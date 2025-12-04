@@ -75,12 +75,12 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 animate-slide-up" style={{ animationDelay: "0.3s" }}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 animate-slide-up" style={{ animationDelay: "0.3s" }}>
               {stats.map((stat, index) => (
-                <div key={index} className="text-center lg:text-left">
-                  <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
+                <div key={index} className="text-center sm:text-left p-3 sm:p-0 rounded-lg sm:rounded-none bg-secondary/30 sm:bg-transparent">
+                  <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
                     <stat.icon className="w-5 h-5 text-primary" />
-                    <span className="text-lg font-bold text-foreground">{stat.value}</span>
+                    <span className="text-base sm:text-lg font-bold text-foreground">{stat.value}</span>
                   </div>
                   {stat.label && <span className="text-xs text-muted-foreground">{stat.label}</span>}
                 </div>
@@ -88,12 +88,12 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </div>
 
             {/* Secondary Stats */}
-            <div className="grid grid-cols-2 gap-4 mt-4 animate-slide-up" style={{ animationDelay: "0.35s" }}>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4 animate-slide-up" style={{ animationDelay: "0.35s" }}>
               {statsSecondary.map((stat, index) => (
-                <div key={index} className="text-center lg:text-left">
-                  <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
+                <div key={index} className="text-center sm:text-left p-3 sm:p-0 rounded-lg sm:rounded-none bg-secondary/30 sm:bg-transparent">
+                  <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
                     <stat.icon className="w-5 h-5 text-primary" />
-                    <span className="text-lg font-bold text-foreground">{stat.value}</span>
+                    <span className="text-base sm:text-lg font-bold text-foreground">{stat.value}</span>
                   </div>
                   {stat.label && <span className="text-xs text-muted-foreground">{stat.label}</span>}
                 </div>
