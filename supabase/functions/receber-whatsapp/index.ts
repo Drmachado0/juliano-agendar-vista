@@ -250,7 +250,7 @@ const handler = async (req: Request): Promise<Response> => {
         telefone: telefoneFormatado,
         direcao: "IN",
         conteudo: conteudo,
-        status_envio: "recebido",
+        status_envio: null, // null for incoming messages (constraint only allows: enviado, entregue, lido, erro)
         mensagem_externa_id: mensagemExternaId,
         lida: false,
       })
