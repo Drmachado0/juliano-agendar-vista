@@ -95,7 +95,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-2">
             {user ? (
-              <Link to="/admin/agendamentos">
+              <Link to="/admin/dashboard">
                 <Button variant="outline" size="default" className="gap-2">
                   <Settings className="h-4 w-4" />
                   {isAdmin ? "Admin" : "Painel"}
@@ -141,7 +141,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
                 </button>
               ))}
               {user ? (
-                <Link to="/admin/agendamentos" onClick={() => setIsMenuOpen(false)}>
+                <Link to="/admin/dashboard" onClick={() => setIsMenuOpen(false)}>
                   <Button variant="outline" className="w-full gap-2 mt-2">
                     <Settings className="h-4 w-4" />
                     {isAdmin ? "Admin" : "Painel"}

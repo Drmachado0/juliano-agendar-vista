@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import AdminDashboard from "./pages/admin/Dashboard";
 import AdminAgendamentos from "./pages/admin/Agendamentos";
 import AdminCRM from "./pages/admin/CRM";
 
@@ -24,7 +25,8 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/admin" element={<AdminAgendamentos />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/agendamentos" element={<AdminAgendamentos />} />
               <Route path="/admin/crm" element={<AdminCRM />} />
               <Route path="*" element={<NotFound />} />
