@@ -1,13 +1,51 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { Helmet } from "react-helmet-async";
+import Header from "@/components/Header";
+import HeroSection from "@/components/HeroSection";
+import AboutSection from "@/components/AboutSection";
+import LocationsSection from "@/components/LocationsSection";
+import InsuranceSection from "@/components/InsuranceSection";
+import WhatsAppButton from "@/components/WhatsAppButton";
+import Footer from "@/components/Footer";
+import SchedulingModal from "@/components/scheduling/SchedulingModal";
 
 const Index = () => {
+  const [isSchedulingOpen, setIsSchedulingOpen] = useState(false);
+
+  const openScheduling = () => setIsSchedulingOpen(true);
+  const closeScheduling = () => setIsSchedulingOpen(false);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <>
+      <Helmet>
+        <title>Dr. Juliano Machado – Oftalmologista em Paragominas e Belém</title>
+        <meta
+          name="description"
+          content="Agende sua consulta com Dr. Juliano Machado, oftalmologista especializado em catarata, pterígio, exames de campo visual e OCT. Atendimento em Paragominas e Belém."
+        />
+        <meta
+          name="keywords"
+          content="oftalmologista, Paragominas, Belém, catarata, pterígio, OCT, campo visual, Dr. Juliano Machado"
+        />
+        <link rel="canonical" href="https://drjulianomachado.com" />
+      </Helmet>
+
+      <div className="min-h-screen bg-background">
+        <Header onScheduleClick={openScheduling} />
+        
+        <main>
+          <HeroSection onScheduleClick={openScheduling} />
+          <AboutSection />
+          <LocationsSection />
+          <InsuranceSection onScheduleClick={openScheduling} />
+        </main>
+
+        <Footer />
+        <WhatsAppButton />
+        
+        <SchedulingModal isOpen={isSchedulingOpen} onClose={closeScheduling} />
       </div>
-    </div>
+    </>
   );
 };
 
