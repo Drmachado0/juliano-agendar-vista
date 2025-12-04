@@ -60,7 +60,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
               <div className="text-center lg:text-left">
                 <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
                   <MapPin className="w-5 h-5 text-primary" />
-                  <span className="text-xl font-bold text-foreground">3</span>
+                  <span className="text-xl font-bold text-foreground">4</span>
                 </div>
                 <span className="text-xs text-muted-foreground">locais de atendimento</span>
               </div>
