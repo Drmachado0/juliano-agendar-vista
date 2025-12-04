@@ -8,3 +8,6 @@ verify_jwt = true
 
 [functions.gerar-mensagem-confirmacao]
 verify_jwt = true
+
+[functions.receber-whatsapp]
+verify_jwt = false
