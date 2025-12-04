@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Award, MapPin, Users, Stethoscope, Eye, Scissors } from "lucide-react";
+import { Award, MapPin, Users, Stethoscope, Eye, Scissors, Star } from "lucide-react";
 import drJulianoPhoto from "@/assets/dr-juliano-machado.jpg";
 
 interface HeroSectionProps {
@@ -11,6 +11,11 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
     { icon: Users, value: "+6.000", label: "pacientes atendidos" },
     { icon: Award, value: "+13 anos", label: "ajudando pessoas a enxergarem melhor" },
     { icon: MapPin, value: "Paragominas", label: "Pará" },
+  ];
+
+  const statsSecondary = [
+    { icon: MapPin, value: "Belém", label: "Pará" },
+    { icon: Star, value: "Referência", label: "em nossa região" },
   ];
 
   const services = [
@@ -76,6 +81,19 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                   <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
                     <stat.icon className="w-5 h-5 text-primary" />
                     <span className="text-lg font-bold text-foreground">{stat.value}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{stat.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Secondary Stats */}
+            <div className="grid grid-cols-2 gap-4 mt-4 animate-slide-up" style={{ animationDelay: "0.35s" }}>
+              {statsSecondary.map((stat, index) => (
+                <div key={index} className="text-center lg:text-left">
+                  <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
+                    <stat.icon className="w-5 h-5 text-primary" />
+                    <span className="text-lg font-bold text-primary">{stat.value}</span>
                   </div>
                   <span className="text-xs text-muted-foreground">{stat.label}</span>
                 </div>
