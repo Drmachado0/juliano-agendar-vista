@@ -145,7 +145,7 @@ const TestimonialsSection = () => {
         {/* CTA */}
         <div className={`text-center mt-12 transition-all duration-700 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <a
-            href="https://www.google.com/maps/place/Dr.+Juliano+Machado"
+            href="https://g.page/r/CTkTpXB1m13mEBI/review"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-card border border-border hover:border-primary/50 transition-all text-foreground font-medium"
