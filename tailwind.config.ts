@@ -14,7 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -59,6 +60,16 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
+        },
+        gold: {
+          DEFAULT: "hsl(42 87% 55%)",
+          light: "hsl(45 90% 65%)",
+          dark: "hsl(38 80% 45%)",
+        },
+        navy: {
+          DEFAULT: "hsl(220 40% 13%)",
+          light: "hsl(220 35% 20%)",
+          dark: "hsl(220 40% 6%)",
         },
       },
       borderRadius: {
