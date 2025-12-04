@@ -55,7 +55,7 @@ const agendamentoInsertSchema = z.object({
   aceita_primeiro_horario: z.boolean().optional(),
   aceita_contato_whatsapp_email: z.boolean().optional(),
   status_crm: z
-    .enum(["NOVO LEAD", "CLINICOR", "HGP"])
+    .enum(["NOVO LEAD", "CLINICOR", "HGP", "BELÉM"])
     .optional()
     .default("NOVO LEAD"),
   origem: z
@@ -129,7 +129,10 @@ function determineStatusCrmByLocation(localAtendimento: string): string {
   if (locationLower.includes("hgp") || locationLower.includes("hospital geral de paragominas")) {
     return "HGP";
   }
-  // Belém locations or others stay as NOVO LEAD (contacts without confirmed appointments)
+  if (locationLower.includes("belém") || locationLower.includes("belem") || locationLower.includes("iob") || locationLower.includes("vitria")) {
+    return "BELÉM";
+  }
+  // Contacts without specific location stay as NOVO LEAD
   return "NOVO LEAD";
 }
 
@@ -240,13 +243,14 @@ export async function listarAgendamentosPorStatus(): Promise<{
 
   if (error) {
     console.error('Erro ao listar agendamentos por status:', error);
-    return { data: { 'NOVO LEAD': [], 'CLINICOR': [], 'HGP': [] }, error: new Error(error.message) };
+    return { data: { 'NOVO LEAD': [], 'CLINICOR': [], 'HGP': [], 'BELÉM': [] }, error: new Error(error.message) };
   }
 
   const grouped: Record<string, Agendamento[]> = {
     'NOVO LEAD': [],
     'CLINICOR': [],
-    'HGP': []
+    'HGP': [],
+    'BELÉM': []
   };
 
   (data || []).forEach((agendamento) => {
