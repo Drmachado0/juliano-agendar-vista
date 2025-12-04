@@ -235,21 +235,42 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get last 8 digits for flexible matching (use slice for correct behavior)
+    // Get last 8 digits for flexible matching
     const last8Digits = telefoneBusca.slice(-8);
+    // Also get last 4 digits for even more flexible matching (will match any phone with same ending)
+    const last4Digits = telefoneBusca.slice(-4);
     console.log("Últimos 8 dígitos para busca:", last8Digits);
+    console.log("Últimos 4 dígitos para busca:", last4Digits);
 
-    // Find agendamento by phone number using ILIKE with last 8 digits (most reliable)
-    const { data: agendamento, error: agendamentoError } = await supabase
+    // Find agendamento by phone number
+    // Search using last 4 digits pattern to work around formatting issues
+    // Format: search for phones ending with the same 4 digits
+    const { data: agendamentos, error: agendamentoError } = await supabase
       .from("agendamentos")
       .select("id, telefone_whatsapp")
-      .ilike("telefone_whatsapp", `%${last8Digits}%`)
+      .ilike("telefone_whatsapp", `%${last4Digits}`)
       .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+      .limit(10);
 
-    if (agendamentoError && agendamentoError.code !== "PGRST116") {
+    if (agendamentoError) {
       console.error("Erro ao buscar agendamento:", agendamentoError);
+    }
+
+    // Find the best match by comparing more digits
+    let agendamento = null;
+    if (agendamentos && agendamentos.length > 0) {
+      for (const ag of agendamentos) {
+        const agDigits = ag.telefone_whatsapp.replace(/\D/g, "");
+        const agLast8 = agDigits.slice(-8);
+        if (agLast8 === last8Digits) {
+          agendamento = ag;
+          break;
+        }
+      }
+      // If no exact match on 8 digits, use first match on 4 digits
+      if (!agendamento) {
+        agendamento = agendamentos[0];
+      }
     }
 
     // If found, use the phone from agendamento for consistency
