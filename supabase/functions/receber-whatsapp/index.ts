@@ -11,30 +11,11 @@ const corsHeaders = {
 const evolutionMessageSchema = z.object({
   event: z.string().optional(),
   type: z.string().optional(),
-  data: z.object({
-    key: z.object({
-      remoteJid: z.string(),
-      fromMe: z.boolean().optional(),
-      id: z.string().optional(),
-    }).optional(),
-    message: z.object({
-      conversation: z.string().optional(),
-      extendedTextMessage: z.object({
-        text: z.string().optional(),
-      }).optional(),
-    }).optional(),
-  }).optional(),
-  key: z.object({
-    remoteJid: z.string(),
-    fromMe: z.boolean().optional(),
-    id: z.string().optional(),
-  }).optional(),
-  message: z.object({
-    conversation: z.string().optional(),
-    extendedTextMessage: z.object({
-      text: z.string().optional(),
-    }).optional(),
-  }).optional(),
+  instance: z.string().optional(),
+  apikey: z.string().optional(),
+  data: z.any().optional(),
+  key: z.any().optional(),
+  message: z.any().optional(),
 }).passthrough();
 
 // Function to verify HMAC signature
@@ -44,7 +25,6 @@ async function verifyHMACSignature(
   secret: string
 ): Promise<boolean> {
   if (!signature) {
-    console.log("Nenhuma assinatura fornecida no request");
     return false;
   }
 
@@ -66,16 +46,20 @@ async function verifyHMACSignature(
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
 
-    // Support both raw signature and prefixed formats (sha256=...)
     const cleanSignature = signature.replace(/^sha256=/, "").toLowerCase();
-    const isValid = cleanSignature === expectedSignature.toLowerCase();
-
-    console.log("Validação de assinatura:", isValid ? "VÁLIDA" : "INVÁLIDA");
-    return isValid;
+    return cleanSignature === expectedSignature.toLowerCase();
   } catch (error) {
     console.error("Erro ao verificar assinatura HMAC:", error);
     return false;
   }
+}
+
+// Function to verify API key from body (Evolution API method)
+function verifyApiKey(bodyApiKey: string | undefined, expectedApiKey: string): boolean {
+  if (!bodyApiKey || !expectedApiKey) {
+    return false;
+  }
+  return bodyApiKey === expectedApiKey;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -89,31 +73,53 @@ const handler = async (req: Request): Promise<Response> => {
     const body = JSON.parse(rawBody);
     
     console.log("=== WEBHOOK RECEBIDO ===");
-    console.log("Body completo:", JSON.stringify(body, null, 2));
+    console.log("Evento:", body.event || body.type);
+    console.log("Instância:", body.instance);
 
-    // Get webhook secret and validate signature
+    // Get secrets for authentication
     const webhookSecret = Deno.env.get("EVOLUTION_WEBHOOK_SECRET");
+    const evolutionApiToken = Deno.env.get("EVOLUTION_API_TOKEN");
     
-    if (webhookSecret) {
-      // Check multiple possible signature headers (Evolution API may use different headers)
-      const signature = 
-        req.headers.get("x-webhook-signature") ||
-        req.headers.get("x-evolution-signature") ||
-        req.headers.get("x-hub-signature-256") ||
-        req.headers.get("x-signature");
-
-      const isValidSignature = await verifyHMACSignature(rawBody, signature, webhookSecret);
-      
-      if (!isValidSignature) {
-        console.error("Assinatura do webhook inválida ou ausente");
-        return new Response(
-          JSON.stringify({ success: false, error: "Assinatura inválida" }),
-          { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
+    // Try multiple authentication methods
+    let isAuthenticated = false;
+    
+    // Method 1: HMAC signature in header
+    const signature = 
+      req.headers.get("x-webhook-signature") ||
+      req.headers.get("x-evolution-signature") ||
+      req.headers.get("x-hub-signature-256") ||
+      req.headers.get("x-signature");
+    
+    if (webhookSecret && signature) {
+      isAuthenticated = await verifyHMACSignature(rawBody, signature, webhookSecret);
+      if (isAuthenticated) {
+        console.log("✓ Autenticado via assinatura HMAC");
       }
-      console.log("✓ Assinatura do webhook validada com sucesso");
-    } else {
-      console.warn("⚠️ EVOLUTION_WEBHOOK_SECRET não configurado - validação de assinatura desabilitada");
+    }
+    
+    // Method 2: API key in body (Evolution API default method)
+    if (!isAuthenticated && body.apikey) {
+      // Check against webhook secret first, then API token
+      if (webhookSecret && verifyApiKey(body.apikey, webhookSecret)) {
+        isAuthenticated = true;
+        console.log("✓ Autenticado via apikey no body (webhook secret)");
+      } else if (evolutionApiToken && verifyApiKey(body.apikey, evolutionApiToken)) {
+        isAuthenticated = true;
+        console.log("✓ Autenticado via apikey no body (API token)");
+      }
+    }
+    
+    // If no authentication method succeeded and secrets are configured, reject
+    if (!isAuthenticated && (webhookSecret || evolutionApiToken)) {
+      console.error("Autenticação falhou - apikey ou assinatura inválida");
+      return new Response(
+        JSON.stringify({ success: false, error: "Não autorizado" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    
+    if (!webhookSecret && !evolutionApiToken) {
+      console.warn("⚠️ Nenhum secret configurado - validação de autenticação desabilitada");
     }
 
     // Validate payload structure with Zod
@@ -121,7 +127,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!parseResult.success) {
       console.error("Payload inválido:", parseResult.error.errors);
       return new Response(
-        JSON.stringify({ success: false, error: "Formato de payload inválido", details: parseResult.error.errors }),
+        JSON.stringify({ success: false, error: "Formato de payload inválido" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -143,7 +149,7 @@ const handler = async (req: Request): Promise<Response> => {
     const message = messageData.message || messageData;
     
     // Check if it's an incoming message (not sent by us)
-    const isFromMe = message?.key?.fromMe || messageData?.key?.fromMe;
+    const isFromMe = messageData?.key?.fromMe;
     if (isFromMe) {
       console.log("Mensagem enviada por nós, ignorando");
       return new Response(
@@ -152,31 +158,38 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Extract phone number (remove @s.whatsapp.net suffix)
-    let telefone = message?.key?.remoteJid || messageData?.key?.remoteJid || "";
-    telefone = telefone.replace("@s.whatsapp.net", "").replace("@g.us", "");
+    // Extract phone number - Evolution may use remoteJid or remoteJidAlt
+    let telefone = messageData?.key?.remoteJidAlt || messageData?.key?.remoteJid || "";
+    telefone = telefone.replace("@s.whatsapp.net", "").replace("@g.us", "").replace("@lid", "");
     
-    // Validate phone number format
-    if (!/^\d{10,15}$/.test(telefone.replace(/\D/g, ""))) {
-      console.error("Formato de telefone inválido:", telefone);
-      return new Response(
-        JSON.stringify({ success: false, error: "Formato de telefone inválido" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+    // If telefone still has @lid format, try to get from remoteJidAlt
+    if (telefone.includes("@") || !/^\d+$/.test(telefone.replace(/\D/g, ""))) {
+      const altPhone = messageData?.key?.remoteJidAlt || "";
+      if (altPhone) {
+        telefone = altPhone.replace("@s.whatsapp.net", "").replace("@g.us", "");
+      }
     }
     
     // Extract message content
-    const conteudo = 
-      message?.message?.conversation ||
-      message?.message?.extendedTextMessage?.text ||
-      messageData?.message?.conversation ||
-      messageData?.message?.extendedTextMessage?.text ||
-      "";
+    const conteudo = message?.conversation || message?.extendedTextMessage?.text || "";
+
+    console.log("Telefone extraído:", telefone);
+    console.log("Conteúdo:", conteudo ? conteudo.substring(0, 100) : "(vazio)");
 
     if (!telefone || !conteudo) {
-      console.log("Dados incompletos - telefone:", telefone, "conteudo:", conteudo);
+      console.log("Dados incompletos - telefone:", telefone, "conteudo:", !!conteudo);
       return new Response(
         JSON.stringify({ success: false, error: "Dados incompletos" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Validate phone number format (should be digits only, 10-15 chars)
+    const phoneDigits = telefone.replace(/\D/g, "");
+    if (phoneDigits.length < 10 || phoneDigits.length > 15) {
+      console.error("Formato de telefone inválido:", telefone);
+      return new Response(
+        JSON.stringify({ success: false, error: "Formato de telefone inválido" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -191,7 +204,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Format phone for database lookup (Brazilian format)
-    let telefoneBusca = telefone;
+    let telefoneBusca = phoneDigits;
     if (telefoneBusca.startsWith("55")) {
       telefoneBusca = telefoneBusca.substring(2);
     }
@@ -204,9 +217,7 @@ const handler = async (req: Request): Promise<Response> => {
       telefoneFormatado = `(${telefoneBusca.substring(0, 2)}) ${telefoneBusca.substring(2, 6)}-${telefoneBusca.substring(6)}`;
     }
 
-    console.log("Telefone original:", telefone);
-    console.log("Telefone formatado:", telefoneFormatado);
-    console.log("Conteúdo:", conteudo.substring(0, 100) + (conteudo.length > 100 ? "..." : ""));
+    console.log("Telefone formatado para DB:", telefoneFormatado);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -229,7 +240,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Agendamento encontrado:", agendamento?.id || "Nenhum");
 
     // Extract external message ID
-    const mensagemExternaId = message?.key?.id || messageData?.key?.id || null;
+    const mensagemExternaId = messageData?.key?.id || null;
 
     // Insert message into database
     const { data: novaMensagem, error: insertError } = await supabase
@@ -254,7 +265,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("Mensagem salva com sucesso:", novaMensagem.id);
+    console.log("✓ Mensagem salva com sucesso:", novaMensagem.id);
 
     return new Response(
       JSON.stringify({ success: true, data: { id: novaMensagem.id } }),
