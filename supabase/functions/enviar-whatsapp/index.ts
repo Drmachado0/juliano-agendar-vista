@@ -101,7 +101,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Build the full URL - Evolution API expects: BASE_URL/message/sendText/INSTANCE_NAME
-    const fullUrl = `${evolutionBaseUrl}/message/sendText/default`;
+    const instanceName = "TesteiA";
+    const fullUrl = `${evolutionBaseUrl}/message/sendText/${instanceName}`;
     console.log("URL completa da Evolution:", fullUrl);
     console.log("Telefone formatado:", phoneFormatted);
     console.log("Mensagem:", mensagem.substring(0, 50) + "...");
