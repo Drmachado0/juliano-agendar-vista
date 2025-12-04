@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Award, MapPin, Star, Users } from "lucide-react";
+import { Award, MapPin, Star, Users, Stethoscope, Eye, Scissors } from "lucide-react";
 import drJulianoPhoto from "@/assets/dr-juliano-machado.jpg";
 
 interface HeroSectionProps {
@@ -8,10 +8,16 @@ interface HeroSectionProps {
 
 const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
   const stats = [
-    { icon: Award, value: "+13", label: "anos de experiência" },
-    { icon: MapPin, value: "4", label: "locais de atendimento" },
-    { icon: Star, value: "Referência", label: "na região Norte" },
-    { icon: Users, value: "+5mil", label: "pacientes atendidos" },
+    { icon: Users, value: "+5.000", label: "pacientes atendidos" },
+    { icon: Award, value: "+13 anos", label: "ajudando pessoas a enxergarem melhor" },
+    { icon: MapPin, value: "Paragominas", label: "e Belém" },
+    { icon: Star, value: "Referência", label: "em nossa região" },
+  ];
+
+  const services = [
+    { icon: Stethoscope, label: "Consultas" },
+    { icon: Eye, label: "Exames" },
+    { icon: Scissors, label: "Cirurgias" },
   ];
 
   return (
@@ -40,13 +46,22 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </h1>
 
             {/* Subtitle */}
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0 animate-slide-up" style={{ animationDelay: "0.1s" }}>
-              Cuidando da sua visão com excelência e tecnologia de ponta. 
-              Atendimento humanizado em Paragominas e Belém.
+            <p className="text-lg md:text-xl text-muted-foreground mb-6 max-w-xl mx-auto lg:mx-0 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+              Oftalmologia que combina <span className="text-primary font-medium">experiência</span> e <span className="text-primary font-medium">tecnologia</span>.
             </p>
 
+            {/* Services Pills */}
+            <div className="flex flex-wrap gap-3 justify-center lg:justify-start mb-8 animate-slide-up" style={{ animationDelay: "0.15s" }}>
+              {services.map((service, index) => (
+                <div key={index} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+                  <service.icon className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-foreground">{service.label}</span>
+                </div>
+              ))}
+            </div>
+
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12 animate-slide-up" style={{ animationDelay: "0.2s" }}>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-10 animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <Button variant="hero" size="lg" onClick={onScheduleClick}>
                 Agendar consulta
               </Button>
@@ -61,7 +76,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                 <div key={index} className="text-center lg:text-left">
                   <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
                     <stat.icon className="w-5 h-5 text-primary" />
-                    <span className="text-xl font-bold text-foreground">{stat.value}</span>
+                    <span className="text-lg font-bold text-foreground">{stat.value}</span>
                   </div>
                   <span className="text-xs text-muted-foreground">{stat.label}</span>
                 </div>
