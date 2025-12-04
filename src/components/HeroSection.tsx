@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Award, MapPin, Star, Users, Stethoscope, Eye, Scissors } from "lucide-react";
+import { Award, MapPin, Users, Stethoscope, Eye, Scissors } from "lucide-react";
 import drJulianoPhoto from "@/assets/dr-juliano-machado.jpg";
 
 interface HeroSectionProps {
@@ -8,11 +8,9 @@ interface HeroSectionProps {
 
 const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
   const stats = [
-    { icon: Users, value: "+5.000", label: "pacientes atendidos" },
+    { icon: Users, value: "+6.000", label: "pacientes atendidos" },
     { icon: Award, value: "+13 anos", label: "ajudando pessoas a enxergarem melhor" },
-    { icon: MapPin, value: "Paragominas", label: "atendimento presencial" },
-    { icon: MapPin, value: "Belém", label: "atendimento presencial", highlight: true },
-    { icon: Star, value: "Referência", label: "em nossa região" },
+    { icon: MapPin, value: "Paragominas", label: "Pará" },
   ];
 
   const services = [
@@ -72,16 +70,14 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 animate-slide-up" style={{ animationDelay: "0.3s" }}>
+            <div className="grid grid-cols-3 gap-4 animate-slide-up" style={{ animationDelay: "0.3s" }}>
               {stats.map((stat, index) => (
                 <div key={index} className="text-center lg:text-left">
                   <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
                     <stat.icon className="w-5 h-5 text-primary" />
                     <span className="text-lg font-bold text-foreground">{stat.value}</span>
                   </div>
-                  <span className={`text-xs ${stat.highlight ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                    {stat.label}
-                  </span>
+                  <span className="text-xs text-muted-foreground">{stat.label}</span>
                 </div>
               ))}
             </div>
