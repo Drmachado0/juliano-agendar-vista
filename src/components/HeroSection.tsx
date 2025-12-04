@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Award, MapPin, Users, Stethoscope, Eye, Scissors, Star } from "lucide-react";
+import { Award, MapPin, Users, Glasses, Eye, Scissors, Star } from "lucide-react";
 import drJulianoPhoto from "@/assets/dr-juliano-machado.jpg";
 
 interface HeroSectionProps {
@@ -19,7 +19,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
   ];
 
   const services = [
-    { icon: Stethoscope, label: "Consultas" },
+    { icon: Glasses, label: "Consultas" },
     { icon: Eye, label: "Exames" },
     { icon: Scissors, label: "Cirurgias" },
   ];
