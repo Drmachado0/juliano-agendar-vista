@@ -10,11 +10,11 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
   const stats = [
     { icon: Users, value: "+6.000", label: "pacientes atendidos" },
     { icon: Award, value: "+13 anos", label: "ajudando pessoas a enxergarem melhor" },
-    { icon: MapPin, value: "Paragominas", label: "Pará" },
+    { icon: MapPin, value: "Paragominas", label: "" },
   ];
 
   const statsSecondary = [
-    { icon: MapPin, value: "Belém", label: "Pará" },
+    { icon: MapPin, value: "Belém", label: "" },
     { icon: Star, value: "Referência", label: "em nossa região" },
   ];
 
@@ -82,7 +82,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                     <stat.icon className="w-5 h-5 text-primary" />
                     <span className="text-lg font-bold text-foreground">{stat.value}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">{stat.label}</span>
+                  {stat.label && <span className="text-xs text-muted-foreground">{stat.label}</span>}
                 </div>
               ))}
             </div>
@@ -93,9 +93,9 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                 <div key={index} className="text-center lg:text-left">
                   <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
                     <stat.icon className="w-5 h-5 text-primary" />
-                    <span className="text-lg font-bold text-primary">{stat.value}</span>
+                    <span className="text-lg font-bold text-foreground">{stat.value}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">{stat.label}</span>
+                  {stat.label && <span className="text-xs text-muted-foreground">{stat.label}</span>}
                 </div>
               ))}
             </div>
