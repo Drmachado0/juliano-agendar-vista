@@ -11,13 +11,23 @@ const AdminWhatsApp = () => {
   const [leads, setLeads] = useState<LeadComMensagens[]>([]);
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
 
-  // Handle realtime messages
+  // Handle realtime messages - match by agendamento_id OR phone number
   const handleNewMessage = useCallback(
     (message: MensagemWhatsApp) => {
+      // Normalize phone for comparison (last 8 digits)
+      const normalizePhone = (phone: string) => phone.replace(/\D/g, "").slice(-8);
+      const messagePhoneLast8 = normalizePhone(message.telefone);
+      
       // Update leads list with new message
       setLeads((prev) => {
         const updated = prev.map((lead) => {
-          if (lead.agendamento_id === message.agendamento_id) {
+          // Match by agendamento_id OR by phone number
+          const leadPhoneLast8 = normalizePhone(lead.telefone_whatsapp);
+          const isMatch = 
+            lead.agendamento_id === message.agendamento_id ||
+            (message.agendamento_id === null && leadPhoneLast8 === messagePhoneLast8);
+          
+          if (isMatch) {
             return {
               ...lead,
               ultima_mensagem: message.conteudo,

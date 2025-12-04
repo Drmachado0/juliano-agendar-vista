@@ -32,18 +32,48 @@ export interface LeadComMensagens {
   mensagens_nao_lidas: number;
 }
 
-// Listar mensagens de um agendamento específico
+// Helper to normalize phone numbers for comparison (get last 8 digits)
+const normalizePhone = (phone: string): string => {
+  const digits = phone.replace(/\D/g, "");
+  return digits.slice(-8);
+};
+
+// Listar mensagens de um agendamento específico (também busca por telefone para pegar todas)
 export const listarMensagensPorAgendamento = async (
-  agendamentoId: string
+  agendamentoId: string,
+  telefone?: string
 ): Promise<{ data: MensagemWhatsApp[]; error: Error | null }> => {
   try {
-    const { data, error } = await supabase
+    // First try by agendamento_id
+    let query = supabase
       .from("mensagens_whatsapp")
       .select("*")
       .eq("agendamento_id", agendamentoId)
       .order("created_at", { ascending: true });
 
+    const { data, error } = await query;
     if (error) throw error;
+
+    // If we have a phone number, also fetch messages by phone that might not be linked
+    if (telefone) {
+      const last8 = normalizePhone(telefone);
+      const { data: phoneMsgs, error: phoneError } = await supabase
+        .from("mensagens_whatsapp")
+        .select("*")
+        .ilike("telefone", `%${last8}%`)
+        .is("agendamento_id", null)
+        .order("created_at", { ascending: true });
+
+      if (!phoneError && phoneMsgs && phoneMsgs.length > 0) {
+        // Merge and deduplicate
+        const allMsgs = [...(data || []), ...phoneMsgs];
+        const uniqueMsgs = allMsgs.filter(
+          (msg, index, self) => index === self.findIndex((m) => m.id === msg.id)
+        );
+        uniqueMsgs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        return { data: uniqueMsgs as MensagemWhatsApp[], error: null };
+      }
+    }
 
     return { data: (data as MensagemWhatsApp[]) || [], error: null };
   } catch (error) {
