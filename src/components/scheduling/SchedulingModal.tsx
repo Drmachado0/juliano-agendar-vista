@@ -111,7 +111,7 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
       if (error) {
         toast({
           title: "Erro ao agendar",
-          description: "Não foi possível enviar seu agendamento. Tente novamente.",
+          description: error.message || "Não foi possível enviar seu agendamento. Tente novamente.",
           variant: "destructive",
         });
         return;
