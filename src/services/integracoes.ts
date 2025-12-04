@@ -45,7 +45,37 @@ export async function notificarN8n(
   }
 }
 
-// Generate default WhatsApp message
+// Generate AI-powered confirmation message
+export async function gerarMensagemConfirmacaoIA(
+  agendamento: Partial<Agendamento>
+): Promise<{ mensagem: string | null; error: string | null }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('gerar-mensagem-confirmacao', {
+      body: { 
+        agendamento: {
+          nome_completo: agendamento.nome_completo,
+          tipo_atendimento: agendamento.tipo_atendimento,
+          local_atendimento: agendamento.local_atendimento,
+          data_agendamento: agendamento.data_agendamento,
+          hora_agendamento: agendamento.hora_agendamento,
+          convenio: agendamento.convenio,
+        }
+      }
+    });
+
+    if (error) {
+      console.error('Erro ao gerar mensagem com IA:', error);
+      return { mensagem: null, error: error.message };
+    }
+
+    return { mensagem: data?.mensagem || null, error: null };
+  } catch (err: any) {
+    console.error('Erro ao gerar mensagem com IA:', err);
+    return { mensagem: null, error: err.message || 'Erro desconhecido' };
+  }
+}
+
+// Generate default WhatsApp message (fallback)
 export function gerarMensagemPadrao(agendamento: Agendamento): string {
   const dataFormatada = new Date(agendamento.data_agendamento).toLocaleDateString('pt-BR');
   const horaFormatada = agendamento.hora_agendamento.slice(0, 5);
