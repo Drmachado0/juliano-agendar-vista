@@ -10,7 +10,8 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
   const stats = [
     { icon: Users, value: "+5.000", label: "pacientes atendidos" },
     { icon: Award, value: "+13 anos", label: "ajudando pessoas a enxergarem melhor" },
-    { icon: MapPin, value: "Paragominas", label: "e Belém", highlight: true },
+    { icon: MapPin, value: "Paragominas", label: "atendimento presencial" },
+    { icon: MapPin, value: "Belém", label: "atendimento presencial", highlight: true },
     { icon: Star, value: "Referência", label: "em nossa região" },
   ];
 
@@ -71,7 +72,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-slide-up" style={{ animationDelay: "0.3s" }}>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 animate-slide-up" style={{ animationDelay: "0.3s" }}>
               {stats.map((stat, index) => (
                 <div key={index} className="text-center lg:text-left">
                   <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
