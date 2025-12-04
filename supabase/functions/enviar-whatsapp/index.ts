@@ -1,14 +1,25 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface WhatsAppRequest {
-  telefone: string;
-  mensagem: string;
-}
+// Schema validation for WhatsApp request
+const whatsAppRequestSchema = z.object({
+  telefone: z
+    .string()
+    .min(10, "Telefone deve ter no mínimo 10 dígitos")
+    .max(15, "Telefone deve ter no máximo 15 dígitos")
+    .regex(/^[\d\s\-\(\)\+]+$/, "Telefone contém caracteres inválidos"),
+  mensagem: z
+    .string()
+    .min(1, "Mensagem não pode estar vazia")
+    .max(4096, "Mensagem muito longa (máximo 4096 caracteres)"),
+});
+
+type WhatsAppRequest = z.infer<typeof whatsAppRequestSchema>;
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -17,7 +28,26 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { telefone, mensagem }: WhatsAppRequest = await req.json();
+    const body = await req.json();
+    
+    // Validate input
+    const validationResult = whatsAppRequestSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      console.error("Validation error:", validationResult.error.errors);
+      return new Response(
+        JSON.stringify({ 
+          error: "Dados inválidos", 
+          details: validationResult.error.errors.map(e => e.message) 
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const { telefone, mensagem }: WhatsAppRequest = validationResult.data;
 
     console.log("Enviando WhatsApp para:", telefone);
     console.log("Mensagem:", mensagem.substring(0, 50) + "...");
