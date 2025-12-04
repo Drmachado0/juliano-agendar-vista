@@ -1,4 +1,4 @@
-import { MapPin, Phone, Clock, ExternalLink, Building2, Hospital, Heart } from "lucide-react";
+import { MapPin, Phone, Clock, ExternalLink, Hospital, Heart, Eye, Glasses } from "lucide-react";
 import { useState } from "react";
 
 const LocationsSection = () => {
@@ -31,7 +31,7 @@ const LocationsSection = () => {
       address: "Av. Generalíssimo Deodoro, 904 - Nazaré, Belém - PA",
       phone: "(91) 99999-9999",
       hours: "Conforme agenda",
-      icon: Building2,
+      icon: Eye,
       mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.456!2d-48.4897!3d-1.4558!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x92a4546013c5d1b7%3A0x1!2sAv.%20General%C3%ADssimo%20Deodoro%2C%20904%20-%20Nazar%C3%A9%2C%20Bel%C3%A9m!5e0!3m2!1spt-BR!2sbr!4v1699999999999!5m2!1spt-BR!2sbr",
       mapsLink: "https://www.google.com/maps/search/Av+Generalissimo+Deodoro+904+Nazare+Belem+PA",
     },
@@ -41,7 +41,7 @@ const LocationsSection = () => {
       address: "Av. Conselheiro Furtado, 2865 - Sobreloja, salas 08-10 - São Braz, Belém - PA",
       phone: "(91) 99999-9999",
       hours: "Conforme agenda",
-      icon: Building2,
+      icon: Glasses,
       mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.456!2d-48.4697!3d-1.4358!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x92a4546013c5d1b7%3A0x1!2sAv.%20Conselheiro%20Furtado%2C%202865%20-%20S%C3%A3o%20Braz%2C%20Bel%C3%A9m!5e0!3m2!1spt-BR!2sbr!4v1699999999999!5m2!1spt-BR!2sbr",
       mapsLink: "https://www.google.com/maps/search/Av+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA",
     },
