@@ -2,69 +2,76 @@ import { Button } from "@/components/ui/button";
 import { Award, MapPin, Users, Glasses, Eye, Scissors, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 import drJulianoPhoto from "@/assets/dr-juliano-machado.jpg";
-
 interface HeroSectionProps {
   onScheduleClick: () => void;
 }
-
-const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
+const HeroSection = ({
+  onScheduleClick
+}: HeroSectionProps) => {
   const [scrollY, setScrollY] = useState(0);
-
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY);
     };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("scroll", handleScroll, {
+      passive: true
+    });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  const stats = [
-    { icon: Users, value: "+6.000", label: "pacientes atendidos" },
-    { icon: Award, value: "+13 anos", label: "ajudando pessoas a enxergarem melhor" },
-    { icon: MapPin, value: "Paragominas", label: "" },
-  ];
-
-  const statsSecondary = [
-    { icon: MapPin, value: "Belém", label: "" },
-    { icon: Star, value: "Referência", label: "em nossa região" },
-  ];
-
-  const services = [
-    { icon: Glasses, label: "Consultas" },
-    { icon: Eye, label: "Exames" },
-    { icon: Scissors, label: "Cirurgias" },
-  ];
-
-  return (
-    <section className="relative min-h-screen flex items-center pt-20 hero-gradient overflow-hidden">
+  const stats = [{
+    icon: Users,
+    value: "+6.000",
+    label: "pacientes atendidos"
+  }, {
+    icon: Award,
+    value: "+13 anos",
+    label: "ajudando pessoas a enxergarem melhor"
+  }, {
+    icon: MapPin,
+    value: "Paragominas",
+    label: ""
+  }];
+  const statsSecondary = [{
+    icon: MapPin,
+    value: "Belém",
+    label: ""
+  }, {
+    icon: Star,
+    value: "Referência",
+    label: "em nossa região"
+  }];
+  const services = [{
+    icon: Glasses,
+    label: "Consultas"
+  }, {
+    icon: Eye,
+    label: "Exames"
+  }, {
+    icon: Scissors,
+    label: "Cirurgias"
+  }];
+  return <section className="relative min-h-screen flex items-center pt-20 hero-gradient overflow-hidden">
       {/* Parallax Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
-        <div 
-          className="absolute top-1/4 -right-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl transition-transform duration-100"
-          style={{ transform: `translateY(${scrollY * 0.3}px) translateX(${scrollY * 0.1}px)` }}
-        />
-        <div 
-          className="absolute bottom-1/4 -left-20 w-80 h-80 bg-accent/10 rounded-full blur-3xl transition-transform duration-100"
-          style={{ transform: `translateY(${scrollY * 0.2}px) translateX(${-scrollY * 0.05}px)` }}
-        />
-        <div 
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl transition-transform duration-100"
-          style={{ transform: `translate(-50%, -50%) scale(${1 + scrollY * 0.0005})` }}
-        />
+        <div className="absolute top-1/4 -right-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl transition-transform duration-100" style={{
+        transform: `translateY(${scrollY * 0.3}px) translateX(${scrollY * 0.1}px)`
+      }} />
+        <div className="absolute bottom-1/4 -left-20 w-80 h-80 bg-accent/10 rounded-full blur-3xl transition-transform duration-100" style={{
+        transform: `translateY(${scrollY * 0.2}px) translateX(${-scrollY * 0.05}px)`
+      }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl transition-transform duration-100" style={{
+        transform: `translate(-50%, -50%) scale(${1 + scrollY * 0.0005})`
+      }} />
         {/* Floating particles */}
-        <div 
-          className="absolute top-20 left-1/4 w-2 h-2 bg-primary/30 rounded-full"
-          style={{ transform: `translateY(${scrollY * 0.5}px)` }}
-        />
-        <div 
-          className="absolute top-40 right-1/3 w-3 h-3 bg-accent/20 rounded-full"
-          style={{ transform: `translateY(${scrollY * 0.4}px)` }}
-        />
-        <div 
-          className="absolute bottom-40 left-1/3 w-2 h-2 bg-primary/20 rounded-full"
-          style={{ transform: `translateY(${scrollY * 0.6}px)` }}
-        />
+        <div className="absolute top-20 left-1/4 w-2 h-2 bg-primary/30 rounded-full" style={{
+        transform: `translateY(${scrollY * 0.5}px)`
+      }} />
+        <div className="absolute top-40 right-1/3 w-3 h-3 bg-accent/20 rounded-full" style={{
+        transform: `translateY(${scrollY * 0.4}px)`
+      }} />
+        <div className="absolute bottom-40 left-1/3 w-2 h-2 bg-primary/20 rounded-full" style={{
+        transform: `translateY(${scrollY * 0.6}px)`
+      }} />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
@@ -81,7 +88,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 opacity-0 animate-slide-up animation-delay-100">
               <span className="text-foreground">Dr. Juliano</span>
               <br />
-              <span className="gradient-text">Machado</span>
+              <span className="gradient-text mx-[150px]">Machado</span>
             </h1>
 
             {/* Subtitle */}
@@ -91,70 +98,50 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
 
             {/* Services Pills */}
             <div className="flex flex-wrap gap-3 justify-center lg:justify-start mb-8">
-              {services.map((service, index) => (
-                <div 
-                  key={index} 
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 opacity-0 animate-scale-in hover:bg-primary/20 transition-colors"
-                  style={{ animationDelay: `${0.3 + index * 0.1}s` }}
-                >
+              {services.map((service, index) => <div key={index} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 opacity-0 animate-scale-in hover:bg-primary/20 transition-colors" style={{
+              animationDelay: `${0.3 + index * 0.1}s`
+            }}>
                   <service.icon className="w-4 h-4 text-primary" />
                   <span className="text-sm font-medium text-foreground">{service.label}</span>
-                </div>
-              ))}
+                </div>)}
             </div>
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start mb-10">
-              <Button 
-                variant="hero" 
-                size="lg" 
-                onClick={onScheduleClick}
-                className="w-full sm:w-auto text-base py-6 sm:py-3 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all opacity-0 animate-slide-up animation-delay-500"
-              >
+              <Button variant="hero" size="lg" onClick={onScheduleClick} className="w-full sm:w-auto text-base py-6 sm:py-3 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all opacity-0 animate-slide-up animation-delay-500">
                 Agendar consulta
               </Button>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                onClick={() => document.getElementById("sobre")?.scrollIntoView({ behavior: "smooth" })}
-                className="w-full sm:w-auto text-base py-6 sm:py-3 border-2 opacity-0 animate-slide-up animation-delay-600"
-              >
+              <Button variant="outline" size="lg" onClick={() => document.getElementById("sobre")?.scrollIntoView({
+              behavior: "smooth"
+            })} className="w-full sm:w-auto text-base py-6 sm:py-3 border-2 opacity-0 animate-slide-up animation-delay-600">
                 Saiba mais
               </Button>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              {stats.map((stat, index) => (
-                <div 
-                  key={index} 
-                  className="text-center sm:text-left p-3 sm:p-0 rounded-lg sm:rounded-none bg-secondary/30 sm:bg-transparent opacity-0 animate-slide-right"
-                  style={{ animationDelay: `${0.6 + index * 0.1}s` }}
-                >
+              {stats.map((stat, index) => <div key={index} className="text-center sm:text-left p-3 sm:p-0 rounded-lg sm:rounded-none bg-secondary/30 sm:bg-transparent opacity-0 animate-slide-right" style={{
+              animationDelay: `${0.6 + index * 0.1}s`
+            }}>
                   <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
                     <stat.icon className="w-5 h-5 text-primary" />
                     <span className="text-base sm:text-lg font-bold text-foreground">{stat.value}</span>
                   </div>
                   {stat.label && <span className="text-xs text-muted-foreground">{stat.label}</span>}
-                </div>
-              ))}
+                </div>)}
             </div>
 
             {/* Secondary Stats */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4">
-              {statsSecondary.map((stat, index) => (
-                <div 
-                  key={index} 
-                  className="text-center sm:text-left p-3 sm:p-0 rounded-lg sm:rounded-none bg-secondary/30 sm:bg-transparent opacity-0 animate-slide-right"
-                  style={{ animationDelay: `${0.9 + index * 0.1}s` }}
-                >
+              {statsSecondary.map((stat, index) => <div key={index} className="text-center sm:text-left p-3 sm:p-0 rounded-lg sm:rounded-none bg-secondary/30 sm:bg-transparent opacity-0 animate-slide-right" style={{
+              animationDelay: `${0.9 + index * 0.1}s`
+            }}>
                   <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
                     <stat.icon className="w-5 h-5 text-primary" />
                     <span className="text-base sm:text-lg font-bold text-foreground">{stat.value}</span>
                   </div>
                   {stat.label && <span className="text-xs text-muted-foreground">{stat.label}</span>}
-                </div>
-              ))}
+                </div>)}
             </div>
           </div>
 
@@ -166,11 +153,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
               
               {/* Photo container */}
               <div className="relative w-72 h-72 md:w-96 md:h-96 rounded-3xl overflow-hidden border-2 border-primary/20 shadow-2xl">
-                <img
-                  src={drJulianoPhoto}
-                  alt="Dr. Juliano Machado - Médico Oftalmologista"
-                  className="w-full h-full object-cover object-top"
-                />
+                <img src={drJulianoPhoto} alt="Dr. Juliano Machado - Médico Oftalmologista" className="w-full h-full object-cover object-top" />
                 {/* Gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent" />
               </div>
@@ -190,8 +173,6 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
           <div className="w-1.5 h-3 bg-primary rounded-full animate-pulse-slow" />
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default HeroSection;
