@@ -65,11 +65,21 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </div>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-10 animate-slide-up" style={{ animationDelay: "0.2s" }}>
-              <Button variant="hero" size="lg" onClick={onScheduleClick}>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start mb-10 animate-slide-up" style={{ animationDelay: "0.2s" }}>
+              <Button 
+                variant="hero" 
+                size="lg" 
+                onClick={onScheduleClick}
+                className="w-full sm:w-auto text-base py-6 sm:py-3 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+              >
                 Agendar consulta
               </Button>
-              <Button variant="outline" size="lg" onClick={() => document.getElementById("sobre")?.scrollIntoView({ behavior: "smooth" })}>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                onClick={() => document.getElementById("sobre")?.scrollIntoView({ behavior: "smooth" })}
+                className="w-full sm:w-auto text-base py-6 sm:py-3 border-2"
+              >
                 Saiba mais
               </Button>
             </div>
