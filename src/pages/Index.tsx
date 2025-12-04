@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import AboutSection from "@/components/AboutSection";
 import ProceduresSection from "@/components/ProceduresSection";
+import TestimonialsSection from "@/components/TestimonialsSection";
 import LocationsSection from "@/components/LocationsSection";
 import InsuranceSection from "@/components/InsuranceSection";
 import WhatsAppButton from "@/components/WhatsAppButton";
@@ -38,6 +39,7 @@ const Index = () => {
           <HeroSection onScheduleClick={openScheduling} />
           <AboutSection />
           <ProceduresSection />
+          <TestimonialsSection />
           <LocationsSection />
           <InsuranceSection onScheduleClick={openScheduling} />
         </main>
