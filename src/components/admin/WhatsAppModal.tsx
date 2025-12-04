@@ -1,14 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Agendamento } from "@/services/agendamentos";
-import { enviarMensagemWhatsApp, gerarMensagemPadrao } from "@/services/integracoes";
+import { enviarMensagemWhatsApp, gerarMensagemPadrao, gerarMensagemConfirmacaoIA } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MessageCircle, Send, Loader2, Phone, Calendar, MapPin } from "lucide-react";
+import { MessageCircle, Send, Loader2, Phone, Calendar, MapPin, Sparkles, RefreshCw } from "lucide-react";
 
 interface WhatsAppModalProps {
   agendamento: Agendamento | null;
@@ -19,15 +19,38 @@ interface WhatsAppModalProps {
 const WhatsAppModal = ({ agendamento, isOpen, onClose }: WhatsAppModalProps) => {
   const [mensagem, setMensagem] = useState("");
   const [sending, setSending] = useState(false);
+  const [generatingAI, setGeneratingAI] = useState(false);
 
-  // Initialize message when agendamento changes
-  useState(() => {
-    if (agendamento) {
+  // Initialize message when modal opens with agendamento
+  useEffect(() => {
+    if (agendamento && isOpen) {
       setMensagem(gerarMensagemPadrao(agendamento));
     }
-  });
+  }, [agendamento, isOpen]);
 
   if (!agendamento) return null;
+
+  const handleGenerateAIMessage = async () => {
+    setGeneratingAI(true);
+    
+    const { mensagem: aiMessage, error } = await gerarMensagemConfirmacaoIA(agendamento);
+    
+    setGeneratingAI(false);
+
+    if (aiMessage) {
+      setMensagem(aiMessage);
+      toast({
+        title: "Mensagem gerada com IA!",
+        description: "A mensagem foi personalizada automaticamente.",
+      });
+    } else {
+      toast({
+        title: "Erro ao gerar mensagem",
+        description: error || "Não foi possível gerar a mensagem com IA. Usando mensagem padrão.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSend = async () => {
     if (!mensagem.trim()) {
@@ -98,9 +121,26 @@ const WhatsAppModal = ({ agendamento, isOpen, onClose }: WhatsAppModalProps) => 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>Mensagem</Label>
-              <Button variant="ghost" size="sm" onClick={handleReset} className="text-xs">
-                Restaurar mensagem padrão
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleGenerateAIMessage}
+                  disabled={generatingAI}
+                  className="text-xs gap-1"
+                >
+                  {generatingAI ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3 w-3 text-purple-500" />
+                  )}
+                  Gerar com IA
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleReset} className="text-xs gap-1">
+                  <RefreshCw className="h-3 w-3" />
+                  Padrão
+                </Button>
+              </div>
             </div>
             <Textarea
               value={mensagem}
@@ -121,7 +161,7 @@ const WhatsAppModal = ({ agendamento, isOpen, onClose }: WhatsAppModalProps) => 
             </Button>
             <Button 
               onClick={handleSend} 
-              disabled={sending}
+              disabled={sending || generatingAI}
               className="bg-green-600 hover:bg-green-700"
             >
               {sending ? (
