@@ -143,7 +143,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
-      status_crm_enum: "NOVO LEAD" | "CLINICOR" | "HGP"
+      status_crm_enum: "NOVO LEAD" | "CLINICOR" | "HGP" | "BELÉM"
       tipo_atendimento_enum: "Consulta" | "Retorno" | "Exame" | "Cirurgia"
     }
     CompositeTypes: {
@@ -273,7 +273,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
-      status_crm_enum: ["NOVO LEAD", "CLINICOR", "HGP"],
+      status_crm_enum: ["NOVO LEAD", "CLINICOR", "HGP", "BELÉM"],
       tipo_atendimento_enum: ["Consulta", "Retorno", "Exame", "Cirurgia"],
     },
   },
