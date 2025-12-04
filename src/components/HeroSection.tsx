@@ -10,7 +10,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
   const stats = [
     { icon: Users, value: "+5.000", label: "pacientes atendidos" },
     { icon: Award, value: "+13 anos", label: "ajudando pessoas a enxergarem melhor" },
-    { icon: MapPin, value: "Paragominas", label: "e Belém" },
+    { icon: MapPin, value: "Paragominas", label: "e Belém", highlight: true },
     { icon: Star, value: "Referência", label: "em nossa região" },
   ];
 
@@ -78,7 +78,9 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                     <stat.icon className="w-5 h-5 text-primary" />
                     <span className="text-lg font-bold text-foreground">{stat.value}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">{stat.label}</span>
+                  <span className={`text-xs ${stat.highlight ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                    {stat.label}
+                  </span>
                 </div>
               ))}
             </div>
