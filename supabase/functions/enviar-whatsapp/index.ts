@@ -76,11 +76,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { telefone, mensagem }: WhatsAppRequest = validationResult.data;
 
-    console.log("Enviando WhatsApp para:", telefone);
-    console.log("Mensagem:", mensagem.substring(0, 50) + "...");
-
     const evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
     const evolutionToken = Deno.env.get("EVOLUTION_API_TOKEN");
+
+    console.log("=== DEBUG EVOLUTION API ===");
+    console.log("EVOLUTION_API_BASE_URL:", evolutionBaseUrl);
+    console.log("Token presente:", evolutionToken ? "Sim" : "Não");
 
     if (!evolutionBaseUrl || !evolutionToken) {
       console.error("Variáveis de ambiente não configuradas");
@@ -99,8 +100,14 @@ const handler = async (req: Request): Promise<Response> => {
       phoneFormatted = "55" + phoneFormatted;
     }
 
+    // Build the full URL - Evolution API expects: BASE_URL/message/sendText/INSTANCE_NAME
+    const fullUrl = `${evolutionBaseUrl}/message/sendText/default`;
+    console.log("URL completa da Evolution:", fullUrl);
+    console.log("Telefone formatado:", phoneFormatted);
+    console.log("Mensagem:", mensagem.substring(0, 50) + "...");
+
     // Call Evolution API
-    const evolutionResponse = await fetch(`${evolutionBaseUrl}/message/sendText/default`, {
+    const evolutionResponse = await fetch(fullUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
