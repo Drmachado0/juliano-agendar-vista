@@ -25,46 +25,25 @@ const TestimonialsSection = () => {
 
   const testimonials = [
     {
-      name: "Maria Silva",
-      date: "há 2 semanas",
+      name: "Amanda Machado",
+      date: "há 2 anos",
       rating: 5,
-      text: "Excelente profissional! Dr. Juliano é muito atencioso e explica tudo com muita clareza. Fiz minha cirurgia de catarata e estou enxergando perfeitamente.",
-      avatar: "MS",
+      text: "Gostei muito da consulta! Excelente profissional, explica tudo muito bem, e nos deixa seguros.",
+      avatar: "AM",
     },
     {
-      name: "João Santos",
-      date: "há 1 mês",
+      name: "Gislene Alves da Silva",
+      date: "há 2 anos",
       rating: 5,
-      text: "Atendimento humanizado e de qualidade. A equipe é muito prestativa e o consultório possui equipamentos modernos. Recomendo a todos!",
-      avatar: "JS",
+      text: "Excelente profissional!",
+      avatar: "GA",
     },
     {
-      name: "Ana Paula Costa",
-      date: "há 1 mês",
+      name: "Ambulatórios Pedfamaz",
+      date: "há 2 anos",
       rating: 5,
-      text: "Depois de anos usando óculos, fiz a cirurgia com o Dr. Juliano e minha vida mudou. Profissional competente e muito dedicado aos pacientes.",
-      avatar: "AC",
-    },
-    {
-      name: "Carlos Oliveira",
-      date: "há 2 meses",
-      rating: 5,
-      text: "Consultório bem localizado, fácil estacionamento. Dr. Juliano é um excelente oftalmologista, muito competente e atualizado.",
-      avatar: "CO",
-    },
-    {
-      name: "Fernanda Lima",
-      date: "há 3 meses",
-      rating: 5,
-      text: "Atendimento nota 10! Desde a recepção até a consulta, tudo perfeito. O doutor é muito paciente e tira todas as dúvidas.",
-      avatar: "FL",
-    },
-    {
-      name: "Roberto Mendes",
-      date: "há 3 meses",
-      rating: 5,
-      text: "Profissional extremamente qualificado. Realizei o mapeamento de retina e fui muito bem atendido. Super recomendo!",
-      avatar: "RM",
+      text: "Atendimento excelente, profissional muito competente e atencioso.",
+      avatar: "AP",
     },
   ];
 
