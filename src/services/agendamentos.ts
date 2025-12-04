@@ -119,6 +119,20 @@ export interface AgendamentoFilters {
   busca?: string;
 }
 
+// Determine CRM status based on location
+function determineStatusCrmByLocation(localAtendimento: string): string {
+  const locationLower = localAtendimento.toLowerCase();
+  
+  if (locationLower.includes("clinicor")) {
+    return "CLINICOR";
+  }
+  if (locationLower.includes("hgp") || locationLower.includes("hospital geral de paragominas")) {
+    return "HGP";
+  }
+  // Belém locations or others stay as NOVO LEAD (contacts without confirmed appointments)
+  return "NOVO LEAD";
+}
+
 // Create new agendamento (public - from website form)
 export async function criarAgendamento(data: AgendamentoInsert): Promise<{ data: Agendamento | null; error: Error | null }> {
   // Validate input with zod schema
@@ -130,8 +144,10 @@ export async function criarAgendamento(data: AgendamentoInsert): Promise<{ data:
     return { data: null, error: new Error(`Dados inválidos: ${errorMessages}`) };
   }
 
-  // Sanitize email - convert empty string to null
+  // Sanitize and determine CRM status based on location
   const validatedData = validationResult.data;
+  const autoStatusCrm = determineStatusCrmByLocation(validatedData.local_atendimento);
+  
   const sanitizedData: AgendamentoInsert = {
     nome_completo: validatedData.nome_completo,
     telefone_whatsapp: validatedData.telefone_whatsapp,
@@ -146,7 +162,7 @@ export async function criarAgendamento(data: AgendamentoInsert): Promise<{ data:
     hora_agendamento: validatedData.hora_agendamento,
     aceita_primeiro_horario: validatedData.aceita_primeiro_horario ?? false,
     aceita_contato_whatsapp_email: validatedData.aceita_contato_whatsapp_email ?? false,
-    status_crm: validatedData.status_crm ?? "NOVO LEAD",
+    status_crm: autoStatusCrm, // Automatically set based on location
     origem: validatedData.origem ?? "site",
     observacoes_internas: validatedData.observacoes_internas ?? null,
   };
