@@ -1,4 +1,4 @@
-import { MapPin, Phone, Clock, ExternalLink, Building2, Hospital, Stethoscope } from "lucide-react";
+import { MapPin, Phone, Clock, ExternalLink, Building2, Hospital, Heart } from "lucide-react";
 import { useState } from "react";
 
 const LocationsSection = () => {
@@ -10,10 +10,10 @@ const LocationsSection = () => {
       city: "Paragominas",
       address: "Rua Eixo W1, R. Célio Miranda, N° 729, Paragominas - PA",
       phone: "(91) 99999-9999",
-      hours: "Seg a Sex, 8h às 18h",
-      icon: Stethoscope,
-      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3985.7!2d-47.3527!3d-2.9958!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMsKwNTknNDUuMCJTIDQ3wrAyMScxMC4wIlc!5e0!3m2!1spt-BR!2sbr!4v1",
-      mapsLink: "https://maps.google.com/?q=Rua+Célio+Miranda+729+Paragominas+PA",
+      hours: "Conforme agenda",
+      icon: Heart,
+      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3985.456!2d-47.3527778!3d-2.9958333!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x92a4546013c5d1b7%3A0x1!2sParagominas%2C%20PA!5e0!3m2!1spt-BR!2sbr!4v1699999999999!5m2!1spt-BR!2sbr",
+      mapsLink: "https://www.google.com/maps/search/Clinicor+Rua+Celio+Miranda+729+Paragominas+PA",
     },
     {
       name: "Hospital Geral de Paragominas",
@@ -22,18 +22,18 @@ const LocationsSection = () => {
       phone: "(91) 99999-9999",
       hours: "Conforme agenda",
       icon: Hospital,
-      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3985.7!2d-47.3527!3d-2.9958!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMsKwNTknNDUuMCJTIDQ3wrAyMScxMC4wIlc!5e0!3m2!1spt-BR!2sbr!4v1",
-      mapsLink: "https://maps.google.com/?q=R.+Santa+Terezinha+304+Centro+Paragominas+PA",
+      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3985.456!2d-47.3558!3d-2.9925!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x92a4546013c5d1b7%3A0x1!2sHospital%20Geral%20de%20Paragominas!5e0!3m2!1spt-BR!2sbr!4v1699999999999!5m2!1spt-BR!2sbr",
+      mapsLink: "https://www.google.com/maps/search/Hospital+Geral+Paragominas+Santa+Terezinha+304",
     },
     {
-      name: "IOB - Instituto de Olhos da Bahia",
+      name: "Instituto de Olhos de Belém",
       city: "Belém",
       address: "Av. Generalíssimo Deodoro, 904 - Nazaré, Belém - PA",
       phone: "(91) 99999-9999",
       hours: "Conforme agenda",
       icon: Building2,
-      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.5!2d-48.4897!3d-1.4558!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMcKwMjcnMjAuOSJTIDQ4wrAyOSczMS4zIlc!5e0!3m2!1spt-BR!2sbr!4v1",
-      mapsLink: "https://maps.google.com/?q=Av.+Generalissimo+Deodoro+904+Nazare+Belem+PA",
+      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.456!2d-48.4897!3d-1.4558!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x92a4546013c5d1b7%3A0x1!2sAv.%20General%C3%ADssimo%20Deodoro%2C%20904%20-%20Nazar%C3%A9%2C%20Bel%C3%A9m!5e0!3m2!1spt-BR!2sbr!4v1699999999999!5m2!1spt-BR!2sbr",
+      mapsLink: "https://www.google.com/maps/search/Av+Generalissimo+Deodoro+904+Nazare+Belem+PA",
     },
     {
       name: "Vitria - Ed. Síntese 21",
@@ -42,8 +42,8 @@ const LocationsSection = () => {
       phone: "(91) 99999-9999",
       hours: "Conforme agenda",
       icon: Building2,
-      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.5!2d-48.4697!3d-1.4358!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMcKwMjYnMDguOSJTIDQ4wrAyOCcxMS4zIlc!5e0!3m2!1spt-BR!2sbr!4v1",
-      mapsLink: "https://maps.google.com/?q=Av.+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA",
+      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.456!2d-48.4697!3d-1.4358!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x92a4546013c5d1b7%3A0x1!2sAv.%20Conselheiro%20Furtado%2C%202865%20-%20S%C3%A3o%20Braz%2C%20Bel%C3%A9m!5e0!3m2!1spt-BR!2sbr!4v1699999999999!5m2!1spt-BR!2sbr",
+      mapsLink: "https://www.google.com/maps/search/Av+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA",
     },
   ];
 
