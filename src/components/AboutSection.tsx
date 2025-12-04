@@ -1,7 +1,29 @@
 import { Heart, Cpu, CheckCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import drJulianoPhoto from "@/assets/dr-juliano-consultorio.jpg";
 
 const AboutSection = () => {
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   const credentials = [
     "Membro SBO",
     "+13 anos de experiência",
@@ -10,11 +32,11 @@ const AboutSection = () => {
   ];
 
   return (
-    <section id="sobre" className="py-24 bg-background">
+    <section id="sobre" className="py-24 bg-background" ref={sectionRef}>
       <div className="container mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Photo Side */}
-          <div className="relative order-2 lg:order-1">
+          <div className={`relative order-2 lg:order-1 transition-all duration-700 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-12'}`}>
             <div className="relative max-w-md mx-auto">
               {/* Background decoration */}
               <div className="absolute -inset-4 bg-gradient-to-br from-primary/20 to-accent/20 rounded-3xl blur-2xl" />
@@ -29,10 +51,14 @@ const AboutSection = () => {
               </div>
 
               {/* Floating credentials card */}
-              <div className="absolute -right-4 md:-right-8 bottom-8 card-glass rounded-2xl p-4 shadow-xl max-w-[200px]">
+              <div className={`absolute -right-4 md:-right-8 bottom-8 card-glass rounded-2xl p-4 shadow-xl max-w-[200px] transition-all duration-700 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
                 <div className="space-y-2">
                   {credentials.map((credential, index) => (
-                    <div key={index} className="flex items-center gap-2">
+                    <div 
+                      key={index} 
+                      className="flex items-center gap-2"
+                      style={{ transitionDelay: `${400 + index * 100}ms` }}
+                    >
                       <CheckCircle className="w-4 h-4 text-primary shrink-0" />
                       <span className="text-xs text-foreground font-medium">{credential}</span>
                     </div>
@@ -43,7 +69,7 @@ const AboutSection = () => {
           </div>
 
           {/* Content Side */}
-          <div className="order-1 lg:order-2">
+          <div className={`order-1 lg:order-2 transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12'}`}>
             <span className="text-primary font-semibold text-sm uppercase tracking-wider">
               Sobre o médico
             </span>
@@ -61,14 +87,20 @@ const AboutSection = () => {
 
             {/* Features */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="card-glass rounded-xl p-4 hover:border-primary/50 transition-all duration-300">
+              <div 
+                className={`card-glass rounded-xl p-4 hover:border-primary/50 transition-all duration-500 hover:-translate-y-1 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+                style={{ transitionDelay: '400ms' }}
+              >
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
                   <Heart className="w-5 h-5 text-primary" />
                 </div>
                 <h4 className="text-foreground font-semibold text-sm mb-1">Atendimento Humanizado</h4>
                 <p className="text-muted-foreground text-xs">Cada paciente recebe atenção personalizada e cuidado especial</p>
               </div>
-              <div className="card-glass rounded-xl p-4 hover:border-primary/50 transition-all duration-300">
+              <div 
+                className={`card-glass rounded-xl p-4 hover:border-primary/50 transition-all duration-500 hover:-translate-y-1 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+                style={{ transitionDelay: '500ms' }}
+              >
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
                   <Cpu className="w-5 h-5 text-primary" />
                 </div>
