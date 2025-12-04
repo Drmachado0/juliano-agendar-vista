@@ -1,10 +1,82 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-webhook-signature, x-evolution-signature",
 };
+
+// Zod schema for Evolution API webhook payload validation
+const evolutionMessageSchema = z.object({
+  event: z.string().optional(),
+  type: z.string().optional(),
+  data: z.object({
+    key: z.object({
+      remoteJid: z.string(),
+      fromMe: z.boolean().optional(),
+      id: z.string().optional(),
+    }).optional(),
+    message: z.object({
+      conversation: z.string().optional(),
+      extendedTextMessage: z.object({
+        text: z.string().optional(),
+      }).optional(),
+    }).optional(),
+  }).optional(),
+  key: z.object({
+    remoteJid: z.string(),
+    fromMe: z.boolean().optional(),
+    id: z.string().optional(),
+  }).optional(),
+  message: z.object({
+    conversation: z.string().optional(),
+    extendedTextMessage: z.object({
+      text: z.string().optional(),
+    }).optional(),
+  }).optional(),
+}).passthrough();
+
+// Function to verify HMAC signature
+async function verifyHMACSignature(
+  payload: string,
+  signature: string | null,
+  secret: string
+): Promise<boolean> {
+  if (!signature) {
+    console.log("Nenhuma assinatura fornecida no request");
+    return false;
+  }
+
+  try {
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(secret);
+    const data = encoder.encode(payload);
+
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign", "verify"]
+    );
+
+    const signatureBuffer = await crypto.subtle.sign("HMAC", cryptoKey, data);
+    const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    // Support both raw signature and prefixed formats (sha256=...)
+    const cleanSignature = signature.replace(/^sha256=/, "").toLowerCase();
+    const isValid = cleanSignature === expectedSignature.toLowerCase();
+
+    console.log("Validação de assinatura:", isValid ? "VÁLIDA" : "INVÁLIDA");
+    return isValid;
+  } catch (error) {
+    console.error("Erro ao verificar assinatura HMAC:", error);
+    return false;
+  }
+}
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -13,10 +85,46 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const body = await req.json();
+    const rawBody = await req.text();
+    const body = JSON.parse(rawBody);
     
     console.log("=== WEBHOOK RECEBIDO ===");
     console.log("Body completo:", JSON.stringify(body, null, 2));
+
+    // Get webhook secret and validate signature
+    const webhookSecret = Deno.env.get("EVOLUTION_WEBHOOK_SECRET");
+    
+    if (webhookSecret) {
+      // Check multiple possible signature headers (Evolution API may use different headers)
+      const signature = 
+        req.headers.get("x-webhook-signature") ||
+        req.headers.get("x-evolution-signature") ||
+        req.headers.get("x-hub-signature-256") ||
+        req.headers.get("x-signature");
+
+      const isValidSignature = await verifyHMACSignature(rawBody, signature, webhookSecret);
+      
+      if (!isValidSignature) {
+        console.error("Assinatura do webhook inválida ou ausente");
+        return new Response(
+          JSON.stringify({ success: false, error: "Assinatura inválida" }),
+          { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      console.log("✓ Assinatura do webhook validada com sucesso");
+    } else {
+      console.warn("⚠️ EVOLUTION_WEBHOOK_SECRET não configurado - validação de assinatura desabilitada");
+    }
+
+    // Validate payload structure with Zod
+    const parseResult = evolutionMessageSchema.safeParse(body);
+    if (!parseResult.success) {
+      console.error("Payload inválido:", parseResult.error.errors);
+      return new Response(
+        JSON.stringify({ success: false, error: "Formato de payload inválido", details: parseResult.error.errors }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     // Evolution API sends different event types
     const event = body.event || body.type;
@@ -48,6 +156,15 @@ const handler = async (req: Request): Promise<Response> => {
     let telefone = message?.key?.remoteJid || messageData?.key?.remoteJid || "";
     telefone = telefone.replace("@s.whatsapp.net", "").replace("@g.us", "");
     
+    // Validate phone number format
+    if (!/^\d{10,15}$/.test(telefone.replace(/\D/g, ""))) {
+      console.error("Formato de telefone inválido:", telefone);
+      return new Response(
+        JSON.stringify({ success: false, error: "Formato de telefone inválido" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    
     // Extract message content
     const conteudo = 
       message?.message?.conversation ||
@@ -60,6 +177,15 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Dados incompletos - telefone:", telefone, "conteudo:", conteudo);
       return new Response(
         JSON.stringify({ success: false, error: "Dados incompletos" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Validate message content length
+    if (conteudo.length > 10000) {
+      console.error("Mensagem muito longa:", conteudo.length);
+      return new Response(
+        JSON.stringify({ success: false, error: "Mensagem muito longa" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -80,7 +206,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Telefone original:", telefone);
     console.log("Telefone formatado:", telefoneFormatado);
-    console.log("Conteúdo:", conteudo);
+    console.log("Conteúdo:", conteudo.substring(0, 100) + (conteudo.length > 100 ? "..." : ""));
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -123,7 +249,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (insertError) {
       console.error("Erro ao inserir mensagem:", insertError);
       return new Response(
-        JSON.stringify({ success: false, error: insertError.message }),
+        JSON.stringify({ success: false, error: "Erro ao salvar mensagem" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -131,13 +257,13 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Mensagem salva com sucesso:", novaMensagem.id);
 
     return new Response(
-      JSON.stringify({ success: true, data: novaMensagem }),
+      JSON.stringify({ success: true, data: { id: novaMensagem.id } }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {
     console.error("Erro no webhook:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ success: false, error: "Erro interno do servidor" }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
