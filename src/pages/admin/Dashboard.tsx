@@ -10,9 +10,17 @@ import {
   Users, 
   TrendingUp, 
   Clock,
-  RefreshCw 
+  RefreshCw,
+  Filter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   BarChart, 
   Bar, 
@@ -26,8 +34,10 @@ import {
   Cell,
   Legend
 } from "recharts";
-import { format, startOfDay, startOfWeek, startOfMonth, subDays } from "date-fns";
+import { format, startOfDay, startOfWeek, startOfMonth, subDays, subWeeks, subMonths, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+type PeriodFilter = "7dias" | "semana" | "mes" | "trimestre" | "todos";
 
 interface Stats {
   total: number;
@@ -38,17 +48,44 @@ interface Stats {
   porStatus: { name: string; value: number }[];
   porTipo: { name: string; value: number }[];
   ultimosDias: { date: string; count: number }[];
+  filteredTotal: number;
 }
 
 const COLORS = {
-  status: ['#10b981', '#3b82f6', '#8b5cf6'],
-  local: ['#3b82f6', '#8b5cf6', '#f59e0b'],
+  status: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b'],
+  local: ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981'],
   tipo: ['#10b981', '#6366f1', '#ec4899', '#f97316'],
+};
+
+const periodLabels: Record<PeriodFilter, string> = {
+  "7dias": "Últimos 7 dias",
+  "semana": "Esta semana",
+  "mes": "Este mês",
+  "trimestre": "Último trimestre",
+  "todos": "Todos os períodos",
 };
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("todos");
+
+  const getFilterStartDate = (filter: PeriodFilter): Date | null => {
+    const now = new Date();
+    switch (filter) {
+      case "7dias":
+        return subDays(now, 7);
+      case "semana":
+        return startOfWeek(now, { locale: ptBR });
+      case "mes":
+        return startOfMonth(now);
+      case "trimestre":
+        return subMonths(now, 3);
+      case "todos":
+      default:
+        return null;
+    }
+  };
 
   const fetchStats = async () => {
     setLoading(true);
@@ -62,8 +99,14 @@ const AdminDashboard = () => {
       const hoje = startOfDay(new Date());
       const inicioSemana = startOfWeek(new Date(), { locale: ptBR });
       const inicioMes = startOfMonth(new Date());
+      const filterStartDate = getFilterStartDate(periodFilter);
 
-      // Calcular estatísticas
+      // Filter agendamentos by period
+      const filteredAgendamentos = filterStartDate
+        ? agendamentos?.filter(a => isAfter(new Date(a.created_at), filterStartDate))
+        : agendamentos;
+
+      // Calcular estatísticas gerais (sempre do total)
       const total = agendamentos?.length || 0;
       const hojeCount = agendamentos?.filter(a => 
         new Date(a.created_at) >= hoje
@@ -75,34 +118,38 @@ const AdminDashboard = () => {
         new Date(a.created_at) >= inicioMes
       ).length || 0;
 
-      // Por local
+      // Estatísticas filtradas
+      const filteredTotal = filteredAgendamentos?.length || 0;
+
+      // Por local (filtrado)
       const localCounts: Record<string, number> = {};
-      agendamentos?.forEach(a => {
+      filteredAgendamentos?.forEach(a => {
         const local = a.local_atendimento.split(' – ')[0];
         localCounts[local] = (localCounts[local] || 0) + 1;
       });
       const porLocal = Object.entries(localCounts).map(([name, value]) => ({ name, value }));
 
-      // Por status CRM
+      // Por status CRM (filtrado)
       const statusCounts: Record<string, number> = {};
-      agendamentos?.forEach(a => {
+      filteredAgendamentos?.forEach(a => {
         statusCounts[a.status_crm] = (statusCounts[a.status_crm] || 0) + 1;
       });
       const porStatus = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
 
-      // Por tipo de atendimento
+      // Por tipo de atendimento (filtrado)
       const tipoCounts: Record<string, number> = {};
-      agendamentos?.forEach(a => {
+      filteredAgendamentos?.forEach(a => {
         tipoCounts[a.tipo_atendimento] = (tipoCounts[a.tipo_atendimento] || 0) + 1;
       });
       const porTipo = Object.entries(tipoCounts).map(([name, value]) => ({ name, value }));
 
-      // Últimos 7 dias
+      // Determinar dias para o gráfico baseado no filtro
+      const daysToShow = periodFilter === "trimestre" ? 30 : periodFilter === "mes" ? 14 : 7;
       const ultimosDias: { date: string; count: number }[] = [];
-      for (let i = 6; i >= 0; i--) {
+      for (let i = daysToShow - 1; i >= 0; i--) {
         const dia = subDays(new Date(), i);
         const diaStr = format(dia, 'yyyy-MM-dd');
-        const count = agendamentos?.filter(a => 
+        const count = filteredAgendamentos?.filter(a => 
           format(new Date(a.created_at), 'yyyy-MM-dd') === diaStr
         ).length || 0;
         ultimosDias.push({
@@ -120,6 +167,7 @@ const AdminDashboard = () => {
         porStatus,
         porTipo,
         ultimosDias,
+        filteredTotal,
       });
     } catch (error: any) {
       toast({
@@ -134,7 +182,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [periodFilter]);
 
   const statCards = [
     { 
@@ -181,10 +229,27 @@ const AdminDashboard = () => {
               Visão geral dos agendamentos
             </p>
           </div>
-          <Button variant="outline" onClick={fetchStats} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={periodFilter} onValueChange={(value: PeriodFilter) => setPeriodFilter(value)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Selecionar período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7dias">Últimos 7 dias</SelectItem>
+                  <SelectItem value="semana">Esta semana</SelectItem>
+                  <SelectItem value="mes">Este mês</SelectItem>
+                  <SelectItem value="trimestre">Último trimestre</SelectItem>
+                  <SelectItem value="todos">Todos os períodos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" onClick={fetchStats} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+          </div>
         </div>
 
         {loading ? (
@@ -212,14 +277,24 @@ const AdminDashboard = () => {
               ))}
             </div>
 
+            {/* Period indicator */}
+            {periodFilter !== "todos" && (
+              <div className="bg-primary/10 border border-primary/20 rounded-lg px-4 py-2 flex items-center gap-2">
+                <Filter className="h-4 w-4 text-primary" />
+                <span className="text-sm text-foreground">
+                  Exibindo <strong>{stats?.filteredTotal || 0}</strong> agendamentos para: <strong>{periodLabels[periodFilter]}</strong>
+                </span>
+              </div>
+            )}
+
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Últimos 7 dias */}
+              {/* Tendência */}
               <Card className="border-border/50">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Calendar className="h-5 w-5" />
-                    Últimos 7 dias
+                    Tendência de Agendamentos
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
