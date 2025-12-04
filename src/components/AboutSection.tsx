@@ -1,19 +1,12 @@
-import { Stethoscope, Eye, ScanEye, Zap, CheckCircle } from "lucide-react";
+import { Heart, Cpu, CheckCircle } from "lucide-react";
 import drJulianoPhoto from "@/assets/dr-juliano-consultorio.jpg";
 
 const AboutSection = () => {
-  const services = [
-    { icon: Stethoscope, title: "Consultas Oftalmológicas", description: "Avaliações completas para detectar e tratar problemas oculares" },
-    { icon: Eye, title: "Cirurgias de Catarata e Pterígio", description: "Procedimentos seguros e eficazes para restaurar sua visão" },
-    { icon: ScanEye, title: "Exames Oftalmológicos", description: "Diagnósticos precisos para uma visão clara e saudável" },
-    { icon: Zap, title: "Capsulotomia YAG Laser", description: "Tratamento avançado para opacificação da cápsula posterior" },
-  ];
-
   const credentials = [
-    "CRM Ativo",
     "Membro SBO",
-    "+11 anos de experiência",
-    "+5000 cirurgias",
+    "+13 anos de experiência",
+    "Atendimento humanizado",
+    "Tecnologia avançada",
   ];
 
   return (
@@ -58,7 +51,7 @@ const AboutSection = () => {
               Visão perfeita em todas as fases da vida
             </h2>
             <p className="text-muted-foreground text-lg leading-relaxed mb-6">
-              Como oftalmologista com mais de 11 anos de experiência, meu compromisso é garantir 
+              Como oftalmologista com mais de 13 anos de experiência, meu compromisso é garantir 
               que você tenha uma visão perfeita em todas as fases da vida.
             </p>
             <p className="text-muted-foreground leading-relaxed mb-8">
@@ -66,21 +59,22 @@ const AboutSection = () => {
               tratamentos mais avançados.
             </p>
 
-            {/* Services Grid */}
-            <h3 className="text-foreground font-semibold mb-4">Nossos Serviços:</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {services.map((service, index) => (
-                <div
-                  key={index}
-                  className="card-glass rounded-xl p-4 hover:border-primary/50 transition-all duration-300 hover:-translate-y-1"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
-                    <service.icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <h4 className="text-foreground font-semibold text-sm mb-1">{service.title}</h4>
-                  <p className="text-muted-foreground text-xs">{service.description}</p>
+            {/* Features */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="card-glass rounded-xl p-4 hover:border-primary/50 transition-all duration-300">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
+                  <Heart className="w-5 h-5 text-primary" />
                 </div>
-              ))}
+                <h4 className="text-foreground font-semibold text-sm mb-1">Atendimento Humanizado</h4>
+                <p className="text-muted-foreground text-xs">Cada paciente recebe atenção personalizada e cuidado especial</p>
+              </div>
+              <div className="card-glass rounded-xl p-4 hover:border-primary/50 transition-all duration-300">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
+                  <Cpu className="w-5 h-5 text-primary" />
+                </div>
+                <h4 className="text-foreground font-semibold text-sm mb-1">Tecnologia de Ponta</h4>
+                <p className="text-muted-foreground text-xs">Equipamentos modernos para diagnósticos precisos</p>
+              </div>
             </div>
           </div>
         </div>

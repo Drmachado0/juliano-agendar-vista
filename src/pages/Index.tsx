@@ -3,6 +3,7 @@ import { Helmet } from "react-helmet-async";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import AboutSection from "@/components/AboutSection";
+import ProceduresSection from "@/components/ProceduresSection";
 import LocationsSection from "@/components/LocationsSection";
 import InsuranceSection from "@/components/InsuranceSection";
 import WhatsAppButton from "@/components/WhatsAppButton";
@@ -36,6 +37,7 @@ const Index = () => {
         <main>
           <HeroSection onScheduleClick={openScheduling} />
           <AboutSection />
+          <ProceduresSection />
           <LocationsSection />
           <InsuranceSection onScheduleClick={openScheduling} />
         </main>
