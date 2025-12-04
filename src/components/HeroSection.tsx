@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Award, Clock, MapPin } from "lucide-react";
+import { Award, MapPin } from "lucide-react";
 import drJulianoPhoto from "@/assets/dr-juliano-machado.jpg";
 
 interface HeroSectionProps {
@@ -49,20 +49,13 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 animate-slide-up" style={{ animationDelay: "0.3s" }}>
+            <div className="grid grid-cols-2 gap-6 animate-slide-up" style={{ animationDelay: "0.3s" }}>
               <div className="text-center lg:text-left">
                 <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
                   <Award className="w-5 h-5 text-primary" />
-                  <span className="text-xl font-bold text-foreground">+11</span>
+                  <span className="text-xl font-bold text-foreground">+13</span>
                 </div>
                 <span className="text-xs text-muted-foreground">anos de experiência</span>
-              </div>
-              <div className="text-center lg:text-left">
-                <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
-                  <Clock className="w-5 h-5 text-primary" />
-                  <span className="text-xl font-bold text-foreground">5000+</span>
-                </div>
-                <span className="text-xs text-muted-foreground">cirurgias realizadas</span>
               </div>
               <div className="text-center lg:text-left">
                 <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
@@ -93,7 +86,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
 
               {/* Floating badge */}
               <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full bg-card border border-border shadow-lg">
-                <span className="text-sm font-semibold text-foreground">CRM Ativo</span>
+                <span className="text-sm font-semibold text-foreground">Oftalmologista</span>
               </div>
             </div>
           </div>
