@@ -1,10 +1,34 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Allowed origins for CORS
+const allowedOrigins = [
+  "https://drjulianomachado.com.br",
+  "https://www.drjulianomachado.com.br",
+  /^https:\/\/.*\.lovable\.app$/,
+  /^https:\/\/.*\.lovableproject\.com$/,
+];
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  };
+
+  if (origin) {
+    const isAllowed = allowedOrigins.some((allowed) => {
+      if (typeof allowed === "string") {
+        return allowed === origin;
+      }
+      return allowed.test(origin);
+    });
+
+    if (isAllowed) {
+      headers["Access-Control-Allow-Origin"] = origin;
+    }
+  }
+
+  return headers;
+}
 
 // Schema validation for WhatsApp request
 const whatsAppRequestSchema = z.object({
@@ -22,6 +46,9 @@ const whatsAppRequestSchema = z.object({
 type WhatsAppRequest = z.infer<typeof whatsAppRequestSchema>;
 
 const handler = async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
