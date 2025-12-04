@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { FormData } from "./SchedulingModal";
-import { User, Phone, Calendar, Mail, Stethoscope, MapPin, Shield, Clock, Check } from "lucide-react";
+import { User, Phone, Calendar, Mail, Stethoscope, MapPin, Shield, Clock, Check, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -8,9 +8,10 @@ interface ConfirmationStepProps {
   formData: FormData;
   onSubmit: () => void;
   onPrev: () => void;
+  isSubmitting?: boolean;
 }
 
-const ConfirmationStep = ({ formData, onSubmit, onPrev }: ConfirmationStepProps) => {
+const ConfirmationStep = ({ formData, onSubmit, onPrev, isSubmitting = false }: ConfirmationStepProps) => {
   const getAppointmentTypeLabel = (value: string) => {
     const types: Record<string, string> = {
       consulta: "Consulta",
@@ -112,8 +113,9 @@ const ConfirmationStep = ({ formData, onSubmit, onPrev }: ConfirmationStepProps)
         <Button variant="outline" onClick={onPrev}>
           Voltar
         </Button>
-        <Button variant="hero" onClick={onSubmit}>
-          Confirmar agendamento
+        <Button variant="hero" onClick={onSubmit} disabled={isSubmitting}>
+          {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          {isSubmitting ? "Enviando..." : "Confirmar agendamento"}
         </Button>
       </div>
     </div>

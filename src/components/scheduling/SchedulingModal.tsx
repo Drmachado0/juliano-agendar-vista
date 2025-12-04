@@ -6,19 +6,20 @@ import ConsultationDetailsStep from "./ConsultationDetailsStep";
 import DateTimeStep from "./DateTimeStep";
 import ConfirmationStep from "./ConfirmationStep";
 import SuccessStep from "./SuccessStep";
+import { criarAgendamento } from "@/services/agendamentos";
+import { notificarN8n } from "@/services/integracoes";
+import { toast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 export interface FormData {
-  // Step 1 - Personal Data
   fullName: string;
   phone: string;
   birthDate: string;
   email: string;
-  // Step 2 - Consultation Details
   appointmentType: string;
   location: string;
   insurance: string;
   otherInsurance: string;
-  // Step 3 - Date/Time
   selectedDate: Date | undefined;
   selectedTime: string;
   acceptFirstAvailable: boolean;
@@ -49,6 +50,7 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const totalSteps = 4;
 
@@ -68,10 +70,56 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
     }
   };
 
-  const handleSubmit = () => {
-    // Here you would integrate with your backend/calendar service
-    console.log("Form submitted:", formData);
-    setIsSubmitted(true);
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    
+    try {
+      const agendamentoData = {
+        nome_completo: formData.fullName,
+        telefone_whatsapp: formData.phone,
+        data_nascimento: formData.birthDate || null,
+        email: formData.email || null,
+        tipo_atendimento: formData.appointmentType,
+        local_atendimento: formData.location,
+        convenio: formData.insurance,
+        convenio_outro: formData.insurance === "Outro" ? formData.otherInsurance : null,
+        data_agendamento: formData.selectedDate ? format(formData.selectedDate, 'yyyy-MM-dd') : '',
+        hora_agendamento: formData.selectedTime,
+        aceita_primeiro_horario: formData.acceptFirstAvailable,
+        aceita_contato_whatsapp_email: formData.acceptNotifications,
+        status_crm: "NOVO LEAD",
+        origem: "site",
+      };
+
+      const { data, error } = await criarAgendamento(agendamentoData);
+      
+      if (error) {
+        toast({
+          title: "Erro ao agendar",
+          description: "Não foi possível enviar seu agendamento. Tente novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Notify n8n about new appointment
+      if (data) {
+        await notificarN8n('agendamento_criado', data);
+      }
+
+      // TODO: Futura integração com Google Calendar/Calendly
+      // await criarEventoCalendario(data);
+
+      setIsSubmitted(true);
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -125,6 +173,7 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
                   formData={formData}
                   onSubmit={handleSubmit}
                   onPrev={prevStep}
+                  isSubmitting={isSubmitting}
                 />
               )}
             </>
