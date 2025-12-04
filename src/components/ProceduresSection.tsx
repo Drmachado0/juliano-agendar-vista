@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { 
   Camera, 
   Eye, 
@@ -11,6 +12,27 @@ import {
 } from "lucide-react";
 
 const ProceduresSection = () => {
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   const procedures = [
     {
       icon: Camera,
@@ -60,10 +82,10 @@ const ProceduresSection = () => {
   ];
 
   return (
-    <section id="procedimentos" className="py-24 bg-secondary/30">
+    <section id="procedimentos" className="py-24 bg-secondary/30" ref={sectionRef}>
       <div className="container mx-auto px-4">
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className={`text-center mb-16 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <span className="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary font-semibold text-sm mb-4">
             Nossos procedimentos
           </span>
@@ -77,10 +99,17 @@ const ProceduresSection = () => {
           {procedures.map((procedure, index) => (
             <div
               key={index}
-              className="card-glass rounded-xl p-6 border-l-4 border-l-primary hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+              className={`card-glass rounded-xl p-6 border-l-4 border-l-primary hover:shadow-lg transition-all duration-500 hover:-translate-y-2 hover:shadow-primary/10 ${
+                isVisible 
+                  ? 'opacity-100 translate-y-0' 
+                  : 'opacity-0 translate-y-12'
+              }`}
+              style={{ 
+                transitionDelay: isVisible ? `${index * 100}ms` : '0ms'
+              }}
             >
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
                   <procedure.icon className="w-6 h-6 text-primary" />
                 </div>
                 <div>
