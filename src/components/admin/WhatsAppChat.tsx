@@ -51,8 +51,8 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
     const loadData = async () => {
       setLoading(true);
       
-      // Load messages
-      const { data: msgs } = await listarMensagensPorAgendamento(lead.agendamento_id);
+      // Load messages (also search by phone for unlinked messages)
+      const { data: msgs } = await listarMensagensPorAgendamento(lead.agendamento_id, lead.telefone_whatsapp);
       setMessages(msgs);
       
       // Load full appointment data for AI generation
@@ -78,6 +78,9 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
   useEffect(() => {
     if (!lead) return;
 
+    // Get last 8 digits for phone matching
+    const last8Digits = lead.telefone_whatsapp.replace(/\D/g, "").slice(-8);
+
     const channel = supabase
       .channel(`chat_${lead.agendamento_id}`)
       .on(
@@ -86,10 +89,18 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
           event: "INSERT",
           schema: "public",
           table: "mensagens_whatsapp",
-          filter: `agendamento_id=eq.${lead.agendamento_id}`,
         },
         (payload) => {
           const newMessage = payload.new as MensagemWhatsApp;
+          
+          // Check if message belongs to this lead (by agendamento_id or phone)
+          const messagePhoneLast8 = newMessage.telefone.replace(/\D/g, "").slice(-8);
+          const isForThisLead = 
+            newMessage.agendamento_id === lead.agendamento_id ||
+            messagePhoneLast8 === last8Digits;
+          
+          if (!isForThisLead) return;
+          
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMessage.id)) return prev;
             return [...prev, newMessage];
@@ -105,7 +116,7 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [lead?.agendamento_id]);
+  }, [lead?.agendamento_id, lead?.telefone_whatsapp]);
 
   // Add new message from realtime (kept for backwards compatibility)
 

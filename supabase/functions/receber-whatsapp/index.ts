@@ -211,24 +211,39 @@ const handler = async (req: Request): Promise<Response> => {
     
     // Format as (XX) XXXXX-XXXX or (XX) XXXX-XXXX
     let telefoneFormatado = telefoneBusca;
+    let telefoneFormatadoAlternativo = "";
+    
     if (telefoneBusca.length === 11) {
+      // Standard 11-digit format
       telefoneFormatado = `(${telefoneBusca.substring(0, 2)}) ${telefoneBusca.substring(2, 7)}-${telefoneBusca.substring(7)}`;
     } else if (telefoneBusca.length === 10) {
+      // 10-digit format - might be missing the leading 9 for mobile
       telefoneFormatado = `(${telefoneBusca.substring(0, 2)}) ${telefoneBusca.substring(2, 6)}-${telefoneBusca.substring(6)}`;
+      // Also try with added 9 for mobile (Brazilian mobile numbers start with 9)
+      const areaCode = telefoneBusca.substring(0, 2);
+      const restOfNumber = telefoneBusca.substring(2);
+      telefoneFormatadoAlternativo = `(${areaCode}) 9${restOfNumber.substring(0, 4)}-${restOfNumber.substring(4)}`;
     }
 
     console.log("Telefone formatado para DB:", telefoneFormatado);
+    if (telefoneFormatadoAlternativo) {
+      console.log("Telefone alternativo (com 9):", telefoneFormatadoAlternativo);
+    }
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Find agendamento by phone number (try multiple formats)
+    // Get last 8 digits for flexible matching (use slice for correct behavior)
+    const last8Digits = telefoneBusca.slice(-8);
+    console.log("Últimos 8 dígitos para busca:", last8Digits);
+
+    // Find agendamento by phone number using ILIKE with last 8 digits (most reliable)
     const { data: agendamento, error: agendamentoError } = await supabase
       .from("agendamentos")
-      .select("id")
-      .or(`telefone_whatsapp.eq.${telefoneFormatado},telefone_whatsapp.eq.${telefoneBusca},telefone_whatsapp.ilike.%${telefoneBusca.substring(telefoneBusca.length - 8)}%`)
+      .select("id, telefone_whatsapp")
+      .ilike("telefone_whatsapp", `%${last8Digits}%`)
       .order("created_at", { ascending: false })
       .limit(1)
       .single();
@@ -237,7 +252,10 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Erro ao buscar agendamento:", agendamentoError);
     }
 
+    // If found, use the phone from agendamento for consistency
+    const telefoneParaSalvar = agendamento?.telefone_whatsapp || telefoneFormatadoAlternativo || telefoneFormatado;
     console.log("Agendamento encontrado:", agendamento?.id || "Nenhum");
+    console.log("Telefone para salvar:", telefoneParaSalvar);
 
     // Extract external message ID
     const mensagemExternaId = messageData?.key?.id || null;
@@ -247,7 +265,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from("mensagens_whatsapp")
       .insert({
         agendamento_id: agendamento?.id || null,
-        telefone: telefoneFormatado,
+        telefone: telefoneParaSalvar,
         direcao: "IN",
         conteudo: conteudo,
         status_envio: null, // null for incoming messages (constraint only allows: enviado, entregue, lido, erro)
