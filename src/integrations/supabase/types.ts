@@ -14,16 +14,137 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agendamentos: {
+        Row: {
+          aceita_contato_whatsapp_email: boolean | null
+          aceita_primeiro_horario: boolean | null
+          convenio: string
+          convenio_outro: string | null
+          created_at: string | null
+          data_agendamento: string
+          data_nascimento: string | null
+          detalhe_exame_ou_cirurgia: string | null
+          email: string | null
+          hora_agendamento: string
+          id: string
+          local_atendimento: string
+          nome_completo: string
+          observacoes_internas: string | null
+          origem: string | null
+          status_crm: string
+          telefone_whatsapp: string
+          tipo_atendimento: string
+          updated_at: string | null
+        }
+        Insert: {
+          aceita_contato_whatsapp_email?: boolean | null
+          aceita_primeiro_horario?: boolean | null
+          convenio: string
+          convenio_outro?: string | null
+          created_at?: string | null
+          data_agendamento: string
+          data_nascimento?: string | null
+          detalhe_exame_ou_cirurgia?: string | null
+          email?: string | null
+          hora_agendamento: string
+          id?: string
+          local_atendimento: string
+          nome_completo: string
+          observacoes_internas?: string | null
+          origem?: string | null
+          status_crm?: string
+          telefone_whatsapp: string
+          tipo_atendimento: string
+          updated_at?: string | null
+        }
+        Update: {
+          aceita_contato_whatsapp_email?: boolean | null
+          aceita_primeiro_horario?: boolean | null
+          convenio?: string
+          convenio_outro?: string | null
+          created_at?: string | null
+          data_agendamento?: string
+          data_nascimento?: string | null
+          detalhe_exame_ou_cirurgia?: string | null
+          email?: string | null
+          hora_agendamento?: string
+          id?: string
+          local_atendimento?: string
+          nome_completo?: string
+          observacoes_internas?: string | null
+          origem?: string | null
+          status_crm?: string
+          telefone_whatsapp?: string
+          tipo_atendimento?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      status_crm_enum: "NOVO LEAD" | "CLINICOR" | "HGP"
+      tipo_atendimento_enum: "Consulta" | "Retorno" | "Exame" | "Cirurgia"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +271,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      status_crm_enum: ["NOVO LEAD", "CLINICOR", "HGP"],
+      tipo_atendimento_enum: ["Consulta", "Retorno", "Exame", "Cirurgia"],
+    },
   },
 } as const
