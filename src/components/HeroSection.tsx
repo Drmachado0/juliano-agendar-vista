@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Award, MapPin } from "lucide-react";
+import { Award, MapPin, Star, Users } from "lucide-react";
 import drJulianoPhoto from "@/assets/dr-juliano-machado.jpg";
 
 interface HeroSectionProps {
@@ -7,6 +7,13 @@ interface HeroSectionProps {
 }
 
 const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
+  const stats = [
+    { icon: Award, value: "+13", label: "anos de experiência" },
+    { icon: MapPin, value: "4", label: "locais de atendimento" },
+    { icon: Star, value: "Referência", label: "na região Norte" },
+    { icon: Users, value: "+5mil", label: "pacientes atendidos" },
+  ];
+
   return (
     <section className="relative min-h-screen flex items-center pt-20 hero-gradient overflow-hidden">
       {/* Background decoration */}
@@ -49,21 +56,16 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 gap-6 animate-slide-up" style={{ animationDelay: "0.3s" }}>
-              <div className="text-center lg:text-left">
-                <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
-                  <Award className="w-5 h-5 text-primary" />
-                  <span className="text-xl font-bold text-foreground">+13</span>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-slide-up" style={{ animationDelay: "0.3s" }}>
+              {stats.map((stat, index) => (
+                <div key={index} className="text-center lg:text-left">
+                  <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
+                    <stat.icon className="w-5 h-5 text-primary" />
+                    <span className="text-xl font-bold text-foreground">{stat.value}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{stat.label}</span>
                 </div>
-                <span className="text-xs text-muted-foreground">anos de experiência</span>
-              </div>
-              <div className="text-center lg:text-left">
-                <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
-                  <MapPin className="w-5 h-5 text-primary" />
-                  <span className="text-xl font-bold text-foreground">4</span>
-                </div>
-                <span className="text-xs text-muted-foreground">locais de atendimento</span>
-              </div>
+              ))}
             </div>
           </div>
 
