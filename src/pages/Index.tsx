@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Helmet } from "react-helmet-async";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
-import SectionNav from "@/components/SectionNav";
 import AboutSection from "@/components/AboutSection";
 import ProceduresSection from "@/components/ProceduresSection";
 import LocationsSection from "@/components/LocationsSection";
@@ -45,7 +44,6 @@ const Index = () => {
 
         <Footer />
         <WhatsAppButton />
-        <SectionNav />
         
         <SchedulingModal isOpen={isSchedulingOpen} onClose={closeScheduling} />
       </div>
