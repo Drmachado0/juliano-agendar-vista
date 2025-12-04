@@ -1,18 +1,18 @@
-import { GraduationCap, Stethoscope, Eye, Heart, CheckCircle } from "lucide-react";
-import drJulianoPhoto from "@/assets/dr-juliano-machado.jpg";
+import { Stethoscope, Eye, ScanEye, Zap, CheckCircle } from "lucide-react";
+import drJulianoPhoto from "@/assets/dr-juliano-consultorio.jpg";
 
 const AboutSection = () => {
-  const specialties = [
-    { icon: Eye, title: "Catarata", description: "Cirurgia moderna e segura" },
-    { icon: Stethoscope, title: "Pterígio", description: "Tratamento especializado" },
-    { icon: GraduationCap, title: "Campo Visual", description: "Exames de diagnóstico" },
-    { icon: Heart, title: "OCT", description: "Tecnologia avançada" },
+  const services = [
+    { icon: Stethoscope, title: "Consultas Oftalmológicas", description: "Avaliações completas para detectar e tratar problemas oculares" },
+    { icon: Eye, title: "Cirurgias de Catarata e Pterígio", description: "Procedimentos seguros e eficazes para restaurar sua visão" },
+    { icon: ScanEye, title: "Exames Oftalmológicos", description: "Diagnósticos precisos para uma visão clara e saudável" },
+    { icon: Zap, title: "Capsulotomia YAG Laser", description: "Tratamento avançado para opacificação da cápsula posterior" },
   ];
 
   const credentials = [
     "CRM Ativo",
     "Membro SBO",
-    "Especialista em Glaucoma",
+    "+11 anos de experiência",
     "+5000 cirurgias",
   ];
 
@@ -55,30 +55,30 @@ const AboutSection = () => {
               Sobre o médico
             </span>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mt-3 mb-6">
-              Compromisso com a saúde dos seus olhos
+              Visão perfeita em todas as fases da vida
             </h2>
             <p className="text-muted-foreground text-lg leading-relaxed mb-6">
-              O Dr. Juliano Machado é médico oftalmologista com mais de 11 anos de experiência, 
-              dedicado a proporcionar atendimento de excelência e humanizado aos seus pacientes.
+              Como oftalmologista com mais de 11 anos de experiência, meu compromisso é garantir 
+              que você tenha uma visão perfeita em todas as fases da vida.
             </p>
             <p className="text-muted-foreground leading-relaxed mb-8">
-              Formado em medicina com especialização em oftalmologia, atua em clínicas e hospitais 
-              de referência em Paragominas e Belém. Especialista em cirurgias de catarata, pterígio, 
-              e diagnósticos através de exames como campo visual, OCT e mapeamento de retina.
+              Oferecemos uma abordagem completa para a saúde ocular, desde a prevenção até os 
+              tratamentos mais avançados.
             </p>
 
-            {/* Specialties Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              {specialties.map((specialty, index) => (
+            {/* Services Grid */}
+            <h3 className="text-foreground font-semibold mb-4">Nossos Serviços:</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {services.map((service, index) => (
                 <div
                   key={index}
                   className="card-glass rounded-xl p-4 hover:border-primary/50 transition-all duration-300 hover:-translate-y-1"
                 >
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
-                    <specialty.icon className="w-5 h-5 text-primary" />
+                    <service.icon className="w-5 h-5 text-primary" />
                   </div>
-                  <h3 className="text-foreground font-semibold text-sm mb-1">{specialty.title}</h3>
-                  <p className="text-muted-foreground text-xs">{specialty.description}</p>
+                  <h4 className="text-foreground font-semibold text-sm mb-1">{service.title}</h4>
+                  <p className="text-muted-foreground text-xs">{service.description}</p>
                 </div>
               ))}
             </div>
