@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Award, MapPin, Users, Glasses, Eye, Scissors, Star } from "lucide-react";
+import { useEffect, useState } from "react";
 import drJulianoPhoto from "@/assets/dr-juliano-machado.jpg";
 
 interface HeroSectionProps {
@@ -7,6 +8,17 @@ interface HeroSectionProps {
 }
 
 const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
+  const [scrollY, setScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const stats = [
     { icon: Users, value: "+6.000", label: "pacientes atendidos" },
     { icon: Award, value: "+13 anos", label: "ajudando pessoas a enxergarem melhor" },
@@ -26,10 +38,33 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
 
   return (
     <section className="relative min-h-screen flex items-center pt-20 hero-gradient overflow-hidden">
-      {/* Background decoration */}
+      {/* Parallax Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 -right-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 -left-20 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
+        <div 
+          className="absolute top-1/4 -right-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl transition-transform duration-100"
+          style={{ transform: `translateY(${scrollY * 0.3}px) translateX(${scrollY * 0.1}px)` }}
+        />
+        <div 
+          className="absolute bottom-1/4 -left-20 w-80 h-80 bg-accent/10 rounded-full blur-3xl transition-transform duration-100"
+          style={{ transform: `translateY(${scrollY * 0.2}px) translateX(${-scrollY * 0.05}px)` }}
+        />
+        <div 
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl transition-transform duration-100"
+          style={{ transform: `translate(-50%, -50%) scale(${1 + scrollY * 0.0005})` }}
+        />
+        {/* Floating particles */}
+        <div 
+          className="absolute top-20 left-1/4 w-2 h-2 bg-primary/30 rounded-full"
+          style={{ transform: `translateY(${scrollY * 0.5}px)` }}
+        />
+        <div 
+          className="absolute top-40 right-1/3 w-3 h-3 bg-accent/20 rounded-full"
+          style={{ transform: `translateY(${scrollY * 0.4}px)` }}
+        />
+        <div 
+          className="absolute bottom-40 left-1/3 w-2 h-2 bg-primary/20 rounded-full"
+          style={{ transform: `translateY(${scrollY * 0.6}px)` }}
+        />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
