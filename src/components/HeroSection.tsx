@@ -71,14 +71,19 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-slide-up" style={{ animationDelay: "0.3s" }}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-slide-up" style={{ animationDelay: "0.3s" }}>
               {stats.map((stat, index) => (
-                <div key={index} className="text-center lg:text-left">
-                  <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
-                    <stat.icon className="w-5 h-5 text-primary" />
-                    <span className="text-lg font-bold text-foreground">{stat.value}</span>
+                <div 
+                  key={index} 
+                  className="group relative p-4 rounded-xl bg-secondary/50 border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all duration-300"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <stat.icon className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-lg font-bold text-primary">{stat.value}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">{stat.label}</span>
+                  <span className="text-xs text-muted-foreground leading-tight block">{stat.label}</span>
                 </div>
               ))}
             </div>
