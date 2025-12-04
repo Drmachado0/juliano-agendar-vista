@@ -1,8 +1,28 @@
 import { MapPin, Phone, Clock, ExternalLink, Hospital, Heart, Eye, Glasses } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const LocationsSection = () => {
   const [activeLocation, setActiveLocation] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   const locations = [
     {
@@ -50,9 +70,9 @@ const LocationsSection = () => {
   const activeLocationData = locations[activeLocation];
 
   return (
-    <section id="locais" className="py-24 bg-card">
+    <section id="locais" className="py-24 bg-card" ref={sectionRef}>
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
+        <div className={`text-center mb-16 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <span className="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary font-semibold text-sm mb-4">
             Locais de atendimento
           </span>
@@ -73,11 +93,12 @@ const LocationsSection = () => {
                 <button
                   key={index}
                   onClick={() => setActiveLocation(index)}
-                  className={`w-full text-left card-glass rounded-xl p-5 transition-all duration-300 ${
+                  className={`w-full text-left card-glass rounded-xl p-5 transition-all duration-500 ${
                     activeLocation === index
                       ? "border-primary/50 bg-primary/5 shadow-lg shadow-primary/10"
                       : "hover:border-primary/30 hover:bg-primary/5"
-                  }`}
+                  } ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}`}
+                  style={{ transitionDelay: isVisible ? `${index * 100}ms` : '0ms' }}
                 >
                   <div className="flex items-start gap-4">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
@@ -113,7 +134,7 @@ const LocationsSection = () => {
           </div>
 
           {/* Map and Details */}
-          <div className="card-glass rounded-2xl overflow-hidden">
+          <div className={`card-glass rounded-2xl overflow-hidden transition-all duration-700 delay-300 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}>
             {/* Map */}
             <div className="aspect-video bg-secondary relative">
               <iframe
