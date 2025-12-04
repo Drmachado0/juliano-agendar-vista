@@ -74,20 +74,35 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
     setIsSubmitting(true);
     
     try {
+      // Map location values to display names for proper CRM status detection
+      const locationMap: Record<string, string> = {
+        clinicor: "Clinicor – Paragominas",
+        hgp: "Hospital Geral de Paragominas",
+        belem: "Belém (IOB / Vitria)",
+      };
+
+      // Map appointment type to proper format
+      const appointmentTypeMap: Record<string, string> = {
+        consulta: "Consulta",
+        retorno: "Retorno",
+        exame: "Exame",
+        cirurgia: "Cirurgia",
+      };
+
       const agendamentoData = {
         nome_completo: formData.fullName,
         telefone_whatsapp: formData.phone,
         data_nascimento: formData.birthDate || null,
         email: formData.email || null,
-        tipo_atendimento: formData.appointmentType,
-        local_atendimento: formData.location,
+        tipo_atendimento: appointmentTypeMap[formData.appointmentType] || formData.appointmentType,
+        local_atendimento: locationMap[formData.location] || formData.location,
         convenio: formData.insurance,
-        convenio_outro: formData.insurance === "Outro" ? formData.otherInsurance : null,
+        convenio_outro: formData.insurance === "outro" ? formData.otherInsurance : null,
         data_agendamento: formData.selectedDate ? format(formData.selectedDate, 'yyyy-MM-dd') : '',
         hora_agendamento: formData.selectedTime,
         aceita_primeiro_horario: formData.acceptFirstAvailable,
         aceita_contato_whatsapp_email: formData.acceptNotifications,
-        status_crm: "NOVO LEAD",
+        // status_crm will be automatically determined by the service based on location
         origem: "site",
       };
 
