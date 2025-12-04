@@ -1,4 +1,74 @@
 import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
+
+// Zod schema for appointment validation
+const agendamentoInsertSchema = z.object({
+  nome_completo: z
+    .string()
+    .min(3, "Nome deve ter no mínimo 3 caracteres")
+    .max(200, "Nome deve ter no máximo 200 caracteres")
+    .regex(/^[a-zA-ZÀ-ÿ\s'-]+$/, "Nome contém caracteres inválidos"),
+  telefone_whatsapp: z
+    .string()
+    .min(10, "Telefone deve ter no mínimo 10 dígitos")
+    .max(20, "Telefone deve ter no máximo 20 caracteres")
+    .regex(/^[\d\s\-\(\)\+]+$/, "Telefone contém caracteres inválidos"),
+  data_nascimento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data de nascimento inválida")
+    .nullable()
+    .optional(),
+  email: z
+    .string()
+    .email("Email inválido")
+    .max(255, "Email deve ter no máximo 255 caracteres")
+    .nullable()
+    .optional()
+    .or(z.literal("")),
+  tipo_atendimento: z.enum(["Consulta", "Retorno", "Exame", "Cirurgia"], {
+    errorMap: () => ({ message: "Tipo de atendimento inválido" }),
+  }),
+  detalhe_exame_ou_cirurgia: z
+    .string()
+    .max(500, "Detalhe deve ter no máximo 500 caracteres")
+    .nullable()
+    .optional(),
+  local_atendimento: z
+    .string()
+    .min(1, "Local de atendimento é obrigatório")
+    .max(200, "Local deve ter no máximo 200 caracteres"),
+  convenio: z
+    .string()
+    .min(1, "Convênio é obrigatório")
+    .max(100, "Convênio deve ter no máximo 100 caracteres"),
+  convenio_outro: z
+    .string()
+    .max(100, "Convênio outro deve ter no máximo 100 caracteres")
+    .nullable()
+    .optional(),
+  data_agendamento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data de agendamento inválida"),
+  hora_agendamento: z
+    .string()
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/, "Hora de agendamento inválida"),
+  aceita_primeiro_horario: z.boolean().optional(),
+  aceita_contato_whatsapp_email: z.boolean().optional(),
+  status_crm: z
+    .enum(["NOVO LEAD", "CLINICOR", "HGP"])
+    .optional()
+    .default("NOVO LEAD"),
+  origem: z
+    .string()
+    .max(100, "Origem deve ter no máximo 100 caracteres")
+    .optional()
+    .default("site"),
+  observacoes_internas: z
+    .string()
+    .max(2000, "Observações devem ter no máximo 2000 caracteres")
+    .nullable()
+    .optional(),
+});
 
 export interface Agendamento {
   id: string;
@@ -51,9 +121,39 @@ export interface AgendamentoFilters {
 
 // Create new agendamento (public - from website form)
 export async function criarAgendamento(data: AgendamentoInsert): Promise<{ data: Agendamento | null; error: Error | null }> {
+  // Validate input with zod schema
+  const validationResult = agendamentoInsertSchema.safeParse(data);
+  
+  if (!validationResult.success) {
+    const errorMessages = validationResult.error.errors.map(e => e.message).join(", ");
+    console.error('Validation error:', validationResult.error.errors);
+    return { data: null, error: new Error(`Dados inválidos: ${errorMessages}`) };
+  }
+
+  // Sanitize email - convert empty string to null
+  const validatedData = validationResult.data;
+  const sanitizedData: AgendamentoInsert = {
+    nome_completo: validatedData.nome_completo,
+    telefone_whatsapp: validatedData.telefone_whatsapp,
+    data_nascimento: validatedData.data_nascimento ?? null,
+    email: validatedData.email === "" ? null : (validatedData.email ?? null),
+    tipo_atendimento: validatedData.tipo_atendimento,
+    detalhe_exame_ou_cirurgia: validatedData.detalhe_exame_ou_cirurgia ?? null,
+    local_atendimento: validatedData.local_atendimento,
+    convenio: validatedData.convenio,
+    convenio_outro: validatedData.convenio_outro ?? null,
+    data_agendamento: validatedData.data_agendamento,
+    hora_agendamento: validatedData.hora_agendamento,
+    aceita_primeiro_horario: validatedData.aceita_primeiro_horario ?? false,
+    aceita_contato_whatsapp_email: validatedData.aceita_contato_whatsapp_email ?? false,
+    status_crm: validatedData.status_crm ?? "NOVO LEAD",
+    origem: validatedData.origem ?? "site",
+    observacoes_internas: validatedData.observacoes_internas ?? null,
+  };
+
   const { data: agendamento, error } = await supabase
     .from('agendamentos')
-    .insert([data])
+    .insert([sanitizedData])
     .select()
     .single();
 
