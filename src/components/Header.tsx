@@ -1,4 +1,4 @@
-import { Menu, X, Settings } from "lucide-react";
+import { Menu, X, Settings, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
@@ -94,11 +94,18 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-2">
-            {user && (
+            {user ? (
               <Link to="/admin/agendamentos">
                 <Button variant="outline" size="default" className="gap-2">
                   <Settings className="h-4 w-4" />
                   {isAdmin ? "Admin" : "Painel"}
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/auth">
+                <Button variant="ghost" size="default" className="gap-2 text-muted-foreground hover:text-foreground">
+                  <LogIn className="h-4 w-4" />
+                  Entrar
                 </Button>
               </Link>
             )}
@@ -133,11 +140,18 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
                   {item.label}
                 </button>
               ))}
-              {user && (
+              {user ? (
                 <Link to="/admin/agendamentos" onClick={() => setIsMenuOpen(false)}>
                   <Button variant="outline" className="w-full gap-2 mt-2">
                     <Settings className="h-4 w-4" />
                     {isAdmin ? "Admin" : "Painel"}
+                  </Button>
+                </Link>
+              ) : (
+                <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                  <Button variant="ghost" className="w-full gap-2 mt-2">
+                    <LogIn className="h-4 w-4" />
+                    Entrar
                   </Button>
                 </Link>
               )}
