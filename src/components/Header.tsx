@@ -1,6 +1,6 @@
-import { Eye, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import logoImage from "@/assets/dr-juliano-logo.webp";
 
 interface HeaderProps {
@@ -9,6 +9,7 @@ interface HeaderProps {
 
 const Header = ({ onScheduleClick }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>("");
 
   const navItems = [
     { label: "Sobre", id: "sobre" },
@@ -16,6 +17,31 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
     { label: "Locais", id: "locais" },
     { label: "Convênios", id: "convenios" },
   ];
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      {
+        rootMargin: "-20% 0px -60% 0px",
+        threshold: 0,
+      }
+    );
+
+    navItems.forEach((item) => {
+      const element = document.getElementById(item.id);
+      if (element) {
+        observer.observe(element);
+      }
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -52,7 +78,11 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
               <button
                 key={item.id}
                 onClick={() => scrollToSection(item.id)}
-                className="px-4 py-2 text-muted-foreground hover:text-primary transition-colors text-sm font-medium rounded-lg hover:bg-primary/5"
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${
+                  activeSection === item.id
+                    ? "text-primary bg-primary/10 border border-primary/20"
+                    : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                }`}
               >
                 {item.label}
               </button>
@@ -83,7 +113,11 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
                 <button
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
-                  className="text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors text-sm font-medium text-left px-4 py-3 rounded-lg"
+                  className={`text-sm font-medium text-left px-4 py-3 rounded-lg transition-all duration-300 ${
+                    activeSection === item.id
+                      ? "text-primary bg-primary/10 border border-primary/20"
+                      : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                  }`}
                 >
                   {item.label}
                 </button>
