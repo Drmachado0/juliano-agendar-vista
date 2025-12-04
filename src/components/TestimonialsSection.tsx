@@ -30,6 +30,7 @@ const TestimonialsSection = () => {
       rating: 5,
       text: "Gostei muito da consulta! Excelente profissional, explica tudo muito bem, e nos deixa seguros.",
       avatar: "AM",
+      image: "https://lh3.googleusercontent.com/a-/ALV-UjVr4IwRV0mKIccKAdcCNGLiadt03y_FVzG3JrNajeCrTYX2IcTI=w72-h72-p-rp-mo-br100",
     },
     {
       name: "Gislene Alves da Silva",
@@ -37,6 +38,7 @@ const TestimonialsSection = () => {
       rating: 5,
       text: "Excelente profissional!",
       avatar: "GA",
+      image: "https://lh3.googleusercontent.com/a/ACg8ocJDkwVCCYhIu0Ek2a-WYH0Pd5MSrjq_hPQ4dcFE_qlVuMfcYg=w72-h72-p-rp-mo-ba2-br100",
     },
     {
       name: "Ambulatórios Pedfamaz",
@@ -44,6 +46,7 @@ const TestimonialsSection = () => {
       rating: 5,
       text: "Atendimento excelente, profissional muito competente e atencioso.",
       avatar: "AP",
+      image: "https://lh3.googleusercontent.com/a/ACg8ocLQnzEQT1_J76p0h2RmkkoKi-wQBPVKn2jYclq0fa-YFPSAPg=w72-h72-p-rp-mo-br100",
     },
   ];
 
@@ -97,11 +100,19 @@ const TestimonialsSection = () => {
               
               {/* Header */}
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold text-sm">
-                  {testimonial.avatar}
-                </div>
+                {testimonial.image ? (
+                  <img 
+                    src={testimonial.image} 
+                    alt={testimonial.name}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-primary/20"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-primary font-semibold text-sm border-2 border-primary/20">
+                    {testimonial.avatar}
+                  </div>
+                )}
                 <div>
-                  <h4 className="font-semibold text-foreground text-sm">{testimonial.name}</h4>
+                  <h4 className="font-semibold text-foreground">{testimonial.name}</h4>
                   <p className="text-xs text-muted-foreground">{testimonial.date}</p>
                 </div>
               </div>
