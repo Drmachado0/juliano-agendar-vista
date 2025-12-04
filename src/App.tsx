@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminAgendamentos from "./pages/admin/Agendamentos";
 import AdminCRM from "./pages/admin/CRM";
+import AdminWhatsApp from "./pages/admin/WhatsApp";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/agendamentos" element={<AdminAgendamentos />} />
               <Route path="/admin/crm" element={<AdminCRM />} />
+              <Route path="/admin/whatsapp" element={<AdminWhatsApp />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

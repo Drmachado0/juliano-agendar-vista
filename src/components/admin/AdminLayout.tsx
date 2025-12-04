@@ -2,7 +2,7 @@ import { ReactNode, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Calendar, LayoutGrid, LogOut, Menu, X, BarChart3 } from "lucide-react";
+import { Calendar, LayoutGrid, LogOut, Menu, X, BarChart3, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import drLogo from "@/assets/dr-juliano-logo.webp";
@@ -39,6 +39,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { href: "/admin/dashboard", label: "Dashboard", icon: BarChart3 },
     { href: "/admin/agendamentos", label: "Agendamentos", icon: Calendar },
     { href: "/admin/crm", label: "CRM Kanban", icon: LayoutGrid },
+    { href: "/admin/whatsapp", label: "WhatsApp", icon: MessageCircle },
   ];
 
   const handleSignOut = async () => {

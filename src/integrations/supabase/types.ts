@@ -80,6 +80,50 @@ export type Database = {
         }
         Relationships: []
       }
+      mensagens_whatsapp: {
+        Row: {
+          agendamento_id: string | null
+          conteudo: string
+          created_at: string
+          direcao: string
+          id: string
+          lida: boolean | null
+          mensagem_externa_id: string | null
+          status_envio: string | null
+          telefone: string
+        }
+        Insert: {
+          agendamento_id?: string | null
+          conteudo: string
+          created_at?: string
+          direcao: string
+          id?: string
+          lida?: boolean | null
+          mensagem_externa_id?: string | null
+          status_envio?: string | null
+          telefone: string
+        }
+        Update: {
+          agendamento_id?: string | null
+          conteudo?: string
+          created_at?: string
+          direcao?: string
+          id?: string
+          lida?: boolean | null
+          mensagem_externa_id?: string | null
+          status_envio?: string | null
+          telefone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensagens_whatsapp_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
