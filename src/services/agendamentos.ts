@@ -353,3 +353,43 @@ export async function buscarAgendamento(id: string): Promise<{ data: Agendamento
 
   return { data: data as Agendamento, error: null };
 }
+
+// Delete agendamento
+export async function excluirAgendamento(id: string): Promise<{ error: Error | null }> {
+  // First delete related messages
+  await supabase
+    .from('mensagens_whatsapp')
+    .delete()
+    .eq('agendamento_id', id);
+
+  // Then delete the agendamento
+  const { error } = await supabase
+    .from('agendamentos')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Erro ao excluir agendamento:', error);
+    return { error: new Error(error.message) };
+  }
+
+  return { error: null };
+}
+
+// Update agendamento (for editing)
+export async function atualizarAgendamento(
+  id: string,
+  data: Partial<AgendamentoInsert>
+): Promise<{ error: Error | null }> {
+  const { error } = await supabase
+    .from('agendamentos')
+    .update({ ...data, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Erro ao atualizar agendamento:', error);
+    return { error: new Error(error.message) };
+  }
+
+  return { error: null };
+}

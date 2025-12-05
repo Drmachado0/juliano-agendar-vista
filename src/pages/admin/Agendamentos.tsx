@@ -5,7 +5,17 @@ import AgendamentosTable from "@/components/admin/AgendamentosTable";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
 import WhatsAppModal from "@/components/admin/WhatsAppModal";
 import { Button } from "@/components/ui/button";
-import { Agendamento, AgendamentoFilters as Filters, listarAgendamentos } from "@/services/agendamentos";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Agendamento, AgendamentoFilters as Filters, listarAgendamentos, excluirAgendamento } from "@/services/agendamentos";
 import { toast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, Calendar, RefreshCw } from "lucide-react";
 
@@ -20,6 +30,9 @@ const AdminAgendamentos = () => {
   const [selectedAgendamento, setSelectedAgendamento] = useState<Agendamento | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [agendamentoToDelete, setAgendamentoToDelete] = useState<Agendamento | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchAgendamentos = async () => {
     setLoading(true);
@@ -62,6 +75,41 @@ const AdminAgendamentos = () => {
     setWhatsappModalOpen(true);
   };
 
+  const handleEdit = (agendamento: Agendamento) => {
+    setSelectedAgendamento(agendamento);
+    setDetailsModalOpen(true);
+  };
+
+  const handleDeleteClick = (agendamento: Agendamento) => {
+    setAgendamentoToDelete(agendamento);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!agendamentoToDelete) return;
+    
+    setDeleting(true);
+    const { error } = await excluirAgendamento(agendamentoToDelete.id);
+    setDeleting(false);
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o agendamento.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Sucesso",
+        description: "Agendamento excluído com sucesso.",
+      });
+      fetchAgendamentos();
+    }
+
+    setDeleteDialogOpen(false);
+    setAgendamentoToDelete(null);
+  };
+
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
@@ -96,6 +144,8 @@ const AdminAgendamentos = () => {
           agendamentos={agendamentos}
           onViewDetails={handleViewDetails}
           onSendWhatsApp={handleSendWhatsApp}
+          onEdit={handleEdit}
+          onDelete={handleDeleteClick}
           loading={loading}
         />
 
@@ -142,6 +192,29 @@ const AdminAgendamentos = () => {
         isOpen={whatsappModalOpen}
         onClose={() => setWhatsappModalOpen(false)}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o agendamento de{" "}
+              <strong>{agendamentoToDelete?.nome_completo}</strong>?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 };
