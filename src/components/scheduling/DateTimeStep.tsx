@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { FormData } from "./SchedulingModal";
-import { useEffect, useState } from "react";
+import CalendarGrid from "./CalendarGrid";
+import TimeSlotPicker from "./TimeSlotPicker";
 
 interface DateTimeStepProps {
   formData: FormData;
@@ -12,127 +13,76 @@ interface DateTimeStepProps {
   onPrev: () => void;
 }
 
-declare global {
-  interface Window {
-    Calendly?: {
-      initInlineWidget: (options: {
-        url: string;
-        parentElement: HTMLElement;
-        prefill?: Record<string, string>;
-        utm?: Record<string, string>;
-      }) => void;
-    };
-  }
-}
-
 const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStepProps) => {
-  const [isScheduled, setIsScheduled] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [scheduledData, setScheduledData] = useState<{
-    eventName?: string;
-    eventStartTime?: string;
-  } | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(formData.selectedDate || null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(formData.selectedTime || null);
 
-  useEffect(() => {
-    // Load Calendly script
-    const script = document.createElement("script");
-    script.src = "https://assets.calendly.com/assets/external/widget.js";
-    script.async = true;
-    document.body.appendChild(script);
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    setSelectedTime(null); // Reset time when date changes
+    updateFormData({ selectedDate: date, selectedTime: undefined });
+  };
 
-    // Listen for Calendly events
-    const handleCalendlyEvent = (e: MessageEvent) => {
-      if (e.data.event && e.data.event.indexOf("calendly") === 0) {
-        // Widget is ready when we receive any calendly event
-        if (e.data.event === "calendly.page_height" || e.data.event === "calendly.event_type_viewed") {
-          setIsLoading(false);
-        }
-        
-        if (e.data.event === "calendly.event_scheduled") {
-          const payload = e.data.payload;
-          setIsScheduled(true);
-          setScheduledData({
-            eventName: payload?.event?.name,
-            eventStartTime: payload?.event?.start_time,
-          });
-          
-          // Parse the scheduled date and time
-          if (payload?.event?.start_time) {
-            const scheduledDate = new Date(payload.event.start_time);
-            updateFormData({
-              selectedDate: scheduledDate,
-              selectedTime: scheduledDate.toLocaleTimeString("pt-BR", {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-            });
-          }
-        }
-      }
-    };
+  const handleTimeSelect = (time: string) => {
+    setSelectedTime(time);
+    updateFormData({ selectedTime: time });
+  };
 
-    window.addEventListener("message", handleCalendlyEvent);
-    
-    // Fallback: hide loading after 5 seconds if no event received
-    const fallbackTimer = setTimeout(() => setIsLoading(false), 5000);
-
-    return () => {
-      window.removeEventListener("message", handleCalendlyEvent);
-      clearTimeout(fallbackTimer);
-      // Clean up script if needed
-      const existingScript = document.querySelector(
-        'script[src="https://assets.calendly.com/assets/external/widget.js"]'
-      );
-      if (existingScript) {
-        existingScript.remove();
-      }
-    };
-  }, [updateFormData]);
+  const handleProximoHorarioLivre = (data: Date, horario: string) => {
+    setSelectedDate(data);
+    setSelectedTime(horario);
+    updateFormData({ selectedDate: data, selectedTime: horario });
+  };
 
   const handleNext = () => {
-    if (isScheduled || (formData.selectedDate && formData.selectedTime)) {
+    if (selectedDate && selectedTime) {
       onNext();
     }
   };
+
+  const canProceed = selectedDate && selectedTime;
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <h3 className="text-lg font-semibold text-foreground">Escolha data e horário</h3>
         <p className="text-sm text-muted-foreground">
-          Selecione a data e horário de sua preferência no calendário abaixo.
+          Selecione a data e horário de sua preferência para o atendimento.
         </p>
       </div>
 
-      {/* Calendly Widget */}
-      <div className="w-full overflow-hidden rounded-xl border border-border relative">
-        {isLoading && (
-          <div className="absolute inset-0 z-10 bg-background p-4 space-y-4">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-8 w-3/4" />
-            <div className="grid grid-cols-7 gap-2 mt-6">
-              {Array.from({ length: 35 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
-            </div>
-            <div className="mt-6 space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-2/3" />
-            </div>
-          </div>
-        )}
-        <div
-          className="calendly-inline-widget h-[450px] sm:h-[550px] md:h-[600px]"
-          data-url="https://calendly.com/julianosmachado/nova-reuniao?hide_event_type_details=1&hide_gdpr_banner=1&background_color=0e1420&text_color=ffffff&primary_color=f0b428"
-          style={{ minWidth: "100%" }}
-        />
+      {/* Calendar and Time Slots */}
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Calendar Section */}
+        <div className="bg-card rounded-xl border border-border p-4">
+          <CalendarGrid
+            selectedDate={selectedDate}
+            onSelectDate={handleDateSelect}
+            onProximoHorarioLivre={handleProximoHorarioLivre}
+          />
+        </div>
+
+        {/* Time Slots Section */}
+        <div className="bg-card rounded-xl border border-border p-4">
+          <TimeSlotPicker
+            selectedDate={selectedDate}
+            selectedTime={selectedTime}
+            onSelectTime={handleTimeSelect}
+          />
+        </div>
       </div>
 
-      {isScheduled && (
+      {/* Selection Summary */}
+      {selectedDate && selectedTime && (
         <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
-          <p className="text-sm text-foreground font-medium">
-            ✓ Horário selecionado com sucesso!
+          <p className="text-sm text-foreground font-medium flex items-center gap-2">
+            <span className="text-primary">✓</span>
+            Horário selecionado: {selectedTime} em{" "}
+            {selectedDate.toLocaleDateString("pt-BR", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
           </p>
         </div>
       )}
@@ -181,7 +131,7 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
         <Button 
           variant="hero" 
           onClick={handleNext}
-          disabled={!isScheduled && !formData.selectedDate}
+          disabled={!canProceed}
         >
           Avançar
         </Button>
