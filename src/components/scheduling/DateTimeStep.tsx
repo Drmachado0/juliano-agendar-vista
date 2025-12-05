@@ -96,9 +96,9 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
       {/* Calendly Widget */}
       <div className="w-full overflow-hidden rounded-xl border border-border">
         <div
-          className="calendly-inline-widget"
+          className="calendly-inline-widget h-[450px] sm:h-[550px] md:h-[600px]"
           data-url="https://calendly.com/julianosmachado/nova-reuniao?hide_event_type_details=1&hide_gdpr_banner=1&background_color=0e1420&text_color=ffffff&primary_color=f0b428"
-          style={{ minWidth: "100%", height: "600px" }}
+          style={{ minWidth: "100%" }}
         />
       </div>
 
