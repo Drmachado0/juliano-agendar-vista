@@ -21,6 +21,19 @@ interface AgendamentoEmailRequest {
   hora_agendamento: string;
 }
 
+// HTML escape function to prevent injection attacks
+function escapeHtml(text: string): string {
+  if (!text) return '';
+  const htmlEntities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return text.replace(/[&<>"']/g, (char) => htmlEntities[char] || char);
+}
+
 function formatarData(dataString: string): string {
   try {
     const data = new Date(dataString + 'T00:00:00');
@@ -31,7 +44,7 @@ function formatarData(dataString: string): string {
       day: 'numeric' 
     });
   } catch {
-    return dataString;
+    return escapeHtml(dataString);
   }
 }
 
@@ -44,18 +57,25 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const dados: AgendamentoEmailRequest = await req.json();
-    console.log("Dados recebidos:", JSON.stringify(dados));
+    console.log("Dados recebidos para email de agendamento");
 
     if (!RESEND_API_KEY) {
       throw new Error("RESEND_API_KEY não configurada");
     }
 
+    // Sanitize all user inputs
+    const nomeCompleto = escapeHtml(dados.nome_completo);
+    const telefoneWhatsapp = escapeHtml(dados.telefone_whatsapp);
+    const localAtendimento = escapeHtml(dados.local_atendimento);
+    const tipoAtendimento = escapeHtml(dados.tipo_atendimento);
+    const horaAgendamento = escapeHtml(dados.hora_agendamento);
+
     const convenioFinal = dados.convenio === "Outro" && dados.convenio_outro 
-      ? dados.convenio_outro 
-      : dados.convenio;
+      ? escapeHtml(dados.convenio_outro) 
+      : escapeHtml(dados.convenio);
 
     const detalheAtendimento = dados.detalhe_exame_ou_cirurgia 
-      ? `<p><strong>Detalhe:</strong> ${dados.detalhe_exame_ou_cirurgia}</p>` 
+      ? `<p><strong>Detalhe:</strong> ${escapeHtml(dados.detalhe_exame_ou_cirurgia)}</p>` 
       : '';
 
     const dataNascimento = dados.data_nascimento 
@@ -63,8 +83,10 @@ const handler = async (req: Request): Promise<Response> => {
       : '';
 
     const emailPaciente = dados.email_paciente 
-      ? `<p><strong>E-mail:</strong> ${dados.email_paciente}</p>` 
+      ? `<p><strong>E-mail:</strong> ${escapeHtml(dados.email_paciente)}</p>` 
       : '';
+
+    const dataFormatada = formatarData(dados.data_agendamento);
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -91,21 +113,21 @@ const handler = async (req: Request): Promise<Response> => {
           
           <div class="content">
             <div class="highlight">
-              <strong>📅 ${formatarData(dados.data_agendamento)} às ${dados.hora_agendamento}</strong><br>
-              <strong>📍 ${dados.local_atendimento}</strong>
+              <strong>📅 ${dataFormatada} às ${horaAgendamento}</strong><br>
+              <strong>📍 ${localAtendimento}</strong>
             </div>
             
             <div class="section">
               <h3>👤 Dados do Paciente</h3>
-              <p><strong>Nome:</strong> ${dados.nome_completo}</p>
-              <p><strong>WhatsApp:</strong> ${dados.telefone_whatsapp}</p>
+              <p><strong>Nome:</strong> ${nomeCompleto}</p>
+              <p><strong>WhatsApp:</strong> ${telefoneWhatsapp}</p>
               ${emailPaciente}
               ${dataNascimento}
             </div>
             
             <div class="section">
               <h3>📋 Detalhes da Consulta</h3>
-              <p><strong>Tipo:</strong> ${dados.tipo_atendimento}</p>
+              <p><strong>Tipo:</strong> ${tipoAtendimento}</p>
               ${detalheAtendimento}
               <p><strong>Convênio:</strong> ${convenioFinal}</p>
             </div>
@@ -130,7 +152,7 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         from: "Agendamentos Dr. Juliano <onboarding@resend.dev>",
         to: ["julianosmachado@gmail.com"],
-        subject: `Novo Agendamento: ${dados.nome_completo} - ${formatarData(dados.data_agendamento)} ${dados.hora_agendamento}`,
+        subject: `Novo Agendamento: ${nomeCompleto} - ${dataFormatada} ${horaAgendamento}`,
         html: htmlContent,
       }),
     });
