@@ -65,7 +65,7 @@ export default function Agenda() {
     const [agendamentosRes, bloqueiosRes, diaDisp] = await Promise.all([
       listarAgendamentosDia(dataFormatada, selectedClinicaId),
       listarBloqueiosDia(dataFormatada, selectedClinicaId),
-      verificarDiaAtivo(selectedDate)
+      verificarDiaAtivo(selectedDate, selectedClinicaId)
     ]);
 
     const duracaoPadrao = getDuracaoPadrao();

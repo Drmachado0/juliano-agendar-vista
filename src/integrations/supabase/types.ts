@@ -206,6 +206,7 @@ export type Database = {
       }
       disponibilidade_especifica: {
         Row: {
+          clinica_id: string | null
           created_at: string | null
           data: string
           disponivel: boolean | null
@@ -217,6 +218,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          clinica_id?: string | null
           created_at?: string | null
           data: string
           disponivel?: boolean | null
@@ -228,6 +230,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          clinica_id?: string | null
           created_at?: string | null
           data?: string
           disponivel?: boolean | null
@@ -238,11 +241,20 @@ export type Database = {
           motivo?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "disponibilidade_especifica_clinica_id_fkey"
+            columns: ["clinica_id"]
+            isOneToOne: false
+            referencedRelation: "clinicas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       disponibilidade_semanal: {
         Row: {
           ativo: boolean | null
+          clinica_id: string | null
           created_at: string | null
           dia_semana: number
           hora_fim: string
@@ -253,6 +265,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean | null
+          clinica_id?: string | null
           created_at?: string | null
           dia_semana: number
           hora_fim: string
@@ -263,6 +276,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean | null
+          clinica_id?: string | null
           created_at?: string | null
           dia_semana?: number
           hora_fim?: string
@@ -271,7 +285,15 @@ export type Database = {
           intervalo_minutos?: number
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "disponibilidade_semanal_clinica_id_fkey"
+            columns: ["clinica_id"]
+            isOneToOne: false
+            referencedRelation: "clinicas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       google_calendar_tokens: {
         Row: {

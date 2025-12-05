@@ -18,16 +18,22 @@ interface DisponibilidadeSemanal {
   hora_fim: string;
   intervalo_minutos: number;
   ativo: boolean;
+  clinica_id: string | null;
 }
 
-export async function verificarDiaAtivo(data: Date): Promise<{ ativo: boolean; horaInicio?: string; horaFim?: string }> {
+export async function verificarDiaAtivo(data: Date, clinicaId?: string): Promise<{ ativo: boolean; horaInicio?: string; horaFim?: string }> {
   const diaSemana = data.getDay();
   
-  const { data: disponibilidade, error } = await supabase
+  let query = supabase
     .from('disponibilidade_semanal')
     .select('*')
-    .eq('dia_semana', diaSemana)
-    .maybeSingle();
+    .eq('dia_semana', diaSemana);
+  
+  if (clinicaId) {
+    query = query.eq('clinica_id', clinicaId);
+  }
+  
+  const { data: disponibilidade, error } = await query.maybeSingle();
   
   if (error) {
     console.error('Erro ao verificar disponibilidade semanal:', error);
