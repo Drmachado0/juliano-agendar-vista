@@ -10,7 +10,7 @@ import { format, addDays, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { listarClinicas, Clinica } from "@/services/clinicas";
 import { listarServicos, Servico, getDuracaoPadrao } from "@/services/servicos";
-import { gerarSlots, listarAgendamentosDia, listarBloqueiosDia, montarGradeAgenda, SlotAgenda } from "@/services/agenda";
+import { gerarSlots, listarAgendamentosDia, listarBloqueiosDia, montarGradeAgenda, SlotAgenda, verificarDiaAtivo } from "@/services/agenda";
 import { Agendamento } from "@/services/agendamentos";
 import { Bloqueio } from "@/services/disponibilidade";
 import { AgendaSlot } from "@/components/admin/AgendaSlot";
@@ -62,9 +62,10 @@ export default function Agenda() {
   async function carregarAgenda() {
     const dataFormatada = format(selectedDate, 'yyyy-MM-dd');
     
-    const [agendamentosRes, bloqueiosRes] = await Promise.all([
+    const [agendamentosRes, bloqueiosRes, diaDisp] = await Promise.all([
       listarAgendamentosDia(dataFormatada, selectedClinicaId),
-      listarBloqueiosDia(dataFormatada, selectedClinicaId)
+      listarBloqueiosDia(dataFormatada, selectedClinicaId),
+      verificarDiaAtivo(selectedDate)
     ]);
 
     const duracaoPadrao = getDuracaoPadrao();
@@ -73,7 +74,10 @@ export default function Agenda() {
       slotsBase,
       agendamentosRes.data,
       bloqueiosRes.data,
-      selectedDate
+      selectedDate,
+      diaDisp.ativo,
+      diaDisp.horaInicio,
+      diaDisp.horaFim
     );
 
     setSlots(gradeAgenda);

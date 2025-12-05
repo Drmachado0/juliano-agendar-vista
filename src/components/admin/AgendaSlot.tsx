@@ -18,6 +18,9 @@ export function AgendaSlot({ slot, onClick }: AgendaSlotProps) {
   };
 
   if (slot.status === 'bloqueado') {
+    const motivoExibicao = slot.motivoBloqueio || (slot.bloqueio ? getTipoBloqueioLabel(slot.bloqueio.tipo_bloqueio) : 'Bloqueado');
+    const tooltipMotivo = slot.motivoBloqueio || slot.bloqueio?.motivo || 'Horário bloqueado';
+    
     return (
       <TooltipProvider>
         <Tooltip>
@@ -34,14 +37,12 @@ export function AgendaSlot({ slot, onClick }: AgendaSlotProps) {
               </div>
               <div className="flex-1 flex items-center gap-2 text-sm text-red-600">
                 <Ban className="h-4 w-4" />
-                <span>
-                  {slot.bloqueio ? getTipoBloqueioLabel(slot.bloqueio.tipo_bloqueio) : 'Bloqueado'}
-                </span>
+                <span>{motivoExibicao}</span>
               </div>
             </div>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{slot.bloqueio?.motivo || 'Horário bloqueado'}</p>
+            <p>{tooltipMotivo}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
