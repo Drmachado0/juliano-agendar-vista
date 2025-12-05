@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, startOfDay, isBefore, isAfter, isSameDay, parse, setHours, setMinutes } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export interface SlotDisponivel {
   horario: string;
@@ -55,6 +56,8 @@ async function buscarDisponibilidadeSemanal(): Promise<DisponibilidadeSemanal[]>
     console.error('Erro ao buscar disponibilidade semanal:', error);
     return [];
   }
+  
+  console.log('[disponibilidadePublica] Dias ativos carregados:', data?.map(d => ({ dia: d.dia_semana, ativo: d.ativo })));
   
   return (data || []) as DisponibilidadeSemanal[];
 }
@@ -189,6 +192,8 @@ export async function listarDatasComDisponibilidade(
   const semanal = await buscarDisponibilidadeSemanal();
   const diasSemanaAtivos = semanal.filter(s => s.ativo).map(s => s.dia_semana);
   
+  console.log('[disponibilidadePublica] listarDatasComDisponibilidade - Dias da semana ativos:', diasSemanaAtivos);
+  
   // Busca todas as disponibilidades específicas do mês
   const { data: especificas } = await supabase
     .from('disponibilidade_especifica')
@@ -208,6 +213,7 @@ export async function listarDatasComDisponibilidade(
     if (!isBefore(dataAtual, hoje)) {
       const dataStr = format(dataAtual, 'yyyy-MM-dd');
       const especifica = especificasMap.get(dataStr);
+      const diaSemana = dataAtual.getDay();
       
       if (especifica) {
         // Se há config específica, verifica se está disponível
@@ -216,7 +222,7 @@ export async function listarDatasComDisponibilidade(
         }
       } else {
         // Usa disponibilidade semanal
-        if (diasSemanaAtivos.includes(dataAtual.getDay())) {
+        if (diasSemanaAtivos.includes(diaSemana)) {
           datasDisponiveis.push(new Date(dataAtual));
         }
       }
@@ -224,6 +230,8 @@ export async function listarDatasComDisponibilidade(
     
     dataAtual = addDays(dataAtual, 1);
   }
+  
+  console.log('[disponibilidadePublica] Datas disponíveis no mês:', datasDisponiveis.map(d => format(d, 'yyyy-MM-dd (EEEE)', { locale: ptBR })));
   
   return datasDisponiveis;
 }
