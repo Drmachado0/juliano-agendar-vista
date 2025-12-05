@@ -58,8 +58,59 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
     setFormData((prev) => ({ ...prev, ...data }));
   };
 
-  const nextStep = () => {
+  // Send data to webhook when step 3 is completed
+  const sendToWebhook = async (data: FormData) => {
+    const webhookUrl = "https://juliano-n8n.cloudfy.live/webhook-test/61e5fbae-9259-4a5d-a437-4a94ea6afd4d";
+    
+    const payload = {
+      // Step 1 - Dados Pessoais
+      dados_pessoais: {
+        nome_completo: data.fullName,
+        telefone_whatsapp: data.phone,
+        data_nascimento: data.birthDate || null,
+        email: data.email || null,
+      },
+      // Step 2 - Detalhes da Consulta
+      detalhes_consulta: {
+        tipo_atendimento: data.appointmentType,
+        local_atendimento: data.location,
+        convenio: data.insurance,
+        convenio_outro: data.insurance === "outro" ? data.otherInsurance : null,
+      },
+      // Step 3 - Data e Horário
+      data_horario: {
+        data_agendamento: data.selectedDate ? format(data.selectedDate, 'yyyy-MM-dd') : null,
+        hora_agendamento: data.selectedTime,
+        aceita_primeiro_horario: data.acceptFirstAvailable,
+        aceita_contato_whatsapp_email: data.acceptNotifications,
+      },
+      // Metadata
+      metadata: {
+        origem: "site",
+        timestamp: new Date().toISOString(),
+      },
+    };
+
+    try {
+      await fetch(webhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      console.log("Dados enviados ao webhook com sucesso");
+    } catch (error) {
+      console.error("Erro ao enviar dados ao webhook:", error);
+    }
+  };
+
+  const nextStep = async () => {
     if (currentStep < totalSteps) {
+      // When completing step 3, send data to webhook
+      if (currentStep === 3) {
+        await sendToWebhook(formData);
+      }
       setCurrentStep((prev) => prev + 1);
     }
   };
