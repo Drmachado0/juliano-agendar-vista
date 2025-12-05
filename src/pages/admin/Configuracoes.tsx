@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Building2, Stethoscope, Plus, Pencil, Clock, MapPin, Phone } from "lucide-react";
+import { Building2, Stethoscope, Plus, Pencil, Clock, MapPin, Phone, Calendar, Link2, Unlink, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Clinica, 
@@ -23,11 +24,25 @@ import {
   criarServico, 
   atualizarServico 
 } from "@/services/servicos";
+import {
+  checkGoogleCalendarConnection,
+  initiateGoogleCalendarAuth,
+  disconnectGoogleCalendar,
+  buildGoogleCalendarAuthUrl,
+  GoogleCalendarStatus
+} from "@/services/googleCalendar";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Configuracoes() {
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [clinicas, setClinicas] = useState<Clinica[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Google Calendar state
+  const [gcalStatus, setGcalStatus] = useState<GoogleCalendarStatus>({ connected: false });
+  const [gcalLoading, setGcalLoading] = useState(false);
   
   // Modal states
   const [clinicaModalOpen, setClinicaModalOpen] = useState(false);
@@ -54,7 +69,34 @@ export default function Configuracoes() {
 
   useEffect(() => {
     carregarDados();
-  }, []);
+    
+    // Handle OAuth callback parameters
+    const success = searchParams.get('success');
+    const error = searchParams.get('error');
+    
+    if (success === 'true') {
+      toast.success('Google Calendar conectado com sucesso!');
+      // Clear URL params
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (error) {
+      toast.error(`Erro ao conectar: ${error}`);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (user?.id) {
+      checkGCalConnection();
+    }
+  }, [user?.id]);
+
+  async function checkGCalConnection() {
+    if (!user?.id) return;
+    setGcalLoading(true);
+    const status = await checkGoogleCalendarConnection(user.id);
+    setGcalStatus(status);
+    setGcalLoading(false);
+  }
 
   async function carregarDados() {
     setLoading(true);
@@ -66,6 +108,53 @@ export default function Configuracoes() {
     if (clinicasRes.data) setClinicas(clinicasRes.data);
     if (servicosRes.data) setServicos(servicosRes.data);
     setLoading(false);
+  }
+
+  async function handleConnectGoogleCalendar() {
+    if (!user?.id) {
+      toast.error('Você precisa estar logado');
+      return;
+    }
+
+    setGcalLoading(true);
+    
+    // Get the base auth URL
+    const { auth_url, error } = await initiateGoogleCalendarAuth();
+    
+    if (error || !auth_url) {
+      toast.error(error || 'Erro ao iniciar conexão');
+      setGcalLoading(false);
+      return;
+    }
+
+    // Build URL with state parameter for callback
+    const callbackUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-calendar-callback`;
+    const appRedirect = `${window.location.origin}/admin/configuracoes`;
+    
+    const fullAuthUrl = buildGoogleCalendarAuthUrl(
+      auth_url,
+      user.id,
+      callbackUrl,
+      appRedirect
+    );
+
+    // Redirect to Google OAuth
+    window.location.href = fullAuthUrl;
+  }
+
+  async function handleDisconnectGoogleCalendar() {
+    if (!user?.id) return;
+
+    setGcalLoading(true);
+    const { success, error } = await disconnectGoogleCalendar(user.id);
+    
+    if (success) {
+      toast.success('Google Calendar desconectado');
+      setGcalStatus({ connected: false });
+    } else {
+      toast.error(error || 'Erro ao desconectar');
+    }
+    setGcalLoading(false);
   }
 
   // Clinica handlers
@@ -180,11 +269,11 @@ export default function Configuracoes() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
-          <p className="text-muted-foreground">Gerencie clínicas e serviços disponíveis</p>
+          <p className="text-muted-foreground">Gerencie clínicas, serviços e integrações</p>
         </div>
 
         <Tabs defaultValue="clinicas" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-lg grid-cols-3">
             <TabsTrigger value="clinicas" className="gap-2">
               <Building2 className="h-4 w-4" />
               Clínicas
@@ -192,6 +281,10 @@ export default function Configuracoes() {
             <TabsTrigger value="servicos" className="gap-2">
               <Stethoscope className="h-4 w-4" />
               Serviços
+            </TabsTrigger>
+            <TabsTrigger value="integracoes" className="gap-2">
+              <Link2 className="h-4 w-4" />
+              Integrações
             </TabsTrigger>
           </TabsList>
 
@@ -319,6 +412,97 @@ export default function Configuracoes() {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          {/* Tab Integrações */}
+          <TabsContent value="integracoes" className="mt-6">
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold">Integrações</h2>
+
+              {/* Google Calendar Card */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Calendar className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        Google Calendar
+                        {gcalStatus.connected && (
+                          <Badge variant="default" className="bg-green-600">
+                            Conectado
+                          </Badge>
+                        )}
+                      </CardTitle>
+                      <CardDescription>
+                        Sincronize agendamentos automaticamente com o Google Calendar
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {gcalStatus.connected ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>Calendário:</span>
+                        <code className="px-2 py-1 bg-muted rounded">
+                          {gcalStatus.calendar_id || 'primary'}
+                        </code>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Novos agendamentos serão automaticamente adicionados ao seu Google Calendar.
+                        Alterações em agendamentos existentes também serão sincronizadas.
+                      </p>
+                      <Button
+                        variant="outline"
+                        onClick={handleDisconnectGoogleCalendar}
+                        disabled={gcalLoading}
+                        className="gap-2"
+                      >
+                        {gcalLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Unlink className="h-4 w-4" />
+                        )}
+                        Desconectar
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Conecte sua conta Google para sincronizar automaticamente os agendamentos 
+                        com seu Google Calendar. Isso permite visualizar os compromissos da clínica 
+                        diretamente no seu calendário pessoal ou compartilhado.
+                      </p>
+                      <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg text-sm">
+                        <span className="text-muted-foreground">
+                          <strong>Benefícios:</strong>
+                          <ul className="list-disc list-inside mt-1 space-y-1">
+                            <li>Visualize agendamentos no Google Calendar</li>
+                            <li>Receba notificações de compromissos</li>
+                            <li>Sincronização bidirecional automática</li>
+                            <li>Compartilhe agenda com equipe</li>
+                          </ul>
+                        </span>
+                      </div>
+                      <Button
+                        onClick={handleConnectGoogleCalendar}
+                        disabled={gcalLoading}
+                        className="gap-2"
+                      >
+                        {gcalLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Calendar className="h-4 w-4" />
+                        )}
+                        Conectar Google Calendar
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
