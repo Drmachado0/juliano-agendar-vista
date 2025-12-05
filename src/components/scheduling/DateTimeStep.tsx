@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { FormData } from "./SchedulingModal";
 import { useEffect, useState } from "react";
 
@@ -26,6 +27,7 @@ declare global {
 
 const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStepProps) => {
   const [isScheduled, setIsScheduled] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [scheduledData, setScheduledData] = useState<{
     eventName?: string;
     eventStartTime?: string;
@@ -41,6 +43,11 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
     // Listen for Calendly events
     const handleCalendlyEvent = (e: MessageEvent) => {
       if (e.data.event && e.data.event.indexOf("calendly") === 0) {
+        // Widget is ready when we receive any calendly event
+        if (e.data.event === "calendly.page_height" || e.data.event === "calendly.event_type_viewed") {
+          setIsLoading(false);
+        }
+        
         if (e.data.event === "calendly.event_scheduled") {
           const payload = e.data.payload;
           setIsScheduled(true);
@@ -65,9 +72,13 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
     };
 
     window.addEventListener("message", handleCalendlyEvent);
+    
+    // Fallback: hide loading after 5 seconds if no event received
+    const fallbackTimer = setTimeout(() => setIsLoading(false), 5000);
 
     return () => {
       window.removeEventListener("message", handleCalendlyEvent);
+      clearTimeout(fallbackTimer);
       // Clean up script if needed
       const existingScript = document.querySelector(
         'script[src="https://assets.calendly.com/assets/external/widget.js"]'
@@ -94,7 +105,23 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
       </div>
 
       {/* Calendly Widget */}
-      <div className="w-full overflow-hidden rounded-xl border border-border">
+      <div className="w-full overflow-hidden rounded-xl border border-border relative">
+        {isLoading && (
+          <div className="absolute inset-0 z-10 bg-background p-4 space-y-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-8 w-3/4" />
+            <div className="grid grid-cols-7 gap-2 mt-6">
+              {Array.from({ length: 35 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+            <div className="mt-6 space-y-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-2/3" />
+            </div>
+          </div>
+        )}
         <div
           className="calendly-inline-widget h-[450px] sm:h-[550px] md:h-[600px]"
           data-url="https://calendly.com/julianosmachado/nova-reuniao?hide_event_type_details=1&hide_gdpr_banner=1&background_color=0e1420&text_color=ffffff&primary_color=f0b428"
