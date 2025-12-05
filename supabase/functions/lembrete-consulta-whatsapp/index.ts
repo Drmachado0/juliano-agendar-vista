@@ -15,6 +15,28 @@ serve(async (req) => {
   console.log("[lembrete-consulta] Iniciando processamento de lembretes...");
 
   try {
+    // Validate cron secret for authentication
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    const authHeader = req.headers.get("authorization");
+    
+    if (!cronSecret) {
+      console.error("[lembrete-consulta] CRON_SECRET não configurado");
+      return new Response(
+        JSON.stringify({ error: "Configuração de segurança ausente" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    // Check Authorization header for Bearer token
+    const expectedAuth = `Bearer ${cronSecret}`;
+    if (authHeader !== expectedAuth) {
+      console.error("[lembrete-consulta] Tentativa de acesso não autorizado");
+      return new Response(
+        JSON.stringify({ error: "Não autorizado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const evolutionApiUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
