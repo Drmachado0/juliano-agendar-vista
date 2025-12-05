@@ -18,6 +18,8 @@ export type Database = {
         Row: {
           aceita_contato_whatsapp_email: boolean | null
           aceita_primeiro_horario: boolean | null
+          clinica_id: string | null
+          confirmacao_enviada: boolean | null
           convenio: string
           convenio_outro: string | null
           created_at: string | null
@@ -31,6 +33,8 @@ export type Database = {
           nome_completo: string
           observacoes_internas: string | null
           origem: string | null
+          profissional_id: string | null
+          servico_id: string | null
           status_crm: string
           telefone_whatsapp: string
           tipo_atendimento: string
@@ -39,6 +43,8 @@ export type Database = {
         Insert: {
           aceita_contato_whatsapp_email?: boolean | null
           aceita_primeiro_horario?: boolean | null
+          clinica_id?: string | null
+          confirmacao_enviada?: boolean | null
           convenio: string
           convenio_outro?: string | null
           created_at?: string | null
@@ -52,6 +58,8 @@ export type Database = {
           nome_completo: string
           observacoes_internas?: string | null
           origem?: string | null
+          profissional_id?: string | null
+          servico_id?: string | null
           status_crm?: string
           telefone_whatsapp: string
           tipo_atendimento: string
@@ -60,6 +68,8 @@ export type Database = {
         Update: {
           aceita_contato_whatsapp_email?: boolean | null
           aceita_primeiro_horario?: boolean | null
+          clinica_id?: string | null
+          confirmacao_enviada?: boolean | null
           convenio?: string
           convenio_outro?: string | null
           created_at?: string | null
@@ -73,9 +83,120 @@ export type Database = {
           nome_completo?: string
           observacoes_internas?: string | null
           origem?: string | null
+          profissional_id?: string | null
+          servico_id?: string | null
           status_crm?: string
           telefone_whatsapp?: string
           tipo_atendimento?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamentos_clinica_id_fkey"
+            columns: ["clinica_id"]
+            isOneToOne: false
+            referencedRelation: "clinicas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_profissional_id_fkey"
+            columns: ["profissional_id"]
+            isOneToOne: false
+            referencedRelation: "profissionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_servico_id_fkey"
+            columns: ["servico_id"]
+            isOneToOne: false
+            referencedRelation: "servicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bloqueios_agenda: {
+        Row: {
+          clinica_id: string
+          created_at: string | null
+          data: string
+          hora_fim: string | null
+          hora_inicio: string | null
+          id: string
+          motivo: string | null
+          profissional_id: string | null
+          tipo_bloqueio: string
+          updated_at: string | null
+        }
+        Insert: {
+          clinica_id: string
+          created_at?: string | null
+          data: string
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          id?: string
+          motivo?: string | null
+          profissional_id?: string | null
+          tipo_bloqueio: string
+          updated_at?: string | null
+        }
+        Update: {
+          clinica_id?: string
+          created_at?: string | null
+          data?: string
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          id?: string
+          motivo?: string | null
+          profissional_id?: string | null
+          tipo_bloqueio?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bloqueios_agenda_clinica_id_fkey"
+            columns: ["clinica_id"]
+            isOneToOne: false
+            referencedRelation: "clinicas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bloqueios_agenda_profissional_id_fkey"
+            columns: ["profissional_id"]
+            isOneToOne: false
+            referencedRelation: "profissionais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinicas: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          endereco: string | null
+          id: string
+          nome: string
+          slug: string
+          telefone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          endereco?: string | null
+          id?: string
+          nome: string
+          slug: string
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          endereco?: string | null
+          id?: string
+          nome?: string
+          slug?: string
+          telefone?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -91,6 +212,7 @@ export type Database = {
           mensagem_externa_id: string | null
           status_envio: string | null
           telefone: string
+          tipo_mensagem: string | null
         }
         Insert: {
           agendamento_id?: string | null
@@ -102,6 +224,7 @@ export type Database = {
           mensagem_externa_id?: string | null
           status_envio?: string | null
           telefone: string
+          tipo_mensagem?: string | null
         }
         Update: {
           agendamento_id?: string | null
@@ -113,6 +236,7 @@ export type Database = {
           mensagem_externa_id?: string | null
           status_envio?: string | null
           telefone?: string
+          tipo_mensagem?: string | null
         }
         Relationships: [
           {
@@ -148,6 +272,105 @@ export type Database = {
           id?: string
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      profissionais: {
+        Row: {
+          ativo: boolean | null
+          cargo: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          nome: string
+          telefone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cargo?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cargo?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profissional_clinica: {
+        Row: {
+          clinica_id: string
+          created_at: string | null
+          id: string
+          profissional_id: string
+        }
+        Insert: {
+          clinica_id: string
+          created_at?: string | null
+          id?: string
+          profissional_id: string
+        }
+        Update: {
+          clinica_id?: string
+          created_at?: string | null
+          id?: string
+          profissional_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profissional_clinica_clinica_id_fkey"
+            columns: ["clinica_id"]
+            isOneToOne: false
+            referencedRelation: "clinicas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profissional_clinica_profissional_id_fkey"
+            columns: ["profissional_id"]
+            isOneToOne: false
+            referencedRelation: "profissionais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      servicos: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string | null
+          duracao_min: number
+          id: string
+          nome: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          duracao_min?: number
+          id?: string
+          nome: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          duracao_min?: number
+          id?: string
+          nome?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
