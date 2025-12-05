@@ -1,11 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
 import { FormData } from "./SchedulingModal";
-import { useState } from "react";
-import { Clock, CalendarDays } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
 interface DateTimeStepProps {
   formData: FormData;
@@ -14,151 +11,139 @@ interface DateTimeStepProps {
   onPrev: () => void;
 }
 
+declare global {
+  interface Window {
+    Calendly?: {
+      initInlineWidget: (options: {
+        url: string;
+        parentElement: HTMLElement;
+        prefill?: Record<string, string>;
+        utm?: Record<string, string>;
+      }) => void;
+    };
+  }
+}
+
 const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStepProps) => {
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledData, setScheduledData] = useState<{
+    eventName?: string;
+    eventStartTime?: string;
+  } | null>(null);
 
-  // Mock available time slots - in production, this would come from Google Calendar/Calendly API
-  const availableTimeSlots = [
-    "08:00",
-    "08:30",
-    "09:00",
-    "09:30",
-    "10:00",
-    "10:30",
-    "11:00",
-    "14:00",
-    "14:30",
-    "15:00",
-    "15:30",
-    "16:00",
-    "16:30",
-    "17:00",
-  ];
+  useEffect(() => {
+    // Load Calendly script
+    const script = document.createElement("script");
+    script.src = "https://assets.calendly.com/assets/external/widget.js";
+    script.async = true;
+    document.body.appendChild(script);
 
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
+    // Listen for Calendly events
+    const handleCalendlyEvent = (e: MessageEvent) => {
+      if (e.data.event && e.data.event.indexOf("calendly") === 0) {
+        if (e.data.event === "calendly.event_scheduled") {
+          const payload = e.data.payload;
+          setIsScheduled(true);
+          setScheduledData({
+            eventName: payload?.event?.name,
+            eventStartTime: payload?.event?.start_time,
+          });
+          
+          // Parse the scheduled date and time
+          if (payload?.event?.start_time) {
+            const scheduledDate = new Date(payload.event.start_time);
+            updateFormData({
+              selectedDate: scheduledDate,
+              selectedTime: scheduledDate.toLocaleTimeString("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+            });
+          }
+        }
+      }
+    };
 
-    if (!formData.selectedDate) {
-      newErrors.selectedDate = "Selecione uma data";
-    }
+    window.addEventListener("message", handleCalendlyEvent);
 
-    if (!formData.selectedTime) {
-      newErrors.selectedTime = "Selecione um horário";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    return () => {
+      window.removeEventListener("message", handleCalendlyEvent);
+      // Clean up script if needed
+      const existingScript = document.querySelector(
+        'script[src="https://assets.calendly.com/assets/external/widget.js"]'
+      );
+      if (existingScript) {
+        existingScript.remove();
+      }
+    };
+  }, [updateFormData]);
 
   const handleNext = () => {
-    if (validate()) {
+    if (isScheduled || (formData.selectedDate && formData.selectedTime)) {
       onNext();
     }
   };
-
-  // Disable past dates and weekends (example)
-  const disabledDays = [
-    { before: new Date() },
-    { dayOfWeek: [0] }, // Sundays
-  ];
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <h3 className="text-lg font-semibold text-foreground">Escolha data e horário</h3>
         <p className="text-sm text-muted-foreground">
-          Selecione a data e horário de sua preferência.
+          Selecione a data e horário de sua preferência no calendário abaixo.
         </p>
       </div>
 
-      <div className="space-y-6">
-        {/* Calendar */}
-        <div className="space-y-3">
-          <Label className="text-foreground flex items-center gap-2">
-            <CalendarDays className="w-4 h-4 text-primary" />
-            Data *
+      {/* Calendly Widget */}
+      <div className="w-full overflow-hidden rounded-xl border border-border">
+        <div
+          className="calendly-inline-widget"
+          data-url="https://calendly.com/julianosmachado/nova-reuniao?hide_event_type_details=1&hide_gdpr_banner=1&background_color=0e1420&text_color=ffffff&primary_color=f0b428"
+          style={{ minWidth: "100%", height: "600px" }}
+        />
+      </div>
+
+      {isScheduled && (
+        <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
+          <p className="text-sm text-foreground font-medium">
+            ✓ Horário selecionado com sucesso!
+          </p>
+        </div>
+      )}
+
+      {/* Checkboxes */}
+      <div className="space-y-4 pt-2">
+        <div className="flex items-start gap-3">
+          <Checkbox
+            id="acceptFirstAvailable"
+            checked={formData.acceptFirstAvailable}
+            onCheckedChange={(checked) =>
+              updateFormData({ acceptFirstAvailable: checked as boolean })
+            }
+            className="mt-0.5"
+          />
+          <Label
+            htmlFor="acceptFirstAvailable"
+            className="text-sm text-muted-foreground cursor-pointer leading-relaxed"
+          >
+            Aceito o primeiro horário disponível se não houver vaga no horário escolhido
           </Label>
-          <div className="flex justify-center">
-            <Calendar
-              mode="single"
-              selected={formData.selectedDate}
-              onSelect={(date) => updateFormData({ selectedDate: date })}
-              disabled={disabledDays}
-              className={cn(
-                "rounded-xl border border-border bg-secondary p-3 pointer-events-auto",
-                errors.selectedDate && "border-destructive"
-              )}
-            />
-          </div>
-          {errors.selectedDate && (
-            <p className="text-sm text-destructive text-center">{errors.selectedDate}</p>
-          )}
         </div>
 
-        {/* Time Slots */}
-        {formData.selectedDate && (
-          <div className="space-y-3 animate-fade-in">
-            <Label className="text-foreground flex items-center gap-2">
-              <Clock className="w-4 h-4 text-primary" />
-              Horário disponível *
-            </Label>
-            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-              {availableTimeSlots.map((time) => (
-                <button
-                  key={time}
-                  type="button"
-                  onClick={() => updateFormData({ selectedTime: time })}
-                  className={`p-3 rounded-lg border text-sm font-medium transition-all duration-200 ${
-                    formData.selectedTime === time
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-secondary text-foreground hover:border-primary/50"
-                  }`}
-                >
-                  {time}
-                </button>
-              ))}
-            </div>
-            {errors.selectedTime && (
-              <p className="text-sm text-destructive">{errors.selectedTime}</p>
-            )}
-          </div>
-        )}
-
-        {/* Checkboxes */}
-        <div className="space-y-4 pt-2">
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="acceptFirstAvailable"
-              checked={formData.acceptFirstAvailable}
-              onCheckedChange={(checked) =>
-                updateFormData({ acceptFirstAvailable: checked as boolean })
-              }
-              className="mt-0.5"
-            />
-            <Label
-              htmlFor="acceptFirstAvailable"
-              className="text-sm text-muted-foreground cursor-pointer leading-relaxed"
-            >
-              Aceito o primeiro horário disponível se não houver vaga no horário escolhido
-            </Label>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="acceptNotifications"
-              checked={formData.acceptNotifications}
-              onCheckedChange={(checked) =>
-                updateFormData({ acceptNotifications: checked as boolean })
-              }
-              className="mt-0.5"
-            />
-            <Label
-              htmlFor="acceptNotifications"
-              className="text-sm text-muted-foreground cursor-pointer leading-relaxed"
-            >
-              Aceito receber confirmação e lembretes por WhatsApp/E-mail
-            </Label>
-          </div>
+        <div className="flex items-start gap-3">
+          <Checkbox
+            id="acceptNotifications"
+            checked={formData.acceptNotifications}
+            onCheckedChange={(checked) =>
+              updateFormData({ acceptNotifications: checked as boolean })
+            }
+            className="mt-0.5"
+          />
+          <Label
+            htmlFor="acceptNotifications"
+            className="text-sm text-muted-foreground cursor-pointer leading-relaxed"
+          >
+            Aceito receber confirmação e lembretes por WhatsApp/E-mail
+          </Label>
         </div>
       </div>
 
@@ -166,7 +151,11 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
         <Button variant="outline" onClick={onPrev}>
           Voltar
         </Button>
-        <Button variant="hero" onClick={handleNext}>
+        <Button 
+          variant="hero" 
+          onClick={handleNext}
+          disabled={!isScheduled && !formData.selectedDate}
+        >
           Avançar
         </Button>
       </div>
