@@ -60,7 +60,7 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
 
   // Send data to webhook when step 3 is completed
   const sendToWebhook = async (data: FormData) => {
-    const webhookUrl = "https://juliano-n8n.cloudfy.live/webhook-test/61e5fbae-9259-4a5d-a437-4a94ea6afd4d";
+    const webhookUrl = "https://juliano-n8n.cloudfy.live/webhook-test/confirmaao";
     
     const payload = {
       // Step 1 - Dados Pessoais
