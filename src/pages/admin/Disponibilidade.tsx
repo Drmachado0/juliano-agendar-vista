@@ -24,6 +24,7 @@ interface DisponibilidadeSemanal {
   hora_fim: string;
   intervalo_minutos: number;
   ativo: boolean;
+  clinica_id: string | null;
 }
 
 interface DisponibilidadeEspecifica {
@@ -34,6 +35,7 @@ interface DisponibilidadeEspecifica {
   intervalo_minutos: number;
   disponivel: boolean;
   motivo: string | null;
+  clinica_id: string | null;
 }
 
 const DIAS_SEMANA = [
@@ -75,37 +77,32 @@ export default function Disponibilidade() {
   const daysOfWeek = eachDayOfInterval({ start: currentWeekStart, end: weekEnd });
 
   useEffect(() => {
-    carregarDados();
+    carregarClinicas();
   }, []);
 
   useEffect(() => {
     if (selectedClinicaId) {
+      carregarDisponibilidadeSemanal(selectedClinicaId);
+      carregarDisponibilidadeEspecifica(selectedClinicaId);
       carregarBloqueios();
     }
   }, [selectedClinicaId, currentWeekStart]);
 
-  async function carregarDados() {
-    setLoading(true);
-    await Promise.all([
-      carregarClinicas(),
-      carregarDisponibilidadeSemanal(),
-      carregarDisponibilidadeEspecifica()
-    ]);
-    setLoading(false);
-  }
-
   async function carregarClinicas() {
+    setLoading(true);
     const { data } = await listarClinicas();
     setClinicas(data);
     if (data.length > 0) {
       setSelectedClinicaId(data[0].id);
     }
+    setLoading(false);
   }
 
-  async function carregarDisponibilidadeSemanal() {
+  async function carregarDisponibilidadeSemanal(clinicaId: string) {
     const { data, error } = await supabase
       .from('disponibilidade_semanal')
       .select('*')
+      .eq('clinica_id', clinicaId)
       .order('dia_semana');
     
     if (error) {
@@ -113,13 +110,51 @@ export default function Disponibilidade() {
       return;
     }
     
+    // Se não existem registros para esta clínica, criar automaticamente
+    if (!data || data.length === 0) {
+      await criarDisponibilidadePadraoClinica(clinicaId);
+      return;
+    }
+    
     setDisponibilidadeSemanal(data || []);
   }
 
-  async function carregarDisponibilidadeEspecifica() {
+  async function criarDisponibilidadePadraoClinica(clinicaId: string) {
+    const diasPadrao = [
+      { dia_semana: 0, hora_inicio: '08:00', hora_fim: '12:00', ativo: false },
+      { dia_semana: 1, hora_inicio: '08:00', hora_fim: '18:00', ativo: true },
+      { dia_semana: 2, hora_inicio: '08:00', hora_fim: '18:00', ativo: true },
+      { dia_semana: 3, hora_inicio: '08:00', hora_fim: '18:00', ativo: true },
+      { dia_semana: 4, hora_inicio: '08:00', hora_fim: '18:00', ativo: true },
+      { dia_semana: 5, hora_inicio: '08:00', hora_fim: '18:00', ativo: true },
+      { dia_semana: 6, hora_inicio: '08:00', hora_fim: '12:00', ativo: true },
+    ];
+
+    const inserts = diasPadrao.map(d => ({
+      ...d,
+      clinica_id: clinicaId,
+      intervalo_minutos: 30
+    }));
+
+    const { error } = await supabase
+      .from('disponibilidade_semanal')
+      .insert(inserts);
+
+    if (error) {
+      console.error('Erro ao criar disponibilidade padrão:', error);
+      toast.error('Erro ao criar disponibilidade padrão para a clínica');
+      return;
+    }
+
+    // Recarregar após criar
+    await carregarDisponibilidadeSemanal(clinicaId);
+  }
+
+  async function carregarDisponibilidadeEspecifica(clinicaId: string) {
     const { data, error } = await supabase
       .from('disponibilidade_especifica')
       .select('*')
+      .eq('clinica_id', clinicaId)
       .gte('data', format(new Date(), 'yyyy-MM-dd'))
       .order('data');
     
@@ -173,6 +208,7 @@ export default function Disponibilidade() {
       const { error } = await supabase
         .from('disponibilidade_especifica')
         .insert({
+          clinica_id: selectedClinicaId,
           data: novaEspecifica.data,
           hora_inicio: novaEspecifica.disponivel ? novaEspecifica.hora_inicio : null,
           hora_fim: novaEspecifica.disponivel ? novaEspecifica.hora_fim : null,
@@ -192,10 +228,10 @@ export default function Disponibilidade() {
         disponivel: true,
         motivo: ""
       });
-      carregarDisponibilidadeEspecifica();
+      carregarDisponibilidadeEspecifica(selectedClinicaId);
     } catch (error: any) {
       if (error.code === '23505') {
-        toast.error('Já existe uma configuração para esta data');
+        toast.error('Já existe uma configuração para esta data nesta clínica');
       } else {
         toast.error('Erro ao adicionar disponibilidade');
       }
@@ -214,7 +250,7 @@ export default function Disponibilidade() {
       toast.error('Erro ao remover');
     } else {
       toast.success('Removido com sucesso');
-      carregarDisponibilidadeEspecifica();
+      carregarDisponibilidadeEspecifica(selectedClinicaId);
     }
   }
 
@@ -296,77 +332,103 @@ export default function Disponibilidade() {
 
           {/* Tab: Disponibilidade Semanal */}
           <TabsContent value="semanal" className="space-y-6">
+            {/* Seletor de Clínica */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <Label className="font-medium">Clínica:</Label>
+                  <Select value={selectedClinicaId} onValueChange={setSelectedClinicaId}>
+                    <SelectTrigger className="w-72">
+                      <SelectValue placeholder="Selecione a clínica" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clinicas.map(clinica => (
+                        <SelectItem key={clinica.id} value={clinica.id}>
+                          {clinica.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Horários Padrão da Semana</CardTitle>
                 <CardDescription>
-                  Configure os horários de atendimento para cada dia da semana. 
-                  Estes horários serão aplicados automaticamente a todos os dias.
+                  Configure os horários de atendimento para cada dia da semana nesta clínica.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {disponibilidadeSemanal.map((disp) => {
-                  const diaInfo = DIAS_SEMANA.find(d => d.value === disp.dia_semana);
-                  return (
-                    <div 
-                      key={disp.id} 
-                      className={`flex flex-wrap items-center gap-4 p-4 rounded-lg border ${disp.ativo ? 'bg-card' : 'bg-muted/50'}`}
-                    >
-                      <div className="flex items-center gap-3 w-40">
-                        <Switch
-                          checked={disp.ativo}
-                          onCheckedChange={(checked) => updateSemanalField(disp.id, 'ativo', checked)}
-                        />
-                        <span className={`font-medium ${!disp.ativo && 'text-muted-foreground'}`}>
-                          {diaInfo?.label}
-                        </span>
+                {disponibilidadeSemanal.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    Carregando disponibilidade...
+                  </p>
+                ) : (
+                  disponibilidadeSemanal.map((disp) => {
+                    const diaInfo = DIAS_SEMANA.find(d => d.value === disp.dia_semana);
+                    return (
+                      <div 
+                        key={disp.id} 
+                        className={`flex flex-wrap items-center gap-4 p-4 rounded-lg border ${disp.ativo ? 'bg-card' : 'bg-muted/50'}`}
+                      >
+                        <div className="flex items-center gap-3 w-40">
+                          <Switch
+                            checked={disp.ativo}
+                            onCheckedChange={(checked) => updateSemanalField(disp.id, 'ativo', checked)}
+                          />
+                          <span className={`font-medium ${!disp.ativo && 'text-muted-foreground'}`}>
+                            {diaInfo?.label}
+                          </span>
+                        </div>
+                        
+                        {disp.ativo && (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm text-muted-foreground">Início:</Label>
+                              <Input
+                                type="time"
+                                value={disp.hora_inicio}
+                                onChange={(e) => updateSemanalField(disp.id, 'hora_inicio', e.target.value)}
+                                className="w-28"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm text-muted-foreground">Fim:</Label>
+                              <Input
+                                type="time"
+                                value={disp.hora_fim}
+                                onChange={(e) => updateSemanalField(disp.id, 'hora_fim', e.target.value)}
+                                className="w-28"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm text-muted-foreground">Intervalo:</Label>
+                              <Select
+                                value={String(disp.intervalo_minutos)}
+                                onValueChange={(v) => updateSemanalField(disp.id, 'intervalo_minutos', Number(v))}
+                              >
+                                <SelectTrigger className="w-24">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="15">15 min</SelectItem>
+                                  <SelectItem value="20">20 min</SelectItem>
+                                  <SelectItem value="30">30 min</SelectItem>
+                                  <SelectItem value="45">45 min</SelectItem>
+                                  <SelectItem value="60">60 min</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </>
+                        )}
                       </div>
-                      
-                      {disp.ativo && (
-                        <>
-                          <div className="flex items-center gap-2">
-                            <Label className="text-sm text-muted-foreground">Início:</Label>
-                            <Input
-                              type="time"
-                              value={disp.hora_inicio}
-                              onChange={(e) => updateSemanalField(disp.id, 'hora_inicio', e.target.value)}
-                              className="w-28"
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Label className="text-sm text-muted-foreground">Fim:</Label>
-                            <Input
-                              type="time"
-                              value={disp.hora_fim}
-                              onChange={(e) => updateSemanalField(disp.id, 'hora_fim', e.target.value)}
-                              className="w-28"
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Label className="text-sm text-muted-foreground">Intervalo:</Label>
-                            <Select
-                              value={String(disp.intervalo_minutos)}
-                              onValueChange={(v) => updateSemanalField(disp.id, 'intervalo_minutos', Number(v))}
-                            >
-                              <SelectTrigger className="w-24">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="15">15 min</SelectItem>
-                                <SelectItem value="20">20 min</SelectItem>
-                                <SelectItem value="30">30 min</SelectItem>
-                                <SelectItem value="45">45 min</SelectItem>
-                                <SelectItem value="60">60 min</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
                 
-                <Button onClick={salvarDisponibilidadeSemanal} disabled={savingSemanal} className="gap-2">
+                <Button onClick={salvarDisponibilidadeSemanal} disabled={savingSemanal || disponibilidadeSemanal.length === 0} className="gap-2">
                   <Save className="h-4 w-4" />
                   {savingSemanal ? 'Salvando...' : 'Salvar Alterações'}
                 </Button>
@@ -376,6 +438,27 @@ export default function Disponibilidade() {
 
           {/* Tab: Disponibilidade Específica */}
           <TabsContent value="especifica" className="space-y-6">
+            {/* Seletor de Clínica */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <Label className="font-medium">Clínica:</Label>
+                  <Select value={selectedClinicaId} onValueChange={setSelectedClinicaId}>
+                    <SelectTrigger className="w-72">
+                      <SelectValue placeholder="Selecione a clínica" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clinicas.map(clinica => (
+                        <SelectItem key={clinica.id} value={clinica.id}>
+                          {clinica.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Adicionar Data Especial</CardTitle>
