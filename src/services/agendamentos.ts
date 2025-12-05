@@ -190,9 +190,39 @@ export async function criarAgendamento(data: AgendamentoInsert): Promise<{ data:
     return { data: null, error: new Error(error.message) };
   }
 
-  // TODO: Integração futura com Google Calendar/Calendly
-  // Aqui seria chamada a função para criar evento no calendário
-  // await criarEventoCalendario(agendamento);
+  // Enviar notificações em paralelo (não bloqueiam a criação)
+  const notificacoes = [];
+
+  // 1. Enviar WhatsApp para o paciente
+  notificacoes.push(
+    supabase.functions.invoke('confirmar-agendamento-whatsapp', {
+      body: { agendamento_id: agendamento.id },
+    }).then(() => console.log('WhatsApp enviado para o paciente'))
+      .catch((err) => console.error('Erro ao enviar WhatsApp (não crítico):', err))
+  );
+
+  // 2. Enviar email para o Dr. Juliano
+  notificacoes.push(
+    supabase.functions.invoke('notificar-agendamento-email', {
+      body: {
+        nome_completo: sanitizedData.nome_completo,
+        telefone_whatsapp: sanitizedData.telefone_whatsapp,
+        email_paciente: sanitizedData.email,
+        data_nascimento: sanitizedData.data_nascimento,
+        tipo_atendimento: sanitizedData.tipo_atendimento,
+        detalhe_exame_ou_cirurgia: sanitizedData.detalhe_exame_ou_cirurgia,
+        local_atendimento: sanitizedData.local_atendimento,
+        convenio: sanitizedData.convenio,
+        convenio_outro: sanitizedData.convenio_outro,
+        data_agendamento: sanitizedData.data_agendamento,
+        hora_agendamento: sanitizedData.hora_agendamento,
+      },
+    }).then(() => console.log('Email de notificação enviado'))
+      .catch((err) => console.error('Erro ao enviar email (não crítico):', err))
+  );
+
+  // Executar notificações em paralelo sem bloquear
+  Promise.all(notificacoes).catch(() => {});
 
   return { data: agendamento as Agendamento, error: null };
 }
