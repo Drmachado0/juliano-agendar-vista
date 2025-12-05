@@ -6,8 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { criarAgendamento, Agendamento } from "@/services/agendamentos";
 import { listarServicos, Servico } from "@/services/servicos";
+import { syncAppointmentToGoogleCalendar, checkGoogleCalendarConnection } from "@/services/googleCalendar";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -46,6 +48,7 @@ export function NovoAgendamentoAdminModal({
   data,
   hora,
 }: NovoAgendamentoAdminModalProps) {
+  const { user } = useAuth();
   const [nomeCompleto, setNomeCompleto] = useState('');
   const [telefoneWhatsapp, setTelefoneWhatsapp] = useState('');
   const [email, setEmail] = useState('');
@@ -54,13 +57,21 @@ export function NovoAgendamentoAdminModal({
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [servicoId, setServicoId] = useState<string>('');
   const [saving, setSaving] = useState(false);
+  const [gcalConnected, setGcalConnected] = useState(false);
 
   useEffect(() => {
     if (open) {
       resetForm();
       carregarServicos();
+      checkGcal();
     }
-  }, [open]);
+  }, [open, user?.id]);
+
+  async function checkGcal() {
+    if (!user?.id) return;
+    const status = await checkGoogleCalendarConnection(user.id);
+    setGcalConnected(status.connected);
+  }
 
   async function carregarServicos() {
     const { data } = await listarServicos();
@@ -130,6 +141,18 @@ export function NovoAgendamentoAdminModal({
           }
         } catch {
           // Silently fail - agendamento já foi criado
+        }
+
+        // Sync to Google Calendar if connected
+        if (gcalConnected && user?.id) {
+          try {
+            const gcalResult = await syncAppointmentToGoogleCalendar(agendamento.id, user.id, 'create');
+            if (gcalResult.success) {
+              toast.success('Agendamento sincronizado com Google Calendar');
+            }
+          } catch {
+            // Silently fail - agendamento já foi criado
+          }
         }
       }
 

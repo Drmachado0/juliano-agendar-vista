@@ -27,6 +27,7 @@ export type Database = {
           data_nascimento: string | null
           detalhe_exame_ou_cirurgia: string | null
           email: string | null
+          google_calendar_event_id: string | null
           hora_agendamento: string
           id: string
           local_atendimento: string
@@ -52,6 +53,7 @@ export type Database = {
           data_nascimento?: string | null
           detalhe_exame_ou_cirurgia?: string | null
           email?: string | null
+          google_calendar_event_id?: string | null
           hora_agendamento: string
           id?: string
           local_atendimento: string
@@ -77,6 +79,7 @@ export type Database = {
           data_nascimento?: string | null
           detalhe_exame_ou_cirurgia?: string | null
           email?: string | null
+          google_calendar_event_id?: string | null
           hora_agendamento?: string
           id?: string
           local_atendimento?: string
@@ -267,6 +270,39 @@ export type Database = {
           id?: string
           intervalo_minutos?: number
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      google_calendar_tokens: {
+        Row: {
+          access_token: string
+          calendar_id: string | null
+          created_at: string | null
+          id: string
+          refresh_token: string
+          token_expiry: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          calendar_id?: string | null
+          created_at?: string | null
+          id?: string
+          refresh_token: string
+          token_expiry: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          calendar_id?: string | null
+          created_at?: string | null
+          id?: string
+          refresh_token?: string
+          token_expiry?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
