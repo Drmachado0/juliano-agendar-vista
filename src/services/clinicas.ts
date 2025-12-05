@@ -67,7 +67,58 @@ export function mapearLocalParaClinicaSlug(localAtendimento: string): string | n
   const mapping: Record<string, string> = {
     'Clinicor – Paragominas': 'clinicor',
     'Hospital Geral de Paragominas': 'hgp',
-    'Belém (IOB / Vitria)': 'iob', // Usando IOB como padrão para Belém
+    'Belém (IOB / Vitria)': 'iob',
   };
   return mapping[localAtendimento] || null;
+}
+
+export async function listarTodasClinicas(): Promise<{ data: Clinica[]; error: Error | null }> {
+  try {
+    const { data, error } = await supabase
+      .from('clinicas')
+      .select('*')
+      .order('nome');
+
+    if (error) throw error;
+
+    return { data: data as Clinica[], error: null };
+  } catch (err: any) {
+    console.error('Erro ao listar todas clínicas:', err);
+    return { data: [], error: err };
+  }
+}
+
+export async function criarClinica(clinica: Omit<Clinica, 'id' | 'created_at' | 'updated_at'>): Promise<{ data: Clinica | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabase
+      .from('clinicas')
+      .insert(clinica)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { data: data as Clinica, error: null };
+  } catch (err: any) {
+    console.error('Erro ao criar clínica:', err);
+    return { data: null, error: err };
+  }
+}
+
+export async function atualizarClinica(id: string, clinica: Partial<Omit<Clinica, 'id' | 'created_at' | 'updated_at'>>): Promise<{ data: Clinica | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabase
+      .from('clinicas')
+      .update(clinica)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { data: data as Clinica, error: null };
+  } catch (err: any) {
+    console.error('Erro ao atualizar clínica:', err);
+    return { data: null, error: err };
+  }
 }
