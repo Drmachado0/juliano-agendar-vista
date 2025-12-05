@@ -9,6 +9,40 @@ export interface SlotAgenda {
   status: 'livre' | 'ocupado' | 'bloqueado' | 'passado';
   agendamento?: Agendamento;
   bloqueio?: Bloqueio;
+  motivoBloqueio?: string;
+}
+
+interface DisponibilidadeSemanal {
+  dia_semana: number;
+  hora_inicio: string;
+  hora_fim: string;
+  intervalo_minutos: number;
+  ativo: boolean;
+}
+
+export async function verificarDiaAtivo(data: Date): Promise<{ ativo: boolean; horaInicio?: string; horaFim?: string }> {
+  const diaSemana = data.getDay();
+  
+  const { data: disponibilidade, error } = await supabase
+    .from('disponibilidade_semanal')
+    .select('*')
+    .eq('dia_semana', diaSemana)
+    .maybeSingle();
+  
+  if (error) {
+    console.error('Erro ao verificar disponibilidade semanal:', error);
+    return { ativo: true }; // Em caso de erro, assume ativo
+  }
+  
+  if (!disponibilidade || !disponibilidade.ativo) {
+    return { ativo: false };
+  }
+  
+  return { 
+    ativo: true, 
+    horaInicio: disponibilidade.hora_inicio,
+    horaFim: disponibilidade.hora_fim
+  };
 }
 
 export function gerarSlots(
@@ -88,7 +122,10 @@ export function montarGradeAgenda(
   slots: { hora: number; minuto: number; horaFormatada: string }[],
   agendamentos: Agendamento[],
   bloqueios: Bloqueio[],
-  dataAtual: Date
+  dataAtual: Date,
+  diaAtivo: boolean = true,
+  horaInicioDisp?: string,
+  horaFimDisp?: string
 ): SlotAgenda[] {
   const agora = new Date();
   const isHoje = dataAtual.toDateString() === agora.toDateString();
@@ -109,6 +146,31 @@ export function montarGradeAgenda(
         horaFormatada: slot.horaFormatada,
         status: 'passado' as const,
       };
+    }
+
+    // Se o dia não está ativo (ex: domingo), todos os slots são bloqueados
+    if (!diaAtivo) {
+      return {
+        hora: String(slot.hora),
+        minuto: slot.minuto,
+        horaFormatada: slot.horaFormatada,
+        status: 'bloqueado' as const,
+        motivoBloqueio: 'Dia não disponível',
+      };
+    }
+
+    // Verificar se o slot está fora do horário de funcionamento do dia
+    if (horaInicioDisp && horaFimDisp) {
+      const slotTime = slot.horaFormatada;
+      if (slotTime < horaInicioDisp || slotTime >= horaFimDisp) {
+        return {
+          hora: String(slot.hora),
+          minuto: slot.minuto,
+          horaFormatada: slot.horaFormatada,
+          status: 'bloqueado' as const,
+          motivoBloqueio: 'Fora do horário de atendimento',
+        };
+      }
     }
 
     // Verificar se há bloqueio
