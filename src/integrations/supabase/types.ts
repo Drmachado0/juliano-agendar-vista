@@ -201,6 +201,75 @@ export type Database = {
         }
         Relationships: []
       }
+      disponibilidade_especifica: {
+        Row: {
+          created_at: string | null
+          data: string
+          disponivel: boolean | null
+          hora_fim: string | null
+          hora_inicio: string | null
+          id: string
+          intervalo_minutos: number | null
+          motivo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data: string
+          disponivel?: boolean | null
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          id?: string
+          intervalo_minutos?: number | null
+          motivo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data?: string
+          disponivel?: boolean | null
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          id?: string
+          intervalo_minutos?: number | null
+          motivo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      disponibilidade_semanal: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          dia_semana: number
+          hora_fim: string
+          hora_inicio: string
+          id: string
+          intervalo_minutos: number
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          dia_semana: number
+          hora_fim: string
+          hora_inicio: string
+          id?: string
+          intervalo_minutos?: number
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          dia_semana?: number
+          hora_fim?: string
+          hora_inicio?: string
+          id?: string
+          intervalo_minutos?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       mensagens_whatsapp: {
         Row: {
           agendamento_id: string | null
