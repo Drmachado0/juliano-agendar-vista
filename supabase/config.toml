@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.receber-whatsapp]
 verify_jwt = false
+
+[functions.confirmar-agendamento-whatsapp]
+verify_jwt = true

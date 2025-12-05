@@ -12,6 +12,8 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import AdminAgendamentos from "./pages/admin/Agendamentos";
 import AdminCRM from "./pages/admin/CRM";
 import AdminWhatsApp from "./pages/admin/WhatsApp";
+import AdminAgenda from "./pages/admin/Agenda";
+import AdminDisponibilidade from "./pages/admin/Disponibilidade";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +31,8 @@ const App = () => (
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/agendamentos" element={<AdminAgendamentos />} />
+              <Route path="/admin/agenda" element={<AdminAgenda />} />
+              <Route path="/admin/disponibilidade" element={<AdminDisponibilidade />} />
               <Route path="/admin/crm" element={<AdminCRM />} />
               <Route path="/admin/whatsapp" element={<AdminWhatsApp />} />
               <Route path="*" element={<NotFound />} />

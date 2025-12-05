@@ -90,6 +90,11 @@ export interface Agendamento {
   observacoes_internas: string | null;
   created_at: string;
   updated_at: string;
+  // Novos campos para agenda multiclínicas
+  clinica_id: string | null;
+  profissional_id: string | null;
+  servico_id: string | null;
+  confirmacao_enviada: boolean;
 }
 
 export interface AgendamentoInsert {
@@ -109,6 +114,10 @@ export interface AgendamentoInsert {
   status_crm?: string;
   origem?: string;
   observacoes_internas?: string | null;
+  // Novos campos opcionais
+  clinica_id?: string | null;
+  profissional_id?: string | null;
+  servico_id?: string | null;
 }
 
 export interface AgendamentoFilters {
