@@ -7,6 +7,43 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-webhook-signature, x-evolution-signature",
 };
 
+// Rate limiter configuration
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute window
+const RATE_LIMIT_MAX_REQUESTS = 60; // Max 60 requests per minute per IP
+
+// In-memory rate limit store (resets on cold start, which is acceptable)
+const rateLimitStore = new Map<string, { count: number; windowStart: number }>();
+
+function checkRateLimit(identifier: string): { allowed: boolean; remaining: number; resetIn: number } {
+  const now = Date.now();
+  const record = rateLimitStore.get(identifier);
+  
+  if (!record || now - record.windowStart > RATE_LIMIT_WINDOW_MS) {
+    // New window
+    rateLimitStore.set(identifier, { count: 1, windowStart: now });
+    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1, resetIn: RATE_LIMIT_WINDOW_MS };
+  }
+  
+  if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
+    const resetIn = RATE_LIMIT_WINDOW_MS - (now - record.windowStart);
+    return { allowed: false, remaining: 0, resetIn };
+  }
+  
+  record.count++;
+  const resetIn = RATE_LIMIT_WINDOW_MS - (now - record.windowStart);
+  return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - record.count, resetIn };
+}
+
+// Cleanup old entries periodically (every 5 minutes)
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, record] of rateLimitStore.entries()) {
+    if (now - record.windowStart > RATE_LIMIT_WINDOW_MS * 2) {
+      rateLimitStore.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+
 // Zod schema for Evolution API webhook payload validation
 const evolutionMessageSchema = z.object({
   event: z.string().optional(),
@@ -68,6 +105,34 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Rate limiting check - use IP or forwarded IP
+  const clientIP = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+                   req.headers.get("x-real-ip") || 
+                   "unknown";
+  
+  const rateLimit = checkRateLimit(clientIP);
+  
+  if (!rateLimit.allowed) {
+    console.warn(`Rate limit exceeded for IP: ${clientIP}`);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: "Too many requests. Please try again later.",
+        retryAfter: Math.ceil(rateLimit.resetIn / 1000)
+      }),
+      { 
+        status: 429, 
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "application/json",
+          "Retry-After": String(Math.ceil(rateLimit.resetIn / 1000)),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": String(Math.ceil(rateLimit.resetIn / 1000))
+        } 
+      }
+    );
+  }
+
   try {
     const rawBody = await req.text();
     const body = JSON.parse(rawBody);
@@ -75,6 +140,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("=== WEBHOOK RECEBIDO ===");
     console.log("Evento:", body.event || body.type);
     console.log("Instância:", body.instance);
+    console.log(`Rate limit remaining: ${rateLimit.remaining}`);
 
     // Get secrets for authentication
     const webhookSecret = Deno.env.get("EVOLUTION_WEBHOOK_SECRET");
