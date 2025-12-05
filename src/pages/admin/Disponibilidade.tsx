@@ -8,11 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight, Plus, Calendar, Trash2, Edit, Clock, Save, CalendarDays } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { listarClinicas, Clinica } from "@/services/clinicas";
-import { listarBloqueios, removerBloqueio, Bloqueio, getTipoBloqueioLabel, getTipoBloqueioColor } from "@/services/disponibilidade";
+import { useBloqueios, Bloqueio, getTipoBloqueioLabel, getTipoBloqueioColor } from "@/hooks/useBloqueios";
 import { BloqueioModal } from "@/components/admin/BloqueioModal";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,8 +53,7 @@ export default function Disponibilidade() {
   const [clinicas, setClinicas] = useState<Clinica[]>([]);
   const [selectedClinicaId, setSelectedClinicaId] = useState<string>("");
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [bloqueios, setBloqueios] = useState<Bloqueio[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingClinicas, setLoadingClinicas] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedBloqueio, setSelectedBloqueio] = useState<Bloqueio | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -76,6 +76,17 @@ export default function Disponibilidade() {
   const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
   const daysOfWeek = eachDayOfInterval({ start: currentWeekStart, end: weekEnd });
 
+  // Hook de bloqueios com React Query - reativo por clínica
+  const dataInicio = format(currentWeekStart, 'yyyy-MM-dd');
+  const dataFim = format(weekEnd, 'yyyy-MM-dd');
+  
+  const {
+    bloqueios,
+    loading: loadingBloqueios,
+    remove: removerBloqueioFn,
+    refetch: refetchBloqueios,
+  } = useBloqueios(selectedClinicaId || null, dataInicio, dataFim);
+
   useEffect(() => {
     carregarClinicas();
   }, []);
@@ -84,18 +95,17 @@ export default function Disponibilidade() {
     if (selectedClinicaId) {
       carregarDisponibilidadeSemanal(selectedClinicaId);
       carregarDisponibilidadeEspecifica(selectedClinicaId);
-      carregarBloqueios();
     }
-  }, [selectedClinicaId, currentWeekStart]);
+  }, [selectedClinicaId]);
 
   async function carregarClinicas() {
-    setLoading(true);
+    setLoadingClinicas(true);
     const { data } = await listarClinicas();
     setClinicas(data);
     if (data.length > 0) {
       setSelectedClinicaId(data[0].id);
     }
-    setLoading(false);
+    setLoadingClinicas(false);
   }
 
   async function carregarDisponibilidadeSemanal(clinicaId: string) {
@@ -166,12 +176,7 @@ export default function Disponibilidade() {
     setDisponibilidadeEspecifica(data || []);
   }
 
-  async function carregarBloqueios() {
-    const dataInicio = format(currentWeekStart, 'yyyy-MM-dd');
-    const dataFim = format(weekEnd, 'yyyy-MM-dd');
-    const { data } = await listarBloqueios(selectedClinicaId, dataInicio, dataFim);
-    setBloqueios(data);
-  }
+  // Bloqueios agora gerenciados pelo hook useBloqueios
 
   async function salvarDisponibilidadeSemanal() {
     setSavingSemanal(true);
@@ -266,12 +271,10 @@ export default function Disponibilidade() {
 
   async function handleRemoverBloqueio(id: string) {
     if (confirm('Tem certeza que deseja remover este bloqueio?')) {
-      const { error } = await removerBloqueio(id);
-      if (error) {
-        toast.error('Erro ao remover bloqueio');
-      } else {
-        toast.success('Bloqueio removido');
-        carregarBloqueios();
+      try {
+        await removerBloqueioFn(id);
+      } catch (error) {
+        // Erro já tratado no hook
       }
     }
   }
@@ -292,10 +295,10 @@ export default function Disponibilidade() {
     setModalOpen(false);
     setSelectedBloqueio(null);
     setSelectedDate(null);
-    carregarBloqueios();
+    refetchBloqueios();
   }
 
-  if (loading) {
+  if (loadingClinicas) {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
@@ -639,73 +642,93 @@ export default function Disponibilidade() {
 
             {/* Grade Semanal */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-              {daysOfWeek.slice(0, 6).map(day => {
-                const bloqueiosDia = getBloqueiosDia(day);
-                const isToday = isSameDay(day, new Date());
-
-                return (
-                  <Card key={day.toISOString()} className={isToday ? 'ring-2 ring-primary' : ''}>
+              {loadingBloqueios ? (
+                // Skeleton loading state
+                daysOfWeek.slice(0, 6).map(day => (
+                  <Card key={day.toISOString()} className="animate-pulse">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium flex items-center justify-between">
                         <span>
                           {format(day, "EEE", { locale: ptBR })}
                           <span className="block text-lg font-bold">{format(day, "d")}</span>
                         </span>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8"
-                          onClick={() => handleNovoBloqueio(day)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 min-h-[120px]">
-                      {bloqueiosDia.length === 0 ? (
-                        <p className="text-xs text-muted-foreground text-center py-4">
-                          Sem bloqueios
-                        </p>
-                      ) : (
-                        bloqueiosDia.map(bloqueio => (
-                          <div
-                            key={bloqueio.id}
-                            className={`p-2 rounded-md border text-xs ${getTipoBloqueioColor(bloqueio.tipo_bloqueio)}`}
-                          >
-                            <div className="flex items-center justify-between gap-1">
-                              <span className="font-medium truncate">
-                                {getTipoBloqueioLabel(bloqueio.tipo_bloqueio)}
-                              </span>
-                              <div className="flex gap-1">
-                                <button
-                                  onClick={() => handleEditarBloqueio(bloqueio)}
-                                  className="p-1 hover:bg-black/10 rounded"
-                                >
-                                  <Edit className="h-3 w-3" />
-                                </button>
-                                <button
-                                  onClick={() => handleRemoverBloqueio(bloqueio.id)}
-                                  className="p-1 hover:bg-black/10 rounded"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
-                              </div>
-                            </div>
-                            {bloqueio.hora_inicio && bloqueio.hora_fim && (
-                              <p className="text-[10px] opacity-80">
-                                {bloqueio.hora_inicio.slice(0, 5)} - {bloqueio.hora_fim.slice(0, 5)}
-                              </p>
-                            )}
-                            {bloqueio.motivo && (
-                              <p className="text-[10px] opacity-80 truncate">{bloqueio.motivo}</p>
-                            )}
-                          </div>
-                        ))
-                      )}
+                      <Skeleton className="h-12 w-full" />
+                      <Skeleton className="h-8 w-3/4" />
                     </CardContent>
                   </Card>
-                );
-              })}
+                ))
+              ) : (
+                daysOfWeek.slice(0, 6).map(day => {
+                  const bloqueiosDia = getBloqueiosDia(day);
+                  const isToday = isSameDay(day, new Date());
+
+                  return (
+                    <Card key={day.toISOString()} className={`transition-all duration-200 ${isToday ? 'ring-2 ring-primary' : ''}`}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium flex items-center justify-between">
+                          <span>
+                            {format(day, "EEE", { locale: ptBR })}
+                            <span className="block text-lg font-bold">{format(day, "d")}</span>
+                          </span>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={() => handleNovoBloqueio(day)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2 min-h-[120px]">
+                        {bloqueiosDia.length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-4">
+                            Sem bloqueios
+                          </p>
+                        ) : (
+                          bloqueiosDia.map(bloqueio => (
+                            <div
+                              key={bloqueio.id}
+                              className={`p-2 rounded-md border text-xs transition-all duration-200 ${getTipoBloqueioColor(bloqueio.tipo_bloqueio)}`}
+                            >
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="font-medium truncate">
+                                  {getTipoBloqueioLabel(bloqueio.tipo_bloqueio)}
+                                </span>
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={() => handleEditarBloqueio(bloqueio)}
+                                    className="p-1 hover:bg-black/10 rounded"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleRemoverBloqueio(bloqueio.id)}
+                                    className="p-1 hover:bg-black/10 rounded"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                              {bloqueio.hora_inicio && bloqueio.hora_fim && (
+                                <p className="text-[10px] opacity-80">
+                                  {bloqueio.hora_inicio.slice(0, 5)} - {bloqueio.hora_fim.slice(0, 5)}
+                                </p>
+                              )}
+                              {bloqueio.motivo && (
+                                <p className="text-[10px] opacity-80 truncate">{bloqueio.motivo}</p>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
             </div>
           </TabsContent>
         </Tabs>
