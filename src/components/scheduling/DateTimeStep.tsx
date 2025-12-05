@@ -2,8 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar } from "@/components/ui/calendar";
 import { FormData } from "./SchedulingModal";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { format, addDays, isBefore, startOfDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Clock, CalendarDays } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DateTimeStepProps {
   formData: FormData;
@@ -12,87 +17,84 @@ interface DateTimeStepProps {
   onPrev: () => void;
 }
 
-declare global {
-  interface Window {
-    Calendly?: {
-      initInlineWidget: (options: {
-        url: string;
-        parentElement: HTMLElement;
-        prefill?: Record<string, string>;
-        utm?: Record<string, string>;
-      }) => void;
-    };
-  }
-}
+// Mapeamento local -> slug da clínica
+const locationToSlug: Record<string, string> = {
+  clinicor: "clinicor",
+  hgp: "hgp",
+  belem: "iob",
+};
+
+// Mapeamento local -> texto para banco
+const locationToText: Record<string, string> = {
+  clinicor: "Clinicor – Paragominas",
+  hgp: "Hospital Geral de Paragominas",
+  belem: "Belém (IOB / Vitria)",
+};
 
 const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStepProps) => {
-  const [isScheduled, setIsScheduled] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [scheduledData, setScheduledData] = useState<{
-    eventName?: string;
-    eventStartTime?: string;
-  } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
+  // Carregar slots disponíveis via edge function
+  const loadSlots = useCallback(async (date: Date) => {
+    if (!formData.location) return;
+
+    setIsLoading(true);
+    try {
+      const dataStr = format(date, "yyyy-MM-dd");
+      const clinicaSlug = locationToSlug[formData.location];
+      const localTexto = locationToText[formData.location];
+
+      const { data, error } = await supabase.functions.invoke("verificar-disponibilidade", {
+        body: {
+          data: dataStr,
+          clinicaSlug,
+          localAtendimento: localTexto,
+        },
+      });
+
+      if (error) throw error;
+
+      setAvailableSlots(data?.slots || []);
+    } catch (error) {
+      console.error("Erro ao carregar slots:", error);
+      setAvailableSlots([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [formData.location]);
+
+  // Carregar slots quando data mudar
   useEffect(() => {
-    // Load Calendly script
-    const script = document.createElement("script");
-    script.src = "https://assets.calendly.com/assets/external/widget.js";
-    script.async = true;
-    document.body.appendChild(script);
+    if (formData.selectedDate && formData.location) {
+      loadSlots(formData.selectedDate);
+      setSelectedTime(null);
+    }
+  }, [formData.selectedDate, formData.location, loadSlots]);
 
-    // Listen for Calendly events
-    const handleCalendlyEvent = (e: MessageEvent) => {
-      if (e.data.event && e.data.event.indexOf("calendly") === 0) {
-        // Widget is ready when we receive any calendly event
-        if (e.data.event === "calendly.page_height" || e.data.event === "calendly.event_type_viewed") {
-          setIsLoading(false);
-        }
-        
-        if (e.data.event === "calendly.event_scheduled") {
-          const payload = e.data.payload;
-          setIsScheduled(true);
-          setScheduledData({
-            eventName: payload?.event?.name,
-            eventStartTime: payload?.event?.start_time,
-          });
-          
-          // Parse the scheduled date and time
-          if (payload?.event?.start_time) {
-            const scheduledDate = new Date(payload.event.start_time);
-            updateFormData({
-              selectedDate: scheduledDate,
-              selectedTime: scheduledDate.toLocaleTimeString("pt-BR", {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-            });
-          }
-        }
-      }
-    };
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      updateFormData({ selectedDate: date, selectedTime: undefined });
+      setSelectedTime(null);
+    }
+  };
 
-    window.addEventListener("message", handleCalendlyEvent);
-    
-    // Fallback: hide loading after 5 seconds if no event received
-    const fallbackTimer = setTimeout(() => setIsLoading(false), 5000);
-
-    return () => {
-      window.removeEventListener("message", handleCalendlyEvent);
-      clearTimeout(fallbackTimer);
-      // Clean up script if needed
-      const existingScript = document.querySelector(
-        'script[src="https://assets.calendly.com/assets/external/widget.js"]'
-      );
-      if (existingScript) {
-        existingScript.remove();
-      }
-    };
-  }, [updateFormData]);
+  const handleTimeSelect = (time: string) => {
+    setSelectedTime(time);
+    updateFormData({ selectedTime: time });
+  };
 
   const handleNext = () => {
-    if (isScheduled || (formData.selectedDate && formData.selectedTime)) {
+    if (formData.selectedDate && formData.selectedTime) {
       onNext();
     }
+  };
+
+  // Desabilitar datas passadas e domingos
+  const disabledDays = (date: Date) => {
+    const today = startOfDay(new Date());
+    return isBefore(date, today) || date.getDay() === 0;
   };
 
   return (
@@ -100,42 +102,90 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
       <div className="space-y-2">
         <h3 className="text-lg font-semibold text-foreground">Escolha data e horário</h3>
         <p className="text-sm text-muted-foreground">
-          Selecione a data e horário de sua preferência no calendário abaixo.
+          Selecione a data e horário disponíveis para seu atendimento.
         </p>
       </div>
 
-      {/* Calendly Widget */}
-      <div className="w-full overflow-hidden rounded-xl border border-border relative">
-        {isLoading && (
-          <div className="absolute inset-0 z-10 bg-background p-4 space-y-4">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-8 w-3/4" />
-            <div className="grid grid-cols-7 gap-2 mt-6">
-              {Array.from({ length: 35 }).map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Calendar */}
+        <div className="space-y-3">
+          <Label className="text-foreground flex items-center gap-2">
+            <CalendarDays className="w-4 h-4 text-primary" />
+            Data do atendimento
+          </Label>
+          <div className="border border-border rounded-xl p-4 bg-secondary/30">
+            <Calendar
+              mode="single"
+              selected={formData.selectedDate}
+              onSelect={handleDateSelect}
+              disabled={disabledDays}
+              locale={ptBR}
+              fromDate={new Date()}
+              toDate={addDays(new Date(), 90)}
+              className="rounded-md"
+            />
+          </div>
+        </div>
+
+        {/* Time Slots */}
+        <div className="space-y-3">
+          <Label className="text-foreground flex items-center gap-2">
+            <Clock className="w-4 h-4 text-primary" />
+            Horários disponíveis
+          </Label>
+
+          {!formData.selectedDate ? (
+            <div className="border border-border rounded-xl p-8 bg-secondary/30 text-center">
+              <p className="text-muted-foreground text-sm">
+                Selecione uma data para ver os horários disponíveis
+              </p>
+            </div>
+          ) : isLoading ? (
+            <div className="border border-border rounded-xl p-4 bg-secondary/30 space-y-2">
+              {Array.from({ length: 6 }).map((_, i) => (
                 <Skeleton key={i} className="h-10 w-full" />
               ))}
             </div>
-            <div className="mt-6 space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-2/3" />
+          ) : availableSlots.length === 0 ? (
+            <div className="border border-border rounded-xl p-8 bg-secondary/30 text-center">
+              <p className="text-muted-foreground text-sm">
+                Nenhum horário disponível para esta data.
+              </p>
+              <p className="text-muted-foreground text-xs mt-2">
+                Por favor, selecione outra data.
+              </p>
             </div>
-          </div>
-        )}
-        <div
-          className="calendly-inline-widget h-[450px] sm:h-[550px] md:h-[600px]"
-          data-url="https://calendly.com/julianosmachado/nova-reuniao?hide_event_type_details=1&hide_gdpr_banner=1&background_color=0e1420&text_color=ffffff&primary_color=f0b428"
-          style={{ minWidth: "100%" }}
-        />
-      </div>
+          ) : (
+            <div className="border border-border rounded-xl p-4 bg-secondary/30 max-h-[320px] overflow-y-auto">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {availableSlots.map((slot) => (
+                  <button
+                    key={slot}
+                    onClick={() => handleTimeSelect(slot)}
+                    className={`p-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      selectedTime === slot
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "bg-background border border-border hover:border-primary/50 hover:bg-primary/10 text-foreground"
+                    }`}
+                  >
+                    {slot}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-      {isScheduled && (
-        <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
-          <p className="text-sm text-foreground font-medium">
-            ✓ Horário selecionado com sucesso!
-          </p>
+          {formData.selectedDate && formData.selectedTime && (
+            <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
+              <p className="text-sm text-foreground">
+                <span className="font-medium">Selecionado:</span>{" "}
+                {format(formData.selectedDate, "dd 'de' MMMM", { locale: ptBR })} às{" "}
+                {formData.selectedTime}
+              </p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Checkboxes */}
       <div className="space-y-4 pt-2">
@@ -178,10 +228,10 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
         <Button variant="outline" onClick={onPrev}>
           Voltar
         </Button>
-        <Button 
-          variant="hero" 
+        <Button
+          variant="hero"
           onClick={handleNext}
-          disabled={!isScheduled && !formData.selectedDate}
+          disabled={!formData.selectedDate || !formData.selectedTime}
         >
           Avançar
         </Button>
