@@ -216,6 +216,36 @@ export type Database = {
         }
         Relationships: []
       }
+      convenios: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          id: string
+          nome: string
+          slug: string
+          updated_at: string | null
+          valor_consulta: number | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome: string
+          slug: string
+          updated_at?: string | null
+          valor_consulta?: number | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+          slug?: string
+          updated_at?: string | null
+          valor_consulta?: number | null
+        }
+        Relationships: []
+      }
       disponibilidade_especifica: {
         Row: {
           clinica_id: string | null
@@ -515,6 +545,36 @@ export type Database = {
           duracao_min?: number
           id?: string
           nome?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      tipos_atendimento: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          slug?: string
           updated_at?: string | null
         }
         Relationships: []

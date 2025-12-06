@@ -3,8 +3,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { FormData } from "./SchedulingModal";
-import { useState } from "react";
-import { Stethoscope, MapPin, Shield } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Stethoscope, MapPin, Shield, Loader2 } from "lucide-react";
+import { listarClinicas, Clinica } from "@/services/clinicas";
+import { listarConvenios, Convenio } from "@/services/convenios";
+import { listarTiposAtendimento, TipoAtendimento } from "@/services/tiposAtendimento";
 
 interface ConsultationDetailsStepProps {
   formData: FormData;
@@ -20,28 +23,29 @@ const ConsultationDetailsStep = ({
   onPrev,
 }: ConsultationDetailsStepProps) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  
+  const [tiposAtendimento, setTiposAtendimento] = useState<TipoAtendimento[]>([]);
+  const [clinicas, setClinicas] = useState<Clinica[]>([]);
+  const [convenios, setConvenios] = useState<Convenio[]>([]);
 
-  const appointmentTypes = [
-    { value: "consulta", label: "Consulta" },
-    { value: "retorno", label: "Retorno" },
-    { value: "exame", label: "Exame (campo visual, OCT, mapeamento etc.)" },
-    { value: "cirurgia", label: "Cirurgia (catarata, pterígio etc.)" },
-  ];
+  useEffect(() => {
+    carregarDados();
+  }, []);
 
-  const locations = [
-    { value: "clinicor", label: "Clinicor – Paragominas" },
-    { value: "hgp", label: "Hospital Geral de Paragominas" },
-    { value: "belem", label: "Belém (IOB / Vitria)" },
-  ];
+  async function carregarDados() {
+    setLoading(true);
+    const [tiposRes, clinicasRes, conveniosRes] = await Promise.all([
+      listarTiposAtendimento(),
+      listarClinicas(),
+      listarConvenios(),
+    ]);
 
-  const insurances = [
-    { value: "particular", label: "Particular" },
-    { value: "bradesco", label: "Bradesco" },
-    { value: "unimed", label: "Unimed" },
-    { value: "cassi", label: "Cassi" },
-    { value: "sulamerica", label: "Sul América" },
-    { value: "outro", label: "Outro" },
-  ];
+    if (tiposRes.data) setTiposAtendimento(tiposRes.data);
+    if (clinicasRes.data) setClinicas(clinicasRes.data);
+    if (conveniosRes.data) setConvenios(conveniosRes.data);
+    setLoading(false);
+  }
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -72,6 +76,17 @@ const ConsultationDetailsStep = ({
     }
   };
 
+  // Check if "outro" option exists in convenios
+  const hasOutroOption = convenios.some(c => c.slug === 'outro');
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -93,18 +108,23 @@ const ConsultationDetailsStep = ({
             onValueChange={(value) => updateFormData({ appointmentType: value })}
             className="grid grid-cols-1 gap-2"
           >
-            {appointmentTypes.map((type) => (
+            {tiposAtendimento.map((tipo) => (
               <Label
-                key={type.value}
-                htmlFor={type.value}
+                key={tipo.id}
+                htmlFor={tipo.slug}
                 className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
-                  formData.appointmentType === type.value
+                  formData.appointmentType === tipo.slug
                     ? "border-primary bg-primary/10"
                     : "border-border bg-secondary hover:border-primary/50"
                 }`}
               >
-                <RadioGroupItem value={type.value} id={type.value} />
-                <span className="text-foreground">{type.label}</span>
+                <RadioGroupItem value={tipo.slug} id={tipo.slug} />
+                <span className="text-foreground">
+                  {tipo.nome}
+                  {tipo.descricao && (
+                    <span className="text-muted-foreground"> ({tipo.descricao})</span>
+                  )}
+                </span>
               </Label>
             ))}
           </RadioGroup>
@@ -124,18 +144,18 @@ const ConsultationDetailsStep = ({
             onValueChange={(value) => updateFormData({ location: value })}
             className="grid grid-cols-1 gap-2"
           >
-            {locations.map((loc) => (
+            {clinicas.map((clinica) => (
               <Label
-                key={loc.value}
-                htmlFor={`loc-${loc.value}`}
+                key={clinica.id}
+                htmlFor={`loc-${clinica.slug}`}
                 className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
-                  formData.location === loc.value
+                  formData.location === clinica.slug
                     ? "border-primary bg-primary/10"
                     : "border-border bg-secondary hover:border-primary/50"
                 }`}
               >
-                <RadioGroupItem value={loc.value} id={`loc-${loc.value}`} />
-                <span className="text-foreground">{loc.label}</span>
+                <RadioGroupItem value={clinica.slug} id={`loc-${clinica.slug}`} />
+                <span className="text-foreground">{clinica.nome}</span>
               </Label>
             ))}
           </RadioGroup>
@@ -155,20 +175,34 @@ const ConsultationDetailsStep = ({
             onValueChange={(value) => updateFormData({ insurance: value })}
             className="grid grid-cols-2 gap-2"
           >
-            {insurances.map((ins) => (
+            {convenios.map((convenio) => (
               <Label
-                key={ins.value}
-                htmlFor={`ins-${ins.value}`}
+                key={convenio.id}
+                htmlFor={`ins-${convenio.slug}`}
                 className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
-                  formData.insurance === ins.value
+                  formData.insurance === convenio.slug
                     ? "border-primary bg-primary/10"
                     : "border-border bg-secondary hover:border-primary/50"
                 }`}
               >
-                <RadioGroupItem value={ins.value} id={`ins-${ins.value}`} />
-                <span className="text-foreground text-sm">{ins.label}</span>
+                <RadioGroupItem value={convenio.slug} id={`ins-${convenio.slug}`} />
+                <span className="text-foreground text-sm">{convenio.nome}</span>
               </Label>
             ))}
+            {/* Always show "Outro" option */}
+            {!hasOutroOption && (
+              <Label
+                htmlFor="ins-outro"
+                className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
+                  formData.insurance === "outro"
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-secondary hover:border-primary/50"
+                }`}
+              >
+                <RadioGroupItem value="outro" id="ins-outro" />
+                <span className="text-foreground text-sm">Outro</span>
+              </Label>
+            )}
           </RadioGroup>
           {errors.insurance && (
             <p className="text-sm text-destructive">{errors.insurance}</p>
