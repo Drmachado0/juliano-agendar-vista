@@ -41,6 +41,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const evolutionApiUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
     const evolutionApiToken = Deno.env.get("EVOLUTION_API_TOKEN");
+    const evolutionInstance = Deno.env.get("EVOLUTION_API_INSTANCE") || "SITEIA";
 
     if (!evolutionApiUrl || !evolutionApiToken) {
       console.error("[lembrete-consulta] Configuração da Evolution API ausente");
@@ -103,7 +104,7 @@ serve(async (req) => {
         console.log(`[lembrete-consulta] Enviando lembrete para: ${telefone}`);
 
         // Enviar via Evolution API
-        const evolutionResponse = await fetch(`${evolutionApiUrl}/message/sendText/Site`, {
+        const evolutionResponse = await fetch(`${evolutionApiUrl}/message/sendText/${evolutionInstance}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
