@@ -126,11 +126,43 @@ serve(async (req) => {
       throw new Error('User ID is required');
     }
 
+    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+
+    // Handle check action first - before requiring valid token
+    if (action === 'check') {
+      const { data: tokenData, error } = await supabase
+        .from('google_calendar_tokens')
+        .select('id, calendar_id, updated_at')
+        .eq('user_id', user_id)
+        .single();
+
+      return new Response(
+        JSON.stringify({ 
+          connected: !error && !!tokenData,
+          calendar_id: tokenData?.calendar_id,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Handle disconnect action - doesn't need valid token
+    if (action === 'disconnect') {
+      await supabase
+        .from('google_calendar_tokens')
+        .delete()
+        .eq('user_id', user_id);
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // For other actions, require Google credentials and valid token
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
       throw new Error('Google OAuth credentials not configured');
     }
 
-    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     const accessToken = await getValidAccessToken(supabase, user_id);
 
     // Get token data for calendar_id
@@ -258,34 +290,6 @@ serve(async (req) => {
       );
     }
 
-    if (action === 'check') {
-      // Check if calendar is connected
-      const { data: tokenData, error } = await supabase
-        .from('google_calendar_tokens')
-        .select('id, calendar_id, updated_at')
-        .eq('user_id', user_id)
-        .single();
-
-      return new Response(
-        JSON.stringify({ 
-          connected: !error && !!tokenData,
-          calendar_id: tokenData?.calendar_id,
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (action === 'disconnect') {
-      await supabase
-        .from('google_calendar_tokens')
-        .delete()
-        .eq('user_id', user_id);
-
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     throw new Error('Invalid action');
   } catch (error: unknown) {
