@@ -1,33 +1,34 @@
 import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, startOfDay, isBefore, isSameDay } from "date-fns";
 
-// Mapeia o valor do local de atendimento para o slug da clínica
-function getClinicaSlugFromLocal(localAtendimento?: string): string | undefined {
-  if (!localAtendimento) return undefined;
+// Mapeia o valor do local de atendimento para o(s) slug(s) da clínica
+function getClinicaSlugsFromLocal(localAtendimento?: string): string[] {
+  if (!localAtendimento) return [];
   
-  const locationMap: Record<string, string> = {
-    clinicor: "clinicor",
-    hgp: "hgp",
-    belem: "belem",
+  const locationMap: Record<string, string[]> = {
+    clinicor: ["clinicor"],
+    hgp: ["hgp"],
+    belem: ["iob", "vitria"], // Belém inclui IOB e Vitria
   };
   
-  return locationMap[localAtendimento];
+  return locationMap[localAtendimento] || [];
 }
 
-// Busca o ID da clínica pelo slug
-async function buscarClinicaIdPorSlug(slug: string): Promise<string | null> {
+// Busca os IDs das clínicas pelos slugs
+async function buscarClinicaIdsPorSlugs(slugs: string[]): Promise<string[]> {
+  if (slugs.length === 0) return [];
+  
   const { data, error } = await supabase
     .from('clinicas')
     .select('id')
-    .eq('slug', slug)
-    .maybeSingle();
+    .in('slug', slugs);
   
   if (error || !data) {
-    console.error('Erro ao buscar clínica:', error);
-    return null;
+    console.error('Erro ao buscar clínicas:', error);
+    return [];
   }
   
-  return data.id;
+  return data.map(c => c.id);
 }
 
 export interface SlotDisponivel {
@@ -142,13 +143,13 @@ export async function gerarHorariosDisponiveis(data: Date, localAtendimento?: st
     return [];
   }
   
-  // Busca clinica_id se localAtendimento foi fornecido
-  let clinicaId: string | undefined;
-  const slug = getClinicaSlugFromLocal(localAtendimento);
-  if (slug) {
-    const id = await buscarClinicaIdPorSlug(slug);
-    if (id) clinicaId = id;
+  // Busca clinica_ids se localAtendimento foi fornecido
+  let clinicaIds: string[] = [];
+  const slugs = getClinicaSlugsFromLocal(localAtendimento);
+  if (slugs.length > 0) {
+    clinicaIds = await buscarClinicaIdsPorSlugs(slugs);
   }
+  const clinicaId = clinicaIds.length > 0 ? clinicaIds[0] : undefined;
   
   // Busca disponibilidade específica primeiro
   const especifica = await buscarDisponibilidadeEspecifica(dataStr, clinicaId);
@@ -235,13 +236,13 @@ export async function listarDatasComDisponibilidade(
   const ultimoDia = new Date(ano, mes + 1, 0);
   const hoje = startOfDay(new Date());
   
-  // Busca clinica_id se localAtendimento foi fornecido
-  let clinicaId: string | undefined;
-  const slug = getClinicaSlugFromLocal(localAtendimento);
-  if (slug) {
-    const id = await buscarClinicaIdPorSlug(slug);
-    if (id) clinicaId = id;
+  // Busca clinica_ids se localAtendimento foi fornecido
+  let clinicaIds: string[] = [];
+  const slugs = getClinicaSlugsFromLocal(localAtendimento);
+  if (slugs.length > 0) {
+    clinicaIds = await buscarClinicaIdsPorSlugs(slugs);
   }
+  const clinicaId = clinicaIds.length > 0 ? clinicaIds[0] : undefined;
   
   // Busca disponibilidade semanal
   const semanal = await buscarDisponibilidadeSemanal(clinicaId);
