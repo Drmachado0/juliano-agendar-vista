@@ -117,11 +117,17 @@ async function buscarDisponibilidadeEspecifica(data: string, clinicaId?: string)
 }
 
 // Busca agendamentos existentes para uma data
-async function buscarAgendamentosData(data: string): Promise<string[]> {
-  const { data: agendamentos, error } = await supabase
+async function buscarAgendamentosData(data: string, clinicaIds?: string[]): Promise<string[]> {
+  let query = supabase
     .from('agendamentos')
     .select('hora_agendamento')
     .eq('data_agendamento', data);
+  
+  if (clinicaIds && clinicaIds.length > 0) {
+    query = query.in('clinica_id', clinicaIds);
+  }
+  
+  const { data: agendamentos, error } = await query;
   
   if (error) {
     console.error('Erro ao buscar agendamentos:', error);
@@ -129,6 +135,50 @@ async function buscarAgendamentosData(data: string): Promise<string[]> {
   }
   
   return (agendamentos || []).map(a => a.hora_agendamento.substring(0, 5));
+}
+
+// Busca bloqueios para uma data e clínicas específicas
+async function buscarBloqueiosData(data: string, clinicaIds?: string[]): Promise<{
+  diaBloqueado: boolean;
+  intervalos: { inicio: string; fim: string }[];
+}> {
+  if (!clinicaIds || clinicaIds.length === 0) {
+    return { diaBloqueado: false, intervalos: [] };
+  }
+  
+  const { data: bloqueios, error } = await supabase
+    .from('bloqueios_agenda')
+    .select('*')
+    .eq('data', data)
+    .in('clinica_id', clinicaIds);
+  
+  if (error) {
+    console.error('Erro ao buscar bloqueios:', error);
+    return { diaBloqueado: false, intervalos: [] };
+  }
+  
+  if (!bloqueios || bloqueios.length === 0) {
+    return { diaBloqueado: false, intervalos: [] };
+  }
+  
+  // Verificar se há bloqueio de dia inteiro ou feriado
+  const bloqueioTotal = bloqueios.some(b => 
+    b.tipo_bloqueio === 'dia_inteiro' || b.tipo_bloqueio === 'feriado'
+  );
+  
+  if (bloqueioTotal) {
+    return { diaBloqueado: true, intervalos: [] };
+  }
+  
+  // Coletar intervalos bloqueados
+  const intervalos = bloqueios
+    .filter(b => b.tipo_bloqueio === 'intervalo' && b.hora_inicio && b.hora_fim)
+    .map(b => ({
+      inicio: b.hora_inicio!.substring(0, 5),
+      fim: b.hora_fim!.substring(0, 5)
+    }));
+  
+  return { diaBloqueado: false, intervalos };
 }
 
 // Gera horários disponíveis para um dia específico
@@ -178,10 +228,18 @@ export async function gerarHorariosDisponiveis(data: Date, localAtendimento?: st
     slots = gerarSlots(config.hora_inicio, config.hora_fim, config.intervalo_minutos);
   }
   
-  // Busca agendamentos existentes
-  const agendamentosExistentes = await buscarAgendamentosData(dataStr);
+  // Busca bloqueios para a data
+  const bloqueiosData = await buscarBloqueiosData(dataStr, clinicaIds);
   
-  // Filtra horários já ocupados e horários passados (se for hoje)
+  // Se o dia está bloqueado, retorna vazio
+  if (bloqueiosData.diaBloqueado) {
+    return [];
+  }
+  
+  // Busca agendamentos existentes
+  const agendamentosExistentes = await buscarAgendamentosData(dataStr, clinicaIds);
+  
+  // Filtra horários já ocupados, bloqueados e passados (se for hoje)
   const horaAtual = hoje.getHours() * 60 + hoje.getMinutes();
   
   return slots.map(horario => {
@@ -190,6 +248,15 @@ export async function gerarHorariosDisponiveis(data: Date, localAtendimento?: st
     
     // Se for hoje, verifica se o horário já passou
     if (isHoje && horarioMinutos <= horaAtual + 30) { // 30 min de margem
+      return { horario, disponivel: false };
+    }
+    
+    // Verifica se está em um intervalo bloqueado
+    const estaBloqueado = bloqueiosData.intervalos.some(intervalo => 
+      horario >= intervalo.inicio && horario < intervalo.fim
+    );
+    
+    if (estaBloqueado) {
       return { horario, disponivel: false };
     }
     
@@ -266,12 +333,35 @@ export async function listarDatasComDisponibilidade(
     especificasMap.set(e.data, e as DisponibilidadeEspecifica);
   });
   
+  // Busca todos os bloqueios do mês para as clínicas
+  let bloqueiosMap = new Map<string, boolean>();
+  if (clinicaIds.length > 0) {
+    const { data: bloqueios } = await supabase
+      .from('bloqueios_agenda')
+      .select('data, tipo_bloqueio')
+      .gte('data', format(primeiroDia, 'yyyy-MM-dd'))
+      .lte('data', format(ultimoDia, 'yyyy-MM-dd'))
+      .in('clinica_id', clinicaIds)
+      .in('tipo_bloqueio', ['dia_inteiro', 'feriado']);
+    
+    (bloqueios || []).forEach(b => {
+      bloqueiosMap.set(b.data, true);
+    });
+  }
+  
   // Itera por cada dia do mês
   let dataAtual = primeiroDia;
   while (dataAtual <= ultimoDia) {
     // Ignora datas passadas
     if (!isBefore(dataAtual, hoje)) {
       const dataStr = format(dataAtual, 'yyyy-MM-dd');
+      
+      // Verifica se há bloqueio de dia inteiro
+      if (bloqueiosMap.has(dataStr)) {
+        dataAtual = addDays(dataAtual, 1);
+        continue;
+      }
+      
       const especifica = especificasMap.get(dataStr);
       const diaSemana = dataAtual.getDay();
       
