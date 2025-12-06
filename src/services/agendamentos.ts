@@ -184,24 +184,39 @@ export async function criarAgendamento(data: AgendamentoInsert): Promise<{ data:
     observacoes_internas: validatedData.observacoes_internas ?? null,
   };
 
-  const { data: agendamento, error } = await supabase
+  // Insert without .select() to avoid RLS SELECT permission requirement for public users
+  const { error } = await supabase
     .from('agendamentos')
-    .insert([sanitizedData])
-    .select()
-    .single();
+    .insert([sanitizedData]);
 
   if (error) {
     console.error('Erro ao criar agendamento:', error);
     return { data: null, error: new Error(error.message) };
   }
 
+  // Create a partial agendamento object for notifications (without needing SELECT)
+  const agendamentoParaNotificacoes = {
+    ...sanitizedData,
+    id: crypto.randomUUID(), // Placeholder - edge functions will use the data directly
+  };
+
   // Enviar notificações em paralelo (não bloqueiam a criação)
   const notificacoes = [];
 
-  // 1. Enviar WhatsApp para o paciente
+  // 1. Enviar WhatsApp para o paciente - passing data directly instead of ID
   notificacoes.push(
     supabase.functions.invoke('confirmar-agendamento-whatsapp', {
-      body: { agendamento_id: agendamento.id },
+      body: { 
+        agendamento_data: {
+          nome_completo: sanitizedData.nome_completo,
+          telefone_whatsapp: sanitizedData.telefone_whatsapp,
+          tipo_atendimento: sanitizedData.tipo_atendimento,
+          local_atendimento: sanitizedData.local_atendimento,
+          data_agendamento: sanitizedData.data_agendamento,
+          hora_agendamento: sanitizedData.hora_agendamento,
+          convenio: sanitizedData.convenio,
+        }
+      },
     }).then(() => console.log('WhatsApp enviado para o paciente'))
       .catch((err) => console.error('Erro ao enviar WhatsApp (não crítico):', err))
   );
@@ -229,7 +244,8 @@ export async function criarAgendamento(data: AgendamentoInsert): Promise<{ data:
   // Executar notificações em paralelo sem bloquear
   Promise.all(notificacoes).catch(() => {});
 
-  return { data: agendamento as Agendamento, error: null };
+  // Return success with sanitized data (no ID since we can't retrieve it)
+  return { data: { ...sanitizedData, id: 'created' } as unknown as Agendamento, error: null };
 }
 
 // List agendamentos with filters (admin only)
