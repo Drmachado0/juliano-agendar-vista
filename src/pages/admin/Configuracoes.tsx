@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Building2, Stethoscope, Plus, Pencil, Clock, MapPin, Phone, Calendar, Link2, Unlink, Loader2 } from "lucide-react";
+import { Building2, Stethoscope, Plus, Pencil, Clock, MapPin, Phone, Calendar, Link2, Unlink, Loader2, Shield, DollarSign } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Clinica, 
@@ -25,6 +25,18 @@ import {
   atualizarServico 
 } from "@/services/servicos";
 import {
+  Convenio,
+  listarTodosConvenios,
+  criarConvenio,
+  atualizarConvenio
+} from "@/services/convenios";
+import {
+  TipoAtendimento,
+  listarTodosTiposAtendimento,
+  criarTipoAtendimento,
+  atualizarTipoAtendimento
+} from "@/services/tiposAtendimento";
+import {
   checkGoogleCalendarConnection,
   initiateGoogleCalendarAuth,
   disconnectGoogleCalendar,
@@ -38,6 +50,8 @@ export default function Configuracoes() {
   const [searchParams] = useSearchParams();
   const [clinicas, setClinicas] = useState<Clinica[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
+  const [convenios, setConvenios] = useState<Convenio[]>([]);
+  const [tiposAtendimento, setTiposAtendimento] = useState<TipoAtendimento[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Google Calendar state
@@ -47,10 +61,14 @@ export default function Configuracoes() {
   // Modal states
   const [clinicaModalOpen, setClinicaModalOpen] = useState(false);
   const [servicoModalOpen, setServicoModalOpen] = useState(false);
+  const [convenioModalOpen, setConvenioModalOpen] = useState(false);
+  const [tipoModalOpen, setTipoModalOpen] = useState(false);
   const [editingClinica, setEditingClinica] = useState<Clinica | null>(null);
   const [editingServico, setEditingServico] = useState<Servico | null>(null);
+  const [editingConvenio, setEditingConvenio] = useState<Convenio | null>(null);
+  const [editingTipo, setEditingTipo] = useState<TipoAtendimento | null>(null);
 
-  // Form states for clinica
+  // Form states
   const [clinicaForm, setClinicaForm] = useState({
     nome: "",
     slug: "",
@@ -59,7 +77,6 @@ export default function Configuracoes() {
     ativo: true,
   });
 
-  // Form states for servico
   const [servicoForm, setServicoForm] = useState({
     nome: "",
     descricao: "",
@@ -67,16 +84,28 @@ export default function Configuracoes() {
     ativo: true,
   });
 
+  const [convenioForm, setConvenioForm] = useState({
+    nome: "",
+    slug: "",
+    valor_consulta: null as number | null,
+    ativo: true,
+  });
+
+  const [tipoForm, setTipoForm] = useState({
+    nome: "",
+    slug: "",
+    descricao: "",
+    ativo: true,
+  });
+
   useEffect(() => {
     carregarDados();
     
-    // Handle OAuth callback parameters
     const success = searchParams.get('success');
     const error = searchParams.get('error');
     
     if (success === 'true') {
       toast.success('Google Calendar conectado com sucesso!');
-      // Clear URL params
       window.history.replaceState({}, '', window.location.pathname);
     } else if (error) {
       toast.error(`Erro ao conectar: ${error}`);
@@ -100,13 +129,17 @@ export default function Configuracoes() {
 
   async function carregarDados() {
     setLoading(true);
-    const [clinicasRes, servicosRes] = await Promise.all([
+    const [clinicasRes, servicosRes, conveniosRes, tiposRes] = await Promise.all([
       listarTodasClinicas(),
       listarTodosServicos(),
+      listarTodosConvenios(),
+      listarTodosTiposAtendimento(),
     ]);
 
     if (clinicasRes.data) setClinicas(clinicasRes.data);
     if (servicosRes.data) setServicos(servicosRes.data);
+    if (conveniosRes.data) setConvenios(conveniosRes.data);
+    if (tiposRes.data) setTiposAtendimento(tiposRes.data);
     setLoading(false);
   }
 
@@ -117,8 +150,6 @@ export default function Configuracoes() {
     }
 
     setGcalLoading(true);
-    
-    // Get the base auth URL
     const { auth_url, error } = await initiateGoogleCalendarAuth();
     
     if (error || !auth_url) {
@@ -127,18 +158,10 @@ export default function Configuracoes() {
       return;
     }
 
-    // Build URL with state parameter for callback
     const callbackUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-calendar-callback`;
     const appRedirect = `${window.location.origin}/admin/configuracoes`;
     
-    const fullAuthUrl = buildGoogleCalendarAuthUrl(
-      auth_url,
-      user.id,
-      callbackUrl,
-      appRedirect
-    );
-
-    // Redirect to Google OAuth
+    const fullAuthUrl = buildGoogleCalendarAuthUrl(auth_url, user.id, callbackUrl, appRedirect);
     window.location.href = fullAuthUrl;
   }
 
@@ -201,6 +224,16 @@ export default function Configuracoes() {
     carregarDados();
   }
 
+  async function toggleClinicaAtivo(clinica: Clinica) {
+    const { error } = await atualizarClinica(clinica.id, { ativo: !clinica.ativo });
+    if (error) {
+      toast.error("Erro ao atualizar status");
+      return;
+    }
+    toast.success(clinica.ativo ? "Clínica desativada" : "Clínica ativada");
+    carregarDados();
+  }
+
   // Servico handlers
   function abrirModalServico(servico?: Servico) {
     if (servico) {
@@ -244,16 +277,6 @@ export default function Configuracoes() {
     carregarDados();
   }
 
-  async function toggleClinicaAtivo(clinica: Clinica) {
-    const { error } = await atualizarClinica(clinica.id, { ativo: !clinica.ativo });
-    if (error) {
-      toast.error("Erro ao atualizar status");
-      return;
-    }
-    toast.success(clinica.ativo ? "Clínica desativada" : "Clínica ativada");
-    carregarDados();
-  }
-
   async function toggleServicoAtivo(servico: Servico) {
     const { error } = await atualizarServico(servico.id, { ativo: !servico.ativo });
     if (error) {
@@ -264,27 +287,141 @@ export default function Configuracoes() {
     carregarDados();
   }
 
+  // Convenio handlers
+  function abrirModalConvenio(convenio?: Convenio) {
+    if (convenio) {
+      setEditingConvenio(convenio);
+      setConvenioForm({
+        nome: convenio.nome,
+        slug: convenio.slug,
+        valor_consulta: convenio.valor_consulta,
+        ativo: convenio.ativo,
+      });
+    } else {
+      setEditingConvenio(null);
+      setConvenioForm({ nome: "", slug: "", valor_consulta: null, ativo: true });
+    }
+    setConvenioModalOpen(true);
+  }
+
+  async function salvarConvenio() {
+    if (!convenioForm.nome || !convenioForm.slug) {
+      toast.error("Nome e slug são obrigatórios");
+      return;
+    }
+
+    if (editingConvenio) {
+      const { error } = await atualizarConvenio(editingConvenio.id, convenioForm);
+      if (error) {
+        toast.error("Erro ao atualizar convênio");
+        return;
+      }
+      toast.success("Convênio atualizado");
+    } else {
+      const { error } = await criarConvenio(convenioForm);
+      if (error) {
+        toast.error("Erro ao criar convênio");
+        return;
+      }
+      toast.success("Convênio criado");
+    }
+
+    setConvenioModalOpen(false);
+    carregarDados();
+  }
+
+  async function toggleConvenioAtivo(convenio: Convenio) {
+    const { error } = await atualizarConvenio(convenio.id, { ativo: !convenio.ativo });
+    if (error) {
+      toast.error("Erro ao atualizar status");
+      return;
+    }
+    toast.success(convenio.ativo ? "Convênio desativado" : "Convênio ativado");
+    carregarDados();
+  }
+
+  // Tipo Atendimento handlers
+  function abrirModalTipo(tipo?: TipoAtendimento) {
+    if (tipo) {
+      setEditingTipo(tipo);
+      setTipoForm({
+        nome: tipo.nome,
+        slug: tipo.slug,
+        descricao: tipo.descricao || "",
+        ativo: tipo.ativo,
+      });
+    } else {
+      setEditingTipo(null);
+      setTipoForm({ nome: "", slug: "", descricao: "", ativo: true });
+    }
+    setTipoModalOpen(true);
+  }
+
+  async function salvarTipo() {
+    if (!tipoForm.nome || !tipoForm.slug) {
+      toast.error("Nome e slug são obrigatórios");
+      return;
+    }
+
+    if (editingTipo) {
+      const { error } = await atualizarTipoAtendimento(editingTipo.id, tipoForm);
+      if (error) {
+        toast.error("Erro ao atualizar tipo");
+        return;
+      }
+      toast.success("Tipo de atendimento atualizado");
+    } else {
+      const { error } = await criarTipoAtendimento(tipoForm);
+      if (error) {
+        toast.error("Erro ao criar tipo");
+        return;
+      }
+      toast.success("Tipo de atendimento criado");
+    }
+
+    setTipoModalOpen(false);
+    carregarDados();
+  }
+
+  async function toggleTipoAtivo(tipo: TipoAtendimento) {
+    const { error } = await atualizarTipoAtendimento(tipo.id, { ativo: !tipo.ativo });
+    if (error) {
+      toast.error("Erro ao atualizar status");
+      return;
+    }
+    toast.success(tipo.ativo ? "Tipo desativado" : "Tipo ativado");
+    carregarDados();
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
-          <p className="text-muted-foreground">Gerencie clínicas, serviços e integrações</p>
+          <p className="text-muted-foreground">Gerencie clínicas, serviços, convênios e integrações</p>
         </div>
 
         <Tabs defaultValue="clinicas" className="w-full">
-          <TabsList className="grid w-full max-w-lg grid-cols-3">
-            <TabsTrigger value="clinicas" className="gap-2">
+          <TabsList className="grid w-full max-w-2xl grid-cols-5">
+            <TabsTrigger value="clinicas" className="gap-2 text-xs sm:text-sm">
               <Building2 className="h-4 w-4" />
-              Clínicas
+              <span className="hidden sm:inline">Clínicas</span>
             </TabsTrigger>
-            <TabsTrigger value="servicos" className="gap-2">
+            <TabsTrigger value="tipos" className="gap-2 text-xs sm:text-sm">
               <Stethoscope className="h-4 w-4" />
-              Serviços
+              <span className="hidden sm:inline">Tipos</span>
             </TabsTrigger>
-            <TabsTrigger value="integracoes" className="gap-2">
+            <TabsTrigger value="convenios" className="gap-2 text-xs sm:text-sm">
+              <Shield className="h-4 w-4" />
+              <span className="hidden sm:inline">Convênios</span>
+            </TabsTrigger>
+            <TabsTrigger value="servicos" className="gap-2 text-xs sm:text-sm">
+              <Clock className="h-4 w-4" />
+              <span className="hidden sm:inline">Serviços</span>
+            </TabsTrigger>
+            <TabsTrigger value="integracoes" className="gap-2 text-xs sm:text-sm">
               <Link2 className="h-4 w-4" />
-              Integrações
+              <span className="hidden sm:inline">Integrações</span>
             </TabsTrigger>
           </TabsList>
 
@@ -331,20 +468,113 @@ export default function Configuracoes() {
                         )}
                       </div>
                       <div className="flex gap-2 mt-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => abrirModalClinica(clinica)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => abrirModalClinica(clinica)}>
                           <Pencil className="h-4 w-4 mr-1" />
                           Editar
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleClinicaAtivo(clinica)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => toggleClinicaAtivo(clinica)}>
                           {clinica.ativo ? "Desativar" : "Ativar"}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Tab Tipos de Atendimento */}
+          <TabsContent value="tipos" className="mt-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Tipos de Atendimento</h2>
+              <Button onClick={() => abrirModalTipo()} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Novo Tipo
+              </Button>
+            </div>
+
+            {loading ? (
+              <div className="text-center py-8 text-muted-foreground">Carregando...</div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {tiposAtendimento.map((tipo) => (
+                  <Card key={tipo.id} className={!tipo.ativo ? "opacity-60" : ""}>
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg">{tipo.nome}</CardTitle>
+                          <p className="text-sm text-muted-foreground font-mono">{tipo.slug}</p>
+                        </div>
+                        <Badge variant={tipo.ativo ? "default" : "secondary"}>
+                          {tipo.ativo ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {tipo.descricao && (
+                        <p className="text-sm text-muted-foreground mb-4">{tipo.descricao}</p>
+                      )}
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => abrirModalTipo(tipo)}>
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => toggleTipoAtivo(tipo)}>
+                          {tipo.ativo ? "Desativar" : "Ativar"}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Tab Convênios */}
+          <TabsContent value="convenios" className="mt-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Convênios</h2>
+              <Button onClick={() => abrirModalConvenio()} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Novo Convênio
+              </Button>
+            </div>
+
+            {loading ? (
+              <div className="text-center py-8 text-muted-foreground">Carregando...</div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {convenios.map((convenio) => (
+                  <Card key={convenio.id} className={!convenio.ativo ? "opacity-60" : ""}>
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg">{convenio.nome}</CardTitle>
+                          <p className="text-sm text-muted-foreground font-mono">{convenio.slug}</p>
+                        </div>
+                        <Badge variant={convenio.ativo ? "default" : "secondary"}>
+                          {convenio.ativo ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm mb-4">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <DollarSign className="h-4 w-4" />
+                          <span>
+                            {convenio.valor_consulta 
+                              ? `R$ ${convenio.valor_consulta.toFixed(2)}` 
+                              : "Valor não definido"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => abrirModalConvenio(convenio)}>
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => toggleConvenioAtivo(convenio)}>
+                          {convenio.ativo ? "Desativar" : "Ativar"}
                         </Button>
                       </div>
                     </CardContent>
@@ -385,25 +615,15 @@ export default function Configuracoes() {
                           <span>{servico.duracao_min} minutos</span>
                         </div>
                         {servico.descricao && (
-                          <p className="text-muted-foreground line-clamp-2">
-                            {servico.descricao}
-                          </p>
+                          <p className="text-muted-foreground line-clamp-2">{servico.descricao}</p>
                         )}
                       </div>
                       <div className="flex gap-2 mt-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => abrirModalServico(servico)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => abrirModalServico(servico)}>
                           <Pencil className="h-4 w-4 mr-1" />
                           Editar
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleServicoAtivo(servico)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => toggleServicoAtivo(servico)}>
                           {servico.ativo ? "Desativar" : "Ativar"}
                         </Button>
                       </div>
@@ -419,7 +639,6 @@ export default function Configuracoes() {
             <div className="space-y-6">
               <h2 className="text-lg font-semibold">Integrações</h2>
 
-              {/* Google Calendar Card */}
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-3">
@@ -430,9 +649,7 @@ export default function Configuracoes() {
                       <CardTitle className="text-lg flex items-center gap-2">
                         Google Calendar
                         {gcalStatus.connected && (
-                          <Badge variant="default" className="bg-green-600">
-                            Conectado
-                          </Badge>
+                          <Badge variant="default" className="bg-green-600">Conectado</Badge>
                         )}
                       </CardTitle>
                       <CardDescription>
@@ -452,7 +669,6 @@ export default function Configuracoes() {
                       </div>
                       <p className="text-sm text-muted-foreground">
                         Novos agendamentos serão automaticamente adicionados ao seu Google Calendar.
-                        Alterações em agendamentos existentes também serão sincronizadas.
                       </p>
                       <Button
                         variant="outline"
@@ -460,42 +676,21 @@ export default function Configuracoes() {
                         disabled={gcalLoading}
                         className="gap-2"
                       >
-                        {gcalLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Unlink className="h-4 w-4" />
-                        )}
+                        {gcalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
                         Desconectar
                       </Button>
                     </div>
                   ) : (
                     <div className="space-y-4">
                       <p className="text-sm text-muted-foreground">
-                        Conecte sua conta Google para sincronizar automaticamente os agendamentos 
-                        com seu Google Calendar. Isso permite visualizar os compromissos da clínica 
-                        diretamente no seu calendário pessoal ou compartilhado.
+                        Conecte sua conta Google para sincronizar automaticamente os agendamentos.
                       </p>
-                      <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg text-sm">
-                        <span className="text-muted-foreground">
-                          <strong>Benefícios:</strong>
-                          <ul className="list-disc list-inside mt-1 space-y-1">
-                            <li>Visualize agendamentos no Google Calendar</li>
-                            <li>Receba notificações de compromissos</li>
-                            <li>Sincronização bidirecional automática</li>
-                            <li>Compartilhe agenda com equipe</li>
-                          </ul>
-                        </span>
-                      </div>
                       <Button
                         onClick={handleConnectGoogleCalendar}
                         disabled={gcalLoading}
                         className="gap-2"
                       >
-                        {gcalLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Calendar className="h-4 w-4" />
-                        )}
+                        {gcalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
                         Conectar Google Calendar
                       </Button>
                     </div>
@@ -511,9 +706,7 @@ export default function Configuracoes() {
       <Dialog open={clinicaModalOpen} onOpenChange={setClinicaModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingClinica ? "Editar Clínica" : "Nova Clínica"}
-            </DialogTitle>
+            <DialogTitle>{editingClinica ? "Editar Clínica" : "Nova Clínica"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -556,9 +749,7 @@ export default function Configuracoes() {
               <Label>Clínica ativa</Label>
             </div>
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setClinicaModalOpen(false)}>
-                Cancelar
-              </Button>
+              <Button variant="outline" onClick={() => setClinicaModalOpen(false)}>Cancelar</Button>
               <Button onClick={salvarClinica}>Salvar</Button>
             </div>
           </div>
@@ -569,9 +760,7 @@ export default function Configuracoes() {
       <Dialog open={servicoModalOpen} onOpenChange={setServicoModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingServico ? "Editar Serviço" : "Novo Serviço"}
-            </DialogTitle>
+            <DialogTitle>{editingServico ? "Editar Serviço" : "Novo Serviço"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -609,10 +798,109 @@ export default function Configuracoes() {
               <Label>Serviço ativo</Label>
             </div>
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setServicoModalOpen(false)}>
-                Cancelar
-              </Button>
+              <Button variant="outline" onClick={() => setServicoModalOpen(false)}>Cancelar</Button>
               <Button onClick={salvarServico}>Salvar</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Convênio */}
+      <Dialog open={convenioModalOpen} onOpenChange={setConvenioModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingConvenio ? "Editar Convênio" : "Novo Convênio"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome *</Label>
+              <Input
+                value={convenioForm.nome}
+                onChange={(e) => setConvenioForm({ ...convenioForm, nome: e.target.value })}
+                placeholder="Nome do convênio"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Slug * (identificador único)</Label>
+              <Input
+                value={convenioForm.slug}
+                onChange={(e) => setConvenioForm({ ...convenioForm, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                placeholder="particular"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Valor da Consulta (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={convenioForm.valor_consulta ?? ""}
+                onChange={(e) => setConvenioForm({ 
+                  ...convenioForm, 
+                  valor_consulta: e.target.value ? parseFloat(e.target.value) : null 
+                })}
+                placeholder="250.00"
+              />
+              <p className="text-xs text-muted-foreground">
+                Deixe em branco para convênios (o valor é coberto pelo plano)
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={convenioForm.ativo}
+                onCheckedChange={(checked) => setConvenioForm({ ...convenioForm, ativo: checked })}
+              />
+              <Label>Convênio ativo</Label>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setConvenioModalOpen(false)}>Cancelar</Button>
+              <Button onClick={salvarConvenio}>Salvar</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Tipo de Atendimento */}
+      <Dialog open={tipoModalOpen} onOpenChange={setTipoModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingTipo ? "Editar Tipo de Atendimento" : "Novo Tipo de Atendimento"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome *</Label>
+              <Input
+                value={tipoForm.nome}
+                onChange={(e) => setTipoForm({ ...tipoForm, nome: e.target.value })}
+                placeholder="Nome do tipo"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Slug * (identificador único)</Label>
+              <Input
+                value={tipoForm.slug}
+                onChange={(e) => setTipoForm({ ...tipoForm, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                placeholder="consulta"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Descrição (mostrada no formulário)</Label>
+              <Textarea
+                value={tipoForm.descricao}
+                onChange={(e) => setTipoForm({ ...tipoForm, descricao: e.target.value })}
+                placeholder="Ex: Campo visual, OCT, mapeamento etc."
+                rows={2}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={tipoForm.ativo}
+                onCheckedChange={(checked) => setTipoForm({ ...tipoForm, ativo: checked })}
+              />
+              <Label>Tipo ativo</Label>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setTipoModalOpen(false)}>Cancelar</Button>
+              <Button onClick={salvarTipo}>Salvar</Button>
             </div>
           </div>
         </DialogContent>
