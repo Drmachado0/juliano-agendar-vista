@@ -90,11 +90,16 @@ export interface Agendamento {
   observacoes_internas: string | null;
   created_at: string;
   updated_at: string;
-  // Novos campos para agenda multiclínicas
+  // Campos para agenda multiclínicas
   clinica_id: string | null;
   profissional_id: string | null;
   servico_id: string | null;
   confirmacao_enviada: boolean;
+  // Campos para confirmação WhatsApp automática
+  confirmation_status: string | null;
+  confirmation_sent_at: string | null;
+  confirmation_response_at: string | null;
+  confirmation_channel: string | null;
 }
 
 export interface AgendamentoInsert {
