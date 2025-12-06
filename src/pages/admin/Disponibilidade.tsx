@@ -409,13 +409,16 @@ export default function Disponibilidade() {
                             <div className="flex items-center gap-2">
                               <Label className="text-sm text-muted-foreground">Intervalo:</Label>
                               <Select
-                                value={String(disp.intervalo_minutos)}
-                                onValueChange={(v) => updateSemanalField(disp.id, 'intervalo_minutos', Number(v))}
+                                value={disp.intervalo_minutos.toString()}
+                                onValueChange={(v) => {
+                                  const novoIntervalo = parseInt(v, 10);
+                                  updateSemanalField(disp.id, 'intervalo_minutos', novoIntervalo);
+                                }}
                               >
                                 <SelectTrigger className="w-24">
-                                  <SelectValue />
+                                  <SelectValue placeholder="Intervalo" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="bg-popover border border-border z-50">
                                   <SelectItem value="15">15 min</SelectItem>
                                   <SelectItem value="20">20 min</SelectItem>
                                   <SelectItem value="30">30 min</SelectItem>
