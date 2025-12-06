@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -11,8 +11,25 @@ import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, User, Phone, Mail, CreditCard, Check, Bell, Loader2 } from "lucide-react";
+import { 
+  Calendar, 
+  Clock, 
+  MapPin, 
+  User, 
+  Phone, 
+  Mail, 
+  CreditCard, 
+  Check, 
+  Bell, 
+  Loader2, 
+  MessageSquare,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  RefreshCw
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AgendamentoDetailsModalProps {
   agendamento: Agendamento | null;
@@ -22,25 +39,65 @@ interface AgendamentoDetailsModalProps {
 }
 
 const statusColors: Record<string, string> = {
-  "NOVO LEAD": "bg-emerald-100 text-emerald-800",
-  "CLINICOR": "bg-blue-100 text-blue-800",
-  "HGP": "bg-purple-100 text-purple-800",
+  "NOVO LEAD": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+  "CLINICOR": "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  "HGP": "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+  "BELÉM": "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+};
+
+// Configuração de status de confirmação
+const confirmationStatusConfig: Record<string, { label: string; icon: React.ElementType; className: string; description: string }> = {
+  'nao_enviado': { 
+    label: 'Não enviado', 
+    icon: MessageSquare, 
+    className: 'bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400',
+    description: 'Nenhuma confirmação foi enviada ainda'
+  },
+  'aguardando_confirmacao': { 
+    label: 'Aguardando resposta', 
+    icon: Clock, 
+    className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    description: 'Confirmação enviada, aguardando resposta do paciente'
+  },
+  'confirmado': { 
+    label: 'Confirmado pelo paciente', 
+    icon: CheckCircle, 
+    className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+    description: 'Paciente confirmou presença'
+  },
+  'cancelado_pelo_paciente': { 
+    label: 'Cancelado pelo paciente', 
+    icon: XCircle, 
+    className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    description: 'Paciente solicitou cancelamento'
+  },
+  'falha_envio': { 
+    label: 'Falha no envio', 
+    icon: AlertTriangle, 
+    className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+    description: 'Houve falha ao enviar a confirmação'
+  },
 };
 
 const AgendamentoDetailsModal = ({ agendamento, isOpen, onClose, onUpdate }: AgendamentoDetailsModalProps) => {
-  const [observacoes, setObservacoes] = useState(agendamento?.observacoes_internas || "");
-  const [statusCrm, setStatusCrm] = useState(agendamento?.status_crm || "NOVO LEAD");
+  const [observacoes, setObservacoes] = useState("");
+  const [statusCrm, setStatusCrm] = useState("NOVO LEAD");
   const [saving, setSaving] = useState(false);
+  const [sendingConfirmation, setSendingConfirmation] = useState(false);
 
   // Update local state when agendamento changes
-  useState(() => {
+  useEffect(() => {
     if (agendamento) {
       setObservacoes(agendamento.observacoes_internas || "");
       setStatusCrm(agendamento.status_crm);
     }
-  });
+  }, [agendamento]);
 
   if (!agendamento) return null;
+
+  const confirmationStatus = agendamento.confirmation_status || 'nao_enviado';
+  const statusConfig = confirmationStatusConfig[confirmationStatus] || confirmationStatusConfig['nao_enviado'];
+  const StatusIcon = statusConfig.icon;
 
   const handleSave = async () => {
     setSaving(true);
@@ -70,14 +127,60 @@ const AgendamentoDetailsModal = ({ agendamento, isOpen, onClose, onUpdate }: Age
 
       onUpdate();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Erro ao salvar alterações.";
       toast({
         title: "Erro",
-        description: error.message || "Erro ao salvar alterações.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    setSendingConfirmation(true);
+    try {
+      // Chamar a edge function de confirmação diretamente
+      const { data, error } = await supabase.functions.invoke('confirmar-agendamento-whatsapp', {
+        body: {
+          telefone: agendamento.telefone_whatsapp,
+          nome_completo: agendamento.nome_completo,
+          data_agendamento: agendamento.data_agendamento,
+          hora_agendamento: agendamento.hora_agendamento,
+          local_atendimento: agendamento.local_atendimento,
+          agendamento_id: agendamento.id,
+        }
+      });
+
+      if (error) throw error;
+
+      // Atualizar status no banco
+      await supabase
+        .from('agendamentos')
+        .update({ 
+          confirmation_status: 'aguardando_confirmacao',
+          confirmation_sent_at: new Date().toISOString(),
+          confirmation_channel: 'whatsapp'
+        })
+        .eq('id', agendamento.id);
+
+      toast({
+        title: "Confirmação reenviada!",
+        description: "Mensagem de confirmação enviada para o WhatsApp do paciente.",
+      });
+
+      onUpdate();
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Erro ao reenviar confirmação.";
+      toast({
+        title: "Erro ao enviar",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setSendingConfirmation(false);
     }
   };
 
@@ -182,6 +285,70 @@ const AgendamentoDetailsModal = ({ agendamento, isOpen, onClose, onUpdate }: Age
 
           <Separator />
 
+          {/* WhatsApp Confirmation Status */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-foreground flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Confirmação WhatsApp
+            </h3>
+            <div className="bg-muted/50 p-4 rounded-lg space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Badge className={cn("flex items-center gap-1.5", statusConfig.className)}>
+                    <StatusIcon className="h-3.5 w-3.5" />
+                    {statusConfig.label}
+                  </Badge>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleResendConfirmation}
+                  disabled={sendingConfirmation || confirmationStatus === 'confirmado'}
+                  className="flex items-center gap-2"
+                >
+                  {sendingConfirmation ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  {confirmationStatus === 'nao_enviado' ? 'Enviar confirmação' : 'Reenviar'}
+                </Button>
+              </div>
+              
+              <p className="text-sm text-muted-foreground">{statusConfig.description}</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                {agendamento.confirmation_sent_at && (
+                  <div>
+                    <p className="text-muted-foreground">Enviado em</p>
+                    <p className="font-medium">
+                      {format(new Date(agendamento.confirmation_sent_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                )}
+                {agendamento.confirmation_response_at && (
+                  <div>
+                    <p className="text-muted-foreground">Respondido em</p>
+                    <p className="font-medium">
+                      {format(new Date(agendamento.confirmation_response_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {confirmationStatus === 'falha_envio' && (
+                <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-md border border-orange-200 dark:border-orange-800">
+                  <p className="text-sm text-orange-700 dark:text-orange-400 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Falha ao enviar confirmação. Tente reenviar manualmente.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <Separator />
+
           {/* Preferences */}
           <div className="space-y-4">
             <h3 className="font-semibold text-foreground">Preferências</h3>
@@ -217,6 +384,7 @@ const AgendamentoDetailsModal = ({ agendamento, isOpen, onClose, onUpdate }: Age
                   <SelectItem value="NOVO LEAD">Novo Lead</SelectItem>
                   <SelectItem value="CLINICOR">Clinicor</SelectItem>
                   <SelectItem value="HGP">HGP</SelectItem>
+                  <SelectItem value="BELÉM">Belém</SelectItem>
                 </SelectContent>
               </Select>
             </div>

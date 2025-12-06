@@ -99,6 +99,71 @@ function verifyApiKey(bodyApiKey: string | undefined, expectedApiKey: string): b
   return bodyApiKey === expectedApiKey;
 }
 
+// Normaliza número de telefone para formato brasileiro
+function normalizePhoneNumber(rawPhone: string): string {
+  let digits = rawPhone.replace(/\D/g, '');
+  
+  if (digits.startsWith('55') && digits.length >= 12) {
+    return digits;
+  }
+  
+  if (digits.length === 10 || digits.length === 11) {
+    return '55' + digits;
+  }
+  
+  if (digits.length === 12 || digits.length === 13) {
+    if (!digits.startsWith('55')) {
+      return '55' + digits;
+    }
+    return digits;
+  }
+  
+  return digits;
+}
+
+// Função para enviar mensagem via Evolution API
+async function sendWhatsappTextMessage(phone: string, body: string): Promise<{ success: boolean; errorMessage?: string }> {
+  try {
+    const baseUrl = Deno.env.get('EVOLUTION_API_BASE_URL');
+    const instance = Deno.env.get('EVOLUTION_API_INSTANCE') || 'Site';
+    const token = Deno.env.get('EVOLUTION_API_TOKEN');
+
+    if (!baseUrl || !token) {
+      console.error('[Evolution API] Variáveis de ambiente não configuradas');
+      return { success: false, errorMessage: 'Evolution API não configurada' };
+    }
+
+    const normalizedPhone = normalizePhoneNumber(phone);
+    const url = `${baseUrl.replace(/\/$/, '')}/message/sendText/${instance}`;
+
+    console.log(`[Evolution API] Enviando resposta automática para ${normalizedPhone}`);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': token,
+      },
+      body: JSON.stringify({
+        number: normalizedPhone,
+        text: body,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Evolution API] Erro HTTP ${response.status}:`, errorText);
+      return { success: false, errorMessage: `HTTP ${response.status}` };
+    }
+
+    console.log('[Evolution API] Resposta automática enviada com sucesso');
+    return { success: true };
+  } catch (error) {
+    console.error('[Evolution API] Exceção:', error);
+    return { success: false, errorMessage: error instanceof Error ? error.message : 'Erro desconhecido' };
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -313,7 +378,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Format: search for phones ending with the same 4 digits
     const { data: agendamentos, error: agendamentoError } = await supabase
       .from("agendamentos")
-      .select("id, telefone_whatsapp")
+      .select("id, telefone_whatsapp, confirmation_status, data_agendamento, nome_completo")
       .ilike("telefone_whatsapp", `%${last4Digits}`)
       .order("created_at", { ascending: false })
       .limit(10);
@@ -347,7 +412,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Extract external message ID
     const mensagemExternaId = messageData?.key?.id || null;
 
-    // Insert message into database
+    // Insert message into database with full payload for logging
     const { data: novaMensagem, error: insertError } = await supabase
       .from("mensagens_whatsapp")
       .insert({
@@ -355,9 +420,10 @@ const handler = async (req: Request): Promise<Response> => {
         telefone: telefoneParaSalvar,
         direcao: "IN",
         conteudo: conteudo,
-        status_envio: null, // null for incoming messages (constraint only allows: enviado, entregue, lido, erro)
+        status_envio: null, // null for incoming messages
         mensagem_externa_id: mensagemExternaId,
         lida: false,
+        payload: body, // Salvar payload completo para auditoria
       })
       .select()
       .single();
@@ -372,11 +438,86 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("✓ Mensagem salva com sucesso:", novaMensagem.id);
 
+    // ============= PROCESSAMENTO DE RESPOSTA DE CONFIRMAÇÃO =============
+    // Verificar se é uma resposta para confirmação de agendamento (1 ou 2)
+    const conteudoLimpo = conteudo.trim().toLowerCase();
+    const primeiroCaractere = conteudoLimpo.charAt(0);
+    
+    // Verificar se há agendamento aguardando confirmação
+    if (agendamento && agendamento.confirmation_status === 'aguardando_confirmacao') {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Só processar se o agendamento é futuro ou hoje
+      if (agendamento.data_agendamento >= today) {
+        let acao: 'confirmar' | 'cancelar' | null = null;
+        
+        // Verificar resposta do paciente
+        if (primeiroCaractere === '1' || conteudoLimpo.startsWith('sim') || conteudoLimpo.startsWith('confirmar') || conteudoLimpo.startsWith('confirmo')) {
+          acao = 'confirmar';
+        } else if (primeiroCaractere === '2' || conteudoLimpo.startsWith('cancelar') || conteudoLimpo.startsWith('cancelo') || conteudoLimpo.startsWith('não')) {
+          acao = 'cancelar';
+        }
+        
+        if (acao) {
+          console.log(`[Confirmação] Ação detectada: ${acao} para agendamento ${agendamento.id}`);
+          
+          // Atualizar status do agendamento
+          const updateData: Record<string, unknown> = {
+            confirmation_response_at: new Date().toISOString(),
+          };
+          
+          let mensagemResposta = '';
+          
+          if (acao === 'confirmar') {
+            updateData.confirmation_status = 'confirmado';
+            mensagemResposta = `✅ Sua presença foi *confirmada*!
+
+Obrigado por confirmar, ${agendamento.nome_completo}. Aguardamos você no horário marcado.
+
+Se precisar reagendar, entre em contato conosco. 📞`;
+          } else {
+            updateData.confirmation_status = 'cancelado_pelo_paciente';
+            mensagemResposta = `❌ Seu agendamento foi *cancelado*.
+
+Caso queira remarcar, entre em contato conosco pelo WhatsApp ou ligue para a clínica.
+
+Obrigado pela compreensão! 🙏`;
+          }
+          
+          // Atualizar no banco
+          const { error: updateError } = await supabase
+            .from('agendamentos')
+            .update(updateData)
+            .eq('id', agendamento.id);
+          
+          if (updateError) {
+            console.error('[Confirmação] Erro ao atualizar agendamento:', updateError);
+          } else {
+            console.log(`[Confirmação] Agendamento ${agendamento.id} atualizado para: ${updateData.confirmation_status}`);
+            
+            // Enviar resposta automática
+            const sendResult = await sendWhatsappTextMessage(telefoneParaSalvar, mensagemResposta);
+            
+            // Salvar a resposta automática na tabela de mensagens
+            await supabase.from('mensagens_whatsapp').insert({
+              agendamento_id: agendamento.id,
+              telefone: telefoneParaSalvar,
+              direcao: 'OUT',
+              conteudo: mensagemResposta,
+              tipo_mensagem: 'resposta_automatica',
+              status_envio: sendResult.success ? 'enviado' : 'erro',
+              error_message: sendResult.errorMessage || null,
+            });
+          }
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({ success: true, data: { id: novaMensagem.id } }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Erro no webhook:", error);
     return new Response(
       JSON.stringify({ success: false, error: "Erro interno do servidor" }),

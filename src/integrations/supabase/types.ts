@@ -20,6 +20,10 @@ export type Database = {
           aceita_primeiro_horario: boolean | null
           clinica_id: string | null
           confirmacao_enviada: boolean | null
+          confirmation_channel: string | null
+          confirmation_response_at: string | null
+          confirmation_sent_at: string | null
+          confirmation_status: string | null
           convenio: string
           convenio_outro: string | null
           created_at: string | null
@@ -46,6 +50,10 @@ export type Database = {
           aceita_primeiro_horario?: boolean | null
           clinica_id?: string | null
           confirmacao_enviada?: boolean | null
+          confirmation_channel?: string | null
+          confirmation_response_at?: string | null
+          confirmation_sent_at?: string | null
+          confirmation_status?: string | null
           convenio: string
           convenio_outro?: string | null
           created_at?: string | null
@@ -72,6 +80,10 @@ export type Database = {
           aceita_primeiro_horario?: boolean | null
           clinica_id?: string | null
           confirmacao_enviada?: boolean | null
+          confirmation_channel?: string | null
+          confirmation_response_at?: string | null
+          confirmation_sent_at?: string | null
+          confirmation_status?: string | null
           convenio?: string
           convenio_outro?: string | null
           created_at?: string | null
@@ -334,9 +346,11 @@ export type Database = {
           conteudo: string
           created_at: string
           direcao: string
+          error_message: string | null
           id: string
           lida: boolean | null
           mensagem_externa_id: string | null
+          payload: Json | null
           status_envio: string | null
           telefone: string
           tipo_mensagem: string | null
@@ -346,9 +360,11 @@ export type Database = {
           conteudo: string
           created_at?: string
           direcao: string
+          error_message?: string | null
           id?: string
           lida?: boolean | null
           mensagem_externa_id?: string | null
+          payload?: Json | null
           status_envio?: string | null
           telefone: string
           tipo_mensagem?: string | null
@@ -358,9 +374,11 @@ export type Database = {
           conteudo?: string
           created_at?: string
           direcao?: string
+          error_message?: string | null
           id?: string
           lida?: boolean | null
           mensagem_externa_id?: string | null
+          payload?: Json | null
           status_envio?: string | null
           telefone?: string
           tipo_mensagem?: string | null
