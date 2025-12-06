@@ -24,14 +24,14 @@ serve(async (req) => {
   }
 
   try {
-    // Validar token de cron se presente
+    // Validar token de cron - OBRIGATÓRIO quando CRON_SECRET está configurado
     const authHeader = req.headers.get('Authorization');
     const cronSecret = Deno.env.get('CRON_SECRET');
     
-    if (cronSecret && authHeader) {
-      const token = authHeader.replace('Bearer ', '');
-      if (token !== cronSecret) {
-        console.warn('[Confirmação] Token de cron inválido');
+    if (cronSecret) {
+      const expectedAuth = `Bearer ${cronSecret}`;
+      if (!authHeader || authHeader !== expectedAuth) {
+        console.warn('[Confirmação] Token de cron inválido ou ausente');
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
