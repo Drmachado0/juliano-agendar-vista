@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import drLogo from "@/assets/dr-juliano-logo.webp";
+import { PasswordStrengthIndicator, validatePasswordStrength } from "@/components/auth/PasswordStrengthIndicator";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -87,10 +88,11 @@ const Auth = () => {
       return;
     }
 
-    if (signupPassword.length < 6) {
+    const { isValid: isPasswordValid } = validatePasswordStrength(signupPassword);
+    if (!isPasswordValid) {
       toast({
-        title: "Erro",
-        description: "A senha deve ter pelo menos 6 caracteres",
+        title: "Senha fraca",
+        description: "A senha deve atender todos os requisitos de segurança",
         variant: "destructive",
       });
       return;
@@ -235,6 +237,7 @@ const Auth = () => {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
+                  <PasswordStrengthIndicator password={signupPassword} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-confirm-password">Confirmar senha</Label>
