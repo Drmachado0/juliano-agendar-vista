@@ -59,6 +59,7 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
             selectedDate={selectedDate}
             onSelectDate={handleDateSelect}
             onProximoHorarioLivre={handleProximoHorarioLivre}
+            localAtendimento={formData.location}
           />
         </div>
 
@@ -68,6 +69,7 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
             selectedDate={selectedDate}
             selectedTime={selectedTime}
             onSelectTime={handleTimeSelect}
+            localAtendimento={formData.location}
           />
         </div>
       </div>

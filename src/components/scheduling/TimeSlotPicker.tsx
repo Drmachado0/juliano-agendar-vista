@@ -11,9 +11,10 @@ interface TimeSlotPickerProps {
   selectedDate: Date | null;
   selectedTime: string | null;
   onSelectTime: (time: string) => void;
+  localAtendimento?: string;
 }
 
-const TimeSlotPicker = ({ selectedDate, selectedTime, onSelectTime }: TimeSlotPickerProps) => {
+const TimeSlotPicker = ({ selectedDate, selectedTime, onSelectTime, localAtendimento }: TimeSlotPickerProps) => {
   const [slots, setSlots] = useState<SlotDisponivel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -23,14 +24,14 @@ const TimeSlotPicker = ({ selectedDate, selectedTime, onSelectTime }: TimeSlotPi
     } else {
       setSlots([]);
     }
-  }, [selectedDate]);
+  }, [selectedDate, localAtendimento]);
 
   const carregarHorarios = async () => {
     if (!selectedDate) return;
     
     setIsLoading(true);
     try {
-      const horariosDisponiveis = await gerarHorariosDisponiveis(selectedDate);
+      const horariosDisponiveis = await gerarHorariosDisponiveis(selectedDate, localAtendimento);
       setSlots(horariosDisponiveis);
     } catch (error) {
       console.error("Erro ao carregar horários:", error);

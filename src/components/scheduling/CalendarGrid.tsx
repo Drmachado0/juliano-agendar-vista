@@ -24,11 +24,12 @@ interface CalendarGridProps {
   selectedDate: Date | null;
   onSelectDate: (date: Date) => void;
   onProximoHorarioLivre?: (data: Date, horario: string) => void;
+  localAtendimento?: string;
 }
 
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-const CalendarGrid = ({ selectedDate, onSelectDate, onProximoHorarioLivre }: CalendarGridProps) => {
+const CalendarGrid = ({ selectedDate, onSelectDate, onProximoHorarioLivre, localAtendimento }: CalendarGridProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [datasDisponiveis, setDatasDisponiveis] = useState<Date[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,14 +39,15 @@ const CalendarGrid = ({ selectedDate, onSelectDate, onProximoHorarioLivre }: Cal
 
   useEffect(() => {
     carregarDisponibilidade();
-  }, [currentMonth]);
+  }, [currentMonth, localAtendimento]);
 
   const carregarDisponibilidade = async () => {
     setIsLoading(true);
     try {
       const datas = await listarDatasComDisponibilidade(
         currentMonth.getMonth(),
-        currentMonth.getFullYear()
+        currentMonth.getFullYear(),
+        localAtendimento
       );
       setDatasDisponiveis(datas);
     } catch (error) {
@@ -58,7 +60,7 @@ const CalendarGrid = ({ selectedDate, onSelectDate, onProximoHorarioLivre }: Cal
   const handleProximoHorarioLivre = async () => {
     setIsBuscandoProximo(true);
     try {
-      const resultado = await buscarProximoHorarioLivre(hoje);
+      const resultado = await buscarProximoHorarioLivre(hoje, localAtendimento);
       if (resultado && onProximoHorarioLivre) {
         // Navega para o mês correto se necessário
         if (!isSameMonth(resultado.data, currentMonth)) {
