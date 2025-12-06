@@ -1,5 +1,34 @@
 import { supabase } from "@/integrations/supabase/client";
-import { format, addDays, startOfDay, isBefore, isAfter, isSameDay, parse, setHours, setMinutes } from "date-fns";
+import { format, addDays, startOfDay, isBefore, isSameDay } from "date-fns";
+
+// Mapeia o valor do local de atendimento para o slug da clínica
+function getClinicaSlugFromLocal(localAtendimento?: string): string | undefined {
+  if (!localAtendimento) return undefined;
+  
+  const locationMap: Record<string, string> = {
+    clinicor: "clinicor",
+    hgp: "hgp",
+    belem: "belem",
+  };
+  
+  return locationMap[localAtendimento];
+}
+
+// Busca o ID da clínica pelo slug
+async function buscarClinicaIdPorSlug(slug: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('clinicas')
+    .select('id')
+    .eq('slug', slug)
+    .maybeSingle();
+  
+  if (error || !data) {
+    console.error('Erro ao buscar clínica:', error);
+    return null;
+  }
+  
+  return data.id;
+}
 
 export interface SlotDisponivel {
   horario: string;
@@ -44,12 +73,18 @@ function gerarSlots(horaInicio: string, horaFim: string, intervaloMinutos: numbe
   return slots;
 }
 
-// Busca disponibilidade semanal
-async function buscarDisponibilidadeSemanal(): Promise<DisponibilidadeSemanal[]> {
-  const { data, error } = await supabase
+// Busca disponibilidade semanal com filtro opcional por clínica
+async function buscarDisponibilidadeSemanal(clinicaId?: string): Promise<DisponibilidadeSemanal[]> {
+  let query = supabase
     .from('disponibilidade_semanal')
     .select('*')
     .eq('ativo', true);
+  
+  if (clinicaId) {
+    query = query.eq('clinica_id', clinicaId);
+  }
+  
+  const { data, error } = await query;
   
   if (error) {
     console.error('Erro ao buscar disponibilidade semanal:', error);
@@ -59,13 +94,18 @@ async function buscarDisponibilidadeSemanal(): Promise<DisponibilidadeSemanal[]>
   return (data || []) as DisponibilidadeSemanal[];
 }
 
-// Busca disponibilidade específica para uma data
-async function buscarDisponibilidadeEspecifica(data: string): Promise<DisponibilidadeEspecifica | null> {
-  const { data: result, error } = await supabase
+// Busca disponibilidade específica para uma data com filtro opcional por clínica
+async function buscarDisponibilidadeEspecifica(data: string, clinicaId?: string): Promise<DisponibilidadeEspecifica | null> {
+  let query = supabase
     .from('disponibilidade_especifica')
     .select('*')
-    .eq('data', data)
-    .maybeSingle();
+    .eq('data', data);
+  
+  if (clinicaId) {
+    query = query.eq('clinica_id', clinicaId);
+  }
+  
+  const { data: result, error } = await query.maybeSingle();
   
   if (error) {
     console.error('Erro ao buscar disponibilidade específica:', error);
@@ -91,7 +131,7 @@ async function buscarAgendamentosData(data: string): Promise<string[]> {
 }
 
 // Gera horários disponíveis para um dia específico
-export async function gerarHorariosDisponiveis(data: Date): Promise<SlotDisponivel[]> {
+export async function gerarHorariosDisponiveis(data: Date, localAtendimento?: string): Promise<SlotDisponivel[]> {
   const dataStr = format(data, 'yyyy-MM-dd');
   const diaSemana = data.getDay();
   const hoje = new Date();
@@ -102,8 +142,16 @@ export async function gerarHorariosDisponiveis(data: Date): Promise<SlotDisponiv
     return [];
   }
   
+  // Busca clinica_id se localAtendimento foi fornecido
+  let clinicaId: string | undefined;
+  const slug = getClinicaSlugFromLocal(localAtendimento);
+  if (slug) {
+    const id = await buscarClinicaIdPorSlug(slug);
+    if (id) clinicaId = id;
+  }
+  
   // Busca disponibilidade específica primeiro
-  const especifica = await buscarDisponibilidadeEspecifica(dataStr);
+  const especifica = await buscarDisponibilidadeEspecifica(dataStr, clinicaId);
   
   let slots: string[] = [];
   
@@ -119,7 +167,7 @@ export async function gerarHorariosDisponiveis(data: Date): Promise<SlotDisponiv
     }
   } else {
     // Busca disponibilidade semanal
-    const semanal = await buscarDisponibilidadeSemanal();
+    const semanal = await buscarDisponibilidadeSemanal(clinicaId);
     const config = semanal.find(s => s.dia_semana === diaSemana);
     
     if (!config || !config.ativo) {
@@ -153,13 +201,14 @@ export async function gerarHorariosDisponiveis(data: Date): Promise<SlotDisponiv
 
 // Busca próximo horário livre a partir de uma data
 export async function buscarProximoHorarioLivre(
-  dataReferencia: Date
+  dataReferencia: Date,
+  localAtendimento?: string
 ): Promise<{ data: Date; horario: string } | null> {
   let dataAtual = startOfDay(dataReferencia);
   const maxDias = 60; // Busca até 60 dias no futuro
   
   for (let i = 0; i < maxDias; i++) {
-    const slots = await gerarHorariosDisponiveis(dataAtual);
+    const slots = await gerarHorariosDisponiveis(dataAtual, localAtendimento);
     const slotLivre = slots.find(s => s.disponivel);
     
     if (slotLivre) {
@@ -178,23 +227,38 @@ export async function buscarProximoHorarioLivre(
 // Lista datas com disponibilidade em um mês
 export async function listarDatasComDisponibilidade(
   mes: number,
-  ano: number
+  ano: number,
+  localAtendimento?: string
 ): Promise<Date[]> {
   const datasDisponiveis: Date[] = [];
   const primeiroDia = new Date(ano, mes, 1);
   const ultimoDia = new Date(ano, mes + 1, 0);
   const hoje = startOfDay(new Date());
   
+  // Busca clinica_id se localAtendimento foi fornecido
+  let clinicaId: string | undefined;
+  const slug = getClinicaSlugFromLocal(localAtendimento);
+  if (slug) {
+    const id = await buscarClinicaIdPorSlug(slug);
+    if (id) clinicaId = id;
+  }
+  
   // Busca disponibilidade semanal
-  const semanal = await buscarDisponibilidadeSemanal();
+  const semanal = await buscarDisponibilidadeSemanal(clinicaId);
   const diasSemanaAtivos = semanal.filter(s => s.ativo).map(s => s.dia_semana);
   
   // Busca todas as disponibilidades específicas do mês
-  const { data: especificas } = await supabase
+  let queryEspecificas = supabase
     .from('disponibilidade_especifica')
     .select('*')
     .gte('data', format(primeiroDia, 'yyyy-MM-dd'))
     .lte('data', format(ultimoDia, 'yyyy-MM-dd'));
+  
+  if (clinicaId) {
+    queryEspecificas = queryEspecificas.eq('clinica_id', clinicaId);
+  }
+  
+  const { data: especificas } = await queryEspecificas;
   
   const especificasMap = new Map<string, DisponibilidadeEspecifica>();
   (especificas || []).forEach(e => {
@@ -230,7 +294,7 @@ export async function listarDatasComDisponibilidade(
 }
 
 // Verifica se uma data específica tem disponibilidade
-export async function verificarDataTemDisponibilidade(data: Date): Promise<boolean> {
-  const slots = await gerarHorariosDisponiveis(data);
+export async function verificarDataTemDisponibilidade(data: Date, localAtendimento?: string): Promise<boolean> {
+  const slots = await gerarHorariosDisponiveis(data, localAtendimento);
   return slots.some(s => s.disponivel);
 }
