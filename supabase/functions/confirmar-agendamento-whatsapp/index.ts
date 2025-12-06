@@ -8,15 +8,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Schema de validação
+// Schema de validação - apenas agendamento_id é obrigatório, outros dados são buscados do banco
 const requestSchema = z.object({
   agendamento_id: z.string().uuid(),
-  telefone: z.string().min(10).max(20),
-  nome_completo: z.string().min(2).max(200),
-  data_agendamento: z.string(),
-  hora_agendamento: z.string(),
-  local_atendimento: z.string(),
-  tipo_atendimento: z.string().optional(),
 });
 
 function formatarTelefone(telefone: string): string {
@@ -40,7 +34,13 @@ function formatarHora(horaStr: string): string {
   return horaStr.slice(0, 5);
 }
 
-function gerarMensagemConfirmacao(dados: z.infer<typeof requestSchema>): string {
+function gerarMensagemConfirmacao(dados: {
+  nome_completo: string;
+  data_agendamento: string;
+  hora_agendamento: string;
+  local_atendimento: string;
+  tipo_atendimento?: string;
+}): string {
   const dataFormatada = formatarData(dados.data_agendamento);
   const horaFormatada = formatarHora(dados.hora_agendamento);
   
@@ -51,6 +51,7 @@ Recebemos seu pedido de agendamento na clínica *Dr. Juliano Machado - Oftalmolo
 📅 *Data:* ${dataFormatada}
 🕐 *Horário:* ${horaFormatada}
 📍 *Local:* ${dados.local_atendimento}
+${dados.tipo_atendimento ? `📋 *Tipo:* ${dados.tipo_atendimento}` : ''}
 
 Nossa equipe entrará em contato para confirmar seu horário.
 
@@ -65,18 +66,57 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    console.log('Recebido pedido de confirmação:', JSON.stringify(body));
+    console.log('[ConfirmarWhatsApp] Recebido pedido:', JSON.stringify(body));
 
     // Validar dados
-    const dados = requestSchema.parse(body);
-    console.log('Dados validados:', dados.agendamento_id);
+    const { agendamento_id } = requestSchema.parse(body);
+    console.log('[ConfirmarWhatsApp] Agendamento ID:', agendamento_id);
+
+    // Criar cliente Supabase para buscar dados do agendamento
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Buscar dados do agendamento
+    const { data: agendamento, error: fetchError } = await supabase
+      .from('agendamentos')
+      .select('*')
+      .eq('id', agendamento_id)
+      .single();
+
+    if (fetchError || !agendamento) {
+      console.error('[ConfirmarWhatsApp] Erro ao buscar agendamento:', fetchError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Agendamento não encontrado' 
+        }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('[ConfirmarWhatsApp] Agendamento encontrado:', agendamento.nome_completo);
+
+    // Verificar se aceita contato WhatsApp
+    if (!agendamento.aceita_contato_whatsapp_email) {
+      console.log('[ConfirmarWhatsApp] Paciente não aceita contato WhatsApp');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Paciente não aceita contato por WhatsApp',
+          skipped: true 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Configurações da Evolution API
     const evolutionBaseUrl = Deno.env.get('EVOLUTION_API_BASE_URL');
     const evolutionToken = Deno.env.get('EVOLUTION_API_TOKEN');
+    const evolutionInstance = Deno.env.get('EVOLUTION_API_INSTANCE') || 'SITEIA';
 
     if (!evolutionBaseUrl || !evolutionToken) {
-      console.error('Variáveis de ambiente da Evolution não configuradas');
+      console.error('[ConfirmarWhatsApp] Variáveis de ambiente da Evolution não configuradas');
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -87,13 +127,21 @@ serve(async (req) => {
     }
 
     // Formatar telefone e mensagem
-    const telefoneFormatado = formatarTelefone(dados.telefone);
-    const mensagem = gerarMensagemConfirmacao(dados);
+    const telefoneFormatado = formatarTelefone(agendamento.telefone_whatsapp);
+    const mensagem = gerarMensagemConfirmacao({
+      nome_completo: agendamento.nome_completo,
+      data_agendamento: agendamento.data_agendamento,
+      hora_agendamento: agendamento.hora_agendamento,
+      local_atendimento: agendamento.local_atendimento,
+      tipo_atendimento: agendamento.tipo_atendimento,
+    });
 
-    console.log('Enviando mensagem para:', telefoneFormatado);
+    console.log('[ConfirmarWhatsApp] Enviando para:', telefoneFormatado);
 
     // Enviar mensagem via Evolution API
-    const evolutionUrl = `${evolutionBaseUrl}/message/sendText/Site`;
+    const evolutionUrl = `${evolutionBaseUrl}/message/sendText/${evolutionInstance}`;
+    console.log('[ConfirmarWhatsApp] Evolution URL:', evolutionUrl);
+    
     const evolutionResponse = await fetch(evolutionUrl, {
       method: 'POST',
       headers: {
@@ -107,23 +155,18 @@ serve(async (req) => {
     });
 
     const evolutionResult = await evolutionResponse.json();
-    console.log('Resposta Evolution:', JSON.stringify(evolutionResult));
+    console.log('[ConfirmarWhatsApp] Resposta Evolution:', JSON.stringify(evolutionResult));
 
     if (!evolutionResponse.ok) {
       throw new Error(`Evolution API error: ${JSON.stringify(evolutionResult)}`);
     }
 
-    // Criar cliente Supabase para salvar mensagem
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     // Salvar mensagem no banco
     const { error: msgError } = await supabase
       .from('mensagens_whatsapp')
       .insert({
-        agendamento_id: dados.agendamento_id,
-        telefone: dados.telefone,
+        agendamento_id: agendamento_id,
+        telefone: agendamento.telefone_whatsapp,
         direcao: 'OUT',
         conteudo: mensagem,
         status_envio: 'enviado',
@@ -132,32 +175,35 @@ serve(async (req) => {
       });
 
     if (msgError) {
-      console.error('Erro ao salvar mensagem:', msgError);
+      console.error('[ConfirmarWhatsApp] Erro ao salvar mensagem:', msgError);
     } else {
-      console.log('Mensagem salva com sucesso');
+      console.log('[ConfirmarWhatsApp] Mensagem salva com sucesso');
     }
 
     // Atualizar agendamento com confirmacao_enviada = true
     const { error: updateError } = await supabase
       .from('agendamentos')
       .update({ confirmacao_enviada: true })
-      .eq('id', dados.agendamento_id);
+      .eq('id', agendamento_id);
 
     if (updateError) {
-      console.error('Erro ao atualizar agendamento:', updateError);
+      console.error('[ConfirmarWhatsApp] Erro ao atualizar agendamento:', updateError);
     }
+
+    console.log('[ConfirmarWhatsApp] ✅ Confirmação enviada com sucesso!');
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: 'Confirmação enviada com sucesso',
+        telefone: telefoneFormatado,
         mensagem_id: evolutionResult?.key?.id 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Erro na função confirmar-agendamento-whatsapp:', error);
+    console.error('[ConfirmarWhatsApp] Erro:', error);
     
     return new Response(
       JSON.stringify({ 
