@@ -32,3 +32,6 @@ verify_jwt = true
 
 [functions.enviar-confirmacao-whatsapp]
 verify_jwt = false
+
+[functions.criar-agendamento]
+verify_jwt = false
