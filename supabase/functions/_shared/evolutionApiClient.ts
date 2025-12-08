@@ -175,15 +175,18 @@ export function buildAppointmentConfirmationMessage(
   const formattedDate = formatDateBR(date);
   const formattedTime = formatTimeBR(time);
   
-  return `Olá, ${patientName}! 👋
+  return `Olá, ${patientName}! 👋✨
 
-Você possui um horário agendado para *${formattedDate}* às *${formattedTime}* com *${professionalName}* na clínica *${location}*.
+🗓️ Você possui um *agendamento* confirmado:
 
-Responda com:
-*1* - ✅ Confirmar presença
-*2* - ❌ Cancelar atendimento
+📅 Data: *${formattedDate}*
+⏰ Horário: *${formattedTime}*
+👨‍⚕️ Profissional: *${professionalName}*
+📍 Local: *${location}*
 
-Se não puder comparecer, avise-nos com antecedência. Obrigado! 🙏`;
+⚠️ *Importante:* O atendimento será por *ordem de chegada*. Recomendamos chegar com antecedência para garantir seu lugar!
+
+Se não puder comparecer, avise-nos com antecedência. Agradecemos a preferência! 🙏💙`;
 }
 
 /**
