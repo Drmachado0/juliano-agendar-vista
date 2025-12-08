@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Agendamento, atualizarStatusCrm, atualizarObservacoes } from "@/services/agendamentos";
+import { Agendamento, atualizarStatusCrm, atualizarObservacoes, buscarObservacoesDecrypted } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -84,12 +84,28 @@ const AgendamentoDetailsModal = ({ agendamento, isOpen, onClose, onUpdate }: Age
   const [statusCrm, setStatusCrm] = useState("NOVO LEAD");
   const [saving, setSaving] = useState(false);
   const [sendingConfirmation, setSendingConfirmation] = useState(false);
+  const [loadingObservacoes, setLoadingObservacoes] = useState(false);
 
   // Update local state when agendamento changes
   useEffect(() => {
     if (agendamento) {
-      setObservacoes(agendamento.observacoes_internas || "");
       setStatusCrm(agendamento.status_crm);
+      
+      // Fetch decrypted observations
+      const fetchDecryptedObservacoes = async () => {
+        setLoadingObservacoes(true);
+        try {
+          const { data } = await buscarObservacoesDecrypted(agendamento.id);
+          setObservacoes(data || "");
+        } catch (error) {
+          console.error('Erro ao carregar observações:', error);
+          setObservacoes("");
+        } finally {
+          setLoadingObservacoes(false);
+        }
+      };
+      
+      fetchDecryptedObservacoes();
     }
   }, [agendamento]);
 
@@ -390,13 +406,20 @@ const AgendamentoDetailsModal = ({ agendamento, isOpen, onClose, onUpdate }: Age
             </div>
 
             <div className="space-y-2">
-              <Label>Observações internas</Label>
-              <Textarea
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-                placeholder="Adicione notas internas sobre este agendamento..."
-                rows={4}
-              />
+              <Label>Observações internas (criptografadas)</Label>
+              {loadingObservacoes ? (
+                <div className="flex items-center gap-2 text-muted-foreground h-24 border rounded-md px-3">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Descriptografando...</span>
+                </div>
+              ) : (
+                <Textarea
+                  value={observacoes}
+                  onChange={(e) => setObservacoes(e.target.value)}
+                  placeholder="Adicione notas internas sobre este agendamento..."
+                  rows={4}
+                />
+              )}
             </div>
           </div>
 

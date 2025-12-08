@@ -375,6 +375,18 @@ export async function buscarAgendamento(id: string): Promise<{ data: Agendamento
   return { data: data as Agendamento, error: null };
 }
 
+// Get decrypted observations for an agendamento (admin only)
+export async function buscarObservacoesDecrypted(id: string): Promise<{ data: string | null; error: Error | null }> {
+  const { data, error } = await supabase.rpc('get_observacoes_decrypted', { agendamento_id: id });
+
+  if (error) {
+    console.error('Erro ao buscar observações descriptografadas:', error);
+    return { data: null, error: new Error(error.message) };
+  }
+
+  return { data: data as string, error: null };
+}
+
 // Delete agendamento
 export async function excluirAgendamento(id: string): Promise<{ error: Error | null }> {
   // First delete related messages
