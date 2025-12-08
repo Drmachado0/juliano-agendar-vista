@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -12,6 +12,7 @@ import { criarAgendamento } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
 const initialFormData: FormData = {
@@ -34,8 +35,14 @@ const Agendar = () => {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { trackViewContent, trackLead, trackSchedule } = useMetaPixel();
 
   const totalSteps = 4;
+
+  // Track ViewContent when page loads
+  useEffect(() => {
+    trackViewContent("Agendamento Online", "Consulta Oftalmológica");
+  }, []);
 
   const updateFormData = (data: Partial<FormData>) => {
     setFormData((prev) => ({ ...prev, ...data }));
@@ -82,6 +89,10 @@ const Agendar = () => {
 
   const nextStep = async () => {
     if (currentStep < totalSteps) {
+      // Track Lead when moving from step 1 to step 2 (personal data filled)
+      if (currentStep === 1) {
+        trackLead("Dados Pessoais Preenchidos");
+      }
       if (currentStep === 3) {
         await sendToWebhook(formData);
       }
@@ -142,6 +153,9 @@ const Agendar = () => {
       if (data) {
         await notificarN8n('agendamento_criado', data);
       }
+
+      // Track Schedule conversion event
+      trackSchedule(formData.appointmentType, formData.location);
 
       setIsSubmitted(true);
     } catch (err) {
