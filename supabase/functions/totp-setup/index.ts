@@ -77,59 +77,16 @@ serve(async (req) => {
     // Create TOTP URI for QR code
     const totpUri = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(email)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
 
-    // Store encrypted secret and backup codes in database
+    // Store encrypted secret and backup codes in database using secure RPC function
     const { error: upsertError } = await supabaseAdmin.rpc('setup_totp', {
       p_user_id: user.id,
       p_secret: secret,
       p_backup_codes: JSON.stringify(backupCodes)
     });
 
-    // If RPC doesn't exist, try direct insert with encryption
     if (upsertError) {
-      console.log('RPC failed, trying direct approach:', upsertError.message);
-      
-      // Delete existing record if any
-      await supabaseAdmin
-        .from('two_factor_auth')
-        .delete()
-        .eq('user_id', user.id);
-
-      // Insert with encrypted data using the encryption functions
-      const { error: insertError } = await supabaseAdmin.rpc('exec_sql', {
-        sql: `
-          INSERT INTO public.two_factor_auth (user_id, totp_secret_encrypted, backup_codes_encrypted, totp_enabled)
-          VALUES (
-            '${user.id}'::uuid,
-            public.encrypt_totp_secret('${secret}'),
-            public.encrypt_totp_secret('${JSON.stringify(backupCodes)}'),
-            false
-          )
-          ON CONFLICT (user_id) DO UPDATE SET
-            totp_secret_encrypted = public.encrypt_totp_secret('${secret}'),
-            backup_codes_encrypted = public.encrypt_totp_secret('${JSON.stringify(backupCodes)}'),
-            totp_enabled = false,
-            backup_codes_used = '{}',
-            verified_at = NULL,
-            updated_at = NOW()
-        `
-      });
-
-      if (insertError) {
-        // Fallback: store unencrypted (temporary, not ideal)
-        console.log('Direct SQL failed, using fallback:', insertError.message);
-        
-        const { error: fallbackError } = await supabaseAdmin
-          .from('two_factor_auth')
-          .upsert({
-            user_id: user.id,
-            totp_enabled: false,
-            backup_codes_used: []
-          }, { onConflict: 'user_id' });
-
-        if (fallbackError) {
-          throw new Error('Failed to setup 2FA: ' + fallbackError.message);
-        }
-      }
+      console.error('Failed to setup 2FA:', upsertError.message);
+      throw new Error('Failed to setup 2FA: ' + upsertError.message);
     }
 
     console.log(`2FA setup initiated for user ${user.id}`);
