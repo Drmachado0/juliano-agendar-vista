@@ -582,6 +582,42 @@ export type Database = {
         }
         Relationships: []
       }
+      two_factor_auth: {
+        Row: {
+          backup_codes_encrypted: string | null
+          backup_codes_used: string[] | null
+          created_at: string | null
+          id: string
+          totp_enabled: boolean | null
+          totp_secret_encrypted: string | null
+          updated_at: string | null
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          backup_codes_encrypted?: string | null
+          backup_codes_used?: string[] | null
+          created_at?: string | null
+          id?: string
+          totp_enabled?: boolean | null
+          totp_secret_encrypted?: string | null
+          updated_at?: string | null
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          backup_codes_encrypted?: string | null
+          backup_codes_used?: string[] | null
+          created_at?: string | null
+          id?: string
+          totp_enabled?: boolean | null
+          totp_secret_encrypted?: string | null
+          updated_at?: string | null
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -612,7 +648,12 @@ export type Database = {
         Args: { encrypted_data: string }
         Returns: string
       }
+      decrypt_totp_secret: {
+        Args: { encrypted_secret: string }
+        Returns: string
+      }
       encrypt_sensitive_data: { Args: { plain_text: string }; Returns: string }
+      encrypt_totp_secret: { Args: { plain_secret: string }; Returns: string }
       get_observacoes_decrypted: {
         Args: { agendamento_id: string }
         Returns: string

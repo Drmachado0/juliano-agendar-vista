@@ -10,6 +10,8 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import drLogo from "@/assets/dr-juliano-logo.webp";
 import { PasswordStrengthIndicator, validatePasswordStrength } from "@/components/auth/PasswordStrengthIndicator";
+import TwoFactorVerification from "@/components/auth/TwoFactorVerification";
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -17,6 +19,8 @@ const Auth = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   
   // Login form
   const [loginEmail, setLoginEmail] = useState("");
@@ -29,10 +33,10 @@ const Auth = () => {
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
 
   useEffect(() => {
-    if (user && !authLoading) {
+    if (user && !authLoading && !requires2FA) {
       navigate("/admin/agendamentos");
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, requires2FA, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,24 +51,48 @@ const Auth = () => {
     }
 
     setIsLoading(true);
-    const { error } = await signIn(loginEmail, loginPassword);
-    setIsLoading(false);
-
-    if (error) {
+    
+    // Use supabase directly to get user data for 2FA check
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password: loginPassword,
+    });
+    
+    if (authError) {
+      setIsLoading(false);
       toast({
         title: "Erro ao fazer login",
-        description: error.message === "Invalid login credentials" 
+        description: authError.message === "Invalid login credentials" 
           ? "Email ou senha incorretos" 
-          : error.message,
+          : authError.message,
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Login realizado",
-        description: "Bem-vindo de volta!",
-      });
-      navigate("/admin/agendamentos");
+      return;
     }
+
+    // Check if user has 2FA enabled
+    if (authData?.user) {
+      const { data: twoFactorData } = await supabase
+        .from('two_factor_auth')
+        .select('totp_enabled')
+        .eq('user_id', authData.user.id)
+        .eq('totp_enabled', true)
+        .maybeSingle();
+
+      if (twoFactorData?.totp_enabled) {
+        setPendingUserId(authData.user.id);
+        setRequires2FA(true);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    setIsLoading(false);
+    toast({
+      title: "Login realizado",
+      description: "Bem-vindo de volta!",
+    });
+    navigate("/admin/agendamentos");
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -121,10 +149,22 @@ const Auth = () => {
     }
   };
 
-  if (authLoading) {
+  // Show 2FA verification screen
+  if (requires2FA && pendingUserId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
+        <TwoFactorVerification
+          userId={pendingUserId}
+          onVerified={() => {
+            toast({ title: "Login realizado", description: "Bem-vindo de volta!" });
+            navigate("/admin/agendamentos");
+          }}
+          onCancel={() => {
+            setRequires2FA(false);
+            setPendingUserId(null);
+            supabase.auth.signOut();
+          }}
+        />
       </div>
     );
   }
