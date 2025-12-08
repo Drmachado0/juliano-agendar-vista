@@ -109,9 +109,11 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
                 </Button>
               </Link>
             )}
-            <Button variant="hero" size="default" onClick={onScheduleClick}>
-              Agendar consulta
-            </Button>
+            <Link to="/agendar">
+              <Button variant="hero" size="default">
+                Agendar Online
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -155,9 +157,11 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
                   </Button>
                 </Link>
               )}
-              <Button variant="hero" onClick={onScheduleClick} className="w-full mt-2">
-                Agendar consulta
-              </Button>
+              <Link to="/agendar" onClick={() => setIsMenuOpen(false)} className="w-full mt-2">
+                <Button variant="hero" className="w-full">
+                  Agendar Online
+                </Button>
+              </Link>
             </nav>
           </div>
         )}
