@@ -150,9 +150,9 @@ function determineStatusCrmByLocation(localAtendimento: string): string {
   return "NOVO LEAD";
 }
 
-// Create new agendamento (public - from website form)
+// Create new agendamento (public - from website form) via rate-limited edge function
 export async function criarAgendamento(data: AgendamentoInsert): Promise<{ data: Agendamento | null; error: Error | null }> {
-  // Validate input with zod schema
+  // Validate input with zod schema on client side first
   const validationResult = agendamentoInsertSchema.safeParse(data);
   
   if (!validationResult.success) {
@@ -179,73 +179,32 @@ export async function criarAgendamento(data: AgendamentoInsert): Promise<{ data:
     hora_agendamento: validatedData.hora_agendamento,
     aceita_primeiro_horario: validatedData.aceita_primeiro_horario ?? false,
     aceita_contato_whatsapp_email: validatedData.aceita_contato_whatsapp_email ?? false,
-    status_crm: autoStatusCrm, // Automatically set based on location
+    status_crm: autoStatusCrm,
     origem: validatedData.origem ?? "site",
     observacoes_internas: validatedData.observacoes_internas ?? null,
   };
 
-  // Insert without .select() to avoid RLS SELECT permission requirement for public users
-  const { error } = await supabase
-    .from('agendamentos')
-    .insert([sanitizedData]);
+  // Call rate-limited edge function instead of direct insert
+  const { data: responseData, error } = await supabase.functions.invoke('criar-agendamento', {
+    body: sanitizedData,
+  });
 
   if (error) {
     console.error('Erro ao criar agendamento:', error);
-    return { data: null, error: new Error(error.message) };
+    return { data: null, error: new Error(error.message || 'Erro ao criar agendamento') };
   }
 
-  // Create a partial agendamento object for notifications (without needing SELECT)
-  const agendamentoParaNotificacoes = {
-    ...sanitizedData,
-    id: crypto.randomUUID(), // Placeholder - edge functions will use the data directly
+  // Check for rate limit or validation errors in response
+  if (responseData?.error) {
+    console.error('Erro retornado pela edge function:', responseData.error);
+    return { data: null, error: new Error(responseData.error) };
+  }
+
+  // Return success with the created appointment ID
+  return { 
+    data: { ...sanitizedData, id: responseData?.data?.id || 'created' } as unknown as Agendamento, 
+    error: null 
   };
-
-  // Enviar notificações em paralelo (não bloqueiam a criação)
-  const notificacoes = [];
-
-  // 1. Enviar WhatsApp para o paciente - passing data directly instead of ID
-  notificacoes.push(
-    supabase.functions.invoke('confirmar-agendamento-whatsapp', {
-      body: { 
-        agendamento_data: {
-          nome_completo: sanitizedData.nome_completo,
-          telefone_whatsapp: sanitizedData.telefone_whatsapp,
-          tipo_atendimento: sanitizedData.tipo_atendimento,
-          local_atendimento: sanitizedData.local_atendimento,
-          data_agendamento: sanitizedData.data_agendamento,
-          hora_agendamento: sanitizedData.hora_agendamento,
-          convenio: sanitizedData.convenio,
-        }
-      },
-    }).then(() => console.log('WhatsApp enviado para o paciente'))
-      .catch((err) => console.error('Erro ao enviar WhatsApp (não crítico):', err))
-  );
-
-  // 2. Enviar email para o Dr. Juliano
-  notificacoes.push(
-    supabase.functions.invoke('notificar-agendamento-email', {
-      body: {
-        nome_completo: sanitizedData.nome_completo,
-        telefone_whatsapp: sanitizedData.telefone_whatsapp,
-        email_paciente: sanitizedData.email,
-        data_nascimento: sanitizedData.data_nascimento,
-        tipo_atendimento: sanitizedData.tipo_atendimento,
-        detalhe_exame_ou_cirurgia: sanitizedData.detalhe_exame_ou_cirurgia,
-        local_atendimento: sanitizedData.local_atendimento,
-        convenio: sanitizedData.convenio,
-        convenio_outro: sanitizedData.convenio_outro,
-        data_agendamento: sanitizedData.data_agendamento,
-        hora_agendamento: sanitizedData.hora_agendamento,
-      },
-    }).then(() => console.log('Email de notificação enviado'))
-      .catch((err) => console.error('Erro ao enviar email (não crítico):', err))
-  );
-
-  // Executar notificações em paralelo sem bloquear
-  Promise.all(notificacoes).catch(() => {});
-
-  // Return success with sanitized data (no ID since we can't retrieve it)
-  return { data: { ...sanitizedData, id: 'created' } as unknown as Agendamento, error: null };
 }
 
 // List agendamentos with filters (admin only)
