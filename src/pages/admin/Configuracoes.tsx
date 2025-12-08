@@ -44,6 +44,7 @@ import {
   GoogleCalendarStatus
 } from "@/services/googleCalendar";
 import { useAuth } from "@/contexts/AuthContext";
+import TwoFactorSetup from "@/components/admin/TwoFactorSetup";
 
 export default function Configuracoes() {
   const { user } = useAuth();
@@ -697,6 +698,9 @@ export default function Configuracoes() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Two-Factor Authentication */}
+              <TwoFactorSetup />
             </div>
           </TabsContent>
         </Tabs>
