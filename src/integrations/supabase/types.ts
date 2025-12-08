@@ -37,6 +37,7 @@ export type Database = {
           local_atendimento: string
           nome_completo: string
           observacoes_internas: string | null
+          observacoes_internas_encrypted: string | null
           origem: string | null
           profissional_id: string | null
           servico_id: string | null
@@ -67,6 +68,7 @@ export type Database = {
           local_atendimento: string
           nome_completo: string
           observacoes_internas?: string | null
+          observacoes_internas_encrypted?: string | null
           origem?: string | null
           profissional_id?: string | null
           servico_id?: string | null
@@ -97,6 +99,7 @@ export type Database = {
           local_atendimento?: string
           nome_completo?: string
           observacoes_internas?: string | null
+          observacoes_internas_encrypted?: string | null
           origem?: string | null
           profissional_id?: string | null
           servico_id?: string | null
@@ -605,6 +608,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      decrypt_sensitive_data: {
+        Args: { encrypted_data: string }
+        Returns: string
+      }
+      encrypt_sensitive_data: { Args: { plain_text: string }; Returns: string }
+      get_observacoes_decrypted: {
+        Args: { agendamento_id: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
