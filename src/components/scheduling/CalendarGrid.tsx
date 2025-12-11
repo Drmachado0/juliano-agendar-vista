@@ -83,13 +83,6 @@ const CalendarGrid = ({ selectedDate, onSelectDate, onProximoHorarioLivre, local
     return info ? { disponivel: true, slots: info.slotsDisponiveis } : { disponivel: false, slots: 0 };
   };
 
-  // Retorna cor do indicador baseado na quantidade de slots
-  const getSlotIndicatorColor = (slots: number): string => {
-    if (slots >= 10) return "bg-emerald-500"; // Muitos slots
-    if (slots >= 5) return "bg-amber-500";    // Médio
-    return "bg-rose-500";                      // Poucos slots
-  };
-
   const renderDias = () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(monthStart);
@@ -107,7 +100,7 @@ const CalendarGrid = ({ selectedDate, onSelectDate, onProximoHorarioLivre, local
         const isHoje = isSameDay(day, hoje);
         const isSelected = selectedDate && isSameDay(day, selectedDate);
         const isPassado = isBefore(day, hoje);
-        const { disponivel: temDisponibilidade, slots } = getDataInfo(day);
+        const { disponivel: temDisponibilidade } = getDataInfo(day);
         const isClicavel = isCurrentMonth && !isPassado && temDisponibilidade;
 
         days.push(
@@ -118,7 +111,7 @@ const CalendarGrid = ({ selectedDate, onSelectDate, onProximoHorarioLivre, local
             onClick={() => isClicavel && onSelectDate(cloneDay)}
             className={cn(
               "relative h-12 w-12 rounded-lg text-sm font-medium transition-all duration-200",
-              "flex flex-col items-center justify-center gap-0.5",
+              "flex items-center justify-center",
               !isCurrentMonth && "text-muted-foreground/30",
               isCurrentMonth && !isClicavel && "text-muted-foreground/50 cursor-not-allowed",
               isCurrentMonth && isClicavel && "hover:bg-primary/10 cursor-pointer text-foreground",
@@ -127,26 +120,7 @@ const CalendarGrid = ({ selectedDate, onSelectDate, onProximoHorarioLivre, local
               isSelected && "bg-primary text-primary-foreground shadow-lg scale-105"
             )}
           >
-            <span>{format(day, "d")}</span>
-            {/* Indicador de slots */}
-            {isCurrentMonth && temDisponibilidade && !isPassado && (
-              <div className="flex items-center gap-0.5">
-                <span 
-                  className={cn(
-                    "h-1.5 w-1.5 rounded-full",
-                    isSelected ? "bg-primary-foreground/70" : getSlotIndicatorColor(slots)
-                  )}
-                />
-                <span 
-                  className={cn(
-                    "text-[9px] font-normal",
-                    isSelected ? "text-primary-foreground/70" : "text-muted-foreground"
-                  )}
-                >
-                  {slots}
-                </span>
-              </div>
-            )}
+            {format(day, "d")}
           </button>
         );
         day = addDays(day, 1);
@@ -221,26 +195,6 @@ const CalendarGrid = ({ selectedDate, onSelectDate, onProximoHorarioLivre, local
         <Zap className="h-4 w-4 text-primary" />
         {isBuscandoProximo ? "Buscando..." : "Próximo horário livre"}
       </Button>
-
-      {/* Legenda */}
-      <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground pt-2">
-        <div className="flex items-center gap-1.5">
-          <div className="h-2 w-2 rounded-full bg-emerald-500" />
-          <span>+10 vagas</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="h-2 w-2 rounded-full bg-amber-500" />
-          <span>5-9 vagas</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="h-2 w-2 rounded-full bg-rose-500" />
-          <span>&lt;5 vagas</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="h-3 w-3 rounded-lg bg-primary" />
-          <span>Selecionado</span>
-        </div>
-      </div>
     </div>
   );
 };
