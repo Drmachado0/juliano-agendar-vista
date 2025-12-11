@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { gerarMensagemDoTemplate, formatarData, formatarHora } from "../_shared/templateRenderer.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,43 +34,6 @@ function formatarTelefone(telefone: string): string {
     return apenasNumeros;
   }
   return '55' + apenasNumeros;
-}
-
-function formatarData(dataStr: string): string {
-  try {
-    const [ano, mes, dia] = dataStr.split('-');
-    return `${dia}/${mes}/${ano}`;
-  } catch {
-    return dataStr;
-  }
-}
-
-function formatarHora(horaStr: string): string {
-  return horaStr.slice(0, 5);
-}
-
-function gerarMensagemConfirmacao(dados: {
-  nome_completo: string;
-  data_agendamento: string;
-  hora_agendamento: string;
-  local_atendimento: string;
-  tipo_atendimento?: string;
-}): string {
-  const dataFormatada = formatarData(dados.data_agendamento);
-  const horaFormatada = formatarHora(dados.hora_agendamento);
-  
-  return `Olá ${dados.nome_completo}! 👋
-
-Recebemos seu pedido de agendamento na clínica *Dr. Juliano Machado - Oftalmologista*.
-
-📅 *Data:* ${dataFormatada}
-🕐 *Horário:* ${horaFormatada}
-📍 *Local:* ${dados.local_atendimento}
-${dados.tipo_atendimento ? `📋 *Tipo:* ${dados.tipo_atendimento}` : ''}
-
-Nossa equipe entrará em contato para confirmar seu horário.
-
-Qualquer dúvida, responda esta mensagem!`;
 }
 
 serve(async (req) => {
@@ -177,13 +141,15 @@ serve(async (req) => {
       );
     }
 
-    // Formatar telefone e mensagem
+    // Formatar telefone e gerar mensagem do template
     const telefoneFormatado = formatarTelefone(agendamentoData.telefone_whatsapp);
-    const mensagem = gerarMensagemConfirmacao({
-      nome_completo: agendamentoData.nome_completo,
-      data_agendamento: agendamentoData.data_agendamento,
-      hora_agendamento: agendamentoData.hora_agendamento,
-      local_atendimento: agendamentoData.local_atendimento,
+    
+    // Buscar template do banco e renderizar
+    const mensagem = await gerarMensagemDoTemplate('confirmacao_agendamento', {
+      nome: agendamentoData.nome_completo,
+      data: formatarData(agendamentoData.data_agendamento),
+      hora: formatarHora(agendamentoData.hora_agendamento),
+      local: agendamentoData.local_atendimento,
       tipo_atendimento: agendamentoData.tipo_atendimento,
     });
 

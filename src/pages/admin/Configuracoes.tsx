@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Building2, Stethoscope, Plus, Pencil, Clock, MapPin, Phone, Calendar, Link2, Unlink, Loader2, Shield, DollarSign } from "lucide-react";
+import { Building2, Stethoscope, Plus, Pencil, Clock, MapPin, Phone, Calendar, Link2, Unlink, Loader2, Shield, DollarSign, MessageSquare } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Clinica, 
@@ -45,6 +45,7 @@ import {
 } from "@/services/googleCalendar";
 import { useAuth } from "@/contexts/AuthContext";
 import TwoFactorSetup from "@/components/admin/TwoFactorSetup";
+import TemplatesWhatsAppTab from "@/components/admin/TemplatesWhatsAppTab";
 
 export default function Configuracoes() {
   const { user } = useAuth();
@@ -403,7 +404,7 @@ export default function Configuracoes() {
         </div>
 
         <Tabs defaultValue="clinicas" className="w-full">
-          <TabsList className="grid w-full max-w-2xl grid-cols-5">
+          <TabsList className="grid w-full max-w-3xl grid-cols-6">
             <TabsTrigger value="clinicas" className="gap-2 text-xs sm:text-sm">
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Clínicas</span>
@@ -419,6 +420,10 @@ export default function Configuracoes() {
             <TabsTrigger value="servicos" className="gap-2 text-xs sm:text-sm">
               <Clock className="h-4 w-4" />
               <span className="hidden sm:inline">Serviços</span>
+            </TabsTrigger>
+            <TabsTrigger value="templates" className="gap-2 text-xs sm:text-sm">
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Templates</span>
             </TabsTrigger>
             <TabsTrigger value="integracoes" className="gap-2 text-xs sm:text-sm">
               <Link2 className="h-4 w-4" />
@@ -702,6 +707,11 @@ export default function Configuracoes() {
               {/* Two-Factor Authentication */}
               <TwoFactorSetup />
             </div>
+          </TabsContent>
+
+          {/* Tab Templates WhatsApp */}
+          <TabsContent value="templates" className="mt-6">
+            <TemplatesWhatsAppTab />
           </TabsContent>
         </Tabs>
       </div>

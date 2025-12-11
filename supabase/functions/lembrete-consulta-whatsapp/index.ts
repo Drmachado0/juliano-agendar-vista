@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { gerarMensagemDoTemplate, formatarData, formatarHora } from "../_shared/templateRenderer.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -95,11 +96,14 @@ serve(async (req) => {
           telefone = "55" + telefone;
         }
 
-        // Formatar horário
-        const horaFormatada = agendamento.hora_agendamento.substring(0, 5);
-
-        // Criar mensagem de lembrete
-        const mensagem = `Olá ${agendamento.nome_completo}! 📅\n\nLembramos que você tem uma consulta agendada para *amanhã* (${formatarData(tomorrowStr)}) às *${horaFormatada}* em ${agendamento.local_atendimento}.\n\n⚠️ Não esqueça de chegar com 15 minutos de antecedência.\n\nCaso precise remarcar ou cancelar, entre em contato conosco.\n\nDr. Juliano Machado - Oftalmologia`;
+        // Gerar mensagem do template do banco
+        const mensagem = await gerarMensagemDoTemplate('lembrete_24h', {
+          nome: agendamento.nome_completo,
+          data: formatarData(tomorrowStr),
+          hora: formatarHora(agendamento.hora_agendamento),
+          local: agendamento.local_atendimento,
+          tipo_atendimento: agendamento.tipo_atendimento,
+        });
 
         console.log(`[lembrete-consulta] Enviando lembrete para: ${telefone}`);
 
@@ -164,8 +168,3 @@ serve(async (req) => {
     );
   }
 });
-
-function formatarData(dataStr: string): string {
-  const [ano, mes, dia] = dataStr.split("-");
-  return `${dia}/${mes}/${ano}`;
-}
