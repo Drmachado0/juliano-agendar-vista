@@ -552,6 +552,42 @@ export type Database = {
         }
         Relationships: []
       }
+      templates_whatsapp: {
+        Row: {
+          ativo: boolean | null
+          conteudo: string
+          created_at: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          tipo: string
+          updated_at: string | null
+          variaveis_disponiveis: string[] | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          conteudo: string
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          tipo: string
+          updated_at?: string | null
+          variaveis_disponiveis?: string[] | null
+        }
+        Update: {
+          ativo?: boolean | null
+          conteudo?: string
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          tipo?: string
+          updated_at?: string | null
+          variaveis_disponiveis?: string[] | null
+        }
+        Relationships: []
+      }
       tipos_atendimento: {
         Row: {
           ativo: boolean | null
