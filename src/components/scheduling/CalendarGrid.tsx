@@ -110,23 +110,47 @@ const CalendarGrid = ({ selectedDate, onSelectDate, onProximoHorarioLivre, local
             disabled={!isClicavel}
             onClick={() => isClicavel && onSelectDate(cloneDay)}
             className={cn(
-              "relative h-12 w-12 rounded-lg text-sm font-medium transition-all duration-200",
+              "relative h-11 w-11 rounded-xl text-sm font-medium",
               "flex items-center justify-center",
-              !isCurrentMonth && "text-muted-foreground/30",
-              isCurrentMonth && !isClicavel && "text-muted-foreground/50 cursor-not-allowed",
-              isCurrentMonth && isClicavel && "hover:bg-primary/10 cursor-pointer text-foreground",
-              isCurrentMonth && temDisponibilidade && !isSelected && "bg-primary/5 text-primary font-semibold",
-              isHoje && !isSelected && "ring-2 ring-primary/30",
-              isSelected && "bg-primary text-primary-foreground shadow-lg scale-105"
+              "transition-all duration-300 ease-out",
+              // Dias fora do mês
+              !isCurrentMonth && "text-muted-foreground/20",
+              // Dias não clicáveis
+              isCurrentMonth && !isClicavel && "text-muted-foreground/40 cursor-not-allowed",
+              // Dias disponíveis - hover suave
+              isCurrentMonth && isClicavel && !isSelected && [
+                "cursor-pointer text-primary",
+                "bg-primary/5 hover:bg-primary/15",
+                "hover:scale-110 hover:shadow-md hover:shadow-primary/10",
+                "active:scale-95"
+              ],
+              // Hoje (não selecionado)
+              isHoje && !isSelected && "ring-2 ring-primary/40 ring-offset-2 ring-offset-background",
+              // Selecionado
+              isSelected && [
+                "bg-primary text-primary-foreground",
+                "shadow-lg shadow-primary/30",
+                "scale-110",
+                "ring-2 ring-primary ring-offset-2 ring-offset-background"
+              ]
             )}
           >
-            {format(day, "d")}
+            <span className={cn(
+              "transition-transform duration-200",
+              isClicavel && !isSelected && "group-hover:font-semibold"
+            )}>
+              {format(day, "d")}
+            </span>
+            {/* Indicador sutil de disponibilidade */}
+            {isCurrentMonth && temDisponibilidade && !isPassado && !isSelected && (
+              <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary/60" />
+            )}
           </button>
         );
         day = addDays(day, 1);
       }
       rows.push(
-        <div key={day.toString()} className="grid grid-cols-7 gap-1">
+        <div key={day.toString()} className="grid grid-cols-7 gap-1.5 justify-items-center">
           {days}
         </div>
       );
@@ -137,32 +161,39 @@ const CalendarGrid = ({ selectedDate, onSelectDate, onProximoHorarioLivre, local
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Header do calendário */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-2">
         <Button
           type="button"
           variant="ghost"
           size="icon"
           onClick={prevMonth}
           disabled={isSameMonth(currentMonth, hoje)}
+          className="h-9 w-9 rounded-full hover:bg-primary/10 transition-colors duration-200"
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <h3 className="text-lg font-semibold capitalize">
+        <h3 className="text-lg font-semibold capitalize text-foreground">
           {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
         </h3>
-        <Button type="button" variant="ghost" size="icon" onClick={nextMonth}>
+        <Button 
+          type="button" 
+          variant="ghost" 
+          size="icon" 
+          onClick={nextMonth}
+          className="h-9 w-9 rounded-full hover:bg-primary/10 transition-colors duration-200"
+        >
           <ChevronRight className="h-5 w-5" />
         </Button>
       </div>
 
       {/* Dias da semana */}
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1.5 justify-items-center">
         {DIAS_SEMANA.map((dia) => (
           <div
             key={dia}
-            className="h-10 flex items-center justify-center text-xs font-medium text-muted-foreground uppercase"
+            className="h-8 w-11 flex items-center justify-center text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider"
           >
             {dia}
           </div>
@@ -173,26 +204,35 @@ const CalendarGrid = ({ selectedDate, onSelectDate, onProximoHorarioLivre, local
       {isLoading ? (
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="grid grid-cols-7 gap-1">
+            <div key={i} className="grid grid-cols-7 gap-1.5 justify-items-center">
               {[...Array(7)].map((_, j) => (
-                <Skeleton key={j} className="h-12 w-12 rounded-lg" />
+                <Skeleton key={j} className="h-11 w-11 rounded-xl" />
               ))}
             </div>
           ))}
         </div>
       ) : (
-        <div className="space-y-1">{renderDias()}</div>
+        <div className="space-y-1.5">{renderDias()}</div>
       )}
 
       {/* Botão próximo horário livre */}
       <Button
         type="button"
         variant="outline"
-        className="w-full mt-4 gap-2 border-primary/20 hover:bg-primary/5 hover:border-primary/40"
+        className={cn(
+          "w-full mt-4 gap-2",
+          "border-primary/30 bg-primary/5",
+          "hover:bg-primary/10 hover:border-primary/50 hover:shadow-md hover:shadow-primary/10",
+          "transition-all duration-300 ease-out",
+          "active:scale-[0.98]"
+        )}
         onClick={handleProximoHorarioLivre}
         disabled={isBuscandoProximo}
       >
-        <Zap className="h-4 w-4 text-primary" />
+        <Zap className={cn(
+          "h-4 w-4 text-primary",
+          isBuscandoProximo && "animate-pulse"
+        )} />
         {isBuscandoProximo ? "Buscando..." : "Próximo horário livre"}
       </Button>
     </div>
