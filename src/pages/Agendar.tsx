@@ -35,7 +35,7 @@ const Agendar = () => {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { trackViewContent, trackLead, trackSchedule } = useMetaPixel();
+  const { trackViewContent, trackLead, trackSchedule, trackCompleteRegistration } = useMetaPixel();
 
   const totalSteps = 4;
 
@@ -154,8 +154,9 @@ const Agendar = () => {
         await notificarN8n('agendamento_criado', data);
       }
 
-      // Track Schedule conversion event
+      // Track Schedule and CompleteRegistration conversion events
       trackSchedule(formData.appointmentType, formData.location);
+      trackCompleteRegistration(formData.appointmentType, formData.location);
 
       setIsSubmitted(true);
     } catch (err) {
