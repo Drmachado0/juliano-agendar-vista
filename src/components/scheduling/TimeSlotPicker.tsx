@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, AlertCircle } from "lucide-react";
+import { Clock, AlertCircle, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -17,10 +17,12 @@ interface TimeSlotPickerProps {
 const TimeSlotPicker = ({ selectedDate, selectedTime, onSelectTime, localAtendimento }: TimeSlotPickerProps) => {
   const [slots, setSlots] = useState<SlotDisponivel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     if (selectedDate) {
       carregarHorarios();
+      setShowAll(false);
     } else {
       setSlots([]);
     }
@@ -41,6 +43,17 @@ const TimeSlotPicker = ({ selectedDate, selectedTime, onSelectTime, localAtendim
     }
   };
 
+  // Seleciona 3 horários aleatórios para exibição inicial
+  const displaySlots = useMemo(() => {
+    if (showAll || slots.length <= 3) return slots;
+    
+    // Embaralha e pega os 3 primeiros
+    const shuffled = [...slots].sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, 3);
+    // Ordena por horário para exibição
+    return selected.sort((a, b) => a.horario.localeCompare(b.horario));
+  }, [slots, showAll]);
+
   if (!selectedDate) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -56,11 +69,11 @@ const TimeSlotPicker = ({ selectedDate, selectedTime, onSelectTime, localAtendim
     return (
       <div className="space-y-4">
         <div className="text-center">
-          <Skeleton className="h-6 w-48 mx-auto" />
+          <Skeleton className="h-6 w-48 mx-auto mb-4" />
         </div>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-          {[...Array(10)].map((_, i) => (
-            <Skeleton key={i} className="h-12 rounded-lg" />
+        <div className="flex flex-wrap justify-center gap-3">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-12 w-20 rounded-xl" />
           ))}
         </div>
       </div>
@@ -82,39 +95,53 @@ const TimeSlotPicker = ({ selectedDate, selectedTime, onSelectTime, localAtendim
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="text-center">
-        <h4 className="font-medium text-foreground">
-          Horários disponíveis para{" "}
-          <span className="text-primary font-semibold">
-            {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
-          </span>
+        <p className="text-sm text-muted-foreground mb-1">Horários disponíveis para</p>
+        <h4 className="text-lg font-semibold text-primary">
+          {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
         </h4>
       </div>
 
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-        {slots.map((slot) => (
-          <Button
+      <div className="flex flex-wrap justify-center gap-3">
+        {displaySlots.map((slot) => (
+          <button
             key={slot.horario}
             type="button"
-            variant={selectedTime === slot.horario ? "default" : "outline"}
-            className={cn(
-              "h-12 text-base font-medium transition-all duration-200",
-              selectedTime === slot.horario
-                ? "bg-primary text-primary-foreground shadow-lg scale-105"
-                : "hover:bg-primary/10 hover:border-primary/40 hover:scale-102"
-            )}
             onClick={() => onSelectTime(slot.horario)}
+            className={cn(
+              "px-5 py-3 rounded-xl text-base font-medium",
+              "transition-all duration-300 ease-out",
+              "border-2",
+              selectedTime === slot.horario
+                ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/30 scale-105"
+                : [
+                    "bg-background border-border/50 text-foreground",
+                    "hover:border-primary/50 hover:bg-primary/5",
+                    "hover:scale-105 hover:shadow-md",
+                    "active:scale-95"
+                  ]
+            )}
           >
             {slot.horario}
-          </Button>
+          </button>
         ))}
       </div>
 
-      {slots.length > 0 && (
-        <p className="text-xs text-muted-foreground text-center">
-          {slots.length} horário{slots.length !== 1 ? "s" : ""} disponíve{slots.length !== 1 ? "is" : "l"}
-        </p>
+      {/* Botão para mostrar mais horários */}
+      {slots.length > 3 && !showAll && (
+        <button
+          type="button"
+          onClick={() => setShowAll(true)}
+          className={cn(
+            "w-full flex items-center justify-center gap-2 py-2",
+            "text-sm text-primary/80 hover:text-primary",
+            "transition-colors duration-200"
+          )}
+        >
+          <span>Ver todos os horários</span>
+          <ChevronDown className="h-4 w-4" />
+        </button>
       )}
     </div>
   );
