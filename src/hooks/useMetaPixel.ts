@@ -57,10 +57,19 @@ export const useMetaPixel = () => {
     });
   };
 
+  const trackCompleteRegistration = (appointmentType?: string, location?: string) => {
+    trackMetaEvent("CompleteRegistration", {
+      content_name: "Agendamento Finalizado",
+      content_category: appointmentType,
+      content_type: location,
+    });
+  };
+
   return {
     trackViewContent,
     trackLead,
     trackSchedule,
+    trackCompleteRegistration,
     trackEvent: trackMetaEvent,
   };
 };
