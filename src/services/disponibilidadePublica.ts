@@ -1,6 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, startOfDay, isBefore, isSameDay, startOfMonth, endOfMonth, getDay } from "date-fns";
 
+// Interface para data com quantidade de slots
+export interface DataComSlots {
+  data: Date;
+  slotsDisponiveis: number;
+}
+
 // Mapeia o valor do local de atendimento para o(s) slug(s) da clínica
 export function getClinicaSlugsFromLocal(localAtendimento?: string): string[] {
   if (!localAtendimento) return [];
@@ -366,12 +372,12 @@ export async function buscarProximoHorarioLivre(
   return null;
 }
 
-// Lista datas com disponibilidade em um mês - VERSÃO OTIMIZADA COM VERIFICAÇÃO REAL
-export async function listarDatasComDisponibilidade(
+// Lista datas com disponibilidade e quantidade de slots - VERSÃO OTIMIZADA
+export async function listarDatasComSlotsDisponiveis(
   mes: number,
   ano: number,
   localAtendimento?: string
-): Promise<Date[]> {
+): Promise<DataComSlots[]> {
   const primeiroDia = startOfMonth(new Date(ano, mes));
   const ultimoDia = endOfMonth(new Date(ano, mes));
   const hoje = startOfDay(new Date());
@@ -423,7 +429,7 @@ export async function listarDatasComDisponibilidade(
     bloqueiosMap.get(key)!.push(b);
   }
   
-  const datasDisponiveis: Date[] = [];
+  const resultado: DataComSlots[] = [];
   let dataAtual = new Date(primeiroDia);
   
   while (dataAtual <= ultimoDia) {
@@ -470,7 +476,7 @@ export async function listarDatasComDisponibilidade(
       }
     }
     
-    // VERIFICAÇÃO REAL: Gerar slots e verificar se há pelo menos um disponível
+    // Gerar slots e contar disponíveis
     const dispEspecificaAtiva = dispEspecificasDia.find(d => 
       d.disponivel !== false && d.hora_inicio && d.hora_fim
     );
@@ -501,8 +507,8 @@ export async function listarDatasComDisponibilidade(
     const horaAtualMinutos = agora.getHours() * 60 + agora.getMinutes();
     const isHoje = isSameDay(dataAtual, agora);
     
-    // Verificar se há pelo menos um slot disponível
-    let temSlotDisponivel = false;
+    // Contar slots disponíveis
+    let slotsDisponiveis = 0;
     
     for (const slot of todosSlots) {
       // Verificar se já passou (para hoje)
@@ -524,19 +530,30 @@ export async function listarDatasComDisponibilidade(
         continue;
       }
       
-      // Encontrou um slot disponível!
-      temSlotDisponivel = true;
-      break;
+      slotsDisponiveis++;
     }
     
-    if (temSlotDisponivel) {
-      datasDisponiveis.push(new Date(dataAtual));
+    if (slotsDisponiveis > 0) {
+      resultado.push({
+        data: new Date(dataAtual),
+        slotsDisponiveis
+      });
     }
     
     dataAtual = addDays(dataAtual, 1);
   }
   
-  return datasDisponiveis;
+  return resultado;
+}
+
+// Lista datas com disponibilidade em um mês (mantida para compatibilidade)
+export async function listarDatasComDisponibilidade(
+  mes: number,
+  ano: number,
+  localAtendimento?: string
+): Promise<Date[]> {
+  const datasComSlots = await listarDatasComSlotsDisponiveis(mes, ano, localAtendimento);
+  return datasComSlots.map(d => d.data);
 }
 
 // Verifica se uma data específica tem disponibilidade
