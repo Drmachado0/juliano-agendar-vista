@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, AlertCircle, ChevronDown } from "lucide-react";
+import { Clock, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -17,12 +16,10 @@ interface TimeSlotPickerProps {
 const TimeSlotPicker = ({ selectedDate, selectedTime, onSelectTime, localAtendimento }: TimeSlotPickerProps) => {
   const [slots, setSlots] = useState<SlotDisponivel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     if (selectedDate) {
       carregarHorarios();
-      setShowAll(false);
     } else {
       setSlots([]);
     }
@@ -43,16 +40,16 @@ const TimeSlotPicker = ({ selectedDate, selectedTime, onSelectTime, localAtendim
     }
   };
 
-  // Seleciona 3 horários aleatórios para exibição inicial
+  // Seleciona 3 horários aleatórios para exibição
   const displaySlots = useMemo(() => {
-    if (showAll || slots.length <= 3) return slots;
+    if (slots.length <= 3) return slots;
     
     // Embaralha e pega os 3 primeiros
     const shuffled = [...slots].sort(() => Math.random() - 0.5);
     const selected = shuffled.slice(0, 3);
     // Ordena por horário para exibição
     return selected.sort((a, b) => a.horario.localeCompare(b.horario));
-  }, [slots, showAll]);
+  }, [slots]);
 
   if (!selectedDate) {
     return (
@@ -127,22 +124,6 @@ const TimeSlotPicker = ({ selectedDate, selectedTime, onSelectTime, localAtendim
           </button>
         ))}
       </div>
-
-      {/* Botão para mostrar mais horários */}
-      {slots.length > 3 && !showAll && (
-        <button
-          type="button"
-          onClick={() => setShowAll(true)}
-          className={cn(
-            "w-full flex items-center justify-center gap-2 py-2",
-            "text-sm text-primary/80 hover:text-primary",
-            "transition-colors duration-200"
-          )}
-        >
-          <span>Ver todos os horários</span>
-          <ChevronDown className="h-4 w-4" />
-        </button>
-      )}
     </div>
   );
 };
