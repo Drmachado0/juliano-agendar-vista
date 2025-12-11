@@ -1,27 +1,32 @@
 import { supabase } from "@/integrations/supabase/client";
-import { format, addDays, startOfDay, isBefore, isSameDay } from "date-fns";
+import { format, addDays, startOfDay, isBefore, isSameDay, startOfMonth, endOfMonth, getDay } from "date-fns";
 
 // Mapeia o valor do local de atendimento para o(s) slug(s) da clínica
-function getClinicaSlugsFromLocal(localAtendimento?: string): string[] {
+export function getClinicaSlugsFromLocal(localAtendimento?: string): string[] {
   if (!localAtendimento) return [];
   
-  const locationMap: Record<string, string[]> = {
-    clinicor: ["clinicor"],
-    hgp: ["hgp"],
-    belem: ["iob", "vitria"], // Belém inclui IOB e Vitria
-  };
+  const local = localAtendimento.toLowerCase();
   
-  return locationMap[localAtendimento] || [];
+  if (local.includes('clinicor')) {
+    return ['clinicor'];
+  } else if (local.includes('hgp') || local.includes('hospital geral')) {
+    return ['hgp'];
+  } else if (local.includes('belem') || local.includes('belém') || local.includes('iob') || local.includes('vitria')) {
+    return ['iob', 'vitria'];
+  }
+  
+  return [];
 }
 
 // Busca os IDs das clínicas pelos slugs
-async function buscarClinicaIdsPorSlugs(slugs: string[]): Promise<string[]> {
+export async function buscarClinicaIdsPorSlugs(slugs: string[]): Promise<string[]> {
   if (slugs.length === 0) return [];
   
   const { data, error } = await supabase
     .from('clinicas')
     .select('id')
-    .in('slug', slugs);
+    .in('slug', slugs)
+    .eq('ativo', true);
   
   if (error || !data) {
     console.error('Erro ao buscar clínicas:', error);
@@ -36,8 +41,9 @@ export interface SlotDisponivel {
   disponivel: boolean;
 }
 
-export interface DisponibilidadeSemanal {
+interface DisponibilidadeSemanal {
   id: string;
+  clinica_id: string | null;
   dia_semana: number;
   hora_inicio: string;
   hora_fim: string;
@@ -45,13 +51,24 @@ export interface DisponibilidadeSemanal {
   ativo: boolean;
 }
 
-export interface DisponibilidadeEspecifica {
+interface DisponibilidadeEspecifica {
   id: string;
+  data: string;
+  clinica_id: string | null;
+  hora_inicio: string | null;
+  hora_fim: string | null;
+  intervalo_minutos: number | null;
+  disponivel: boolean;
+  motivo: string | null;
+}
+
+interface Bloqueio {
+  id: string;
+  clinica_id: string;
   data: string;
   hora_inicio: string | null;
   hora_fim: string | null;
-  intervalo_minutos: number;
-  disponivel: boolean;
+  tipo_bloqueio: string;
   motivo: string | null;
 }
 
@@ -74,117 +91,133 @@ function gerarSlots(horaInicio: string, horaFim: string, intervaloMinutos: numbe
   return slots;
 }
 
-// Busca disponibilidade semanal com filtro opcional por clínica
-async function buscarDisponibilidadeSemanal(clinicaId?: string): Promise<DisponibilidadeSemanal[]> {
-  let query = supabase
+// Busca disponibilidade semanal para múltiplas clínicas
+async function buscarDisponibilidadeSemanalMulti(clinicaIds: string[]): Promise<DisponibilidadeSemanal[]> {
+  if (clinicaIds.length === 0) {
+    // Busca global se não houver clínica específica
+    const { data, error } = await supabase
+      .from('disponibilidade_semanal')
+      .select('*')
+      .is('clinica_id', null)
+      .eq('ativo', true);
+    
+    if (error || !data) return [];
+    return data as DisponibilidadeSemanal[];
+  }
+  
+  const { data, error } = await supabase
     .from('disponibilidade_semanal')
     .select('*')
+    .in('clinica_id', clinicaIds)
     .eq('ativo', true);
   
-  if (clinicaId) {
-    query = query.eq('clinica_id', clinicaId);
-  }
+  if (error || !data) return [];
+  return data as DisponibilidadeSemanal[];
+}
+
+// Busca agendamentos para um período - OTIMIZADO
+async function buscarAgendamentosPeriodo(
+  dataInicio: string, 
+  dataFim: string, 
+  clinicaIds: string[]
+): Promise<Map<string, Set<string>>> {
+  const query = supabase
+    .from('agendamentos')
+    .select('data_agendamento, hora_agendamento, local_atendimento, clinica_id')
+    .gte('data_agendamento', dataInicio)
+    .lte('data_agendamento', dataFim);
   
   const { data, error } = await query;
   
-  if (error) {
-    console.error('Erro ao buscar disponibilidade semanal:', error);
-    return [];
-  }
-  
-  return (data || []) as DisponibilidadeSemanal[];
-}
-
-// Busca disponibilidade específica para uma data com filtro opcional por clínica
-async function buscarDisponibilidadeEspecifica(data: string, clinicaId?: string): Promise<DisponibilidadeEspecifica | null> {
-  let query = supabase
-    .from('disponibilidade_especifica')
-    .select('*')
-    .eq('data', data);
-  
-  if (clinicaId) {
-    query = query.eq('clinica_id', clinicaId);
-  }
-  
-  const { data: result, error } = await query.maybeSingle();
-  
-  if (error) {
-    console.error('Erro ao buscar disponibilidade específica:', error);
-    return null;
-  }
-  
-  return result as DisponibilidadeEspecifica | null;
-}
-
-// Busca agendamentos existentes para uma data
-async function buscarAgendamentosData(data: string, clinicaIds?: string[]): Promise<string[]> {
-  let query = supabase
-    .from('agendamentos')
-    .select('hora_agendamento')
-    .eq('data_agendamento', data);
-  
-  if (clinicaIds && clinicaIds.length > 0) {
-    query = query.in('clinica_id', clinicaIds);
-  }
-  
-  const { data: agendamentos, error } = await query;
-  
-  if (error) {
+  if (error || !data) {
     console.error('Erro ao buscar agendamentos:', error);
-    return [];
+    return new Map();
   }
   
-  return (agendamentos || []).map(a => a.hora_agendamento.substring(0, 5));
+  // Mapa: data -> Set de horários ocupados
+  const agendamentosMap = new Map<string, Set<string>>();
+  
+  for (const ag of data) {
+    // Verificar se o agendamento pertence a uma das clínicas selecionadas
+    let pertenceClinica = true;
+    
+    if (clinicaIds.length > 0) {
+      // Se tem clinica_id direto, usar ele
+      if (ag.clinica_id) {
+        pertenceClinica = clinicaIds.includes(ag.clinica_id);
+      } else if (ag.local_atendimento) {
+        // Fallback para local_atendimento
+        const agSlugs = getClinicaSlugsFromLocal(ag.local_atendimento);
+        // Verificar se algum slug mapeia para as clínicas selecionadas
+        pertenceClinica = agSlugs.some(slug => {
+          if (slug === 'clinicor') return clinicaIds.some(id => id.includes('clinicor') || id === '657e4784-e292-45c6-a033-40f3d115f984');
+          if (slug === 'hgp') return clinicaIds.some(id => id.includes('hgp') || id === '5f2f3bcb-5945-4220-912a-4d7c79b9b056');
+          if (slug === 'iob') return clinicaIds.some(id => id.includes('iob') || id === 'f72d4685-7e91-4b27-b4e6-8c47db742bef');
+          if (slug === 'vitria') return clinicaIds.some(id => id.includes('vitria') || id === 'dee8244b-a4f0-492a-aa59-89cfb8848463');
+          return false;
+        });
+      }
+    }
+    
+    if (!pertenceClinica) continue;
+    
+    const dataKey = ag.data_agendamento;
+    if (!agendamentosMap.has(dataKey)) {
+      agendamentosMap.set(dataKey, new Set());
+    }
+    agendamentosMap.get(dataKey)!.add(ag.hora_agendamento.slice(0, 5));
+  }
+  
+  return agendamentosMap;
 }
 
-// Busca bloqueios para uma data e clínicas específicas
-async function buscarBloqueiosData(data: string, clinicaIds?: string[]): Promise<{
-  diaBloqueado: boolean;
-  intervalos: { inicio: string; fim: string }[];
-}> {
-  if (!clinicaIds || clinicaIds.length === 0) {
-    return { diaBloqueado: false, intervalos: [] };
-  }
+// Busca bloqueios para um período
+async function buscarBloqueiosPeriodo(
+  dataInicio: string, 
+  dataFim: string, 
+  clinicaIds: string[]
+): Promise<Bloqueio[]> {
+  if (clinicaIds.length === 0) return [];
   
-  const { data: bloqueios, error } = await supabase
+  const { data, error } = await supabase
     .from('bloqueios_agenda')
     .select('*')
-    .eq('data', data)
+    .gte('data', dataInicio)
+    .lte('data', dataFim)
     .in('clinica_id', clinicaIds);
   
-  if (error) {
+  if (error || !data) {
     console.error('Erro ao buscar bloqueios:', error);
-    return { diaBloqueado: false, intervalos: [] };
+    return [];
   }
   
-  if (!bloqueios || bloqueios.length === 0) {
-    return { diaBloqueado: false, intervalos: [] };
+  return data as Bloqueio[];
+}
+
+// Verifica se um horário está bloqueado
+function horarioBloqueado(horario: string, bloqueios: Bloqueio[]): boolean {
+  for (const bloqueio of bloqueios) {
+    // Bloqueio de dia inteiro ou feriado
+    if (bloqueio.tipo_bloqueio === 'dia_inteiro' || bloqueio.tipo_bloqueio === 'feriado') {
+      return true;
+    }
+    
+    // Bloqueio de intervalo
+    if (bloqueio.hora_inicio && bloqueio.hora_fim) {
+      const inicio = bloqueio.hora_inicio.slice(0, 5);
+      const fim = bloqueio.hora_fim.slice(0, 5);
+      if (horario >= inicio && horario < fim) {
+        return true;
+      }
+    }
   }
-  
-  // Verificar se há bloqueio de dia inteiro ou feriado
-  const bloqueioTotal = bloqueios.some(b => 
-    b.tipo_bloqueio === 'dia_inteiro' || b.tipo_bloqueio === 'feriado'
-  );
-  
-  if (bloqueioTotal) {
-    return { diaBloqueado: true, intervalos: [] };
-  }
-  
-  // Coletar intervalos bloqueados
-  const intervalos = bloqueios
-    .filter(b => b.tipo_bloqueio === 'intervalo' && b.hora_inicio && b.hora_fim)
-    .map(b => ({
-      inicio: b.hora_inicio!.substring(0, 5),
-      fim: b.hora_fim!.substring(0, 5)
-    }));
-  
-  return { diaBloqueado: false, intervalos };
+  return false;
 }
 
 // Gera horários disponíveis para um dia específico
 export async function gerarHorariosDisponiveis(data: Date, localAtendimento?: string): Promise<SlotDisponivel[]> {
   const dataStr = format(data, 'yyyy-MM-dd');
-  const diaSemana = data.getDay();
+  const diaSemana = getDay(data);
   const hoje = new Date();
   const isHoje = isSameDay(data, hoje);
   
@@ -193,78 +226,120 @@ export async function gerarHorariosDisponiveis(data: Date, localAtendimento?: st
     return [];
   }
   
-  // Busca clinica_ids se localAtendimento foi fornecido
-  let clinicaIds: string[] = [];
+  // Busca clinica_ids
   const slugs = getClinicaSlugsFromLocal(localAtendimento);
-  if (slugs.length > 0) {
-    clinicaIds = await buscarClinicaIdsPorSlugs(slugs);
-  }
-  const clinicaId = clinicaIds.length > 0 ? clinicaIds[0] : undefined;
+  const clinicaIds = await buscarClinicaIdsPorSlugs(slugs);
   
-  // Busca disponibilidade específica primeiro
-  const especifica = await buscarDisponibilidadeEspecifica(dataStr, clinicaId);
+  // Busca disponibilidade semanal para TODAS as clínicas selecionadas
+  const disponibilidadeSemanal = await buscarDisponibilidadeSemanalMulti(clinicaIds);
   
-  let slots: string[] = [];
+  // Filtrar para o dia da semana
+  const dispDia = disponibilidadeSemanal.filter(d => d.dia_semana === diaSemana);
   
-  if (especifica) {
-    // Se há disponibilidade específica
-    if (!especifica.disponivel) {
-      return []; // Dia bloqueado
-    }
-    if (especifica.hora_inicio && especifica.hora_fim) {
-      slots = gerarSlots(especifica.hora_inicio, especifica.hora_fim, especifica.intervalo_minutos);
-    } else {
-      return []; // Sem horários definidos
-    }
-  } else {
-    // Busca disponibilidade semanal
-    const semanal = await buscarDisponibilidadeSemanal(clinicaId);
-    const config = semanal.find(s => s.dia_semana === diaSemana);
-    
-    if (!config || !config.ativo) {
-      return []; // Dia sem disponibilidade
-    }
-    
-    slots = gerarSlots(config.hora_inicio, config.hora_fim, config.intervalo_minutos);
-  }
-  
-  // Busca bloqueios para a data
-  const bloqueiosData = await buscarBloqueiosData(dataStr, clinicaIds);
-  
-  // Se o dia está bloqueado, retorna vazio
-  if (bloqueiosData.diaBloqueado) {
+  if (dispDia.length === 0) {
     return [];
   }
   
-  // Busca agendamentos existentes
-  const agendamentosExistentes = await buscarAgendamentosData(dataStr, clinicaIds);
+  // Busca disponibilidade específica
+  let queryEspecifica = supabase
+    .from('disponibilidade_especifica')
+    .select('*')
+    .eq('data', dataStr);
   
-  // Filtra horários já ocupados, bloqueados e passados (se for hoje)
-  const horaAtual = hoje.getHours() * 60 + hoje.getMinutes();
+  if (clinicaIds.length > 0) {
+    queryEspecifica = queryEspecifica.in('clinica_id', clinicaIds);
+  }
   
-  return slots.map(horario => {
-    const [h, m] = horario.split(':').map(Number);
-    const horarioMinutos = h * 60 + m;
+  const { data: dispEspecificas } = await queryEspecifica;
+  
+  // Se há disponibilidade específica marcando como indisponível
+  const indisponivel = (dispEspecificas || []).find(d => d.disponivel === false);
+  if (indisponivel) {
+    return [];
+  }
+  
+  // Busca bloqueios do dia
+  const bloqueios = await buscarBloqueiosPeriodo(dataStr, dataStr, clinicaIds);
+  
+  // Verificar se TODAS as clínicas estão bloqueadas no dia inteiro
+  // Para Belém, se apenas uma clínica estiver disponível, ainda temos horários
+  if (clinicaIds.length > 0) {
+    const clinicasBloqueadas = new Set<string>();
+    for (const b of bloqueios) {
+      if (b.tipo_bloqueio === 'dia_inteiro' || b.tipo_bloqueio === 'feriado') {
+        clinicasBloqueadas.add(b.clinica_id);
+      }
+    }
+    // Se todas as clínicas estão bloqueadas, retorna vazio
+    if (clinicasBloqueadas.size >= clinicaIds.length) {
+      return [];
+    }
+  }
+  
+  // Busca agendamentos do dia
+  const agendamentosMap = await buscarAgendamentosPeriodo(dataStr, dataStr, clinicaIds);
+  const horariosOcupados = agendamentosMap.get(dataStr) || new Set<string>();
+  
+  // Gerar slots baseado na disponibilidade
+  // Usar a disponibilidade específica se existir, senão usar semanal
+  const dispEspecificaAtiva = (dispEspecificas || []).find(d => 
+    d.disponivel !== false && d.hora_inicio && d.hora_fim
+  );
+  
+  let horaInicio: string;
+  let horaFim: string;
+  let intervalo: number;
+  
+  if (dispEspecificaAtiva && dispEspecificaAtiva.hora_inicio && dispEspecificaAtiva.hora_fim) {
+    horaInicio = dispEspecificaAtiva.hora_inicio;
+    horaFim = dispEspecificaAtiva.hora_fim;
+    intervalo = dispEspecificaAtiva.intervalo_minutos || 30;
+  } else {
+    // Para múltiplas clínicas, pegar o intervalo mais amplo
+    const primeiraDisp = dispDia[0];
+    horaInicio = primeiraDisp.hora_inicio;
+    horaFim = primeiraDisp.hora_fim;
+    intervalo = primeiraDisp.intervalo_minutos;
     
-    // Se for hoje, verifica se o horário já passou
-    if (isHoje && horarioMinutos <= horaAtual + 30) { // 30 min de margem
-      return { horario, disponivel: false };
+    for (const d of dispDia) {
+      if (d.hora_inicio < horaInicio) horaInicio = d.hora_inicio;
+      if (d.hora_fim > horaFim) horaFim = d.hora_fim;
+    }
+  }
+  
+  const todosSlots = gerarSlots(horaInicio, horaFim, intervalo);
+  
+  // Filtrar slots disponíveis
+  const slotsDisponiveis: SlotDisponivel[] = [];
+  const horaAtualMinutos = hoje.getHours() * 60 + hoje.getMinutes();
+  
+  for (const slot of todosSlots) {
+    // Verificar se já passou (para hoje)
+    if (isHoje) {
+      const [h, m] = slot.split(':').map(Number);
+      const slotMinutos = h * 60 + m;
+      if (slotMinutos <= horaAtualMinutos + 30) { // 30 min de margem
+        continue;
+      }
     }
     
-    // Verifica se está em um intervalo bloqueado
-    const estaBloqueado = bloqueiosData.intervalos.some(intervalo => 
-      horario >= intervalo.inicio && horario < intervalo.fim
-    );
-    
-    if (estaBloqueado) {
-      return { horario, disponivel: false };
+    // Verificar se está ocupado
+    if (horariosOcupados.has(slot)) {
+      continue;
     }
     
-    // Verifica se já está ocupado
-    const ocupado = agendamentosExistentes.includes(horario);
+    // Verificar se está bloqueado
+    if (horarioBloqueado(slot, bloqueios)) {
+      continue;
+    }
     
-    return { horario, disponivel: !ocupado };
-  }).filter(slot => slot.disponivel);
+    slotsDisponiveis.push({
+      horario: slot,
+      disponivel: true
+    });
+  }
+  
+  return slotsDisponiveis;
 }
 
 // Busca próximo horário livre a partir de uma data
@@ -273,16 +348,15 @@ export async function buscarProximoHorarioLivre(
   localAtendimento?: string
 ): Promise<{ data: Date; horario: string } | null> {
   let dataAtual = startOfDay(dataReferencia);
-  const maxDias = 60; // Busca até 60 dias no futuro
+  const maxDias = 60;
   
   for (let i = 0; i < maxDias; i++) {
     const slots = await gerarHorariosDisponiveis(dataAtual, localAtendimento);
-    const slotLivre = slots.find(s => s.disponivel);
     
-    if (slotLivre) {
+    if (slots.length > 0) {
       return {
         data: dataAtual,
-        horario: slotLivre.horario
+        horario: slots[0].horario
       };
     }
     
@@ -292,90 +366,171 @@ export async function buscarProximoHorarioLivre(
   return null;
 }
 
-// Lista datas com disponibilidade em um mês
+// Lista datas com disponibilidade em um mês - VERSÃO OTIMIZADA COM VERIFICAÇÃO REAL
 export async function listarDatasComDisponibilidade(
   mes: number,
   ano: number,
   localAtendimento?: string
 ): Promise<Date[]> {
-  const datasDisponiveis: Date[] = [];
-  const primeiroDia = new Date(ano, mes, 1);
-  const ultimoDia = new Date(ano, mes + 1, 0);
+  const primeiroDia = startOfMonth(new Date(ano, mes));
+  const ultimoDia = endOfMonth(new Date(ano, mes));
   const hoje = startOfDay(new Date());
   
-  // Busca clinica_ids se localAtendimento foi fornecido
-  let clinicaIds: string[] = [];
+  const dataInicio = format(primeiroDia, 'yyyy-MM-dd');
+  const dataFim = format(ultimoDia, 'yyyy-MM-dd');
+  
+  // Busca clinica_ids
   const slugs = getClinicaSlugsFromLocal(localAtendimento);
-  if (slugs.length > 0) {
-    clinicaIds = await buscarClinicaIdsPorSlugs(slugs);
-  }
-  const clinicaId = clinicaIds.length > 0 ? clinicaIds[0] : undefined;
+  const clinicaIds = await buscarClinicaIdsPorSlugs(slugs);
   
-  // Busca disponibilidade semanal
-  const semanal = await buscarDisponibilidadeSemanal(clinicaId);
-  const diasSemanaAtivos = semanal.filter(s => s.ativo).map(s => s.dia_semana);
+  // Buscar dados em batch para otimização
+  const [disponibilidadeSemanal, bloqueios, agendamentosMap] = await Promise.all([
+    buscarDisponibilidadeSemanalMulti(clinicaIds),
+    buscarBloqueiosPeriodo(dataInicio, dataFim, clinicaIds),
+    buscarAgendamentosPeriodo(dataInicio, dataFim, clinicaIds)
+  ]);
   
-  // Busca todas as disponibilidades específicas do mês
-  let queryEspecificas = supabase
+  // Buscar disponibilidades específicas do mês
+  let queryEspecifica = supabase
     .from('disponibilidade_especifica')
     .select('*')
-    .gte('data', format(primeiroDia, 'yyyy-MM-dd'))
-    .lte('data', format(ultimoDia, 'yyyy-MM-dd'));
+    .gte('data', dataInicio)
+    .lte('data', dataFim);
   
-  if (clinicaId) {
-    queryEspecificas = queryEspecificas.eq('clinica_id', clinicaId);
-  }
-  
-  const { data: especificas } = await queryEspecificas;
-  
-  const especificasMap = new Map<string, DisponibilidadeEspecifica>();
-  (especificas || []).forEach(e => {
-    especificasMap.set(e.data, e as DisponibilidadeEspecifica);
-  });
-  
-  // Busca todos os bloqueios do mês para as clínicas
-  let bloqueiosMap = new Map<string, boolean>();
   if (clinicaIds.length > 0) {
-    const { data: bloqueios } = await supabase
-      .from('bloqueios_agenda')
-      .select('data, tipo_bloqueio')
-      .gte('data', format(primeiroDia, 'yyyy-MM-dd'))
-      .lte('data', format(ultimoDia, 'yyyy-MM-dd'))
-      .in('clinica_id', clinicaIds)
-      .in('tipo_bloqueio', ['dia_inteiro', 'feriado']);
-    
-    (bloqueios || []).forEach(b => {
-      bloqueiosMap.set(b.data, true);
-    });
+    queryEspecifica = queryEspecifica.in('clinica_id', clinicaIds);
   }
   
-  // Itera por cada dia do mês
-  let dataAtual = primeiroDia;
+  const { data: dispEspecificas } = await queryEspecifica;
+  
+  // Mapear por data
+  const dispEspecificasMap = new Map<string, DisponibilidadeEspecifica[]>();
+  for (const de of (dispEspecificas || [])) {
+    const key = de.data;
+    if (!dispEspecificasMap.has(key)) {
+      dispEspecificasMap.set(key, []);
+    }
+    dispEspecificasMap.get(key)!.push(de as DisponibilidadeEspecifica);
+  }
+  
+  // Mapear bloqueios por data
+  const bloqueiosMap = new Map<string, Bloqueio[]>();
+  for (const b of bloqueios) {
+    const key = b.data;
+    if (!bloqueiosMap.has(key)) {
+      bloqueiosMap.set(key, []);
+    }
+    bloqueiosMap.get(key)!.push(b);
+  }
+  
+  const datasDisponiveis: Date[] = [];
+  let dataAtual = new Date(primeiroDia);
+  
   while (dataAtual <= ultimoDia) {
-    // Ignora datas passadas
-    if (!isBefore(dataAtual, hoje)) {
-      const dataStr = format(dataAtual, 'yyyy-MM-dd');
-      
-      // Verifica se há bloqueio de dia inteiro
-      if (bloqueiosMap.has(dataStr)) {
+    // Ignorar datas passadas
+    if (isBefore(dataAtual, hoje)) {
+      dataAtual = addDays(dataAtual, 1);
+      continue;
+    }
+    
+    const dataStr = format(dataAtual, 'yyyy-MM-dd');
+    const diaSemana = getDay(dataAtual);
+    
+    // Verificar disponibilidade semanal
+    const dispDia = disponibilidadeSemanal.filter(d => d.dia_semana === diaSemana);
+    
+    if (dispDia.length === 0) {
+      dataAtual = addDays(dataAtual, 1);
+      continue;
+    }
+    
+    // Verificar disponibilidade específica
+    const dispEspecificasDia = dispEspecificasMap.get(dataStr) || [];
+    const indisponivel = dispEspecificasDia.find(d => d.disponivel === false);
+    
+    if (indisponivel) {
+      dataAtual = addDays(dataAtual, 1);
+      continue;
+    }
+    
+    // Verificar bloqueios do dia
+    const bloqueiosDia = bloqueiosMap.get(dataStr) || [];
+    
+    // Para múltiplas clínicas, verificar se TODAS estão bloqueadas
+    if (clinicaIds.length > 0) {
+      const clinicasBloqueadas = new Set<string>();
+      for (const b of bloqueiosDia) {
+        if (b.tipo_bloqueio === 'dia_inteiro' || b.tipo_bloqueio === 'feriado') {
+          clinicasBloqueadas.add(b.clinica_id);
+        }
+      }
+      if (clinicasBloqueadas.size >= clinicaIds.length) {
         dataAtual = addDays(dataAtual, 1);
         continue;
       }
+    }
+    
+    // VERIFICAÇÃO REAL: Gerar slots e verificar se há pelo menos um disponível
+    const dispEspecificaAtiva = dispEspecificasDia.find(d => 
+      d.disponivel !== false && d.hora_inicio && d.hora_fim
+    );
+    
+    let horaInicio: string;
+    let horaFim: string;
+    let intervalo: number;
+    
+    if (dispEspecificaAtiva && dispEspecificaAtiva.hora_inicio && dispEspecificaAtiva.hora_fim) {
+      horaInicio = dispEspecificaAtiva.hora_inicio;
+      horaFim = dispEspecificaAtiva.hora_fim;
+      intervalo = dispEspecificaAtiva.intervalo_minutos || 30;
+    } else {
+      const primeiraDisp = dispDia[0];
+      horaInicio = primeiraDisp.hora_inicio;
+      horaFim = primeiraDisp.hora_fim;
+      intervalo = primeiraDisp.intervalo_minutos;
       
-      const especifica = especificasMap.get(dataStr);
-      const diaSemana = dataAtual.getDay();
-      
-      if (especifica) {
-        // Se há config específica, verifica se está disponível
-        if (especifica.disponivel && especifica.hora_inicio && especifica.hora_fim) {
-          datasDisponiveis.push(new Date(dataAtual));
-        }
-      } else {
-        // Usa disponibilidade semanal
-        if (diasSemanaAtivos.includes(diaSemana)) {
-          datasDisponiveis.push(new Date(dataAtual));
+      for (const d of dispDia) {
+        if (d.hora_inicio < horaInicio) horaInicio = d.hora_inicio;
+        if (d.hora_fim > horaFim) horaFim = d.hora_fim;
+      }
+    }
+    
+    const todosSlots = gerarSlots(horaInicio, horaFim, intervalo);
+    const horariosOcupados = agendamentosMap.get(dataStr) || new Set<string>();
+    const agora = new Date();
+    const horaAtualMinutos = agora.getHours() * 60 + agora.getMinutes();
+    const isHoje = isSameDay(dataAtual, agora);
+    
+    // Verificar se há pelo menos um slot disponível
+    let temSlotDisponivel = false;
+    
+    for (const slot of todosSlots) {
+      // Verificar se já passou (para hoje)
+      if (isHoje) {
+        const [h, m] = slot.split(':').map(Number);
+        const slotMinutos = h * 60 + m;
+        if (slotMinutos <= horaAtualMinutos + 30) {
+          continue;
         }
       }
+      
+      // Verificar se está ocupado
+      if (horariosOcupados.has(slot)) {
+        continue;
+      }
+      
+      // Verificar se está bloqueado
+      if (horarioBloqueado(slot, bloqueiosDia)) {
+        continue;
+      }
+      
+      // Encontrou um slot disponível!
+      temSlotDisponivel = true;
+      break;
+    }
+    
+    if (temSlotDisponivel) {
+      datasDisponiveis.push(new Date(dataAtual));
     }
     
     dataAtual = addDays(dataAtual, 1);
@@ -387,5 +542,5 @@ export async function listarDatasComDisponibilidade(
 // Verifica se uma data específica tem disponibilidade
 export async function verificarDataTemDisponibilidade(data: Date, localAtendimento?: string): Promise<boolean> {
   const slots = await gerarHorariosDisponiveis(data, localAtendimento);
-  return slots.some(s => s.disponivel);
+  return slots.length > 0;
 }
