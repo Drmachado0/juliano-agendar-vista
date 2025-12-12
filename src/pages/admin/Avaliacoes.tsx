@@ -207,6 +207,7 @@ const Avaliacoes = () => {
     const dataFormatada = format(dataFiltro, 'yyyy-MM-dd');
 
     try {
+      // Buscar pacientes do n8n
       const response = await fetch(N8N_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -223,17 +224,48 @@ const Avaliacoes = () => {
         throw new Error("Falha ao buscar pacientes do sistema");
       }
 
-      setPacientesLote(data.pacientes || []);
+      const pacientesN8n = data.pacientes || [];
+      const totalN8n = pacientesN8n.length;
 
-      if (data.pacientes.length === 0) {
+      if (totalN8n === 0) {
+        setPacientesLote([]);
         toast({
           title: "Nenhum paciente encontrado",
           description: `Não há pacientes atendidos em ${format(dataFiltro, 'dd/MM/yyyy')}.`,
         });
+        return;
+      }
+
+      // Buscar telefones que já receberam avaliação
+      const { data: mensagensEnviadas } = await supabase
+        .from("mensagens_whatsapp")
+        .select("telefone")
+        .eq("tipo_mensagem", "avaliacao");
+
+      // Criar Set com últimos 8 dígitos para matching flexível
+      const telefonesJaEnviados = new Set(
+        (mensagensEnviadas || []).map(m => m.telefone.replace(/\D/g, '').slice(-8))
+      );
+
+      // Filtrar pacientes que ainda NÃO receberam avaliação
+      const pacientesPendentes = pacientesN8n.filter(p => {
+        const telefoneNormalizado = p.telefone.replace(/\D/g, '').slice(-8);
+        return !telefonesJaEnviados.has(telefoneNormalizado);
+      });
+
+      setPacientesLote(pacientesPendentes);
+
+      const jaEnviados = totalN8n - pacientesPendentes.length;
+
+      if (pacientesPendentes.length === 0) {
+        toast({
+          title: "Todos já receberam avaliação",
+          description: `${jaEnviados} paciente(s) de ${format(dataFiltro, 'dd/MM/yyyy')} já receberam mensagem.`,
+        });
       } else {
         toast({
           title: "Pacientes carregados!",
-          description: `${data.total_pacientes} paciente(s) encontrado(s).`,
+          description: `${pacientesPendentes.length} pendente(s) de ${totalN8n} total (${jaEnviados} já enviado${jaEnviados !== 1 ? 's' : ''}).`,
         });
       }
     } catch (error: any) {
