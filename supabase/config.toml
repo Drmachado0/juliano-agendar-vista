@@ -1,10 +1,10 @@
 project_id = "cnpifhaszbonwlqruwnn"
 
 [functions.enviar-whatsapp]
-verify_jwt = true
+verify_jwt = false
 
 [functions.enviar-whatsapp-imagem]
-verify_jwt = true
+verify_jwt = false
 
 [functions.notificar-n8n]
 verify_jwt = true
