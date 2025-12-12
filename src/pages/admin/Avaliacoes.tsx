@@ -100,6 +100,7 @@ const Avaliacoes = () => {
   const [progressoLote, setProgressoLote] = useState({ enviados: 0, total: 0 });
   const [telefonesDiarioJaEnviados, setTelefonesDiarioJaEnviados] = useState<Set<string>>(new Set());
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [intervaloEnvio, setIntervaloEnvio] = useState(15); // segundos
 
   useEffect(() => {
     carregarPacientesAtendidos();
@@ -272,9 +273,9 @@ const Avaliacoes = () => {
 
       setProgressoLote({ enviados: i + 1, total: pacientesSelecionados.length });
 
-      // Aguardar 2 segundos entre envios (exceto no último)
+      // Aguardar intervalo configurado entre envios (exceto no último)
       if (i < pacientesSelecionados.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, intervaloEnvio * 1000));
       }
     }
 
@@ -538,8 +539,8 @@ const Avaliacoes = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Seletor de Data + Botão Buscar */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            {/* Seletor de Data + Intervalo + Botão Buscar */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <Label className="whitespace-nowrap">Data de Atendimento:</Label>
                 <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
@@ -564,6 +565,21 @@ const Avaliacoes = () => {
                   </PopoverContent>
                 </Popover>
               </div>
+              
+              <div className="flex items-center gap-2">
+                <Label htmlFor="intervalo" className="whitespace-nowrap">Intervalo:</Label>
+                <Input
+                  id="intervalo"
+                  type="number"
+                  min={5}
+                  max={60}
+                  value={intervaloEnvio}
+                  onChange={(e) => setIntervaloEnvio(Math.max(5, Math.min(60, Number(e.target.value))))}
+                  className="w-20"
+                />
+                <span className="text-sm text-muted-foreground">seg</span>
+              </div>
+
               <Button 
                 onClick={buscarPacientesN8n} 
                 disabled={!dataFiltro || loadingLote}
@@ -584,7 +600,7 @@ const Avaliacoes = () => {
               <AlertDescription className="text-sm">
                 Selecione a data e clique em "Buscar Pacientes". Após revisar a lista, 
                 selecione os pacientes e clique em "Enviar". O envio respeita um 
-                intervalo de <strong>2 segundos</strong> entre mensagens para evitar bloqueio.
+                intervalo de <strong>{intervaloEnvio} segundos</strong> entre mensagens para evitar bloqueio.
               </AlertDescription>
             </Alert>
 
