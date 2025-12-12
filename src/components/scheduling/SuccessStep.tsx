@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { FormData } from "./SchedulingModal";
-import { CheckCircle, MessageCircle, Calendar } from "lucide-react";
+import { CheckCircle, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -10,8 +10,6 @@ interface SuccessStepProps {
 }
 
 const SuccessStep = ({ onClose, formData }: SuccessStepProps) => {
-  const whatsappNumber = "5591999999999"; // Replace with actual number
-  
   const getLocationLabel = (value: string) => {
     const locations: Record<string, string> = {
       clinicor: "Clinicor – Paragominas",
@@ -24,17 +22,6 @@ const SuccessStep = ({ onClose, formData }: SuccessStepProps) => {
   const formattedDate = formData.selectedDate
     ? format(formData.selectedDate, "dd/MM/yyyy", { locale: ptBR })
     : "";
-
-  const message = encodeURIComponent(
-    `Olá! Acabei de solicitar um agendamento:\n\n` +
-    `Nome: ${formData.fullName}\n` +
-    `Data: ${formattedDate}\n` +
-    `Horário: ${formData.selectedTime}\n` +
-    `Local: ${getLocationLabel(formData.location)}\n\n` +
-    `Aguardo a confirmação. Obrigado!`
-  );
-  
-  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`;
 
   return (
     <div className="text-center space-y-6 py-4">
@@ -69,18 +56,9 @@ const SuccessStep = ({ onClose, formData }: SuccessStepProps) => {
         </p>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-col gap-3 pt-4">
-        <Button
-          variant="whatsapp"
-          size="lg"
-          className="w-full"
-          onClick={() => window.open(whatsappUrl, "_blank")}
-        >
-          <MessageCircle className="w-5 h-5" />
-          Falar no WhatsApp
-        </Button>
-        <Button variant="outline" onClick={onClose}>
+      {/* Action Button */}
+      <div className="pt-4">
+        <Button variant="outline" onClick={onClose} className="min-w-32">
           Fechar
         </Button>
       </div>
