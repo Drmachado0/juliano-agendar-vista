@@ -11,8 +11,10 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarMensagemWhatsApp, enviarImagemWhatsApp } from "@/services/integracoes";
 import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Clock, History } from "lucide-react";
 
 interface PacienteAtendido {
   id: string;
@@ -22,6 +24,14 @@ interface PacienteAtendido {
   hora_agendamento: string;
   local_atendimento: string;
   avaliacaoEnviada?: boolean;
+}
+
+interface HistoricoAvaliacao {
+  id: string;
+  telefone: string;
+  conteudo: string;
+  created_at: string;
+  agendamentos: { nome_completo: string } | null;
 }
 
 const TEMPLATE_PADRAO = `Olá, {{nome}}! 👋
@@ -47,6 +57,8 @@ const Avaliacoes = () => {
   const [busca, setBusca] = useState("");
   const [enviandoIds, setEnviandoIds] = useState<Set<string>>(new Set());
   const [avaliacoesEnviadas, setAvaliacoesEnviadas] = useState<Set<string>>(new Set());
+  const [historico, setHistorico] = useState<HistoricoAvaliacao[]>([]);
+  const [loadingHistorico, setLoadingHistorico] = useState(true);
   
   // Image state
   const [imagemBase64, setImagemBase64] = useState<string | null>(null);
@@ -57,15 +69,20 @@ const Avaliacoes = () => {
   useEffect(() => {
     carregarPacientesAtendidos();
     carregarAvaliacoesEnviadas();
+    carregarHistoricoAvaliacoes();
   }, []);
 
   const carregarPacientesAtendidos = async () => {
     setLoadingPacientes(true);
     try {
+      // D+1: Buscar agendamentos cuja data já passou (consultas realizadas)
+      const hoje = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      
       const { data, error } = await supabase
         .from("agendamentos")
         .select("id, nome_completo, telefone_whatsapp, data_agendamento, hora_agendamento, local_atendimento")
-        .eq("status_funil", "confirmado")
+        .lt("data_agendamento", hoje) // Consultas que já aconteceram
+        .not("data_agendamento", "is", null) // Ignorar leads incompletos
         .order("data_agendamento", { ascending: false })
         .limit(50);
 
@@ -96,6 +113,31 @@ const Avaliacoes = () => {
       setAvaliacoesEnviadas(ids);
     } catch (error) {
       console.error("Erro ao carregar avaliações enviadas:", error);
+    }
+  };
+
+  const carregarHistoricoAvaliacoes = async () => {
+    setLoadingHistorico(true);
+    try {
+      const { data, error } = await supabase
+        .from("mensagens_whatsapp")
+        .select(`
+          id,
+          telefone,
+          conteudo,
+          created_at,
+          agendamentos (nome_completo)
+        `)
+        .eq("tipo_mensagem", "avaliacao")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setHistorico((data as HistoricoAvaliacao[]) || []);
+    } catch (error) {
+      console.error("Erro ao carregar histórico:", error);
+    } finally {
+      setLoadingHistorico(false);
     }
   };
 
@@ -248,6 +290,7 @@ const Avaliacoes = () => {
         title: "Avaliação enviada!",
         description: `Mensagem enviada para ${nomeAvulso}.`,
       });
+      carregarHistoricoAvaliacoes(); // Atualiza o histórico
 
       setNomeAvulso("");
       setTelefoneAvulso("");
@@ -274,6 +317,7 @@ const Avaliacoes = () => {
       );
 
       setAvaliacoesEnviadas(prev => new Set(prev).add(paciente.id));
+      carregarHistoricoAvaliacoes(); // Atualiza o histórico
 
       toast({
         title: "Avaliação enviada!",
@@ -487,7 +531,7 @@ const Avaliacoes = () => {
               <div>
                 <CardTitle>Pacientes Atendidos</CardTitle>
                 <CardDescription>
-                  Pacientes com consultas confirmadas (últimos 50)
+                  Pacientes com consultas já realizadas (últimos 50)
                 </CardDescription>
               </div>
               <Button variant="outline" size="sm" onClick={carregarPacientesAtendidos}>
@@ -576,6 +620,71 @@ const Avaliacoes = () => {
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Histórico de Avaliações Enviadas */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Histórico de Avaliações Enviadas
+                </CardTitle>
+                <CardDescription>
+                  Últimas 50 mensagens de avaliação enviadas
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={carregarHistoricoAvaliacoes}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Atualizar
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loadingHistorico ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : historico.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhuma avaliação enviada ainda.
+              </div>
+            ) : (
+              <ScrollArea className="h-80">
+                <div className="space-y-3">
+                  {historico.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-4 rounded-lg border bg-card space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <span className="font-medium">
+                            {item.agendamentos?.nome_completo || "Envio avulso"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {formatDistanceToNow(new Date(item.created_at), { 
+                            addSuffix: true, 
+                            locale: ptBR 
+                          })}
+                        </div>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        📱 {item.telefone}
+                      </div>
+                      <div className="text-sm bg-muted p-2 rounded line-clamp-2">
+                        {item.conteudo}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
           </CardContent>
         </Card>
       </div>
