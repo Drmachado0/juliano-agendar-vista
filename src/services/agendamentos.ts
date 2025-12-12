@@ -245,6 +245,14 @@ export async function listarAgendamentos(
 
   if (error) {
     console.error('Erro ao listar agendamentos:', error);
+    
+    // Detect JWT expired and force logout
+    if (error.message?.includes('JWT expired') || error.code === 'PGRST303') {
+      await supabase.auth.signOut();
+      window.location.href = '/auth';
+      return { data: [], count: 0, error: new Error('Sessão expirada. Redirecionando para login...') };
+    }
+    
     return { data: [], count: 0, error: new Error(error.message) };
   }
 
@@ -263,6 +271,14 @@ export async function listarAgendamentosPorStatus(): Promise<{
 
   if (error) {
     console.error('Erro ao listar agendamentos por status:', error);
+    
+    // Detect JWT expired and force logout
+    if (error.message?.includes('JWT expired') || error.code === 'PGRST303') {
+      await supabase.auth.signOut();
+      window.location.href = '/auth';
+      return { data: { 'NOVO LEAD': [], 'CLINICOR': [], 'HGP': [], 'BELÉM': [] }, error: new Error('Sessão expirada. Redirecionando para login...') };
+    }
+    
     return { data: { 'NOVO LEAD': [], 'CLINICOR': [], 'HGP': [], 'BELÉM': [] }, error: new Error(error.message) };
   }
 
