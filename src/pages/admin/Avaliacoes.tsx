@@ -10,11 +10,16 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarMensagemWhatsApp, enviarImagemWhatsApp } from "@/services/integracoes";
-import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X } from "lucide-react";
+import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Clock, History } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PacienteAtendido {
   id: string;
@@ -34,6 +39,24 @@ interface HistoricoAvaliacao {
   agendamentos: { nome_completo: string } | null;
 }
 
+// Tipos para integração com n8n (SaudeViaNet)
+interface PacienteN8n {
+  id: string;
+  nome: string;
+  primeiro_nome: string;
+  telefone: string;
+  telefone_formatado: string;
+  data_atendimento: string;
+  data_atendimento_formatada: string;
+}
+
+interface N8nResponse {
+  sucesso: boolean;
+  data_consulta: string;
+  total_pacientes: number;
+  pacientes: PacienteN8n[];
+}
+
 const TEMPLATE_PADRAO = `Olá, {{nome}}! 👋
 
 Foi um prazer atendê-lo(a). Sua opinião é muito importante para continuarmos oferecendo um atendimento de qualidade e em constante melhoria.
@@ -46,6 +69,7 @@ Dr. Juliano Machado
 Oftalmologia`;
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const N8N_WEBHOOK_URL = "https://juliano-n8n.cloudfy.live/webhook/avaliacao-google-lovable";
 
 const Avaliacoes = () => {
   const [template, setTemplate] = useState(TEMPLATE_PADRAO);
@@ -65,6 +89,17 @@ const Avaliacoes = () => {
   const [imagemPreview, setImagemPreview] = useState<string | null>(null);
   const [imagemNome, setImagemNome] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Estados para Disparo em Lote (n8n)
+  const [dataFiltro, setDataFiltro] = useState<Date | undefined>(undefined);
+  const [pacientesLote, setPacientesLote] = useState<PacienteN8n[]>([]);
+  const [loadingLote, setLoadingLote] = useState(false);
+  const [erroLote, setErroLote] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [enviandoLote, setEnviandoLote] = useState(false);
+  const [progressoLote, setProgressoLote] = useState({ enviados: 0, total: 0 });
+  const [telefonesDiarioJaEnviados, setTelefonesDiarioJaEnviados] = useState<Set<string>>(new Set());
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   useEffect(() => {
     carregarPacientesAtendidos();
@@ -140,6 +175,137 @@ const Avaliacoes = () => {
       setLoadingHistorico(false);
     }
   };
+
+  // ===== Funções para Disparo em Lote (n8n) =====
+
+  const buscarPacientesN8n = async () => {
+    if (!dataFiltro) {
+      toast({
+        title: "Selecione uma data",
+        description: "Escolha a data de atendimento para buscar os pacientes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoadingLote(true);
+    setErroLote(null);
+    setPacientesLote([]);
+    setSelectedIds(new Set());
+    setTelefonesDiarioJaEnviados(new Set());
+
+    const dataFormatada = format(dataFiltro, 'yyyy-MM-dd');
+
+    try {
+      const response = await fetch(N8N_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data_atendimento: dataFormatada }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro HTTP: ${response.status}`);
+      }
+
+      const data: N8nResponse = await response.json();
+
+      if (!data.sucesso) {
+        throw new Error("Falha ao buscar pacientes do sistema");
+      }
+
+      setPacientesLote(data.pacientes || []);
+
+      if (data.pacientes.length === 0) {
+        toast({
+          title: "Nenhum paciente encontrado",
+          description: `Não há pacientes atendidos em ${format(dataFiltro, 'dd/MM/yyyy')}.`,
+        });
+      } else {
+        toast({
+          title: "Pacientes carregados!",
+          description: `${data.total_pacientes} paciente(s) encontrado(s).`,
+        });
+      }
+    } catch (error: any) {
+      console.error("Erro ao buscar pacientes n8n:", error);
+      setErroLote(error.message || "Erro ao conectar com o sistema");
+      toast({
+        title: "Erro ao buscar pacientes",
+        description: error.message || "Não foi possível conectar ao sistema SaudeViaNet.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingLote(false);
+    }
+  };
+
+  const enviarEmLote = async () => {
+    const pacientesSelecionados = pacientesLote.filter(p => selectedIds.has(p.id));
+
+    if (pacientesSelecionados.length === 0) {
+      toast({
+        title: "Nenhum paciente selecionado",
+        description: "Selecione pelo menos um paciente para enviar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setEnviandoLote(true);
+    setProgressoLote({ enviados: 0, total: pacientesSelecionados.length });
+
+    let sucessos = 0;
+    let falhas = 0;
+
+    for (let i = 0; i < pacientesSelecionados.length; i++) {
+      const paciente = pacientesSelecionados[i];
+
+      try {
+        // Usa primeiro_nome para personalização amigável
+        await enviarAvaliacaoSequencial(paciente.telefone, paciente.primeiro_nome);
+        setTelefonesDiarioJaEnviados(prev => new Set(prev).add(paciente.telefone));
+        sucessos++;
+      } catch (error) {
+        console.error(`Erro ao enviar para ${paciente.nome}:`, error);
+        falhas++;
+      }
+
+      setProgressoLote({ enviados: i + 1, total: pacientesSelecionados.length });
+
+      // Aguardar 2 segundos entre envios (exceto no último)
+      if (i < pacientesSelecionados.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    setEnviandoLote(false);
+    carregarHistoricoAvaliacoes();
+
+    toast({
+      title: "Envio concluído!",
+      description: `${sucessos} enviado(s) com sucesso${falhas > 0 ? `, ${falhas} falha(s)` : ""}.`,
+    });
+  };
+
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(pacientesLote.map(p => p.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const toggleSelectPaciente = (id: string, checked: boolean) => {
+    const newSet = new Set(selectedIds);
+    if (checked) {
+      newSet.add(id);
+    } else {
+      newSet.delete(id);
+    }
+    setSelectedIds(newSet);
+  };
+
+  // ===== Funções existentes =====
 
   const renderizarMensagem = (nome: string) => {
     return template.replace(/\{\{nome\}\}/g, nome);
@@ -359,6 +525,183 @@ const Avaliacoes = () => {
             </p>
           </div>
         </div>
+
+        {/* ===== NOVA SEÇÃO: Disparo em Lote ===== */}
+        <Card className="border-yellow-500/30 bg-gradient-to-r from-card to-yellow-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
+              <Zap className="h-5 w-5" />
+              Disparo em Lote
+            </CardTitle>
+            <CardDescription>
+              Busque pacientes atendidos no SaudeViaNet por data e envie avaliações em massa
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Seletor de Data + Botão Buscar */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label className="whitespace-nowrap">Data de Atendimento:</Label>
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-[200px] justify-start text-left font-normal">
+                      <CalendarIcon className="h-4 w-4 mr-2" />
+                      {dataFiltro ? format(dataFiltro, "dd/MM/yyyy") : "Selecione uma data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dataFiltro}
+                      onSelect={(date) => {
+                        setDataFiltro(date);
+                        setCalendarOpen(false);
+                      }}
+                      disabled={(date) => date > new Date()}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Button 
+                onClick={buscarPacientesN8n} 
+                disabled={!dataFiltro || loadingLote}
+                className="bg-yellow-600 hover:bg-yellow-700 text-white"
+              >
+                {loadingLote ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4 mr-2" />
+                )}
+                Buscar Pacientes
+              </Button>
+            </div>
+
+            {/* Instrução */}
+            <Alert className="border-yellow-500/30 bg-yellow-500/10">
+              <Zap className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-sm">
+                Selecione a data e clique em "Buscar Pacientes". Após revisar a lista, 
+                selecione os pacientes e clique em "Enviar". O envio respeita um 
+                intervalo de <strong>2 segundos</strong> entre mensagens para evitar bloqueio.
+              </AlertDescription>
+            </Alert>
+
+            {/* Erro */}
+            {erroLote && (
+              <Alert variant="destructive">
+                <AlertDescription>{erroLote}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Lista de pacientes do lote */}
+            {pacientesLote.length > 0 && (
+              <div className="space-y-4">
+                {/* Selecionar todos + contador */}
+                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="select-all"
+                      checked={selectedIds.size === pacientesLote.length && pacientesLote.length > 0}
+                      onCheckedChange={(checked) => toggleSelectAll(!!checked)}
+                      disabled={enviandoLote}
+                    />
+                    <Label htmlFor="select-all" className="cursor-pointer font-medium">
+                      Selecionar todos ({pacientesLote.length})
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    {selectedIds.size} selecionado(s)
+                  </div>
+                </div>
+
+                {/* Lista scrollável */}
+                <ScrollArea className="h-64 border rounded-lg">
+                  <div className="p-2 space-y-2">
+                    {pacientesLote.map((paciente) => {
+                      const jaEnviou = telefonesDiarioJaEnviados.has(paciente.telefone);
+                      
+                      return (
+                        <div
+                          key={paciente.id}
+                          className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                            jaEnviou 
+                              ? "bg-green-500/10 border-green-500/30" 
+                              : selectedIds.has(paciente.id) 
+                                ? "bg-yellow-500/10 border-yellow-500/30" 
+                                : "bg-card hover:bg-muted/50"
+                          }`}
+                        >
+                          <Checkbox
+                            checked={selectedIds.has(paciente.id)}
+                            onCheckedChange={(checked) => toggleSelectPaciente(paciente.id, !!checked)}
+                            disabled={enviandoLote || jaEnviou}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium truncate">{paciente.nome}</span>
+                              {jaEnviou && (
+                                <Badge variant="secondary" className="bg-green-500/20 text-green-700 dark:text-green-400">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Enviado
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {paciente.telefone_formatado}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+
+                {/* Barra de progresso */}
+                {enviandoLote && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Enviando...</span>
+                      <span>{progressoLote.enviados} / {progressoLote.total}</span>
+                    </div>
+                    <Progress value={(progressoLote.enviados / progressoLote.total) * 100} className="h-2" />
+                  </div>
+                )}
+
+                {/* Botão de envio */}
+                <Button
+                  onClick={enviarEmLote}
+                  disabled={selectedIds.size === 0 || enviandoLote}
+                  className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
+                  size="lg"
+                >
+                  {enviandoLote ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Enviando {progressoLote.enviados}/{progressoLote.total}...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Enviar para {selectedIds.size} paciente(s)
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {/* Estado vazio após busca */}
+            {!loadingLote && dataFiltro && pacientesLote.length === 0 && !erroLote && (
+              <div className="text-center py-6 text-muted-foreground">
+                <Users className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                <p>Nenhum paciente encontrado para esta data.</p>
+                <p className="text-sm">Tente selecionar outra data de atendimento.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Template de Mensagem */}
