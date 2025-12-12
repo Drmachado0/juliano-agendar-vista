@@ -40,16 +40,19 @@ export async function enviarMensagemWhatsApp(
   }
 }
 
-// WhatsApp Evolution API integration - Enviar imagem
+// WhatsApp Evolution API integration - Enviar imagem (com caption opcional)
 export async function enviarImagemWhatsApp(
   telefone: string,
-  imageBase64: string
+  imageBase64: string,
+  caption?: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
     console.log("[integracoes] Preparando envio de imagem via WhatsApp", {
       telefone,
       temBase64: !!imageBase64,
       tamanhoBase64: imageBase64?.length,
+      temCaption: !!caption,
+      captionPreview: caption ? (caption.length > 50 ? caption.slice(0, 47) + "..." : caption) : null,
     });
 
     // Remover prefixo data:image/...;base64, se presente
@@ -60,7 +63,7 @@ export async function enviarImagemWhatsApp(
     }
 
     const { data, error } = await supabase.functions.invoke("enviar-whatsapp-imagem", {
-      body: { telefone, imageBase64: base64Puro },
+      body: { telefone, imageBase64: base64Puro, caption },
     });
 
     console.log("[integracoes] Resposta da função enviar-whatsapp-imagem", { data, error });
