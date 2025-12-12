@@ -17,8 +17,11 @@ export interface FormData {
   birthDate: string;
   email: string;
   appointmentType: string;
+  appointmentTypeName: string;
   location: string;
+  locationName: string;
   insurance: string;
+  insuranceName: string;
   otherInsurance: string;
   selectedDate: Date | undefined;
   selectedTime: string;
@@ -32,8 +35,11 @@ const initialFormData: FormData = {
   birthDate: "",
   email: "",
   appointmentType: "",
+  appointmentTypeName: "",
   location: "",
+  locationName: "",
   insurance: "",
+  insuranceName: "",
   otherInsurance: "",
   selectedDate: undefined,
   selectedTime: "",
@@ -125,29 +131,14 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
     setIsSubmitting(true);
     
     try {
-      // Map location values to display names for proper CRM status detection
-      const locationMap: Record<string, string> = {
-        clinicor: "Clinicor – Paragominas",
-        hgp: "Hospital Geral de Paragominas",
-        belem: "Belém (IOB / Vitria)",
-      };
-
-      // Map appointment type to proper format
-      const appointmentTypeMap: Record<string, string> = {
-        consulta: "Consulta",
-        retorno: "Retorno",
-        exame: "Exame",
-        cirurgia: "Cirurgia",
-      };
-
       const agendamentoData = {
         nome_completo: formData.fullName,
         telefone_whatsapp: formData.phone,
         data_nascimento: formData.birthDate || null,
         email: formData.email || null,
-        tipo_atendimento: appointmentTypeMap[formData.appointmentType] || formData.appointmentType,
-        local_atendimento: locationMap[formData.location] || formData.location,
-        convenio: formData.insurance,
+        tipo_atendimento: formData.appointmentTypeName || formData.appointmentType,
+        local_atendimento: formData.locationName || formData.location,
+        convenio: formData.insuranceName || formData.insurance,
         convenio_outro: formData.insurance === "outro" ? formData.otherInsurance : null,
         data_agendamento: formData.selectedDate ? format(formData.selectedDate, 'yyyy-MM-dd') : '',
         hora_agendamento: formData.selectedTime,

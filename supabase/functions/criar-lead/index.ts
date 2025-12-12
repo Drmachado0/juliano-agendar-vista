@@ -32,9 +32,18 @@ Deno.serve(async (req) => {
 
   try {
     const data: LeadData = await req.json();
+    
+    console.log('[criar-lead] Dados recebidos:', JSON.stringify(data));
 
     // Validação básica
     if (!data.nome_completo || !data.telefone_whatsapp || !data.tipo_atendimento || !data.local_atendimento || !data.convenio) {
+      console.error('[criar-lead] Campos obrigatórios faltando:', {
+        nome_completo: !!data.nome_completo,
+        telefone_whatsapp: !!data.telefone_whatsapp,
+        tipo_atendimento: !!data.tipo_atendimento,
+        local_atendimento: !!data.local_atendimento,
+        convenio: !!data.convenio,
+      });
       return new Response(
         JSON.stringify({ error: 'Campos obrigatórios faltando' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
