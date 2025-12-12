@@ -381,7 +381,9 @@ const Avaliacoes = () => {
 
               {/* Mensagem de Texto */}
               <div className="space-y-2">
-                <Label htmlFor="template">💬 Mensagem (enviada após a imagem)</Label>
+                <Label htmlFor="template">
+                  💬 {imagemPreview ? "Legenda da imagem (caption)" : "Mensagem"}
+                </Label>
                 <Textarea
                   id="template"
                   value={template}
@@ -409,15 +411,11 @@ const Avaliacoes = () => {
                 <Label>Preview da Mensagem</Label>
                 <div className="bg-muted p-4 rounded-lg space-y-3">
                   {imagemPreview && (
-                    <div className="text-xs text-muted-foreground flex items-center gap-2">
+                    <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-2 font-medium">
                       <ImagePlus className="h-3 w-3" />
-                      1º: Imagem será enviada
+                      Imagem + texto enviados juntos (caption)
                     </div>
                   )}
-                  <div className="text-xs text-muted-foreground flex items-center gap-2">
-                    <MessageCircle className="h-3 w-3" />
-                    {imagemPreview ? "2º: " : ""}Texto:
-                  </div>
                   <div className="whitespace-pre-wrap text-sm">
                     {renderizarMensagem("João Silva")}
                   </div>
