@@ -7,19 +7,36 @@ export async function enviarMensagemWhatsApp(
   mensagem: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
-    const { data, error } = await supabase.functions.invoke('enviar-whatsapp', {
-      body: { telefone, mensagem }
+    const preview = mensagem.length > 80 ? mensagem.slice(0, 77) + "..." : mensagem;
+    console.log("[integracoes] Iniciando envio de texto via WhatsApp", {
+      telefone,
+      preview,
     });
 
+    const { data, error } = await supabase.functions.invoke("enviar-whatsapp", {
+      body: { telefone, mensagem },
+    });
+
+    console.log("[integracoes] Resposta da função enviar-whatsapp", { data, error });
+
     if (error) {
-      console.error('Erro ao enviar WhatsApp:', error);
+      console.error("[integracoes] Erro Supabase ao enviar WhatsApp:", error);
       return { success: false, error: error.message };
+    }
+
+    if (data && typeof data === "object" && "success" in data && (data as any).success === false) {
+      const dataAny: any = data;
+      console.error("[integracoes] Função enviar-whatsapp retornou falha:", dataAny);
+      return {
+        success: false,
+        error: dataAny.error || "Falha ao enviar mensagem via WhatsApp",
+      };
     }
 
     return { success: true, error: null };
   } catch (err: any) {
-    console.error('Erro ao enviar WhatsApp:', err);
-    return { success: false, error: err.message || 'Erro desconhecido' };
+    console.error("[integracoes] Erro inesperado ao enviar WhatsApp:", err);
+    return { success: false, error: err.message || "Erro desconhecido" };
   }
 }
 
@@ -29,25 +46,43 @@ export async function enviarImagemWhatsApp(
   imageBase64: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
-    // Remover prefixo data:image/...;base64, se presente
-    let base64Puro = imageBase64;
-    if (imageBase64 && imageBase64.includes(';base64,')) {
-      base64Puro = imageBase64.split(';base64,')[1];
-    }
-
-    const { data, error } = await supabase.functions.invoke('enviar-whatsapp-imagem', {
-      body: { telefone, imageBase64: base64Puro }
+    console.log("[integracoes] Preparando envio de imagem via WhatsApp", {
+      telefone,
+      temBase64: !!imageBase64,
+      tamanhoBase64: imageBase64?.length,
     });
 
+    // Remover prefixo data:image/...;base64, se presente
+    let base64Puro = imageBase64;
+    if (imageBase64 && imageBase64.includes(";base64,")) {
+      base64Puro = imageBase64.split(";base64,")[1];
+      console.log("[integracoes] Prefixo base64 removido, novo tamanho:", base64Puro.length);
+    }
+
+    const { data, error } = await supabase.functions.invoke("enviar-whatsapp-imagem", {
+      body: { telefone, imageBase64: base64Puro },
+    });
+
+    console.log("[integracoes] Resposta da função enviar-whatsapp-imagem", { data, error });
+
     if (error) {
-      console.error('Erro ao enviar imagem WhatsApp:', error);
+      console.error("[integracoes] Erro Supabase ao enviar imagem WhatsApp:", error);
       return { success: false, error: error.message };
+    }
+
+    if (data && typeof data === "object" && "success" in data && (data as any).success === false) {
+      const dataAny: any = data;
+      console.error("[integracoes] Função enviar-whatsapp-imagem retornou falha:", dataAny);
+      return {
+        success: false,
+        error: dataAny.error || "Falha ao enviar imagem via WhatsApp",
+      };
     }
 
     return { success: true, error: null };
   } catch (err: any) {
-    console.error('Erro ao enviar imagem WhatsApp:', err);
-    return { success: false, error: err.message || 'Erro desconhecido' };
+    console.error("[integracoes] Erro inesperado ao enviar imagem WhatsApp:", err);
+    return { success: false, error: err.message || "Erro desconhecido" };
   }
 }
 
