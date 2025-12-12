@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarMensagemWhatsApp, enviarImagemWhatsApp } from "@/services/integracoes";
-import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users, Pause, Play } from "lucide-react";
+import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users, Pause, Play, XCircle } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -99,10 +99,17 @@ const Avaliacoes = () => {
   const [enviandoLote, setEnviandoLote] = useState(false);
   const [pausado, setPausado] = useState(false);
   const pausadoRef = useRef(false);
+  const canceladoRef = useRef(false);
   const [progressoLote, setProgressoLote] = useState({ enviados: 0, total: 0 });
   const [telefonesDiarioJaEnviados, setTelefonesDiarioJaEnviados] = useState<Set<string>>(new Set());
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [intervaloEnvio, setIntervaloEnvio] = useState(15); // segundos
+
+  // Função para tocar som de notificação
+  const tocarNotificacao = () => {
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQQAPlrT6NtqFgA0o+bWcQwAbMzV3YccADWi5ONvGQA0o+bWcQwAbMzV3YccAA==');
+    audio.play().catch(() => {}); // Ignorar erros se áudio não for suportado
+  };
 
   useEffect(() => {
     carregarPacientesAtendidos();
@@ -261,9 +268,18 @@ const Avaliacoes = () => {
     let falhas = 0;
 
     for (let i = 0; i < pacientesSelecionados.length; i++) {
+      // Verificar se foi cancelado
+      if (canceladoRef.current) {
+        break;
+      }
+
       // Verificar se está pausado e aguardar
-      while (pausadoRef.current) {
+      while (pausadoRef.current && !canceladoRef.current) {
         await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      if (canceladoRef.current) {
+        break;
       }
 
       const paciente = pacientesSelecionados[i];
@@ -281,17 +297,26 @@ const Avaliacoes = () => {
       setProgressoLote({ enviados: i + 1, total: pacientesSelecionados.length });
 
       // Aguardar intervalo configurado entre envios (exceto no último)
-      if (i < pacientesSelecionados.length - 1) {
+      if (i < pacientesSelecionados.length - 1 && !canceladoRef.current) {
         await new Promise(resolve => setTimeout(resolve, intervaloEnvio * 1000));
       }
     }
 
+    const foiCancelado = canceladoRef.current;
     setEnviandoLote(false);
+    setPausado(false);
+    pausadoRef.current = false;
+    canceladoRef.current = false;
     carregarHistoricoAvaliacoes();
 
+    // Tocar notificação sonora
+    tocarNotificacao();
+
     toast({
-      title: "Envio concluído!",
-      description: `${sucessos} enviado(s) com sucesso${falhas > 0 ? `, ${falhas} falha(s)` : ""}.`,
+      title: foiCancelado ? "Envio cancelado!" : "Envio concluído!",
+      description: foiCancelado 
+        ? `Cancelado após ${sucessos} envio(s)${falhas > 0 ? `, ${falhas} falha(s)` : ""}.`
+        : `${sucessos} enviado(s) com sucesso${falhas > 0 ? `, ${falhas} falha(s)` : ""}.`,
     });
   };
 
@@ -706,30 +731,44 @@ const Avaliacoes = () => {
                   </div>
                 )}
 
-                {/* Botões de envio e pausar */}
+                {/* Botões de envio, pausar e cancelar */}
                 <div className="flex gap-2">
                   {enviandoLote && (
-                    <Button
-                      onClick={() => {
-                        pausadoRef.current = !pausadoRef.current;
-                        setPausado(!pausado);
-                      }}
-                      variant={pausado ? "default" : "outline"}
-                      size="lg"
-                      className={pausado ? "bg-green-600 hover:bg-green-700" : ""}
-                    >
-                      {pausado ? (
-                        <>
-                          <Play className="h-4 w-4 mr-2" />
-                          Retomar
-                        </>
-                      ) : (
-                        <>
-                          <Pause className="h-4 w-4 mr-2" />
-                          Pausar
-                        </>
-                      )}
-                    </Button>
+                    <>
+                      <Button
+                        onClick={() => {
+                          pausadoRef.current = !pausadoRef.current;
+                          setPausado(!pausado);
+                        }}
+                        variant={pausado ? "default" : "outline"}
+                        size="lg"
+                        className={pausado ? "bg-green-600 hover:bg-green-700" : ""}
+                      >
+                        {pausado ? (
+                          <>
+                            <Play className="h-4 w-4 mr-2" />
+                            Retomar
+                          </>
+                        ) : (
+                          <>
+                            <Pause className="h-4 w-4 mr-2" />
+                            Pausar
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          canceladoRef.current = true;
+                          pausadoRef.current = false;
+                          setPausado(false);
+                        }}
+                        variant="destructive"
+                        size="lg"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Cancelar
+                      </Button>
+                    </>
                   )}
                   <Button
                     onClick={enviarEmLote}
