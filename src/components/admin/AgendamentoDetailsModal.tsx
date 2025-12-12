@@ -263,14 +263,22 @@ const AgendamentoDetailsModal = ({ agendamento, isOpen, onClose, onUpdate }: Age
                   <Calendar className="h-3 w-3" /> Data
                 </p>
                 <p className="font-medium">
-                  {format(new Date(agendamento.data_agendamento), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  {agendamento.data_agendamento 
+                    ? format(new Date(agendamento.data_agendamento), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                    : <span className="text-amber-600 italic">Aguardando</span>
+                  }
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                   <Clock className="h-3 w-3" /> Horário
                 </p>
-                <p className="font-medium">{agendamento.hora_agendamento.slice(0, 5)}</p>
+                <p className="font-medium">
+                  {agendamento.hora_agendamento 
+                    ? agendamento.hora_agendamento.slice(0, 5)
+                    : <span className="text-amber-600 italic">Aguardando</span>
+                  }
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Tipo de atendimento</p>
