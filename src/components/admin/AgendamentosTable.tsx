@@ -71,14 +71,20 @@ const AgendamentosTable = ({ agendamentos, onViewDetails, onSendWhatsApp, onEdit
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="text-sm">
-                    <div className="font-medium">
-                      {format(new Date(agendamento.data_agendamento), "dd/MM/yyyy", { locale: ptBR })}
+                  {agendamento.data_agendamento && agendamento.hora_agendamento ? (
+                    <div className="text-sm">
+                      <div className="font-medium">
+                        {format(new Date(agendamento.data_agendamento), "dd/MM/yyyy", { locale: ptBR })}
+                      </div>
+                      <div className="text-muted-foreground">
+                        {agendamento.hora_agendamento.slice(0, 5)}
+                      </div>
                     </div>
-                    <div className="text-muted-foreground">
-                      {agendamento.hora_agendamento.slice(0, 5)}
-                    </div>
-                  </div>
+                  ) : (
+                    <span className="text-sm text-amber-600 dark:text-amber-400 italic">
+                      Aguardando
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <span className="text-sm">{agendamento.tipo_atendimento}</span>
