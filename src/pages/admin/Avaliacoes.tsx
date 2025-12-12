@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarMensagemWhatsApp, enviarImagemWhatsApp } from "@/services/integracoes";
-import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users } from "lucide-react";
+import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users, Pause, Play } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -97,6 +97,8 @@ const Avaliacoes = () => {
   const [erroLote, setErroLote] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [enviandoLote, setEnviandoLote] = useState(false);
+  const [pausado, setPausado] = useState(false);
+  const pausadoRef = useRef(false);
   const [progressoLote, setProgressoLote] = useState({ enviados: 0, total: 0 });
   const [telefonesDiarioJaEnviados, setTelefonesDiarioJaEnviados] = useState<Set<string>>(new Set());
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -259,6 +261,11 @@ const Avaliacoes = () => {
     let falhas = 0;
 
     for (let i = 0; i < pacientesSelecionados.length; i++) {
+      // Verificar se está pausado e aguardar
+      while (pausadoRef.current) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
       const paciente = pacientesSelecionados[i];
 
       try {
@@ -699,25 +706,50 @@ const Avaliacoes = () => {
                   </div>
                 )}
 
-                {/* Botão de envio */}
-                <Button
-                  onClick={enviarEmLote}
-                  disabled={selectedIds.size === 0 || enviandoLote}
-                  className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
-                  size="lg"
-                >
-                  {enviandoLote ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Enviando {progressoLote.enviados}/{progressoLote.total}...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Enviar para {selectedIds.size} paciente(s)
-                    </>
+                {/* Botões de envio e pausar */}
+                <div className="flex gap-2">
+                  {enviandoLote && (
+                    <Button
+                      onClick={() => {
+                        pausadoRef.current = !pausadoRef.current;
+                        setPausado(!pausado);
+                      }}
+                      variant={pausado ? "default" : "outline"}
+                      size="lg"
+                      className={pausado ? "bg-green-600 hover:bg-green-700" : ""}
+                    >
+                      {pausado ? (
+                        <>
+                          <Play className="h-4 w-4 mr-2" />
+                          Retomar
+                        </>
+                      ) : (
+                        <>
+                          <Pause className="h-4 w-4 mr-2" />
+                          Pausar
+                        </>
+                      )}
+                    </Button>
                   )}
-                </Button>
+                  <Button
+                    onClick={enviarEmLote}
+                    disabled={selectedIds.size === 0 || enviandoLote}
+                    className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white"
+                    size="lg"
+                  >
+                    {enviandoLote ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {pausado ? "Pausado" : "Enviando"} {progressoLote.enviados}/{progressoLote.total}...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Enviar para {selectedIds.size} paciente(s)
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             )}
 
