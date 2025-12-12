@@ -106,10 +106,17 @@ const WhatsAppModal = ({ agendamento, isOpen, onClose }: WhatsAppModalProps) => 
                 <Phone className="h-3 w-3" />
                 {agendamento.telefone_whatsapp}
               </span>
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {format(new Date(agendamento.data_agendamento), "dd/MM/yyyy", { locale: ptBR })} às {agendamento.hora_agendamento.slice(0, 5)}
-              </span>
+              {agendamento.data_agendamento && agendamento.hora_agendamento ? (
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {format(new Date(agendamento.data_agendamento), "dd/MM/yyyy", { locale: ptBR })} às {agendamento.hora_agendamento.slice(0, 5)}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-amber-600">
+                  <Calendar className="h-3 w-3" />
+                  Aguardando agendamento
+                </span>
+              )}
               <span className="flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
                 {agendamento.local_atendimento}

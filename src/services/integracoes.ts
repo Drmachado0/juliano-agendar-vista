@@ -77,6 +77,10 @@ export async function gerarMensagemConfirmacaoIA(
 
 // Generate default WhatsApp message (fallback)
 export function gerarMensagemPadrao(agendamento: Agendamento): string {
+  if (!agendamento.data_agendamento || !agendamento.hora_agendamento) {
+    return `Olá, ${agendamento.nome_completo}! Aqui é da clínica Dr. Juliano Machado. Vimos seu interesse em agendar uma consulta no local ${agendamento.local_atendimento}. Qual data e horário seriam melhores para você?`;
+  }
+  
   const dataFormatada = new Date(agendamento.data_agendamento).toLocaleDateString('pt-BR');
   const horaFormatada = agendamento.hora_agendamento.slice(0, 5);
   
