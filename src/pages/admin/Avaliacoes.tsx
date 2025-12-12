@@ -683,6 +683,19 @@ const Avaliacoes = () => {
                       <span>{progressoLote.enviados} / {progressoLote.total}</span>
                     </div>
                     <Progress value={(progressoLote.enviados / progressoLote.total) * 100} className="h-2" />
+                    {progressoLote.total > progressoLote.enviados && (
+                      <div className="text-center text-sm text-muted-foreground">
+                        Tempo estimado restante: {(() => {
+                          const restantes = progressoLote.total - progressoLote.enviados;
+                          const segundosRestantes = restantes * intervaloEnvio;
+                          const minutos = Math.floor(segundosRestantes / 60);
+                          const segundos = segundosRestantes % 60;
+                          return minutos > 0 
+                            ? `${minutos}min ${segundos}s`
+                            : `${segundos}s`;
+                        })()}
+                      </div>
+                    )}
                   </div>
                 )}
 
