@@ -27,12 +27,12 @@ export type Database = {
           convenio: string
           convenio_outro: string | null
           created_at: string | null
-          data_agendamento: string
+          data_agendamento: string | null
           data_nascimento: string | null
           detalhe_exame_ou_cirurgia: string | null
           email: string | null
           google_calendar_event_id: string | null
-          hora_agendamento: string
+          hora_agendamento: string | null
           id: string
           local_atendimento: string
           nome_completo: string
@@ -42,6 +42,7 @@ export type Database = {
           profissional_id: string | null
           servico_id: string | null
           status_crm: string
+          status_funil: string | null
           telefone_whatsapp: string
           tipo_atendimento: string
           updated_at: string | null
@@ -58,12 +59,12 @@ export type Database = {
           convenio: string
           convenio_outro?: string | null
           created_at?: string | null
-          data_agendamento: string
+          data_agendamento?: string | null
           data_nascimento?: string | null
           detalhe_exame_ou_cirurgia?: string | null
           email?: string | null
           google_calendar_event_id?: string | null
-          hora_agendamento: string
+          hora_agendamento?: string | null
           id?: string
           local_atendimento: string
           nome_completo: string
@@ -73,6 +74,7 @@ export type Database = {
           profissional_id?: string | null
           servico_id?: string | null
           status_crm?: string
+          status_funil?: string | null
           telefone_whatsapp: string
           tipo_atendimento: string
           updated_at?: string | null
@@ -89,12 +91,12 @@ export type Database = {
           convenio?: string
           convenio_outro?: string | null
           created_at?: string | null
-          data_agendamento?: string
+          data_agendamento?: string | null
           data_nascimento?: string | null
           detalhe_exame_ou_cirurgia?: string | null
           email?: string | null
           google_calendar_event_id?: string | null
-          hora_agendamento?: string
+          hora_agendamento?: string | null
           id?: string
           local_atendimento?: string
           nome_completo?: string
@@ -104,6 +106,7 @@ export type Database = {
           profissional_id?: string | null
           servico_id?: string | null
           status_crm?: string
+          status_funil?: string | null
           telefone_whatsapp?: string
           tipo_atendimento?: string
           updated_at?: string | null
@@ -709,6 +712,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user"
       status_crm_enum: "NOVO LEAD" | "CLINICOR" | "HGP" | "BELÉM"
+      status_funil_enum: "lead" | "agendado" | "confirmado" | "cancelado"
       tipo_atendimento_enum: "Consulta" | "Retorno" | "Exame" | "Cirurgia"
     }
     CompositeTypes: {
@@ -839,6 +843,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user"],
       status_crm_enum: ["NOVO LEAD", "CLINICOR", "HGP", "BELÉM"],
+      status_funil_enum: ["lead", "agendado", "confirmado", "cancelado"],
       tipo_atendimento_enum: ["Consulta", "Retorno", "Exame", "Cirurgia"],
     },
   },

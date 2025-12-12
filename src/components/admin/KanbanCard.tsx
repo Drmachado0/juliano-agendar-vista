@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface KanbanCardProps {
@@ -13,6 +13,11 @@ interface KanbanCardProps {
   onTriggerAutomation: (agendamento: Agendamento) => void;
   isDragging?: boolean;
 }
+
+// Verifica se é um lead incompleto (sem data/hora de agendamento)
+const isLeadIncompleto = (agendamento: Agendamento) => {
+  return (agendamento as any).status_funil === 'lead' || !agendamento.data_agendamento || !agendamento.hora_agendamento;
+};
 
 const localBadgeColors: Record<string, string> = {
   "Clinicor – Paragominas": "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
@@ -27,13 +32,24 @@ const KanbanCard = ({
   onTriggerAutomation,
   isDragging 
 }: KanbanCardProps) => {
+  const isLead = isLeadIncompleto(agendamento);
+  
   return (
     <div
       className={cn(
         "bg-card border border-border rounded-lg p-4 space-y-3 shadow-sm transition-all cursor-grab active:cursor-grabbing",
-        isDragging && "shadow-lg ring-2 ring-primary/50 opacity-90"
+        isDragging && "shadow-lg ring-2 ring-primary/50 opacity-90",
+        isLead && "border-amber-400 bg-amber-50/50 dark:bg-amber-900/10"
       )}
     >
+      {/* Lead Indicator */}
+      {isLead && (
+        <div className="flex items-center gap-2 text-amber-600 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded">
+          <AlertTriangle className="h-3 w-3" />
+          <span>Aguardando agendamento</span>
+        </div>
+      )}
+      
       {/* Header - Name */}
       <div className="font-semibold text-foreground truncate">{agendamento.nome_completo}</div>
 
@@ -43,17 +59,19 @@ const KanbanCard = ({
         <span>{agendamento.telefone_whatsapp}</span>
       </div>
 
-      {/* Date and time */}
-      <div className="flex items-center gap-4 text-sm">
-        <span className="flex items-center gap-1 text-muted-foreground">
-          <Calendar className="h-3 w-3" />
-          {format(new Date(agendamento.data_agendamento), "dd/MM/yy", { locale: ptBR })}
-        </span>
-        <span className="flex items-center gap-1 text-muted-foreground">
-          <Clock className="h-3 w-3" />
-          {agendamento.hora_agendamento.slice(0, 5)}
-        </span>
-      </div>
+      {/* Date and time - only show if scheduled */}
+      {!isLead && agendamento.data_agendamento && agendamento.hora_agendamento && (
+        <div className="flex items-center gap-4 text-sm">
+          <span className="flex items-center gap-1 text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            {format(new Date(agendamento.data_agendamento), "dd/MM/yy", { locale: ptBR })}
+          </span>
+          <span className="flex items-center gap-1 text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            {agendamento.hora_agendamento.slice(0, 5)}
+          </span>
+        </div>
+      )}
 
       {/* Location badge */}
       <Badge className={cn("text-xs", localBadgeColors[agendamento.local_atendimento] || "bg-gray-100 text-gray-800")}>

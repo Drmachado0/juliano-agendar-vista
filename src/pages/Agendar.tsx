@@ -8,7 +8,7 @@ import ConsultationDetailsStep from "@/components/scheduling/ConsultationDetails
 import DateTimeStep from "@/components/scheduling/DateTimeStep";
 import ConfirmationStep from "@/components/scheduling/ConfirmationStep";
 import SuccessStep from "@/components/scheduling/SuccessStep";
-import { criarAgendamento } from "@/services/agendamentos";
+import { criarLead, converterLeadEmAgendamento } from "@/services/leads";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -33,6 +33,7 @@ const initialFormData: FormData = {
 const Agendar = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [leadId, setLeadId] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { trackViewContent, trackLead, trackSchedule, trackCompleteRegistration } = useMetaPixel();
@@ -93,6 +94,44 @@ const Agendar = () => {
       if (currentStep === 1) {
         trackLead("Dados Pessoais Preenchidos");
       }
+      
+      // Ao avançar da etapa 2 para 3, criar o lead no banco
+      if (currentStep === 2 && !leadId) {
+        const locationMap: Record<string, string> = {
+          clinicor: "Clinicor – Paragominas",
+          hgp: "Hospital Geral de Paragominas",
+          belem: "Belém (IOB / Vitria)",
+        };
+
+        const appointmentTypeMap: Record<string, string> = {
+          consulta: "Consulta",
+          retorno: "Retorno",
+          exame: "Exame",
+          cirurgia: "Cirurgia",
+        };
+
+        const leadData = {
+          nome_completo: formData.fullName,
+          telefone_whatsapp: formData.phone,
+          data_nascimento: formData.birthDate || null,
+          email: formData.email || null,
+          tipo_atendimento: appointmentTypeMap[formData.appointmentType] || formData.appointmentType,
+          local_atendimento: locationMap[formData.location] || formData.location,
+          convenio: formData.insurance,
+          convenio_outro: formData.insurance === "outro" ? formData.otherInsurance : null,
+        };
+
+        const { lead_id, error } = await criarLead(leadData);
+        
+        if (error) {
+          console.error('Erro ao criar lead:', error);
+          // Continua mesmo com erro para não bloquear o fluxo
+        } else if (lead_id) {
+          setLeadId(lead_id);
+          console.log('Lead criado com ID:', lead_id);
+        }
+      }
+      
       if (currentStep === 3) {
         await sendToWebhook(formData);
       }
@@ -116,42 +155,47 @@ const Agendar = () => {
         belem: "Belém (IOB / Vitria)",
       };
 
-      const appointmentTypeMap: Record<string, string> = {
-        consulta: "Consulta",
-        retorno: "Retorno",
-        exame: "Exame",
-        cirurgia: "Cirurgia",
-      };
+      const localAtendimento = locationMap[formData.location] || formData.location;
 
-      const agendamentoData = {
-        nome_completo: formData.fullName,
-        telefone_whatsapp: formData.phone,
-        data_nascimento: formData.birthDate || null,
-        email: formData.email || null,
-        tipo_atendimento: appointmentTypeMap[formData.appointmentType] || formData.appointmentType,
-        local_atendimento: locationMap[formData.location] || formData.location,
-        convenio: formData.insurance,
-        convenio_outro: formData.insurance === "outro" ? formData.otherInsurance : null,
-        data_agendamento: formData.selectedDate ? format(formData.selectedDate, 'yyyy-MM-dd') : '',
-        hora_agendamento: formData.selectedTime,
-        aceita_primeiro_horario: formData.acceptFirstAvailable,
-        aceita_contato_whatsapp_email: formData.acceptNotifications,
-        origem: "site",
-      };
+      if (leadId) {
+        // Converter lead existente em agendamento
+        const { error } = await converterLeadEmAgendamento(
+          leadId,
+          {
+            data_agendamento: formData.selectedDate ? format(formData.selectedDate, 'yyyy-MM-dd') : '',
+            hora_agendamento: formData.selectedTime,
+            aceita_primeiro_horario: formData.acceptFirstAvailable,
+            aceita_contato_whatsapp_email: formData.acceptNotifications,
+          },
+          localAtendimento
+        );
 
-      const { data, error } = await criarAgendamento(agendamentoData);
-      
-      if (error) {
+        if (error) {
+          toast({
+            title: "Erro ao agendar",
+            description: error.message || "Não foi possível finalizar seu agendamento. Tente novamente.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Notificar n8n sobre agendamento convertido
+        await notificarN8n('agendamento_criado', {
+          id: leadId,
+          nome_completo: formData.fullName,
+          telefone_whatsapp: formData.phone,
+          local_atendimento: localAtendimento,
+          data_agendamento: formData.selectedDate ? format(formData.selectedDate, 'yyyy-MM-dd') : '',
+          hora_agendamento: formData.selectedTime,
+        });
+      } else {
+        // Fallback: criar agendamento diretamente se não houver lead
         toast({
-          title: "Erro ao agendar",
-          description: error.message || "Não foi possível enviar seu agendamento. Tente novamente.",
+          title: "Erro",
+          description: "Lead não encontrado. Por favor, reinicie o agendamento.",
           variant: "destructive",
         });
         return;
-      }
-
-      if (data) {
-        await notificarN8n('agendamento_criado', data);
       }
 
       // Track Schedule and CompleteRegistration conversion events
@@ -173,6 +217,7 @@ const Agendar = () => {
   const handleReset = () => {
     setCurrentStep(1);
     setFormData(initialFormData);
+    setLeadId(null);
     setIsSubmitted(false);
   };
 
