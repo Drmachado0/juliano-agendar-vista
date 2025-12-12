@@ -12,13 +12,20 @@ serve(async (req) => {
   }
 
   try {
-    const { telefone, imageBase64, imageUrl, caption } = await req.json();
+    const { telefone, imageBase64: rawImageBase64, imageUrl, caption } = await req.json();
 
     if (!telefone) {
       return new Response(
         JSON.stringify({ success: false, error: 'Telefone é obrigatório' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Limpar prefixo data URL do base64 se presente
+    let imageBase64 = rawImageBase64;
+    if (rawImageBase64 && rawImageBase64.includes(';base64,')) {
+      imageBase64 = rawImageBase64.split(';base64,')[1];
+      console.log('Prefixo data URL removido do base64');
     }
 
     if (!imageBase64 && !imageUrl) {
@@ -52,6 +59,7 @@ serve(async (req) => {
     console.log('Token presente:', EVOLUTION_API_TOKEN ? 'Sim' : 'Não');
     console.log('Telefone formatado:', telefoneFormatado);
     console.log('Tem imageBase64:', !!imageBase64);
+    console.log('Tamanho base64:', imageBase64 ? imageBase64.length : 0);
     console.log('Tem imageUrl:', !!imageUrl);
 
     const evolutionUrl = `${EVOLUTION_API_BASE_URL}/message/sendMedia/${EVOLUTION_API_INSTANCE}`;

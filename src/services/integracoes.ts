@@ -25,12 +25,18 @@ export async function enviarMensagemWhatsApp(
 
 // WhatsApp Evolution API integration - Enviar imagem
 export async function enviarImagemWhatsApp(
-  telefone: string, 
+  telefone: string,
   imageBase64: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
+    // Remover prefixo data:image/...;base64, se presente
+    let base64Puro = imageBase64;
+    if (imageBase64 && imageBase64.includes(';base64,')) {
+      base64Puro = imageBase64.split(';base64,')[1];
+    }
+
     const { data, error } = await supabase.functions.invoke('enviar-whatsapp-imagem', {
-      body: { telefone, imageBase64 }
+      body: { telefone, imageBase64: base64Puro }
     });
 
     if (error) {
