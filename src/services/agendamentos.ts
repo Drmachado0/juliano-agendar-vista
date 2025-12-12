@@ -81,11 +81,12 @@ export interface Agendamento {
   local_atendimento: string;
   convenio: string;
   convenio_outro: string | null;
-  data_agendamento: string;
-  hora_agendamento: string;
+  data_agendamento: string | null;
+  hora_agendamento: string | null;
   aceita_primeiro_horario: boolean;
   aceita_contato_whatsapp_email: boolean;
   status_crm: string;
+  status_funil: string;
   origem: string;
   observacoes_internas: string | null;
   created_at: string;
@@ -250,7 +251,7 @@ export async function listarAgendamentos(
   return { data: (data || []) as Agendamento[], count: count || 0, error: null };
 }
 
-// Get agendamentos by CRM status (for Kanban)
+// Get agendamentos by CRM status (for Kanban) - Separando leads de agendamentos
 export async function listarAgendamentosPorStatus(): Promise<{ 
   data: Record<string, Agendamento[]>; 
   error: Error | null 
@@ -273,8 +274,13 @@ export async function listarAgendamentosPorStatus(): Promise<{
   };
 
   (data || []).forEach((agendamento) => {
+    const statusFunil = (agendamento as any).status_funil || 'agendado';
     const status = agendamento.status_crm || 'NOVO LEAD';
-    if (grouped[status]) {
+    
+    // Leads incompletos sempre vão para NOVO LEAD
+    if (statusFunil === 'lead') {
+      grouped['NOVO LEAD'].push(agendamento as Agendamento);
+    } else if (grouped[status]) {
       grouped[status].push(agendamento as Agendamento);
     }
   });

@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.criar-agendamento]
 verify_jwt = false
+
+[functions.criar-lead]
+verify_jwt = false
