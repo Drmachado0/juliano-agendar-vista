@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { enviarMensagemWhatsApp } from "@/services/integracoes";
-import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle } from "lucide-react";
+import { enviarMensagemWhatsApp, enviarImagemWhatsApp } from "@/services/integracoes";
+import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -24,12 +24,18 @@ interface PacienteAtendido {
   avaliacaoEnviada?: boolean;
 }
 
-const TEMPLATE_PADRAO = `Olá! 👋
-Espero que esteja tudo bem. Sua opinião faz toda a diferença para melhorar nosso atendimento.
-Se puder, avalie sua consulta clicando aqui 👇
+const TEMPLATE_PADRAO = `Olá, {{nome}}! 👋
+
+Foi um prazer atendê-lo(a). Sua opinião é muito importante para continuarmos oferecendo um atendimento de qualidade e em constante melhoria.
+
+Se puder, deixe sua avaliação clicando no link abaixo:
 👉 https://g.page/r/CTkTpXB1m13mEBM/review
 
-Agradecemos muito! 💙`;
+Agradeço desde já pela confiança. 💙
+Dr. Juliano Machado
+Oftalmologia`;
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const Avaliacoes = () => {
   const [template, setTemplate] = useState(TEMPLATE_PADRAO);
@@ -41,6 +47,12 @@ const Avaliacoes = () => {
   const [busca, setBusca] = useState("");
   const [enviandoIds, setEnviandoIds] = useState<Set<string>>(new Set());
   const [avaliacoesEnviadas, setAvaliacoesEnviadas] = useState<Set<string>>(new Set());
+  
+  // Image state
+  const [imagemBase64, setImagemBase64] = useState<string | null>(null);
+  const [imagemPreview, setImagemPreview] = useState<string | null>(null);
+  const [imagemNome, setImagemNome] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     carregarPacientesAtendidos();
@@ -103,6 +115,96 @@ const Avaliacoes = () => {
     setTelefoneAvulso(formatted);
   };
 
+  const handleImagemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Arquivo inválido",
+        description: "Por favor, selecione uma imagem (JPG, PNG ou WEBP).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast({
+        title: "Arquivo muito grande",
+        description: "A imagem deve ter no máximo 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setImagemNome(file.name);
+
+    // Create preview
+    const previewUrl = URL.createObjectURL(file);
+    setImagemPreview(previewUrl);
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setImagemBase64(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removerImagem = () => {
+    setImagemBase64(null);
+    setImagemPreview(null);
+    setImagemNome("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const enviarAvaliacaoSequencial = async (
+    telefone: string,
+    nome: string,
+    agendamentoId?: string
+  ): Promise<boolean> => {
+    const telefoneNumeros = telefone.replace(/\D/g, "");
+    const mensagem = renderizarMensagem(nome);
+
+    try {
+      // 1. Enviar imagem primeiro (se houver)
+      if (imagemBase64) {
+        const resultImagem = await enviarImagemWhatsApp(telefoneNumeros, imagemBase64);
+        if (!resultImagem.success) {
+          throw new Error(resultImagem.error || "Erro ao enviar imagem");
+        }
+        // Pequeno delay entre imagem e texto
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      // 2. Enviar texto
+      const resultTexto = await enviarMensagemWhatsApp(telefoneNumeros, mensagem);
+      if (!resultTexto.success) {
+        throw new Error(resultTexto.error || "Erro ao enviar mensagem");
+      }
+
+      // 3. Registrar no banco
+      await supabase.from("mensagens_whatsapp").insert({
+        telefone: telefoneNumeros,
+        conteudo: mensagem,
+        direcao: "OUT",
+        tipo_mensagem: "avaliacao",
+        agendamento_id: agendamentoId || null,
+        status_envio: "enviado",
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Erro no envio sequencial:", error);
+      throw error;
+    }
+  };
+
   const enviarAvaliacaoAvulsa = async () => {
     if (!nomeAvulso.trim() || !telefoneAvulso.trim()) {
       toast({
@@ -115,21 +217,7 @@ const Avaliacoes = () => {
 
     setEnviandoAvulso(true);
     try {
-      const mensagem = renderizarMensagem(nomeAvulso.trim());
-      const telefoneNumeros = telefoneAvulso.replace(/\D/g, "");
-
-      const result = await enviarMensagemWhatsApp(telefoneNumeros, mensagem);
-      
-      if (!result.success) throw new Error(result.error || "Erro ao enviar");
-
-      // Registrar mensagem no banco
-      await supabase.from("mensagens_whatsapp").insert({
-        telefone: telefoneNumeros,
-        conteudo: mensagem,
-        direcao: "OUT",
-        tipo_mensagem: "avaliacao",
-        status_envio: "enviado",
-      });
+      await enviarAvaliacaoSequencial(telefoneAvulso, nomeAvulso.trim());
 
       toast({
         title: "Avaliação enviada!",
@@ -138,11 +226,11 @@ const Avaliacoes = () => {
 
       setNomeAvulso("");
       setTelefoneAvulso("");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao enviar avaliação:", error);
       toast({
         title: "Erro ao enviar",
-        description: "Não foi possível enviar a mensagem. Tente novamente.",
+        description: error.message || "Não foi possível enviar a mensagem. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -154,22 +242,11 @@ const Avaliacoes = () => {
     setEnviandoIds(prev => new Set(prev).add(paciente.id));
     
     try {
-      const mensagem = renderizarMensagem(paciente.nome_completo);
-      const telefoneNumeros = paciente.telefone_whatsapp.replace(/\D/g, "");
-
-      const result = await enviarMensagemWhatsApp(telefoneNumeros, mensagem);
-      
-      if (!result.success) throw new Error(result.error || "Erro ao enviar");
-
-      // Registrar mensagem no banco
-      await supabase.from("mensagens_whatsapp").insert({
-        telefone: telefoneNumeros,
-        conteudo: mensagem,
-        direcao: "OUT",
-        tipo_mensagem: "avaliacao",
-        agendamento_id: paciente.id,
-        status_envio: "enviado",
-      });
+      await enviarAvaliacaoSequencial(
+        paciente.telefone_whatsapp,
+        paciente.nome_completo,
+        paciente.id
+      );
 
       setAvaliacoesEnviadas(prev => new Set(prev).add(paciente.id));
 
@@ -177,11 +254,11 @@ const Avaliacoes = () => {
         title: "Avaliação enviada!",
         description: `Mensagem enviada para ${paciente.nome_completo}.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao enviar avaliação:", error);
       toast({
         title: "Erro ao enviar",
-        description: "Não foi possível enviar a mensagem. Tente novamente.",
+        description: error.message || "Não foi possível enviar a mensagem. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -227,8 +304,59 @@ const Avaliacoes = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Upload de Imagem */}
               <div className="space-y-2">
-                <Label htmlFor="template">Mensagem</Label>
+                <Label className="flex items-center gap-2">
+                  <ImagePlus className="h-4 w-4" />
+                  Imagem (enviada primeiro)
+                </Label>
+                
+                {imagemPreview ? (
+                  <div className="relative">
+                    <img 
+                      src={imagemPreview} 
+                      alt="Preview" 
+                      className="w-full h-48 object-cover rounded-lg border"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-8 w-8"
+                      onClick={removerImagem}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-1">{imagemNome}</p>
+                  </div>
+                ) : (
+                  <div 
+                    className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <ImagePlus className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      Clique para selecionar uma imagem
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      JPG, PNG ou WEBP (máx. 5MB)
+                    </p>
+                  </div>
+                )}
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleImagemChange}
+                  className="hidden"
+                />
+              </div>
+
+              <Separator />
+
+              {/* Mensagem de Texto */}
+              <div className="space-y-2">
+                <Label htmlFor="template">💬 Mensagem (enviada após a imagem)</Label>
                 <Textarea
                   id="template"
                   value={template}
@@ -254,8 +382,20 @@ const Avaliacoes = () => {
 
               <div className="space-y-2">
                 <Label>Preview da Mensagem</Label>
-                <div className="bg-muted p-4 rounded-lg whitespace-pre-wrap text-sm">
-                  {renderizarMensagem("João Silva")}
+                <div className="bg-muted p-4 rounded-lg space-y-3">
+                  {imagemPreview && (
+                    <div className="text-xs text-muted-foreground flex items-center gap-2">
+                      <ImagePlus className="h-3 w-3" />
+                      1º: Imagem será enviada
+                    </div>
+                  )}
+                  <div className="text-xs text-muted-foreground flex items-center gap-2">
+                    <MessageCircle className="h-3 w-3" />
+                    {imagemPreview ? "2º: " : ""}Texto:
+                  </div>
+                  <div className="whitespace-pre-wrap text-sm">
+                    {renderizarMensagem("João Silva")}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -294,6 +434,13 @@ const Avaliacoes = () => {
                 />
               </div>
 
+              {imagemBase64 && (
+                <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground flex items-center gap-2">
+                  <ImagePlus className="h-4 w-4" />
+                  Imagem será enviada antes do texto
+                </div>
+              )}
+
               <Button
                 onClick={enviarAvaliacaoAvulsa}
                 disabled={enviandoAvulso || !nomeAvulso.trim() || !telefoneAvulso.trim()}
@@ -304,7 +451,7 @@ const Avaliacoes = () => {
                 ) : (
                   <Send className="h-4 w-4 mr-2" />
                 )}
-                Enviar Avaliação
+                {enviandoAvulso ? "Enviando..." : "Enviar Avaliação"}
               </Button>
             </CardContent>
           </Card>

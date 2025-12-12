@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Agendamento } from "./agendamentos";
 
-// WhatsApp Evolution API integration
+// WhatsApp Evolution API integration - Enviar texto
 export async function enviarMensagemWhatsApp(
   telefone: string, 
   mensagem: string
@@ -19,6 +19,28 @@ export async function enviarMensagemWhatsApp(
     return { success: true, error: null };
   } catch (err: any) {
     console.error('Erro ao enviar WhatsApp:', err);
+    return { success: false, error: err.message || 'Erro desconhecido' };
+  }
+}
+
+// WhatsApp Evolution API integration - Enviar imagem
+export async function enviarImagemWhatsApp(
+  telefone: string, 
+  imageBase64: string
+): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('enviar-whatsapp-imagem', {
+      body: { telefone, imageBase64 }
+    });
+
+    if (error) {
+      console.error('Erro ao enviar imagem WhatsApp:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, error: null };
+  } catch (err: any) {
+    console.error('Erro ao enviar imagem WhatsApp:', err);
     return { success: false, error: err.message || 'Erro desconhecido' };
   }
 }
