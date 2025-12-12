@@ -171,7 +171,7 @@ const Avaliacoes = () => {
     const telefoneNumeros = telefone.replace(/\D/g, "");
     const mensagem = renderizarMensagem(nome);
 
-    console.log("[Avaliacoes] Iniciando envio sequencial de avaliação", {
+    console.log("[Avaliacoes] Iniciando envio de avaliação", {
       telefoneOriginal: telefone,
       telefoneNumeros,
       nome,
@@ -180,47 +180,38 @@ const Avaliacoes = () => {
     });
 
     try {
-      // 1. Enviar imagem primeiro (se houver)
       if (imagemBase64) {
-        console.log("[Avaliacoes] Enviando imagem de avaliação via WhatsApp", {
+        // Enviar imagem COM o texto como caption (1 única chamada)
+        console.log("[Avaliacoes] Enviando imagem + caption via WhatsApp", {
           tamanhoBase64: imagemBase64.length,
+          captionPreview: mensagem.length > 50 ? mensagem.slice(0, 47) + "..." : mensagem,
         });
 
-        const resultImagem = await enviarImagemWhatsApp(telefoneNumeros, imagemBase64);
-        console.log("[Avaliacoes] Resultado envio imagem:", resultImagem);
+        const resultImagem = await enviarImagemWhatsApp(telefoneNumeros, imagemBase64, mensagem);
+        console.log("[Avaliacoes] Resultado envio imagem+caption:", resultImagem);
 
         if (!resultImagem.success) {
-          console.error("[Avaliacoes] Falha no envio da imagem:", resultImagem.error);
-          throw new Error(resultImagem.error || "Erro ao enviar imagem");
+          console.error("[Avaliacoes] Falha no envio:", resultImagem.error);
+          throw new Error(resultImagem.error || "Erro ao enviar imagem com texto");
         }
+      } else {
+        // Sem imagem: enviar apenas texto
+        console.log("[Avaliacoes] Enviando apenas texto via WhatsApp", {
+          telefoneNumeros,
+          mensagemPreview: mensagem.length > 50 ? mensagem.slice(0, 47) + "..." : mensagem,
+        });
 
-        // Delay maior entre imagem e texto
-        console.log("[Avaliacoes] Aguardando 2s antes de enviar o texto...");
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const resultTexto = await enviarMensagemWhatsApp(telefoneNumeros, mensagem);
+        console.log("[Avaliacoes] Resultado envio texto:", resultTexto);
+
+        if (!resultTexto.success) {
+          console.error("[Avaliacoes] Falha no envio do texto:", resultTexto.error);
+          throw new Error(resultTexto.error || "Erro ao enviar mensagem");
+        }
       }
 
-      // 2. Enviar texto
-      const previewMensagem =
-        mensagem.length > 80 ? mensagem.slice(0, 77) + "..." : mensagem;
-
-      console.log("[Avaliacoes] Enviando texto de avaliação via WhatsApp", {
-        telefoneNumeros,
-        previewMensagem,
-      });
-
-      const resultTexto = await enviarMensagemWhatsApp(telefoneNumeros, mensagem);
-      console.log("[Avaliacoes] Resultado envio texto:", resultTexto);
-
-      if (!resultTexto.success) {
-        console.error("[Avaliacoes] Falha no envio do texto:", resultTexto.error);
-        throw new Error(resultTexto.error || "Erro ao enviar mensagem");
-      }
-
-      // 3. Registrar no banco
-      console.log("[Avaliacoes] Registrando mensagem de avaliação no banco...", {
-        telefoneNumeros,
-        agendamentoId,
-      });
+      // Registrar no banco
+      console.log("[Avaliacoes] Registrando mensagem de avaliação no banco...");
 
       await supabase.from("mensagens_whatsapp").insert({
         telefone: telefoneNumeros,
@@ -231,10 +222,10 @@ const Avaliacoes = () => {
         status_envio: "enviado",
       });
 
-      console.log("[Avaliacoes] Envio sequencial concluído com sucesso");
+      console.log("[Avaliacoes] Envio concluído com sucesso");
       return true;
     } catch (error) {
-      console.error("[Avaliacoes] Erro no envio sequencial:", error);
+      console.error("[Avaliacoes] Erro no envio:", error);
       throw error;
     }
   };
