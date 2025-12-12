@@ -1,6 +1,13 @@
-import { Shield, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+
+// Logos dos convênios
+import logoBradesco from "@/assets/convenios/bradesco-saude.png";
+import logoSulamerica from "@/assets/convenios/sulamerica.png";
+import logoUnimed from "@/assets/convenios/unimed.png";
+import logoCassi from "@/assets/convenios/cassi.png";
+import logoSaudeCaixa from "@/assets/convenios/saude-caixa.png";
+import logoParticular from "@/assets/convenios/particular.png";
 
 interface InsuranceSectionProps {
   onScheduleClick: () => void;
@@ -29,11 +36,12 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
   }, []);
 
   const insurances = [
-    { name: "Particular", highlight: true },
-    { name: "Bradesco Saúde", highlight: false },
-    { name: "Unimed", highlight: false },
-    { name: "Cassi", highlight: false },
-    { name: "Sul América", highlight: false },
+    { name: "Particular", logo: logoParticular, highlight: true },
+    { name: "Bradesco Saúde", logo: logoBradesco, highlight: false },
+    { name: "Unimed", logo: logoUnimed, highlight: false },
+    { name: "Cassi", logo: logoCassi, highlight: false },
+    { name: "Sul América", logo: logoSulamerica, highlight: false },
+    { name: "Saúde Caixa", logo: logoSaudeCaixa, highlight: false },
   ];
 
   return (
@@ -41,7 +49,6 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto text-center">
           <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/50 border border-border/50 mb-6 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-            <Shield className="w-4 h-4 text-primary" />
             <span className="text-sm text-muted-foreground">Convênios aceitos</span>
           </div>
 
@@ -58,13 +65,17 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
                 key={index}
                 className={`flex items-center gap-3 px-6 py-4 rounded-xl border transition-all duration-500 hover:scale-105 hover:-translate-y-1 ${
                   insurance.highlight
-                    ? "bg-primary/10 border-primary/30 text-primary"
-                    : "bg-secondary border-border text-foreground"
+                    ? "bg-primary/10 border-primary/30"
+                    : "bg-secondary border-border"
                 } ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
                 style={{ transitionDelay: isVisible ? `${300 + index * 100}ms` : '0ms' }}
               >
-                <Check className={`w-5 h-5 ${insurance.highlight ? "text-primary" : "text-primary"}`} />
-                <span className="font-medium">{insurance.name}</span>
+                <img 
+                  src={insurance.logo} 
+                  alt={insurance.name} 
+                  className="h-8 w-auto object-contain"
+                />
+                <span className="font-medium text-foreground">{insurance.name}</span>
               </div>
             ))}
           </div>
