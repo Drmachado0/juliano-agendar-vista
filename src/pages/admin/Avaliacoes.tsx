@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarMensagemWhatsApp, enviarImagemWhatsApp } from "@/services/integracoes";
-import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users, Pause, Play, XCircle } from "lucide-react";
+import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users, Pause, Play, XCircle, Phone } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -100,7 +100,7 @@ const Avaliacoes = () => {
   const [pausado, setPausado] = useState(false);
   const pausadoRef = useRef(false);
   const canceladoRef = useRef(false);
-  const [progressoLote, setProgressoLote] = useState({ enviados: 0, total: 0 });
+  const [progressoLote, setProgressoLote] = useState({ enviados: 0, total: 0, sucesso: 0, falha: 0 });
   const [telefonesDiarioJaEnviados, setTelefonesDiarioJaEnviados] = useState<Set<string>>(new Set());
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [intervaloEnvio, setIntervaloEnvio] = useState(15); // segundos
@@ -294,7 +294,7 @@ const Avaliacoes = () => {
     }
 
     setEnviandoLote(true);
-    setProgressoLote({ enviados: 0, total: pacientesSelecionados.length });
+    setProgressoLote({ enviados: 0, total: pacientesSelecionados.length, sucesso: 0, falha: 0 });
 
     let sucessos = 0;
     let falhas = 0;
@@ -326,7 +326,7 @@ const Avaliacoes = () => {
         falhas++;
       }
 
-      setProgressoLote({ enviados: i + 1, total: pacientesSelecionados.length });
+      setProgressoLote({ enviados: i + 1, total: pacientesSelecionados.length, sucesso: sucessos, falha: falhas });
 
       // Aguardar intervalo configurado entre envios (exceto no último)
       if (i < pacientesSelecionados.length - 1 && !canceladoRef.current) {
@@ -697,40 +697,92 @@ const Avaliacoes = () => {
                   </div>
                 </div>
 
-                {/* Lista scrollável */}
-                <ScrollArea className="h-64 border rounded-lg">
-                  <div className="p-2 space-y-2">
-                    {pacientesLote.map((paciente) => {
+                {/* Lista scrollável com visual aprimorado */}
+                <ScrollArea className="h-72 border rounded-xl bg-gradient-to-b from-muted/20 to-transparent">
+                  <div className="p-3 space-y-2">
+                    {pacientesLote.map((paciente, index) => {
                       const jaEnviou = telefonesDiarioJaEnviados.has(paciente.telefone);
+                      const isSelected = selectedIds.has(paciente.id);
                       
                       return (
                         <div
                           key={paciente.id}
-                          className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                            jaEnviou 
-                              ? "bg-green-500/10 border-green-500/30" 
-                              : selectedIds.has(paciente.id) 
-                                ? "bg-yellow-500/10 border-yellow-500/30" 
-                                : "bg-card hover:bg-muted/50"
-                          }`}
+                          className={`
+                            flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200
+                            ${jaEnviou 
+                              ? "bg-emerald-500/10 border-emerald-500/40 shadow-sm shadow-emerald-500/10" 
+                              : isSelected 
+                                ? "bg-amber-500/10 border-amber-500/40 shadow-sm shadow-amber-500/10 scale-[1.01]" 
+                                : "bg-card/80 border-border/50 hover:bg-muted/60 hover:border-muted-foreground/30"
+                            }
+                          `}
                         >
+                          {/* Número do item */}
+                          <div className={`
+                            flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold
+                            ${jaEnviou 
+                              ? "bg-emerald-500 text-white" 
+                              : isSelected 
+                                ? "bg-amber-500 text-white" 
+                                : "bg-muted text-muted-foreground"
+                            }
+                          `}>
+                            {jaEnviou ? (
+                              <CheckCircle className="h-4 w-4" />
+                            ) : (
+                              index + 1
+                            )}
+                          </div>
+                          
                           <Checkbox
-                            checked={selectedIds.has(paciente.id)}
+                            checked={isSelected}
                             onCheckedChange={(checked) => toggleSelectPaciente(paciente.id, !!checked)}
                             disabled={enviandoLote || jaEnviou}
+                            className={`
+                              h-5 w-5 border-2 transition-colors
+                              ${isSelected ? "border-amber-500 data-[state=checked]:bg-amber-500" : ""}
+                            `}
                           />
+                          
+                          {/* Avatar com inicial */}
+                          <div className={`
+                            flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold uppercase
+                            ${jaEnviou 
+                              ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" 
+                              : isSelected 
+                                ? "bg-amber-500/20 text-amber-700 dark:text-amber-400" 
+                                : "bg-primary/10 text-primary"
+                            }
+                          `}>
+                            {paciente.primeiro_nome?.charAt(0) || paciente.nome?.charAt(0) || "?"}
+                          </div>
+                          
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium truncate">{paciente.nome}</span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold truncate text-foreground">
+                                {paciente.primeiro_nome || paciente.nome}
+                              </span>
                               {jaEnviou && (
-                                <Badge variant="secondary" className="bg-green-500/20 text-green-700 dark:text-green-400">
+                                <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-xs px-2">
                                   <CheckCircle className="h-3 w-3 mr-1" />
-                                  Enviado
+                                  Enviado agora
+                                </Badge>
+                              )}
+                              {isSelected && !jaEnviou && (
+                                <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30 text-xs px-2">
+                                  Selecionado
                                 </Badge>
                               )}
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                              {paciente.telefone_formatado}
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-0.5">
+                              <Phone className="h-3 w-3" />
+                              <span>{paciente.telefone_formatado}</span>
+                              {paciente.data_atendimento_formatada && (
+                                <>
+                                  <span className="text-muted-foreground/50">•</span>
+                                  <span className="text-xs">{paciente.data_atendimento_formatada}</span>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -739,27 +791,64 @@ const Avaliacoes = () => {
                   </div>
                 </ScrollArea>
 
-                {/* Barra de progresso */}
+                {/* Barra de progresso aprimorada */}
                 {enviandoLote && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Enviando...</span>
-                      <span>{progressoLote.enviados} / {progressoLote.total}</span>
-                    </div>
-                    <Progress value={(progressoLote.enviados / progressoLote.total) * 100} className="h-2" />
-                    {progressoLote.total > progressoLote.enviados && (
-                      <div className="text-center text-sm text-muted-foreground">
-                        Tempo estimado restante: {(() => {
-                          const restantes = progressoLote.total - progressoLote.enviados;
-                          const segundosRestantes = restantes * intervaloEnvio;
-                          const minutos = Math.floor(segundosRestantes / 60);
-                          const segundos = segundosRestantes % 60;
-                          return minutos > 0 
-                            ? `${minutos}min ${segundos}s`
-                            : `${segundos}s`;
-                        })()}
+                  <div className="space-y-3 p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-amber-500/10 border border-amber-500/20">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
+                          <div className="absolute inset-0 h-5 w-5 animate-ping opacity-30 bg-amber-500 rounded-full" />
+                        </div>
+                        <span className="font-medium text-foreground">
+                          {pausado ? "Envio pausado" : "Enviando mensagens..."}
+                        </span>
                       </div>
-                    )}
+                      <Badge variant="outline" className="font-mono text-sm px-3 py-1">
+                        {progressoLote.enviados} / {progressoLote.total}
+                      </Badge>
+                    </div>
+                    
+                    <div className="relative">
+                      <Progress 
+                        value={(progressoLote.enviados / progressoLote.total) * 100} 
+                        className="h-3 bg-amber-500/20"
+                      />
+                      <div 
+                        className="absolute inset-0 h-3 bg-gradient-to-r from-amber-500/0 via-white/30 to-amber-500/0 animate-pulse rounded-full"
+                        style={{ width: `${(progressoLote.enviados / progressoLote.total) * 100}%` }}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle className="h-4 w-4" />
+                          {progressoLote.sucesso} sucesso
+                        </span>
+                        {progressoLote.falha > 0 && (
+                          <span className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
+                            <XCircle className="h-4 w-4" />
+                            {progressoLote.falha} falha(s)
+                          </span>
+                        )}
+                      </div>
+                      
+                      {progressoLote.total > progressoLote.enviados && (
+                        <span className="text-muted-foreground flex items-center gap-1.5">
+                          <Clock className="h-4 w-4" />
+                          {(() => {
+                            const restantes = progressoLote.total - progressoLote.enviados;
+                            const segundosRestantes = restantes * intervaloEnvio;
+                            const minutos = Math.floor(segundosRestantes / 60);
+                            const segundos = segundosRestantes % 60;
+                            return minutos > 0 
+                              ? `~${minutos}min ${segundos}s`
+                              : `~${segundos}s`;
+                          })()}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
 
