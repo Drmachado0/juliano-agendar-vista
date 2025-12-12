@@ -61,6 +61,8 @@ serve(async (req) => {
     console.log('Tem imageBase64:', !!imageBase64);
     console.log('Tamanho base64:', imageBase64 ? imageBase64.length : 0);
     console.log('Tem imageUrl:', !!imageUrl);
+    console.log('Tem caption:', !!caption);
+    console.log('Caption preview:', caption ? (caption.length > 100 ? caption.slice(0, 97) + '...' : caption) : 'SEM CAPTION');
 
     const evolutionUrl = `${EVOLUTION_API_BASE_URL}/message/sendMedia/${EVOLUTION_API_INSTANCE}`;
     console.log('URL completa da Evolution:', evolutionUrl);
