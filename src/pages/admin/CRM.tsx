@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
-import { LayoutGrid, RefreshCw } from "lucide-react";
+import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle } from "lucide-react";
 
 const columns = [
   { status: "NOVO LEAD", title: "Novo Lead", color: "bg-emerald-500" },
@@ -153,7 +153,13 @@ const AdminCRM = () => {
     }
   };
 
-  const totalAgendamentos = Object.values(agendamentosPorStatus).flat().length;
+  // Calcula estatísticas: leads incompletos vs agendamentos confirmados
+  const allItems = Object.values(agendamentosPorStatus).flat();
+  const totalItems = allItems.length;
+  const leadsIncompletos = allItems.filter(
+    (a) => (a as any).status_funil === 'lead' || !a.data_agendamento || !a.hora_agendamento
+  ).length;
+  const agendamentosConfirmados = totalItems - leadsIncompletos;
 
   return (
     <AdminLayout>
@@ -165,9 +171,25 @@ const AdminCRM = () => {
               <LayoutGrid className="h-6 w-6" />
               CRM Kanban
             </h1>
-            <p className="text-muted-foreground mt-1">
-              {totalAgendamentos} agendamento{totalAgendamentos !== 1 ? 's' : ''} no pipeline
-            </p>
+            <div className="flex items-center gap-4 mt-2">
+              <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span className="font-medium">{leadsIncompletos}</span>
+                  <span className="text-amber-600/80 dark:text-amber-400/80">leads</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+                  <CalendarCheck className="h-3.5 w-3.5" />
+                  <span className="font-medium">{agendamentosConfirmados}</span>
+                  <span className="text-emerald-600/80 dark:text-emerald-400/80">agendados</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
+                  <Users className="h-3.5 w-3.5" />
+                  <span className="font-medium">{totalItems}</span>
+                  <span>total</span>
+                </div>
+              </div>
+            </div>
           </div>
           <Button variant="outline" onClick={fetchAgendamentos} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
