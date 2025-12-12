@@ -21,8 +21,11 @@ const initialFormData: FormData = {
   birthDate: "",
   email: "",
   appointmentType: "",
+  appointmentTypeName: "",
   location: "",
+  locationName: "",
   insurance: "",
+  insuranceName: "",
   otherInsurance: "",
   selectedDate: undefined,
   selectedTime: "",
@@ -97,38 +100,31 @@ const Agendar = () => {
       
       // Ao avançar da etapa 2 para 3, criar o lead no banco
       if (currentStep === 2 && !leadId) {
-        const locationMap: Record<string, string> = {
-          clinicor: "Clinicor – Paragominas",
-          hgp: "Hospital Geral de Paragominas",
-          belem: "Belém (IOB / Vitria)",
-        };
-
-        const appointmentTypeMap: Record<string, string> = {
-          consulta: "Consulta",
-          retorno: "Retorno",
-          exame: "Exame",
-          cirurgia: "Cirurgia",
-        };
-
         const leadData = {
           nome_completo: formData.fullName,
           telefone_whatsapp: formData.phone,
           data_nascimento: formData.birthDate || null,
           email: formData.email || null,
-          tipo_atendimento: appointmentTypeMap[formData.appointmentType] || formData.appointmentType,
-          local_atendimento: locationMap[formData.location] || formData.location,
-          convenio: formData.insurance,
+          tipo_atendimento: formData.appointmentTypeName || formData.appointmentType,
+          local_atendimento: formData.locationName || formData.location,
+          convenio: formData.insuranceName || formData.insurance,
           convenio_outro: formData.insurance === "outro" ? formData.otherInsurance : null,
         };
 
+        console.log('[Agendar] Criando lead com dados:', leadData);
+        
         const { lead_id, error } = await criarLead(leadData);
         
         if (error) {
-          console.error('Erro ao criar lead:', error);
-          // Continua mesmo com erro para não bloquear o fluxo
+          console.error('[Agendar] Erro ao criar lead:', error);
+          toast({
+            title: "Erro ao registrar interesse",
+            description: "Não foi possível salvar seus dados. O agendamento continuará normalmente.",
+            variant: "destructive",
+          });
         } else if (lead_id) {
           setLeadId(lead_id);
-          console.log('Lead criado com ID:', lead_id);
+          console.log('[Agendar] Lead criado com ID:', lead_id);
         }
       }
       
@@ -149,13 +145,7 @@ const Agendar = () => {
     setIsSubmitting(true);
     
     try {
-      const locationMap: Record<string, string> = {
-        clinicor: "Clinicor – Paragominas",
-        hgp: "Hospital Geral de Paragominas",
-        belem: "Belém (IOB / Vitria)",
-      };
-
-      const localAtendimento = locationMap[formData.location] || formData.location;
+      const localAtendimento = formData.locationName || formData.location;
 
       if (leadId) {
         // Converter lead existente em agendamento

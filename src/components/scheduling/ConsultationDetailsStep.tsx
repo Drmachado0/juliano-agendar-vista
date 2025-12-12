@@ -105,7 +105,13 @@ const ConsultationDetailsStep = ({
           </Label>
           <RadioGroup
             value={formData.appointmentType}
-            onValueChange={(value) => updateFormData({ appointmentType: value })}
+            onValueChange={(value) => {
+              const tipo = tiposAtendimento.find(t => t.slug === value);
+              updateFormData({ 
+                appointmentType: value,
+                appointmentTypeName: tipo?.nome || value
+              });
+            }}
             className="grid grid-cols-1 gap-2"
           >
             {tiposAtendimento.map((tipo) => (
@@ -141,7 +147,13 @@ const ConsultationDetailsStep = ({
           </Label>
           <RadioGroup
             value={formData.location}
-            onValueChange={(value) => updateFormData({ location: value })}
+            onValueChange={(value) => {
+              const clinica = clinicas.find(c => c.slug === value);
+              updateFormData({ 
+                location: value,
+                locationName: clinica?.nome || value
+              });
+            }}
             className="grid grid-cols-1 gap-2"
           >
             {clinicas.map((clinica) => (
@@ -172,7 +184,13 @@ const ConsultationDetailsStep = ({
           </Label>
           <RadioGroup
             value={formData.insurance}
-            onValueChange={(value) => updateFormData({ insurance: value })}
+            onValueChange={(value) => {
+              const convenio = convenios.find(c => c.slug === value);
+              updateFormData({ 
+                insurance: value,
+                insuranceName: convenio?.nome || (value === 'outro' ? 'Outro' : value)
+              });
+            }}
             className="grid grid-cols-2 gap-2"
           >
             {convenios.map((convenio) => (
