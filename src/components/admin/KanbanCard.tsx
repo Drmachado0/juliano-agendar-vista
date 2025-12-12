@@ -39,12 +39,12 @@ const KanbanCard = ({
       className={cn(
         "bg-card border border-border rounded-lg p-4 space-y-3 shadow-sm transition-all cursor-grab active:cursor-grabbing",
         isDragging && "shadow-lg ring-2 ring-primary/50 opacity-90",
-        isLead && "border-amber-400 bg-amber-50/50 dark:bg-amber-900/10"
+        isLead && "border-l-4 border-l-emerald-500"
       )}
     >
       {/* Lead Indicator */}
       {isLead && (
-        <div className="flex items-center gap-2 text-amber-600 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded">
+        <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded">
           <AlertTriangle className="h-3 w-3" />
           <span>Aguardando agendamento</span>
         </div>
