@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Star, Quote, RefreshCw, Pause, Play } from "lucide-react";
+import { Star, Quote } from "lucide-react";
 
 interface Testimonial {
   id: string;
@@ -124,8 +124,6 @@ const TestimonialsSection = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [displayedTestimonials, setDisplayedTestimonials] = useState<Testimonial[]>([]);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isSpinning, setIsSpinning] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
   const autoRotateRef = useRef<NodeJS.Timeout | null>(null);
@@ -148,7 +146,6 @@ const TestimonialsSection = () => {
     if (isTransitioning) return;
     
     setIsTransitioning(true);
-    setIsSpinning(true);
     
     // Fade out
     setTimeout(() => {
@@ -163,7 +160,6 @@ const TestimonialsSection = () => {
       }
       
       setDisplayedTestimonials(newTestimonials);
-      setIsSpinning(false);
       
       // Fade in complete
       setTimeout(() => {
@@ -174,7 +170,7 @@ const TestimonialsSection = () => {
 
   // Auto-rotate carousel
   useEffect(() => {
-    if (!isVisible || isPaused || isHovered || isTransitioning) {
+    if (!isVisible || isHovered || isTransitioning) {
       if (autoRotateRef.current) {
         clearInterval(autoRotateRef.current);
         autoRotateRef.current = null;
@@ -191,11 +187,7 @@ const TestimonialsSection = () => {
         clearInterval(autoRotateRef.current);
       }
     };
-  }, [isVisible, isPaused, isHovered, isTransitioning, loadNewTestimonials]);
-
-  const togglePause = useCallback(() => {
-    setIsPaused(prev => !prev);
-  }, []);
+  }, [isVisible, isHovered, isTransitioning, loadNewTestimonials]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -327,35 +319,8 @@ const TestimonialsSection = () => {
           ))}
         </div>
 
-        {/* CTA Buttons */}
-        <div className={`flex flex-col sm:flex-row items-center justify-center gap-4 mt-12 transition-all duration-700 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <button
-            onClick={togglePause}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 border border-border hover:bg-muted transition-all text-muted-foreground text-sm"
-            title={isPaused ? "Retomar rotação automática" : "Pausar rotação automática"}
-          >
-            {isPaused ? (
-              <>
-                <Play className="w-4 h-4" />
-                <span className="hidden sm:inline">Retomar</span>
-              </>
-            ) : (
-              <>
-                <Pause className="w-4 h-4" />
-                <span className="hidden sm:inline">Pausar</span>
-              </>
-            )}
-          </button>
-          
-          <button
-            onClick={loadNewTestimonials}
-            disabled={isTransitioning}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary/10 border border-primary/20 hover:bg-primary/20 hover:border-primary/40 transition-all text-primary font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${isSpinning ? 'animate-spin' : ''}`} />
-            Ver mais depoimentos
-          </button>
-          
+        {/* CTA */}
+        <div className={`text-center mt-12 transition-all duration-700 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <a
             href="https://g.page/r/CTkTpXB1m13mEBI/review"
             target="_blank"
@@ -380,7 +345,7 @@ const TestimonialsSection = () => {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            Ver todas no Google
+            Ver todas as avaliações no Google
           </a>
         </div>
       </div>
