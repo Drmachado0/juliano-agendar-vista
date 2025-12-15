@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import { Star, Quote } from "lucide-react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { Star, Quote, RefreshCw } from "lucide-react";
 
 interface Testimonial {
   id: string;
@@ -121,6 +121,8 @@ function shuffleArray<T>(array: T[]): T[] {
 const TestimonialsSection = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [displayedTestimonials, setDisplayedTestimonials] = useState<Testimonial[]>([]);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isSpinning, setIsSpinning] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
 
   // Shuffle and select 3 testimonials on mount
@@ -135,6 +137,35 @@ const TestimonialsSection = () => {
     const sum = displayedTestimonials.reduce((acc, t) => acc + t.rating, 0);
     return (sum / displayedTestimonials.length).toFixed(1);
   }, [displayedTestimonials]);
+
+  // Load new testimonials with smooth transition
+  const loadNewTestimonials = useCallback(() => {
+    if (isTransitioning) return;
+    
+    setIsTransitioning(true);
+    setIsSpinning(true);
+    
+    // Fade out
+    setTimeout(() => {
+      const currentIds = displayedTestimonials.map(t => t.id);
+      const availableTestimonials = ALL_TESTIMONIALS.filter(t => !currentIds.includes(t.id));
+      
+      let newTestimonials: Testimonial[];
+      if (availableTestimonials.length >= 3) {
+        newTestimonials = shuffleArray(availableTestimonials).slice(0, 3);
+      } else {
+        newTestimonials = shuffleArray(ALL_TESTIMONIALS).slice(0, 3);
+      }
+      
+      setDisplayedTestimonials(newTestimonials);
+      setIsSpinning(false);
+      
+      // Fade in complete
+      setTimeout(() => {
+        setIsTransitioning(false);
+      }, 400);
+    }, 300);
+  }, [displayedTestimonials, isTransitioning]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -190,13 +221,18 @@ const TestimonialsSection = () => {
           {displayedTestimonials.map((testimonial, index) => (
             <div
               key={testimonial.id}
-              className={`card-glass rounded-xl p-6 relative transition-all duration-500 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 ${
+              className={`card-glass rounded-xl p-6 relative hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 ${
                 isVisible 
-                  ? 'opacity-100 translate-y-0' 
+                  ? isTransitioning
+                    ? 'opacity-0 translate-y-4 scale-95'
+                    : 'opacity-100 translate-y-0 scale-100'
                   : 'opacity-0 translate-y-12'
               }`}
               style={{ 
-                transitionDelay: isVisible ? `${index * 100}ms` : '0ms'
+                transitionProperty: 'opacity, transform',
+                transitionDuration: '400ms',
+                transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+                transitionDelay: isVisible && !isTransitioning ? `${index * 100}ms` : '0ms'
               }}
             >
               {/* Quote Icon */}
@@ -257,8 +293,17 @@ const TestimonialsSection = () => {
           ))}
         </div>
 
-        {/* CTA */}
-        <div className={`text-center mt-12 transition-all duration-700 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+        {/* CTA Buttons */}
+        <div className={`flex flex-col sm:flex-row items-center justify-center gap-4 mt-12 transition-all duration-700 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <button
+            onClick={loadNewTestimonials}
+            disabled={isTransitioning}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary/10 border border-primary/20 hover:bg-primary/20 hover:border-primary/40 transition-all text-primary font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${isSpinning ? 'animate-spin' : ''}`} />
+            Ver mais depoimentos
+          </button>
+          
           <a
             href="https://g.page/r/CTkTpXB1m13mEBI/review"
             target="_blank"
@@ -283,7 +328,7 @@ const TestimonialsSection = () => {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            Ver todas as avaliações no Google
+            Ver todas no Google
           </a>
         </div>
       </div>
