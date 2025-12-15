@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Star, Quote, RefreshCw } from "lucide-react";
+import { Star, Quote, RefreshCw, Pause, Play } from "lucide-react";
 
 interface Testimonial {
   id: string;
@@ -118,12 +118,17 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
+const AUTO_ROTATE_INTERVAL = 8000; // 8 seconds
+
 const TestimonialsSection = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [displayedTestimonials, setDisplayedTestimonials] = useState<Testimonial[]>([]);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const autoRotateRef = useRef<NodeJS.Timeout | null>(null);
 
   // Shuffle and select 3 testimonials on mount
   useEffect(() => {
@@ -166,6 +171,31 @@ const TestimonialsSection = () => {
       }, 400);
     }, 300);
   }, [displayedTestimonials, isTransitioning]);
+
+  // Auto-rotate carousel
+  useEffect(() => {
+    if (!isVisible || isPaused || isHovered || isTransitioning) {
+      if (autoRotateRef.current) {
+        clearInterval(autoRotateRef.current);
+        autoRotateRef.current = null;
+      }
+      return;
+    }
+
+    autoRotateRef.current = setInterval(() => {
+      loadNewTestimonials();
+    }, AUTO_ROTATE_INTERVAL);
+
+    return () => {
+      if (autoRotateRef.current) {
+        clearInterval(autoRotateRef.current);
+      }
+    };
+  }, [isVisible, isPaused, isHovered, isTransitioning, loadNewTestimonials]);
+
+  const togglePause = useCallback(() => {
+    setIsPaused(prev => !prev);
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -217,7 +247,11 @@ const TestimonialsSection = () => {
         </div>
 
         {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
           {displayedTestimonials.map((testimonial, index) => (
             <div
               key={testimonial.id}
@@ -295,6 +329,24 @@ const TestimonialsSection = () => {
 
         {/* CTA Buttons */}
         <div className={`flex flex-col sm:flex-row items-center justify-center gap-4 mt-12 transition-all duration-700 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <button
+            onClick={togglePause}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 border border-border hover:bg-muted transition-all text-muted-foreground text-sm"
+            title={isPaused ? "Retomar rotação automática" : "Pausar rotação automática"}
+          >
+            {isPaused ? (
+              <>
+                <Play className="w-4 h-4" />
+                <span className="hidden sm:inline">Retomar</span>
+              </>
+            ) : (
+              <>
+                <Pause className="w-4 h-4" />
+                <span className="hidden sm:inline">Pausar</span>
+              </>
+            )}
+          </button>
+          
           <button
             onClick={loadNewTestimonials}
             disabled={isTransitioning}
