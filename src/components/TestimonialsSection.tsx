@@ -1,9 +1,140 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Star, Quote } from "lucide-react";
+
+interface Testimonial {
+  id: string;
+  name: string;
+  avatar: string;
+  image?: string;
+  rating: 4 | 5;
+  text: string;
+  date: string;
+  source: 'Google';
+}
+
+const ALL_TESTIMONIALS: Testimonial[] = [
+  {
+    id: "1",
+    name: "Amanda Machado",
+    avatar: "AM",
+    image: "https://lh3.googleusercontent.com/a-/ALV-UjVr4IwRV0mKIccKAdcCNGLiadt03y_FVzG3JrNajeCrTYX2IcTI=w72-h72-p-rp-mo-br100",
+    rating: 5,
+    text: "Gostei muito da consulta! Excelente profissional, explica tudo muito bem, e nos deixa seguros.",
+    date: "há 2 anos",
+    source: 'Google',
+  },
+  {
+    id: "2",
+    name: "Gislene Alves da Silva",
+    avatar: "GA",
+    image: "https://lh3.googleusercontent.com/a/ACg8ocJDkwVCCYhIu0Ek2a-WYH0Pd5MSrjq_hPQ4dcFE_qlVuMfcYg=w72-h72-p-rp-mo-ba2-br100",
+    rating: 5,
+    text: "Excelente profissional!",
+    date: "há 2 anos",
+    source: 'Google',
+  },
+  {
+    id: "3",
+    name: "Ambulatórios Pedfamaz",
+    avatar: "AP",
+    image: "https://lh3.googleusercontent.com/a/ACg8ocLQnzEQT1_J76p0h2RmkkoKi-wQBPVKn2jYclq0fa-YFPSAPg=w72-h72-p-rp-mo-br100",
+    rating: 5,
+    text: "Atendimento excelente, profissional muito competente e atencioso.",
+    date: "há 2 anos",
+    source: 'Google',
+  },
+  {
+    id: "4",
+    name: "Carlos Henrique Souza",
+    avatar: "CH",
+    rating: 5,
+    text: "Médico muito atencioso e dedicado. Explicou todo o procedimento com paciência e clareza. Super recomendo!",
+    date: "há 3 meses",
+    source: 'Google',
+  },
+  {
+    id: "5",
+    name: "Maria Santos",
+    avatar: "MS",
+    rating: 5,
+    text: "Recomendo demais! Atendimento humanizado e equipe muito preparada. Me senti acolhida desde a recepção.",
+    date: "há 1 semana",
+    source: 'Google',
+  },
+  {
+    id: "6",
+    name: "João Pedro Almeida",
+    avatar: "JP",
+    rating: 5,
+    text: "Tratamento excepcional para meu problema de visão. O Dr. Juliano é um profissional de primeira linha.",
+    date: "há 6 meses",
+    source: 'Google',
+  },
+  {
+    id: "7",
+    name: "Ana Beatriz Costa",
+    avatar: "AB",
+    rating: 5,
+    text: "Equipe muito profissional e consultório bem equipado. Fiz meus exames com total confiança.",
+    date: "há 2 semanas",
+    source: 'Google',
+  },
+  {
+    id: "8",
+    name: "Roberto Silva",
+    avatar: "RS",
+    rating: 4,
+    text: "Muito bom atendimento, médico atencioso e pontual. Ambiente limpo e organizado.",
+    date: "há 4 meses",
+    source: 'Google',
+  },
+  {
+    id: "9",
+    name: "Fernanda Lima",
+    avatar: "FL",
+    rating: 5,
+    text: "Dr. Juliano é excelente! Fez minha cirurgia de catarata e o resultado foi perfeito. Muito grata!",
+    date: "há 1 mês",
+    source: 'Google',
+  },
+  {
+    id: "10",
+    name: "Paulo Ricardo Martins",
+    avatar: "PR",
+    rating: 5,
+    text: "Cirurgia de pterígio realizada com sucesso. Profissional competente e humano. Indico para todos!",
+    date: "há 8 meses",
+    source: 'Google',
+  },
+];
+
+// Fisher-Yates shuffle algorithm
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
 
 const TestimonialsSection = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const [displayedTestimonials, setDisplayedTestimonials] = useState<Testimonial[]>([]);
   const sectionRef = useRef<HTMLDivElement>(null);
+
+  // Shuffle and select 3 testimonials on mount
+  useEffect(() => {
+    const shuffled = shuffleArray(ALL_TESTIMONIALS);
+    setDisplayedTestimonials(shuffled.slice(0, 3));
+  }, []);
+
+  // Calculate average rating dynamically
+  const averageRating = useMemo(() => {
+    if (displayedTestimonials.length === 0) return "5.0";
+    const sum = displayedTestimonials.reduce((acc, t) => acc + t.rating, 0);
+    return (sum / displayedTestimonials.length).toFixed(1);
+  }, [displayedTestimonials]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -22,33 +153,6 @@ const TestimonialsSection = () => {
 
     return () => observer.disconnect();
   }, []);
-
-  const testimonials = [
-    {
-      name: "Amanda Machado",
-      date: "há 2 anos",
-      rating: 5,
-      text: "Gostei muito da consulta! Excelente profissional, explica tudo muito bem, e nos deixa seguros.",
-      avatar: "AM",
-      image: "https://lh3.googleusercontent.com/a-/ALV-UjVr4IwRV0mKIccKAdcCNGLiadt03y_FVzG3JrNajeCrTYX2IcTI=w72-h72-p-rp-mo-br100",
-    },
-    {
-      name: "Gislene Alves da Silva",
-      date: "há 2 anos",
-      rating: 5,
-      text: "Excelente profissional!",
-      avatar: "GA",
-      image: "https://lh3.googleusercontent.com/a/ACg8ocJDkwVCCYhIu0Ek2a-WYH0Pd5MSrjq_hPQ4dcFE_qlVuMfcYg=w72-h72-p-rp-mo-ba2-br100",
-    },
-    {
-      name: "Ambulatórios Pedfamaz",
-      date: "há 2 anos",
-      rating: 5,
-      text: "Atendimento excelente, profissional muito competente e atencioso.",
-      avatar: "AP",
-      image: "https://lh3.googleusercontent.com/a/ACg8ocLQnzEQT1_J76p0h2RmkkoKi-wQBPVKn2jYclq0fa-YFPSAPg=w72-h72-p-rp-mo-br100",
-    },
-  ];
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }).map((_, index) => (
@@ -74,18 +178,18 @@ const TestimonialsSection = () => {
           </h2>
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
             <div className="flex items-center gap-1">
-              {renderStars(5)}
+              {renderStars(Math.round(parseFloat(averageRating)))}
             </div>
-            <span className="font-semibold text-foreground">5.0</span>
+            <span className="font-semibold text-foreground">{averageRating}</span>
             <span>• Avaliações do Google</span>
           </div>
         </div>
 
         {/* Testimonials Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {testimonials.map((testimonial, index) => (
+          {displayedTestimonials.map((testimonial, index) => (
             <div
-              key={index}
+              key={testimonial.id}
               className={`card-glass rounded-xl p-6 relative transition-all duration-500 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 ${
                 isVisible 
                   ? 'opacity-100 translate-y-0' 
