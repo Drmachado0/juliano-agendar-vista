@@ -10,16 +10,19 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarMensagemWhatsApp, enviarImagemWhatsApp } from "@/services/integracoes";
-import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users, Pause, Play, XCircle, Phone } from "lucide-react";
+import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Shuffle } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Clock, History } from "lucide-react";
+import { History } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface PacienteAtendido {
   id: string;
@@ -39,7 +42,6 @@ interface HistoricoAvaliacao {
   agendamentos: { nome_completo: string } | null;
 }
 
-// Tipos para integração com n8n (SaudeViaNet)
 interface PacienteN8n {
   id: string;
   nome: string;
@@ -57,6 +59,58 @@ interface N8nResponse {
   pacientes: PacienteN8n[];
 }
 
+interface LogEnvio {
+  timestamp: Date;
+  telefone: string;
+  nome: string;
+  delayAplicado: number;
+  mensagemGerada: string;
+  status: 'sucesso' | 'falha' | 'bloqueado';
+  motivo?: string;
+}
+
+type EstadoEnvio = 'idle' | 'enviando' | 'aguardando_intervalo' | 'pausa_seguranca' | 'interrompido_limite';
+
+// ===== CONSTANTES DE SEGURANÇA (Hard Rules - NÃO EDITÁVEIS) =====
+const LIMITE_SESSAO = 40;
+const LIMITE_DIARIO = 100;
+const HORARIO_INICIO = 9;
+const HORARIO_FIM = 18;
+
+// ===== SISTEMA DE VARIAÇÃO DE MENSAGENS =====
+const SAUDACOES = [
+  "Olá", "Oi", "Olá 😊", "Oi 👋", "Olá!", "Oi!", "E aí"
+];
+
+const BLOCOS_ABERTURA = [
+  "Foi um prazer atendê-lo(a).",
+  "Agradeço por ter nos escolhido.",
+  "Espero que esteja tudo bem com você.",
+  "Foi muito bom ter você conosco.",
+  "Obrigado pela confiança no nosso trabalho.",
+  "Esperamos que tenha gostado do atendimento."
+];
+
+const BLOCOS_EXPLICATIVOS = [
+  "Sua opinião é muito importante para continuarmos oferecendo um atendimento de qualidade.",
+  "Sua avaliação nos ajuda a melhorar cada vez mais.",
+  "Gostaria de saber como foi sua experiência conosco.",
+  "Seu feedback é essencial para nossa melhoria contínua.",
+  "Sua avaliação faz toda diferença para nós.",
+  "Queremos saber se você ficou satisfeito(a) com nosso serviço."
+];
+
+const CTAS = [
+  "Se puder, deixe sua avaliação clicando no link abaixo:",
+  "Ficaria muito grato se pudesse nos avaliar:",
+  "Pode nos deixar sua avaliação aqui:",
+  "Compartilhe sua experiência conosco:",
+  "Deixe sua opinião no link:",
+  "Avalie nosso atendimento:"
+];
+
+const EMOJIS_OPCIONAIS = ["💙", "🙏", "✨", "❤️", "👨‍⚕️", "⭐", ""];
+
 const TEMPLATE_PADRAO = `Olá, {{nome}}! 👋
 
 Foi um prazer atendê-lo(a). Sua opinião é muito importante para continuarmos oferecendo um atendimento de qualidade e em constante melhoria.
@@ -68,8 +122,45 @@ Agradeço desde já pela confiança. 💙
 Dr. Juliano Machado
 Oftalmologia`;
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const N8N_WEBHOOK_URL = "https://juliano-n8n.cloudfy.live/webhook/avaliacao-google-lovable";
+
+// Função para gerar mensagem variada
+const gerarMensagemVariada = (nome: string, ultimaMensagem?: string): string => {
+  let mensagem = '';
+  let tentativas = 0;
+  
+  do {
+    const saudacao = SAUDACOES[Math.floor(Math.random() * SAUDACOES.length)];
+    const abertura = BLOCOS_ABERTURA[Math.floor(Math.random() * BLOCOS_ABERTURA.length)];
+    const explicativo = BLOCOS_EXPLICATIVOS[Math.floor(Math.random() * BLOCOS_EXPLICATIVOS.length)];
+    const cta = CTAS[Math.floor(Math.random() * CTAS.length)];
+    
+    // 0-2 emojis opcionais
+    const qtdEmojis = Math.floor(Math.random() * 3);
+    const emojisSet = new Set<string>();
+    while (emojisSet.size < qtdEmojis) {
+      const emoji = EMOJIS_OPCIONAIS[Math.floor(Math.random() * EMOJIS_OPCIONAIS.length)];
+      if (emoji) emojisSet.add(emoji);
+    }
+    const emojis = Array.from(emojisSet).join(' ');
+    
+    mensagem = `${saudacao}, ${nome}!
+
+${abertura} ${explicativo}
+
+${cta}
+👉 https://g.page/r/CTkTpXB1m13mEBM/review
+
+Agradeço desde já pela confiança.${emojis ? ` ${emojis}` : ''}
+Dr. Juliano Machado
+Oftalmologia`;
+    
+    tentativas++;
+  } while (mensagem === ultimaMensagem && tentativas < 10);
+  
+  return mensagem;
+};
 
 const Avaliacoes = () => {
   const [template, setTemplate] = useState(TEMPLATE_PADRAO);
@@ -103,13 +194,62 @@ const Avaliacoes = () => {
   const [progressoLote, setProgressoLote] = useState({ enviados: 0, total: 0, sucesso: 0, falha: 0 });
   const [telefonesDiarioJaEnviados, setTelefonesDiarioJaEnviados] = useState<Set<string>>(new Set());
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [intervaloEnvio, setIntervaloEnvio] = useState(15); // segundos
+
+  // ===== NOVOS ESTADOS PARA DISPARO SEGURO =====
+  const [configAvancadaAberta, setConfigAvancadaAberta] = useState(false);
+  
+  // Intervalos aleatórios
+  const [intervaloMin, setIntervaloMin] = useState(45);
+  const [intervaloMax, setIntervaloMax] = useState(120);
+  
+  // Pausas estratégicas
+  const [pausarAposEnvios, setPausarAposEnvios] = useState(10);
+  const [pausaMinMin, setPausaMinMin] = useState(5);
+  const [pausaMaxMin, setPausaMaxMin] = useState(10);
+  
+  // Variação de texto
+  const [variacaoTextoAtiva, setVariacaoTextoAtiva] = useState(true);
+  const [mensagemPreviewVariada, setMensagemPreviewVariada] = useState(() => gerarMensagemVariada("Maria"));
+  
+  // Tracking de limites
+  const [estadoEnvio, setEstadoEnvio] = useState<EstadoEnvio>('idle');
+  const [enviosSessao, setEnviosSessao] = useState(0);
+  const [enviosDiarios, setEnviosDiarios] = useState(0);
+  const [logsEnvio, setLogsEnvio] = useState<LogEnvio[]>([]);
+  
+  // Contagem regressiva visual
+  const [tempoRestante, setTempoRestante] = useState(0);
+  const [pausaRestante, setPausaRestante] = useState(0);
 
   // Função para tocar som de notificação
   const tocarNotificacao = () => {
     const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQQAPlrT6NtqFgA0o+bWcQwAbMzV3YccADWi5ONvGQA0o+bWcQwAbMzV3YccAA==');
-    audio.play().catch(() => {}); // Ignorar erros se áudio não for suportado
+    audio.play().catch(() => {});
   };
+
+  // Carregar limites diários do localStorage
+  useEffect(() => {
+    const hoje = new Date().toISOString().split('T')[0];
+    const dados = localStorage.getItem('avaliacoes_limites_diarios');
+    if (dados) {
+      const parsed = JSON.parse(dados);
+      if (parsed.data === hoje) {
+        setEnviosDiarios(parsed.enviados);
+      } else {
+        // Reset para novo dia
+        localStorage.setItem('avaliacoes_limites_diarios', JSON.stringify({ data: hoje, enviados: 0 }));
+      }
+    }
+  }, []);
+
+  // Persistir limites diários
+  useEffect(() => {
+    const hoje = new Date().toISOString().split('T')[0];
+    localStorage.setItem('avaliacoes_limites_diarios', JSON.stringify({
+      data: hoje,
+      enviados: enviosDiarios
+    }));
+  }, [enviosDiarios]);
 
   useEffect(() => {
     carregarPacientesAtendidos();
@@ -117,17 +257,50 @@ const Avaliacoes = () => {
     carregarHistoricoAvaliacoes();
   }, []);
 
+  // Atualizar preview de mensagem variada
+  const gerarNovoPreview = () => {
+    setMensagemPreviewVariada(gerarMensagemVariada("Maria", mensagemPreviewVariada));
+  };
+
+  // Validar limites de envio
+  const validarLimitesEnvio = (): { permitido: boolean; motivo?: string } => {
+    const agora = new Date();
+    const hora = agora.getHours();
+    
+    if (hora < HORARIO_INICIO || hora >= HORARIO_FIM) {
+      return { 
+        permitido: false, 
+        motivo: `Envio permitido apenas entre ${HORARIO_INICIO}h e ${HORARIO_FIM}h` 
+      };
+    }
+    
+    if (enviosSessao >= LIMITE_SESSAO) {
+      return { 
+        permitido: false, 
+        motivo: `Limite de ${LIMITE_SESSAO} mensagens por sessão atingido` 
+      };
+    }
+    
+    if (enviosDiarios >= LIMITE_DIARIO) {
+      return { 
+        permitido: false, 
+        motivo: `Limite diário de ${LIMITE_DIARIO} mensagens atingido` 
+      };
+    }
+    
+    return { permitido: true };
+  };
+
   const carregarPacientesAtendidos = async () => {
     setLoadingPacientes(true);
     try {
-      // D+1: Buscar agendamentos cuja data já passou (consultas realizadas)
-      const hoje = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const hoje = new Date().toISOString().split('T')[0];
       
       const { data, error } = await supabase
         .from("agendamentos")
         .select("id, nome_completo, telefone_whatsapp, data_agendamento, hora_agendamento, local_atendimento")
-        .lt("data_agendamento", hoje) // Consultas que já aconteceram
-        .not("data_agendamento", "is", null) // Ignorar leads incompletos
+        .lt("data_agendamento", hoje)
+        .not("data_agendamento", "is", null)
         .order("data_agendamento", { ascending: false })
         .limit(50);
 
@@ -207,7 +380,6 @@ const Avaliacoes = () => {
     const dataFormatada = format(dataFiltro, 'yyyy-MM-dd');
 
     try {
-      // Buscar pacientes do n8n
       const response = await fetch(N8N_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -236,18 +408,15 @@ const Avaliacoes = () => {
         return;
       }
 
-      // Buscar telefones que já receberam avaliação
       const { data: mensagensEnviadas } = await supabase
         .from("mensagens_whatsapp")
         .select("telefone")
         .eq("tipo_mensagem", "avaliacao");
 
-      // Criar Set com últimos 8 dígitos para matching flexível
       const telefonesJaEnviados = new Set(
         (mensagensEnviadas || []).map(m => m.telefone.replace(/\D/g, '').slice(-8))
       );
 
-      // Filtrar pacientes que ainda NÃO receberam avaliação
       const pacientesPendentes = pacientesN8n.filter(p => {
         const telefoneNormalizado = p.telefone.replace(/\D/g, '').slice(-8);
         return !telefonesJaEnviados.has(telefoneNormalizado);
@@ -281,6 +450,7 @@ const Avaliacoes = () => {
     }
   };
 
+  // ===== FUNÇÃO DE ENVIO EM LOTE APRIMORADA =====
   const enviarEmLote = async () => {
     const pacientesSelecionados = pacientesLote.filter(p => selectedIds.has(p.id));
 
@@ -293,11 +463,26 @@ const Avaliacoes = () => {
       return;
     }
 
+    // Validar limites iniciais
+    const validacao = validarLimitesEnvio();
+    if (!validacao.permitido) {
+      toast({ 
+        title: "Bloqueado por segurança", 
+        description: validacao.motivo, 
+        variant: "destructive" 
+      });
+      setEstadoEnvio('interrompido_limite');
+      return;
+    }
+
     setEnviandoLote(true);
+    setEstadoEnvio('enviando');
     setProgressoLote({ enviados: 0, total: pacientesSelecionados.length, sucesso: 0, falha: 0 });
 
     let sucessos = 0;
     let falhas = 0;
+    let ultimaMensagem = '';
+    let contadorPausa = 0;
 
     for (let i = 0; i < pacientesSelecionados.length; i++) {
       // Verificar se foi cancelado
@@ -314,23 +499,115 @@ const Avaliacoes = () => {
         break;
       }
 
+      // Revalidar limites a cada envio
+      const revalidacao = validarLimitesEnvio();
+      if (!revalidacao.permitido) {
+        setEstadoEnvio('interrompido_limite');
+        toast({
+          title: "Limite atingido",
+          description: revalidacao.motivo,
+          variant: "destructive",
+        });
+        
+        // Registrar log
+        setLogsEnvio(prev => [...prev, {
+          timestamp: new Date(),
+          telefone: pacientesSelecionados[i].telefone,
+          nome: pacientesSelecionados[i].primeiro_nome,
+          delayAplicado: 0,
+          mensagemGerada: '',
+          status: 'bloqueado',
+          motivo: revalidacao.motivo
+        }]);
+        break;
+      }
+
       const paciente = pacientesSelecionados[i];
+      
+      // Gerar mensagem (variada ou template fixo)
+      const mensagem = variacaoTextoAtiva 
+        ? gerarMensagemVariada(paciente.primeiro_nome, ultimaMensagem)
+        : renderizarMensagem(paciente.primeiro_nome);
+      
+      ultimaMensagem = mensagem;
+
+      setEstadoEnvio('enviando');
 
       try {
-        // Usa primeiro_nome para personalização amigável
-        await enviarAvaliacaoSequencial(paciente.telefone, paciente.primeiro_nome);
+        await enviarAvaliacaoSequencial(paciente.telefone, paciente.primeiro_nome, undefined, mensagem);
         setTelefonesDiarioJaEnviados(prev => new Set(prev).add(paciente.telefone));
         sucessos++;
+        
+        // Incrementar contadores
+        setEnviosSessao(prev => prev + 1);
+        setEnviosDiarios(prev => prev + 1);
+        contadorPausa++;
+
+        // Registrar log de sucesso
+        setLogsEnvio(prev => [...prev, {
+          timestamp: new Date(),
+          telefone: paciente.telefone,
+          nome: paciente.primeiro_nome,
+          delayAplicado: 0,
+          mensagemGerada: mensagem.slice(0, 100) + '...',
+          status: 'sucesso'
+        }]);
+
       } catch (error) {
         console.error(`Erro ao enviar para ${paciente.nome}:`, error);
         falhas++;
+        
+        // Registrar log de falha
+        setLogsEnvio(prev => [...prev, {
+          timestamp: new Date(),
+          telefone: paciente.telefone,
+          nome: paciente.primeiro_nome,
+          delayAplicado: 0,
+          mensagemGerada: mensagem.slice(0, 100) + '...',
+          status: 'falha',
+          motivo: error instanceof Error ? error.message : 'Erro desconhecido'
+        }]);
       }
 
       setProgressoLote({ enviados: i + 1, total: pacientesSelecionados.length, sucesso: sucessos, falha: falhas });
 
-      // Aguardar intervalo configurado entre envios (exceto no último)
-      if (i < pacientesSelecionados.length - 1 && !canceladoRef.current) {
-        await new Promise(resolve => setTimeout(resolve, intervaloEnvio * 1000));
+      // Verificar se precisa de pausa estratégica
+      if (contadorPausa >= pausarAposEnvios && i < pacientesSelecionados.length - 1 && !canceladoRef.current) {
+        setEstadoEnvio('pausa_seguranca');
+        
+        // Calcular pausa aleatória
+        const pausaMs = (pausaMinMin + Math.random() * (pausaMaxMin - pausaMinMin)) * 60 * 1000;
+        const pausaSegundos = Math.round(pausaMs / 1000);
+        
+        // Countdown da pausa
+        for (let s = pausaSegundos; s > 0; s--) {
+          if (canceladoRef.current) break;
+          while (pausadoRef.current && !canceladoRef.current) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+          setPausaRestante(s);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        setPausaRestante(0);
+        contadorPausa = 0;
+        
+      } else if (i < pacientesSelecionados.length - 1 && !canceladoRef.current) {
+        // Intervalo aleatório normal
+        setEstadoEnvio('aguardando_intervalo');
+        
+        const delayMs = (intervaloMin + Math.random() * (intervaloMax - intervaloMin)) * 1000;
+        const delaySegundos = Math.round(delayMs / 1000);
+        
+        // Countdown do intervalo
+        for (let s = delaySegundos; s > 0; s--) {
+          if (canceladoRef.current) break;
+          while (pausadoRef.current && !canceladoRef.current) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+          setTempoRestante(s);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        setTempoRestante(0);
       }
     }
 
@@ -339,9 +616,9 @@ const Avaliacoes = () => {
     setPausado(false);
     pausadoRef.current = false;
     canceladoRef.current = false;
+    setEstadoEnvio('idle');
     carregarHistoricoAvaliacoes();
 
-    // Tocar notificação sonora
     tocarNotificacao();
 
     toast({
@@ -392,7 +669,6 @@ const Avaliacoes = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Arquivo inválido",
@@ -402,7 +678,6 @@ const Avaliacoes = () => {
       return;
     }
 
-    // Validate file size
     if (file.size > MAX_IMAGE_SIZE) {
       toast({
         title: "Arquivo muito grande",
@@ -414,11 +689,9 @@ const Avaliacoes = () => {
 
     setImagemNome(file.name);
 
-    // Create preview
     const previewUrl = URL.createObjectURL(file);
     setImagemPreview(previewUrl);
 
-    // Convert to base64
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = reader.result as string;
@@ -439,52 +712,24 @@ const Avaliacoes = () => {
   const enviarAvaliacaoSequencial = async (
     telefone: string,
     nome: string,
-    agendamentoId?: string
+    agendamentoId?: string,
+    mensagemCustom?: string
   ): Promise<boolean> => {
     const telefoneNumeros = telefone.replace(/\D/g, "");
-    const mensagem = renderizarMensagem(nome);
-
-    console.log("[Avaliacoes] Iniciando envio de avaliação", {
-      telefoneOriginal: telefone,
-      telefoneNumeros,
-      nome,
-      agendamentoId,
-      temImagem: !!imagemBase64,
-    });
+    const mensagem = mensagemCustom || renderizarMensagem(nome);
 
     try {
       if (imagemBase64) {
-        // Enviar imagem COM o texto como caption (1 única chamada)
-        console.log("[Avaliacoes] Enviando imagem + caption via WhatsApp", {
-          tamanhoBase64: imagemBase64.length,
-          captionPreview: mensagem.length > 50 ? mensagem.slice(0, 47) + "..." : mensagem,
-        });
-
         const resultImagem = await enviarImagemWhatsApp(telefoneNumeros, imagemBase64, mensagem);
-        console.log("[Avaliacoes] Resultado envio imagem+caption:", resultImagem);
-
         if (!resultImagem.success) {
-          console.error("[Avaliacoes] Falha no envio:", resultImagem.error);
           throw new Error(resultImagem.error || "Erro ao enviar imagem com texto");
         }
       } else {
-        // Sem imagem: enviar apenas texto
-        console.log("[Avaliacoes] Enviando apenas texto via WhatsApp", {
-          telefoneNumeros,
-          mensagemPreview: mensagem.length > 50 ? mensagem.slice(0, 47) + "..." : mensagem,
-        });
-
         const resultTexto = await enviarMensagemWhatsApp(telefoneNumeros, mensagem);
-        console.log("[Avaliacoes] Resultado envio texto:", resultTexto);
-
         if (!resultTexto.success) {
-          console.error("[Avaliacoes] Falha no envio do texto:", resultTexto.error);
           throw new Error(resultTexto.error || "Erro ao enviar mensagem");
         }
       }
-
-      // Registrar no banco
-      console.log("[Avaliacoes] Registrando mensagem de avaliação no banco...");
 
       await supabase.from("mensagens_whatsapp").insert({
         telefone: telefoneNumeros,
@@ -495,7 +740,6 @@ const Avaliacoes = () => {
         status_envio: "enviado",
       });
 
-      console.log("[Avaliacoes] Envio concluído com sucesso");
       return true;
     } catch (error) {
       console.error("[Avaliacoes] Erro no envio:", error);
@@ -521,7 +765,7 @@ const Avaliacoes = () => {
         title: "Avaliação enviada!",
         description: `Mensagem enviada para ${nomeAvulso}.`,
       });
-      carregarHistoricoAvaliacoes(); // Atualiza o histórico
+      carregarHistoricoAvaliacoes();
 
       setNomeAvulso("");
       setTelefoneAvulso("");
@@ -548,7 +792,7 @@ const Avaliacoes = () => {
       );
 
       setAvaliacoesEnviadas(prev => new Set(prev).add(paciente.id));
-      carregarHistoricoAvaliacoes(); // Atualiza o histórico
+      carregarHistoricoAvaliacoes();
 
       toast({
         title: "Avaliação enviada!",
@@ -575,6 +819,42 @@ const Avaliacoes = () => {
     p.telefone_whatsapp.includes(busca)
   );
 
+  // Renderizar estado de envio
+  const renderEstadoEnvio = () => {
+    switch (estadoEnvio) {
+      case 'enviando':
+        return (
+          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+            <Send className="h-4 w-4 animate-pulse" />
+            <span>Enviando mensagem {progressoLote.enviados + 1} de {progressoLote.total}...</span>
+          </div>
+        );
+      case 'aguardando_intervalo':
+        return (
+          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+            <Clock className="h-4 w-4 animate-spin" />
+            <span>Aguardando intervalo ({tempoRestante}s restantes)...</span>
+          </div>
+        );
+      case 'pausa_seguranca':
+        return (
+          <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
+            <Coffee className="h-4 w-4" />
+            <span>Pausa de segurança ({Math.floor(pausaRestante / 60)}min {pausaRestante % 60}s)...</span>
+          </div>
+        );
+      case 'interrompido_limite':
+        return (
+          <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+            <AlertTriangle className="h-4 w-4" />
+            <span>Interrompido por limite de segurança</span>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -591,19 +871,19 @@ const Avaliacoes = () => {
           </div>
         </div>
 
-        {/* ===== NOVA SEÇÃO: Disparo em Lote ===== */}
+        {/* ===== SEÇÃO: Disparo em Lote Seguro ===== */}
         <Card className="border-yellow-500/30 bg-gradient-to-r from-card to-yellow-500/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
               <Zap className="h-5 w-5" />
-              Disparo em Lote
+              Disparo em Lote Seguro
             </CardTitle>
             <CardDescription>
-              Busque pacientes atendidos no SaudeViaNet por data e envie avaliações em massa
+              Envie avaliações em massa com proteção anti-bloqueio integrada
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Seletor de Data + Intervalo + Botão Buscar */}
+            {/* Seletor de Data + Botão Buscar */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <Label className="whitespace-nowrap">Data de Atendimento:</Label>
@@ -629,20 +909,6 @@ const Avaliacoes = () => {
                   </PopoverContent>
                 </Popover>
               </div>
-              
-              <div className="flex items-center gap-2">
-                <Label htmlFor="intervalo" className="whitespace-nowrap">Intervalo:</Label>
-                <Input
-                  id="intervalo"
-                  type="number"
-                  min={5}
-                  max={60}
-                  value={intervaloEnvio}
-                  onChange={(e) => setIntervaloEnvio(Math.max(5, Math.min(60, Number(e.target.value))))}
-                  className="w-20"
-                />
-                <span className="text-sm text-muted-foreground">seg</span>
-              </div>
 
               <Button 
                 onClick={buscarPacientesN8n} 
@@ -658,15 +924,216 @@ const Avaliacoes = () => {
               </Button>
             </div>
 
-            {/* Instrução */}
-            <Alert className="border-yellow-500/30 bg-yellow-500/10">
-              <Zap className="h-4 w-4 text-yellow-600" />
-              <AlertDescription className="text-sm">
-                Selecione a data e clique em "Buscar Pacientes". Após revisar a lista, 
-                selecione os pacientes e clique em "Enviar". O envio respeita um 
-                intervalo de <strong>{intervaloEnvio} segundos</strong> entre mensagens para evitar bloqueio.
-              </AlertDescription>
-            </Alert>
+            {/* ===== SEÇÃO DE SEGURANÇA (Read-only) ===== */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
+              <TooltipProvider>
+                <div className="text-center">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex flex-col items-center gap-1 cursor-help">
+                        <Shield className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-xs text-muted-foreground">Sessão</span>
+                        <span className="font-bold text-sm">{enviosSessao}/{LIMITE_SESSAO}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Máximo {LIMITE_SESSAO} mensagens por sessão</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                
+                <div className="text-center">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex flex-col items-center gap-1 cursor-help">
+                        <CalendarIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-xs text-muted-foreground">Diário</span>
+                        <span className="font-bold text-sm">{enviosDiarios}/{LIMITE_DIARIO}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Máximo {LIMITE_DIARIO} mensagens por dia</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                
+                <div className="text-center">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex flex-col items-center gap-1 cursor-help">
+                        <Clock className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-xs text-muted-foreground">Horário</span>
+                        <span className="font-bold text-sm">{HORARIO_INICIO}h-{HORARIO_FIM}h</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Envio apenas em horário comercial</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                
+                <div className="text-center">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex flex-col items-center gap-1 cursor-help">
+                        <Shuffle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-xs text-muted-foreground">Variação</span>
+                        <Badge variant={variacaoTextoAtiva ? "default" : "secondary"} className="text-xs">
+                          {variacaoTextoAtiva ? "Ativa" : "Inativa"}
+                        </Badge>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Mensagens únicas para cada paciente</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TooltipProvider>
+            </div>
+
+            {/* ===== CONFIGURAÇÕES AVANÇADAS (Colapsável) ===== */}
+            <Collapsible open={configAvancadaAberta} onOpenChange={setConfigAvancadaAberta}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  <span className="flex items-center gap-2">
+                    <Settings2 className="h-4 w-4" />
+                    Configurações Avançadas de Envio
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {configAvancadaAberta ? "Fechar" : "Abrir"}
+                  </span>
+                </Button>
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent className="mt-4 space-y-6 p-4 rounded-xl border bg-muted/30">
+                {/* Intervalos Aleatórios */}
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2 text-sm font-semibold">
+                    <Clock className="h-4 w-4" />
+                    Intervalos Aleatórios entre Mensagens
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    O sistema sorteia um delay aleatório entre esses valores para simular comportamento humano
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="intervaloMin" className="text-xs whitespace-nowrap">Mínimo:</Label>
+                      <Input
+                        id="intervaloMin"
+                        type="number"
+                        min={30}
+                        max={intervaloMax - 1}
+                        value={intervaloMin}
+                        onChange={(e) => setIntervaloMin(Math.max(30, Math.min(intervaloMax - 1, Number(e.target.value))))}
+                        className="w-20"
+                      />
+                      <span className="text-xs text-muted-foreground">seg</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="intervaloMax" className="text-xs whitespace-nowrap">Máximo:</Label>
+                      <Input
+                        id="intervaloMax"
+                        type="number"
+                        min={intervaloMin + 1}
+                        max={300}
+                        value={intervaloMax}
+                        onChange={(e) => setIntervaloMax(Math.max(intervaloMin + 1, Math.min(300, Number(e.target.value))))}
+                        className="w-20"
+                      />
+                      <span className="text-xs text-muted-foreground">seg</span>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Pausas Estratégicas */}
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2 text-sm font-semibold">
+                    <Coffee className="h-4 w-4" />
+                    Pausas Estratégicas
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    A cada X mensagens, o sistema faz uma pausa maior para evitar detecção
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="pausarApos" className="text-xs whitespace-nowrap">Pausar após:</Label>
+                      <Input
+                        id="pausarApos"
+                        type="number"
+                        min={5}
+                        max={20}
+                        value={pausarAposEnvios}
+                        onChange={(e) => setPausarAposEnvios(Math.max(5, Math.min(20, Number(e.target.value))))}
+                        className="w-16"
+                      />
+                      <span className="text-xs text-muted-foreground">msgs</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="pausaMin" className="text-xs whitespace-nowrap">Pausa mín:</Label>
+                      <Input
+                        id="pausaMin"
+                        type="number"
+                        min={1}
+                        max={pausaMaxMin - 1}
+                        value={pausaMinMin}
+                        onChange={(e) => setPausaMinMin(Math.max(1, Math.min(pausaMaxMin - 1, Number(e.target.value))))}
+                        className="w-16"
+                      />
+                      <span className="text-xs text-muted-foreground">min</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="pausaMax" className="text-xs whitespace-nowrap">Pausa máx:</Label>
+                      <Input
+                        id="pausaMax"
+                        type="number"
+                        min={pausaMinMin + 1}
+                        max={30}
+                        value={pausaMaxMin}
+                        onChange={(e) => setPausaMaxMin(Math.max(pausaMinMin + 1, Math.min(30, Number(e.target.value))))}
+                        className="w-16"
+                      />
+                      <span className="text-xs text-muted-foreground">min</span>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Variação de Texto */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2 text-sm font-semibold">
+                      <Shuffle className="h-4 w-4" />
+                      Variação Automática de Mensagens
+                    </Label>
+                    <Switch
+                      checked={variacaoTextoAtiva}
+                      onCheckedChange={setVariacaoTextoAtiva}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Gera mensagens únicas combinando diferentes saudações, textos e emojis. Nenhuma mensagem será igual à anterior.
+                  </p>
+                  
+                  {variacaoTextoAtiva && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs">Preview de mensagem gerada:</Label>
+                        <Button variant="ghost" size="sm" onClick={gerarNovoPreview}>
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                          Gerar novo exemplo
+                        </Button>
+                      </div>
+                      <div className="bg-background p-3 rounded-lg border text-sm whitespace-pre-wrap max-h-40 overflow-y-auto">
+                        {mensagemPreviewVariada}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Erro */}
             {erroLote && (
@@ -697,7 +1164,7 @@ const Avaliacoes = () => {
                   </div>
                 </div>
 
-                {/* Lista scrollável com visual aprimorado */}
+                {/* Lista scrollável */}
                 <ScrollArea className="h-72 border rounded-xl bg-gradient-to-b from-muted/20 to-transparent">
                   <div className="p-3 space-y-2">
                     {pacientesLote.map((paciente, index) => {
@@ -717,7 +1184,6 @@ const Avaliacoes = () => {
                             }
                           `}
                         >
-                          {/* Número do item */}
                           <div className={`
                             flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold
                             ${jaEnviou 
@@ -744,7 +1210,6 @@ const Avaliacoes = () => {
                             `}
                           />
                           
-                          {/* Avatar com inicial */}
                           <div className={`
                             flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold uppercase
                             ${jaEnviou 
@@ -765,12 +1230,7 @@ const Avaliacoes = () => {
                               {jaEnviou && (
                                 <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-xs px-2">
                                   <CheckCircle className="h-3 w-3 mr-1" />
-                                  Enviado agora
-                                </Badge>
-                              )}
-                              {isSelected && !jaEnviou && (
-                                <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30 text-xs px-2">
-                                  Selecionado
+                                  Enviado
                                 </Badge>
                               )}
                             </div>
@@ -791,19 +1251,12 @@ const Avaliacoes = () => {
                   </div>
                 </ScrollArea>
 
-                {/* Barra de progresso aprimorada */}
+                {/* Barra de progresso e estado */}
                 {enviandoLote && (
                   <div className="space-y-3 p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-amber-500/10 border border-amber-500/20">
+                    {/* Estado atual */}
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="relative">
-                          <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
-                          <div className="absolute inset-0 h-5 w-5 animate-ping opacity-30 bg-amber-500 rounded-full" />
-                        </div>
-                        <span className="font-medium text-foreground">
-                          {pausado ? "Envio pausado" : "Enviando mensagens..."}
-                        </span>
-                      </div>
+                      {renderEstadoEnvio()}
                       <Badge variant="outline" className="font-mono text-sm px-3 py-1">
                         {progressoLote.enviados} / {progressoLote.total}
                       </Badge>
@@ -813,10 +1266,6 @@ const Avaliacoes = () => {
                       <Progress 
                         value={(progressoLote.enviados / progressoLote.total) * 100} 
                         className="h-3 bg-amber-500/20"
-                      />
-                      <div 
-                        className="absolute inset-0 h-3 bg-gradient-to-r from-amber-500/0 via-white/30 to-amber-500/0 animate-pulse rounded-full"
-                        style={{ width: `${(progressoLote.enviados / progressoLote.total) * 100}%` }}
                       />
                     </div>
                     
@@ -833,26 +1282,11 @@ const Avaliacoes = () => {
                           </span>
                         )}
                       </div>
-                      
-                      {progressoLote.total > progressoLote.enviados && (
-                        <span className="text-muted-foreground flex items-center gap-1.5">
-                          <Clock className="h-4 w-4" />
-                          {(() => {
-                            const restantes = progressoLote.total - progressoLote.enviados;
-                            const segundosRestantes = restantes * intervaloEnvio;
-                            const minutos = Math.floor(segundosRestantes / 60);
-                            const segundos = segundosRestantes % 60;
-                            return minutos > 0 
-                              ? `~${minutos}min ${segundos}s`
-                              : `~${segundos}s`;
-                          })()}
-                        </span>
-                      )}
                     </div>
                   </div>
                 )}
 
-                {/* Botões de envio, pausar e cancelar */}
+                {/* Botões de envio */}
                 <div className="flex gap-2">
                   {enviandoLote && (
                     <>
@@ -933,7 +1367,10 @@ const Avaliacoes = () => {
                 Template da Mensagem
               </CardTitle>
               <CardDescription>
-                Personalize a mensagem que será enviada aos pacientes
+                {variacaoTextoAtiva 
+                  ? "Template usado quando variação está desativada ou para envios avulsos"
+                  : "Personalize a mensagem que será enviada aos pacientes"
+                }
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -941,7 +1378,7 @@ const Avaliacoes = () => {
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <ImagePlus className="h-4 w-4" />
-                  Imagem (enviada primeiro)
+                  Imagem (enviada com o texto)
                 </Label>
                 
                 {imagemPreview ? (
@@ -1068,7 +1505,7 @@ const Avaliacoes = () => {
               {imagemBase64 && (
                 <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground flex items-center gap-2">
                   <ImagePlus className="h-4 w-4" />
-                  Imagem será enviada antes do texto
+                  Imagem será enviada com o texto
                 </div>
               )}
 
