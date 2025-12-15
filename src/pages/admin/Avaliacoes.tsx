@@ -533,6 +533,23 @@ const Avaliacoes = () => {
 
       setEstadoEnvio('enviando');
 
+      // Calcular delay que será aplicado após este envio
+      let delayAplicadoSegundos = 0;
+      let isPausaEstrategica = false;
+      
+      if (i < pacientesSelecionados.length - 1) {
+        if (contadorPausa + 1 >= pausarAposEnvios) {
+          // Será pausa estratégica
+          isPausaEstrategica = true;
+          const pausaMs = (pausaMinMin + Math.random() * (pausaMaxMin - pausaMinMin)) * 60 * 1000;
+          delayAplicadoSegundos = Math.round(pausaMs / 1000);
+        } else {
+          // Será intervalo normal
+          const delayMs = (intervaloMin + Math.random() * (intervaloMax - intervaloMin)) * 1000;
+          delayAplicadoSegundos = Math.round(delayMs / 1000);
+        }
+      }
+
       try {
         await enviarAvaliacaoSequencial(paciente.telefone, paciente.primeiro_nome, undefined, mensagem);
         setTelefonesDiarioJaEnviados(prev => new Set(prev).add(paciente.telefone));
@@ -543,13 +560,13 @@ const Avaliacoes = () => {
         setEnviosDiarios(prev => prev + 1);
         contadorPausa++;
 
-        // Registrar log de sucesso
+        // Registrar log de sucesso com delay que será aplicado
         setLogsEnvio(prev => [...prev, {
           timestamp: new Date(),
           telefone: paciente.telefone,
           nome: paciente.primeiro_nome,
-          delayAplicado: 0,
-          mensagemGerada: mensagem.slice(0, 100) + '...',
+          delayAplicado: delayAplicadoSegundos,
+          mensagemGerada: mensagem,
           status: 'sucesso'
         }]);
 
@@ -562,8 +579,8 @@ const Avaliacoes = () => {
           timestamp: new Date(),
           telefone: paciente.telefone,
           nome: paciente.primeiro_nome,
-          delayAplicado: 0,
-          mensagemGerada: mensagem.slice(0, 100) + '...',
+          delayAplicado: delayAplicadoSegundos,
+          mensagemGerada: mensagem,
           status: 'falha',
           motivo: error instanceof Error ? error.message : 'Erro desconhecido'
         }]);
@@ -571,43 +588,38 @@ const Avaliacoes = () => {
 
       setProgressoLote({ enviados: i + 1, total: pacientesSelecionados.length, sucesso: sucessos, falha: falhas });
 
-      // Verificar se precisa de pausa estratégica
-      if (contadorPausa >= pausarAposEnvios && i < pacientesSelecionados.length - 1 && !canceladoRef.current) {
-        setEstadoEnvio('pausa_seguranca');
-        
-        // Calcular pausa aleatória
-        const pausaMs = (pausaMinMin + Math.random() * (pausaMaxMin - pausaMinMin)) * 60 * 1000;
-        const pausaSegundos = Math.round(pausaMs / 1000);
-        
-        // Countdown da pausa
-        for (let s = pausaSegundos; s > 0; s--) {
-          if (canceladoRef.current) break;
-          while (pausadoRef.current && !canceladoRef.current) {
-            await new Promise(resolve => setTimeout(resolve, 500));
+      // Aplicar pausa ou intervalo
+      if (i < pacientesSelecionados.length - 1 && !canceladoRef.current) {
+        if (isPausaEstrategica) {
+          setEstadoEnvio('pausa_seguranca');
+          
+          // Countdown da pausa
+          for (let s = delayAplicadoSegundos; s > 0; s--) {
+            if (canceladoRef.current) break;
+            while (pausadoRef.current && !canceladoRef.current) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            setPausaRestante(s);
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
-          setPausaRestante(s);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-        setPausaRestante(0);
-        contadorPausa = 0;
-        
-      } else if (i < pacientesSelecionados.length - 1 && !canceladoRef.current) {
-        // Intervalo aleatório normal
-        setEstadoEnvio('aguardando_intervalo');
-        
-        const delayMs = (intervaloMin + Math.random() * (intervaloMax - intervaloMin)) * 1000;
-        const delaySegundos = Math.round(delayMs / 1000);
-        
-        // Countdown do intervalo
-        for (let s = delaySegundos; s > 0; s--) {
-          if (canceladoRef.current) break;
-          while (pausadoRef.current && !canceladoRef.current) {
-            await new Promise(resolve => setTimeout(resolve, 500));
+          setPausaRestante(0);
+          contadorPausa = 0;
+          
+        } else {
+          // Intervalo aleatório normal
+          setEstadoEnvio('aguardando_intervalo');
+          
+          // Countdown do intervalo
+          for (let s = delayAplicadoSegundos; s > 0; s--) {
+            if (canceladoRef.current) break;
+            while (pausadoRef.current && !canceladoRef.current) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            setTempoRestante(s);
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
-          setTempoRestante(s);
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          setTempoRestante(0);
         }
-        setTempoRestante(0);
       }
     }
 
@@ -1623,6 +1635,123 @@ const Avaliacoes = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* ===== LOGS DETALHADOS DA SESSÃO ===== */}
+        {logsEnvio.length > 0 && (
+          <Card className="border-blue-500/30">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <History className="h-5 w-5" />
+                    Logs de Envio da Sessão
+                  </CardTitle>
+                  <CardDescription>
+                    Registro detalhado de cada mensagem enviada nesta sessão
+                  </CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setLogsEnvio([])}
+                  className="text-muted-foreground"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Limpar logs
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-64">
+                <div className="space-y-2">
+                  {logsEnvio.slice().reverse().map((log, index) => (
+                    <div
+                      key={index}
+                      className={`
+                        p-3 rounded-lg border text-sm space-y-2
+                        ${log.status === 'sucesso' 
+                          ? 'bg-emerald-500/5 border-emerald-500/20' 
+                          : log.status === 'falha'
+                            ? 'bg-red-500/5 border-red-500/20'
+                            : 'bg-amber-500/5 border-amber-500/20'
+                        }
+                      `}
+                    >
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          {log.status === 'sucesso' ? (
+                            <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          ) : log.status === 'falha' ? (
+                            <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                          )}
+                          <span className="font-medium">{log.nome}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {log.telefone}
+                          </Badge>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {format(log.timestamp, "HH:mm:ss", { locale: ptBR })}
+                        </span>
+                      </div>
+                      
+                      {log.delayAplicado > 0 && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          Delay: {log.delayAplicado}s
+                        </div>
+                      )}
+                      
+                      {log.motivo && (
+                        <div className="text-xs text-red-600 dark:text-red-400 bg-red-500/10 p-2 rounded">
+                          ⚠️ {log.motivo}
+                        </div>
+                      )}
+                      
+                      {log.mensagemGerada && (
+                        <Collapsible>
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 text-xs w-full justify-start">
+                              <MessageCircle className="h-3 w-3 mr-1" />
+                              Ver mensagem enviada
+                            </Button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <div className="mt-2 p-2 bg-muted rounded text-xs whitespace-pre-wrap max-h-24 overflow-y-auto">
+                              {log.mensagemGerada}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+              
+              {/* Resumo dos logs */}
+              <div className="mt-4 pt-4 border-t flex items-center justify-between text-sm">
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle className="h-4 w-4" />
+                    {logsEnvio.filter(l => l.status === 'sucesso').length} sucesso
+                  </span>
+                  <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                    <XCircle className="h-4 w-4" />
+                    {logsEnvio.filter(l => l.status === 'falha').length} falha
+                  </span>
+                  <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                    <AlertTriangle className="h-4 w-4" />
+                    {logsEnvio.filter(l => l.status === 'bloqueado').length} bloqueado
+                  </span>
+                </div>
+                <span className="text-muted-foreground">
+                  Total: {logsEnvio.length} registro(s)
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Histórico de Avaliações Enviadas */}
         <Card>
