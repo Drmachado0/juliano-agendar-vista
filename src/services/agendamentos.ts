@@ -232,7 +232,11 @@ export async function listarAgendamentos(
     query = query.eq('status_crm', filters.statusCrm);
   }
   if (filters.busca) {
-    query = query.or(`nome_completo.ilike.%${filters.busca}%,telefone_whatsapp.ilike.%${filters.busca}%`);
+    // Sanitize search input: limit length and escape ILIKE special characters to prevent pattern attacks
+    const sanitizedSearch = filters.busca
+      .slice(0, 100) // Limit to 100 characters to prevent DoS
+      .replace(/[%_\\]/g, '\\$&'); // Escape ILIKE wildcards: %, _, \
+    query = query.or(`nome_completo.ilike.%${sanitizedSearch}%,telefone_whatsapp.ilike.%${sanitizedSearch}%`);
   }
 
   // Order and paginate

@@ -30,6 +30,25 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   return headers;
 }
 
+// Generate HMAC-SHA256 signature for webhook payload
+async function generateHmacSignature(payload: string, secret: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const payloadData = encoder.encode(payload);
+  
+  const key = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  
+  const signature = await crypto.subtle.sign("HMAC", key, payloadData);
+  const hashArray = Array.from(new Uint8Array(signature));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // Schema validation for n8n notification request
 const n8nRequestSchema = z.object({
   evento: z.enum(["agendamento_criado", "status_crm_atualizado"], {
@@ -95,6 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Dados:", JSON.stringify(dados_agendamento).substring(0, 100) + "...");
 
     const n8nWebhookUrl = Deno.env.get("N8N_WEBHOOK_URL");
+    const n8nWebhookSecret = Deno.env.get("N8N_WEBHOOK_SECRET");
 
     if (!n8nWebhookUrl) {
       console.error("N8N_WEBHOOK_URL não configurado");
@@ -107,17 +127,37 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Call n8n webhook
+    // Prepare payload with timestamp and request ID for deduplication
+    const requestId = crypto.randomUUID();
+    const timestamp = new Date().toISOString();
+    const payload = JSON.stringify({
+      evento,
+      dados_agendamento,
+      timestamp,
+      request_id: requestId,
+    });
+
+    // Build request headers
+    const requestHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    // Add HMAC signature if secret is configured
+    if (n8nWebhookSecret) {
+      const signature = await generateHmacSignature(payload, n8nWebhookSecret);
+      requestHeaders["X-Webhook-Signature"] = `sha256=${signature}`;
+      requestHeaders["X-Request-ID"] = requestId;
+      requestHeaders["X-Timestamp"] = timestamp;
+      console.log("HMAC signature added to request");
+    } else {
+      console.warn("N8N_WEBHOOK_SECRET not configured - sending without authentication");
+    }
+
+    // Call n8n webhook with HMAC authentication
     const n8nResponse = await fetch(n8nWebhookUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        evento,
-        dados_agendamento,
-        timestamp: new Date().toISOString(),
-      }),
+      headers: requestHeaders,
+      body: payload,
     });
 
     if (!n8nResponse.ok) {
