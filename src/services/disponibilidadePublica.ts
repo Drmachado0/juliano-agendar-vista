@@ -65,7 +65,7 @@ interface DisponibilidadeEspecifica {
   hora_fim: string | null;
   intervalo_minutos: number | null;
   disponivel: boolean;
-  motivo: string | null;
+  // Note: motivo field excluded from public queries for security
 }
 
 interface Bloqueio {
@@ -246,10 +246,10 @@ export async function gerarHorariosDisponiveis(data: Date, localAtendimento?: st
     return [];
   }
   
-  // Busca disponibilidade específica
+  // Busca disponibilidade específica (exclude 'motivo' field for security)
   let queryEspecifica = supabase
     .from('disponibilidade_especifica')
-    .select('*')
+    .select('id, data, clinica_id, hora_inicio, hora_fim, intervalo_minutos, disponivel')
     .eq('data', dataStr);
   
   if (clinicaIds.length > 0) {
@@ -396,10 +396,10 @@ export async function listarDatasComSlotsDisponiveis(
     buscarAgendamentosPeriodo(dataInicio, dataFim, clinicaIds)
   ]);
   
-  // Buscar disponibilidades específicas do mês
+  // Buscar disponibilidades específicas do mês (exclude 'motivo' field for security)
   let queryEspecifica = supabase
     .from('disponibilidade_especifica')
-    .select('*')
+    .select('id, data, clinica_id, hora_inicio, hora_fim, intervalo_minutos, disponivel')
     .gte('data', dataInicio)
     .lte('data', dataFim);
   
