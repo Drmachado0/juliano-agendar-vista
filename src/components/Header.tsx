@@ -17,6 +17,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
   const navItems = [
     { label: "Sobre", id: "sobre" },
     { label: "Procedimentos", id: "procedimentos" },
+    { label: "Depoimentos", id: "depoimentos" },
     { label: "Locais", id: "locais" },
     { label: "Convênios", id: "convenios" },
   ];
