@@ -15,8 +15,8 @@ import {
   type PacienteN8n,
   type LembreteAnual
 } from "@/services/lembretesAnuais";
-import { Bell, Send, RefreshCw, Loader2, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Save, Filter, CheckCircle, Calendar as CalendarIconLucide } from "lucide-react";
-import { format, formatDistanceToNow, isPast, isWithinInterval, addDays, addMonths } from "date-fns";
+import { Bell, Send, RefreshCw, Loader2, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Save, Filter, CheckCircle, Calendar as CalendarIconLucide, CalendarRange, ArrowRight } from "lucide-react";
+import { format, formatDistanceToNow, isPast, isWithinInterval, addDays, addMonths, eachDayOfInterval, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "@/components/ui/calendar";
@@ -119,13 +119,16 @@ Oftalmologia`;
 };
 
 const Lembretes = () => {
-  // Import patients state
-  const [dataFiltro, setDataFiltro] = useState<Date | undefined>(undefined);
+  // Import patients state - now with date range
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
+  const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
   const [pacientesN8n, setPacientesN8n] = useState<PacienteN8n[]>([]);
   const [loadingN8n, setLoadingN8n] = useState(false);
   const [selectedImport, setSelectedImport] = useState<Set<string>>(new Set());
   const [salvando, setSalvando] = useState(false);
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarInicioOpen, setCalendarInicioOpen] = useState(false);
+  const [calendarFimOpen, setCalendarFimOpen] = useState(false);
+  const [progressoBusca, setProgressoBusca] = useState({ atual: 0, total: 0 });
 
   // Pending reminders state
   const [lembretesPendentes, setLembretesPendentes] = useState<LembreteAnual[]>([]);
@@ -212,10 +215,25 @@ const Lembretes = () => {
     return { permitido: true };
   };
 
-  // === Import patients from n8n ===
+  // === Import patients from n8n - now with date range ===
   const buscarPacientes = async () => {
-    if (!dataFiltro) {
-      toast({ title: "Selecione uma data", description: "Escolha a data de atendimento.", variant: "destructive" });
+    if (!dataInicio) {
+      toast({ title: "Selecione uma data", description: "Escolha pelo menos a data inicial.", variant: "destructive" });
+      return;
+    }
+
+    // If only start date, use it as both start and end
+    const inicio = dataInicio;
+    const fim = dataFim || dataInicio;
+    
+    // Validate date range (max 90 days to avoid too many requests)
+    const diasDiferenca = differenceInDays(fim, inicio);
+    if (diasDiferenca < 0) {
+      toast({ title: "Intervalo inválido", description: "A data final deve ser após a data inicial.", variant: "destructive" });
+      return;
+    }
+    if (diasDiferenca > 90) {
+      toast({ title: "Intervalo muito grande", description: "Selecione um período de no máximo 90 dias.", variant: "destructive" });
       return;
     }
 
@@ -223,35 +241,81 @@ const Lembretes = () => {
     setPacientesN8n([]);
     setSelectedImport(new Set());
 
-    const dataFormatada = format(dataFiltro, 'yyyy-MM-dd');
-    const { data, error } = await buscarPacientesN8n(dataFormatada);
+    // Get all dates in range
+    const datasNoIntervalo = eachDayOfInterval({ start: inicio, end: fim });
+    setProgressoBusca({ atual: 0, total: datasNoIntervalo.length });
 
-    if (error) {
-      toast({ title: "Erro", description: error, variant: "destructive" });
-      setLoadingN8n(false);
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      toast({ title: "Nenhum paciente", description: `Não há pacientes em ${format(dataFiltro, 'dd/MM/yyyy')}.` });
-      setLoadingN8n(false);
-      return;
-    }
-
-    // Filter out already saved patients
+    // Get existing records once
     const { data: existentes } = await buscarTelefonesExistentes();
-    const pacientesNovos = data.filter(p => {
-      const key = `${p.telefone.replace(/\D/g, '').slice(-8)}_${p.data_atendimento}`;
-      return !existentes?.has(key);
-    });
-
-    setPacientesN8n(pacientesNovos);
     
-    const jaExistem = data.length - pacientesNovos.length;
-    toast({
-      title: "Pacientes carregados!",
-      description: `${pacientesNovos.length} novo(s) de ${data.length} total (${jaExistem} já no banco).`,
-    });
+    let todosPacientes: PacienteN8n[] = [];
+    let totalBuscados = 0;
+    let totalJaExistem = 0;
+    const telefonesVistos = new Set<string>();
+
+    for (let i = 0; i < datasNoIntervalo.length; i++) {
+      const data = datasNoIntervalo[i];
+      setProgressoBusca({ atual: i + 1, total: datasNoIntervalo.length });
+
+      const dataFormatada = format(data, 'yyyy-MM-dd');
+      const { data: pacientes, error } = await buscarPacientesN8n(dataFormatada);
+
+      if (error) {
+        console.error(`Erro ao buscar ${dataFormatada}:`, error);
+        continue;
+      }
+
+      if (pacientes && pacientes.length > 0) {
+        totalBuscados += pacientes.length;
+        
+        // Filter duplicates and already saved
+        const pacientesNovos = pacientes.filter(p => {
+          const telefoneNorm = p.telefone.replace(/\D/g, '').slice(-8);
+          const key = `${telefoneNorm}_${p.data_atendimento}`;
+          
+          // Skip if already in database
+          if (existentes?.has(key)) {
+            totalJaExistem++;
+            return false;
+          }
+          
+          // Skip if already seen in this batch (avoid duplicates across days)
+          if (telefonesVistos.has(telefoneNorm)) {
+            return false;
+          }
+          
+          telefonesVistos.add(telefoneNorm);
+          return true;
+        });
+
+        todosPacientes = [...todosPacientes, ...pacientesNovos];
+      }
+
+      // Small delay between requests to avoid overwhelming the API
+      if (i < datasNoIntervalo.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
+
+    setPacientesN8n(todosPacientes);
+    setProgressoBusca({ atual: 0, total: 0 });
+
+    if (todosPacientes.length === 0 && totalBuscados === 0) {
+      toast({ 
+        title: "Nenhum paciente", 
+        description: `Não há pacientes no período selecionado.`
+      });
+    } else if (todosPacientes.length === 0) {
+      toast({ 
+        title: "Todos já cadastrados", 
+        description: `${totalJaExistem} paciente(s) já estão no banco de lembretes.`
+      });
+    } else {
+      toast({
+        title: "Pacientes carregados!",
+        description: `${todosPacientes.length} novo(s) de ${totalBuscados} total (${totalJaExistem} já no banco).`,
+      });
+    }
 
     setLoadingN8n(false);
   };
@@ -500,39 +564,87 @@ const Lembretes = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
+                  <CalendarRange className="h-5 w-5 text-primary" />
                   Importar do Sistema SaudeViaNet
                 </CardTitle>
                 <CardDescription>
-                  Busque pacientes atendidos em uma data específica e salve no banco de lembretes
+                  Selecione um período para buscar pacientes em lote e salvar no banco de lembretes
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-wrap gap-3 items-center">
-                  <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                  {/* Data Início */}
+                  <Popover open={calendarInicioOpen} onOpenChange={setCalendarInicioOpen}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className={cn("w-[200px] justify-start text-left font-normal", !dataFiltro && "text-muted-foreground")}>
+                      <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal", !dataInicio && "text-muted-foreground")}>
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {dataFiltro ? format(dataFiltro, "dd/MM/yyyy") : "Selecionar data"}
+                        {dataInicio ? format(dataInicio, "dd/MM/yyyy") : "Data início"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={dataFiltro}
-                        onSelect={(date) => { setDataFiltro(date); setCalendarOpen(false); }}
+                        selected={dataInicio}
+                        onSelect={(date) => { setDataInicio(date); setCalendarInicioOpen(false); }}
                         disabled={(date) => date > new Date()}
                         initialFocus
                         locale={ptBR}
+                        className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
 
-                  <Button onClick={buscarPacientes} disabled={loadingN8n || !dataFiltro}>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+
+                  {/* Data Fim */}
+                  <Popover open={calendarFimOpen} onOpenChange={setCalendarFimOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal", !dataFim && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dataFim ? format(dataFim, "dd/MM/yyyy") : "Data fim (opcional)"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dataFim}
+                        onSelect={(date) => { setDataFim(date); setCalendarFimOpen(false); }}
+                        disabled={(date) => date > new Date() || (dataInicio && date < dataInicio)}
+                        initialFocus
+                        locale={ptBR}
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+
+                  <Button onClick={buscarPacientes} disabled={loadingN8n || !dataInicio}>
                     {loadingN8n ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                    Buscar Pacientes
+                    {loadingN8n ? `Buscando... ${progressoBusca.atual}/${progressoBusca.total}` : "Buscar Pacientes"}
                   </Button>
                 </div>
+
+                {/* Progress during batch fetch */}
+                {loadingN8n && progressoBusca.total > 0 && (
+                  <div className="space-y-2">
+                    <Progress value={(progressoBusca.atual / progressoBusca.total) * 100} />
+                    <p className="text-sm text-muted-foreground text-center">
+                      Buscando dia {progressoBusca.atual} de {progressoBusca.total}...
+                    </p>
+                  </div>
+                )}
+
+                {/* Date range info */}
+                {dataInicio && (
+                  <Alert>
+                    <CalendarRange className="h-4 w-4" />
+                    <AlertDescription>
+                      {dataFim && dataFim !== dataInicio 
+                        ? `Período: ${format(dataInicio, 'dd/MM/yyyy')} até ${format(dataFim, 'dd/MM/yyyy')} (${differenceInDays(dataFim, dataInicio) + 1} dias)`
+                        : `Data única: ${format(dataInicio, 'dd/MM/yyyy')}`
+                      }
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {pacientesN8n.length > 0 && (
                   <div className="space-y-3">
