@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { user, signIn, signUp, loading: authLoading } = useAuth();
+  const { user, isAdmin, signIn, signUp, loading: authLoading } = useAuth();
   
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -33,10 +33,10 @@ const Auth = () => {
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
 
   useEffect(() => {
-    if (user && !authLoading && !requires2FA) {
-      navigate("/admin/agendamentos");
+    if (!authLoading && user && isAdmin && !requires2FA) {
+      navigate("/admin/agendamentos", { replace: true });
     }
-  }, [user, authLoading, requires2FA, navigate]);
+  }, [user, isAdmin, authLoading, requires2FA, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
