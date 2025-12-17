@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Star, Quote } from "lucide-react";
 
 interface Testimonial {
@@ -12,6 +12,7 @@ interface Testimonial {
   source: 'Google';
 }
 
+// Apenas avaliações reais do Google
 const ALL_TESTIMONIALS: Testimonial[] = [
   {
     id: "1",
@@ -43,95 +44,16 @@ const ALL_TESTIMONIALS: Testimonial[] = [
     date: "há 2 anos",
     source: 'Google',
   },
-  {
-    id: "4",
-    name: "Carlos Henrique Souza",
-    avatar: "CH",
-    rating: 5,
-    text: "Médico muito atencioso e dedicado. Explicou todo o procedimento com paciência e clareza. Super recomendo!",
-    date: "há 3 meses",
-    source: 'Google',
-  },
-  {
-    id: "5",
-    name: "Maria Santos",
-    avatar: "MS",
-    rating: 5,
-    text: "Recomendo demais! Atendimento humanizado e equipe muito preparada. Me senti acolhida desde a recepção.",
-    date: "há 1 semana",
-    source: 'Google',
-  },
-  {
-    id: "6",
-    name: "João Pedro Almeida",
-    avatar: "JP",
-    rating: 5,
-    text: "Tratamento excepcional para meu problema de visão. O Dr. Juliano é um profissional de primeira linha.",
-    date: "há 6 meses",
-    source: 'Google',
-  },
-  {
-    id: "7",
-    name: "Ana Beatriz Costa",
-    avatar: "AB",
-    rating: 5,
-    text: "Equipe muito profissional e consultório bem equipado. Fiz meus exames com total confiança.",
-    date: "há 2 semanas",
-    source: 'Google',
-  },
-  {
-    id: "8",
-    name: "Roberto Silva",
-    avatar: "RS",
-    rating: 4,
-    text: "Muito bom atendimento, médico atencioso e pontual. Ambiente limpo e organizado.",
-    date: "há 4 meses",
-    source: 'Google',
-  },
-  {
-    id: "9",
-    name: "Fernanda Lima",
-    avatar: "FL",
-    rating: 5,
-    text: "Dr. Juliano é excelente! Fez minha cirurgia de catarata e o resultado foi perfeito. Muito grata!",
-    date: "há 1 mês",
-    source: 'Google',
-  },
-  {
-    id: "10",
-    name: "Paulo Ricardo Martins",
-    avatar: "PR",
-    rating: 5,
-    text: "Cirurgia de pterígio realizada com sucesso. Profissional competente e humano. Indico para todos!",
-    date: "há 8 meses",
-    source: 'Google',
-  },
 ];
-
-// Fisher-Yates shuffle algorithm
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
-
-const AUTO_ROTATE_INTERVAL = 8000; // 8 seconds
 
 const TestimonialsSection = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [displayedTestimonials, setDisplayedTestimonials] = useState<Testimonial[]>([]);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
-  const autoRotateRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Shuffle and select 3 testimonials on mount
+  // Display all testimonials (only 3 real ones)
   useEffect(() => {
-    const shuffled = shuffleArray(ALL_TESTIMONIALS);
-    setDisplayedTestimonials(shuffled.slice(0, 3));
+    setDisplayedTestimonials(ALL_TESTIMONIALS);
   }, []);
 
   // Calculate average rating dynamically
@@ -140,54 +62,6 @@ const TestimonialsSection = () => {
     const sum = displayedTestimonials.reduce((acc, t) => acc + t.rating, 0);
     return (sum / displayedTestimonials.length).toFixed(1);
   }, [displayedTestimonials]);
-
-  // Load new testimonials with smooth transition
-  const loadNewTestimonials = useCallback(() => {
-    if (isTransitioning) return;
-    
-    setIsTransitioning(true);
-    
-    // Fade out
-    setTimeout(() => {
-      const currentIds = displayedTestimonials.map(t => t.id);
-      const availableTestimonials = ALL_TESTIMONIALS.filter(t => !currentIds.includes(t.id));
-      
-      let newTestimonials: Testimonial[];
-      if (availableTestimonials.length >= 3) {
-        newTestimonials = shuffleArray(availableTestimonials).slice(0, 3);
-      } else {
-        newTestimonials = shuffleArray(ALL_TESTIMONIALS).slice(0, 3);
-      }
-      
-      setDisplayedTestimonials(newTestimonials);
-      
-      // Fade in complete
-      setTimeout(() => {
-        setIsTransitioning(false);
-      }, 400);
-    }, 300);
-  }, [displayedTestimonials, isTransitioning]);
-
-  // Auto-rotate carousel
-  useEffect(() => {
-    if (!isVisible || isHovered || isTransitioning) {
-      if (autoRotateRef.current) {
-        clearInterval(autoRotateRef.current);
-        autoRotateRef.current = null;
-      }
-      return;
-    }
-
-    autoRotateRef.current = setInterval(() => {
-      loadNewTestimonials();
-    }, AUTO_ROTATE_INTERVAL);
-
-    return () => {
-      if (autoRotateRef.current) {
-        clearInterval(autoRotateRef.current);
-      }
-    };
-  }, [isVisible, isHovered, isTransitioning, loadNewTestimonials]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -239,26 +113,17 @@ const TestimonialsSection = () => {
         </div>
 
         {/* Testimonials Grid */}
-        <div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayedTestimonials.map((testimonial, index) => (
             <div
               key={testimonial.id}
-              className={`card-glass rounded-xl p-6 relative hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 ${
+              className={`card-glass rounded-xl p-6 relative hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-400 ${
                 isVisible 
-                  ? isTransitioning
-                    ? 'opacity-0 translate-y-4 scale-95'
-                    : 'opacity-100 translate-y-0 scale-100'
+                  ? 'opacity-100 translate-y-0 scale-100'
                   : 'opacity-0 translate-y-12'
               }`}
               style={{ 
-                transitionProperty: 'opacity, transform',
-                transitionDuration: '400ms',
-                transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-                transitionDelay: isVisible && !isTransitioning ? `${index * 100}ms` : '0ms'
+                transitionDelay: isVisible ? `${index * 100}ms` : '0ms'
               }}
             >
               {/* Quote Icon */}
