@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Star, Quote } from "lucide-react";
 
 interface Testimonial {
@@ -11,6 +11,8 @@ interface Testimonial {
   date: string;
   source: 'Google';
 }
+
+const AUTO_ROTATE_INTERVAL = 6000; // 6 seconds
 
 // Avaliações reais do perfil do Google
 const ALL_TESTIMONIALS: Testimonial[] = [
@@ -76,12 +78,57 @@ const ALL_TESTIMONIALS: Testimonial[] = [
 const TestimonialsSection = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [displayedTestimonials, setDisplayedTestimonials] = useState<Testimonial[]>([]);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const autoRotateRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Display all testimonials (only 3 real ones)
-  useEffect(() => {
-    setDisplayedTestimonials(ALL_TESTIMONIALS);
+  // Shuffle array using Fisher-Yates algorithm
+  const shuffleArray = useCallback((array: Testimonial[]): Testimonial[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
   }, []);
+
+  // Load new set of testimonials with transition
+  const loadNewTestimonials = useCallback(() => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      const shuffled = shuffleArray(ALL_TESTIMONIALS);
+      setDisplayedTestimonials(shuffled.slice(0, 3));
+      setIsTransitioning(false);
+    }, 300);
+  }, [shuffleArray]);
+
+  // Initial load
+  useEffect(() => {
+    const shuffled = shuffleArray(ALL_TESTIMONIALS);
+    setDisplayedTestimonials(shuffled.slice(0, 3));
+  }, [shuffleArray]);
+
+  // Auto-rotate testimonials
+  useEffect(() => {
+    if (isHovered) {
+      if (autoRotateRef.current) {
+        clearInterval(autoRotateRef.current);
+        autoRotateRef.current = null;
+      }
+      return;
+    }
+
+    autoRotateRef.current = setInterval(() => {
+      loadNewTestimonials();
+    }, AUTO_ROTATE_INTERVAL);
+
+    return () => {
+      if (autoRotateRef.current) {
+        clearInterval(autoRotateRef.current);
+      }
+    };
+  }, [isHovered, loadNewTestimonials]);
 
   // Calculate average rating dynamically
   const averageRating = useMemo(() => {
@@ -140,17 +187,23 @@ const TestimonialsSection = () => {
         </div>
 
         {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
           {displayedTestimonials.map((testimonial, index) => (
             <div
               key={testimonial.id}
-              className={`card-glass rounded-xl p-6 relative hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-400 ${
+              className={`card-glass rounded-xl p-6 relative hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300 ${
                 isVisible 
-                  ? 'opacity-100 translate-y-0 scale-100'
+                  ? isTransitioning 
+                    ? 'opacity-0 scale-95' 
+                    : 'opacity-100 translate-y-0 scale-100'
                   : 'opacity-0 translate-y-12'
               }`}
               style={{ 
-                transitionDelay: isVisible ? `${index * 100}ms` : '0ms'
+                transitionDelay: isVisible && !isTransitioning ? `${index * 100}ms` : '0ms'
               }}
             >
               {/* Quote Icon */}
