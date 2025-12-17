@@ -76,7 +76,7 @@ export async function listarLembretes(): Promise<{ data: LembreteAnual[] | null;
 }
 
 // List pending lembretes (not sent yet and due date <= today or within range)
-export async function listarLembretesPendentes(filtro: 'vencidos' | 'semana' | 'mes' | 'todos' = 'todos'): Promise<{ data: LembreteAnual[] | null; error: string | null }> {
+export async function listarLembretesPendentes(filtro: string = 'todos'): Promise<{ data: LembreteAnual[] | null; error: string | null }> {
   try {
     const hoje = new Date();
     let query = supabase
@@ -95,6 +95,17 @@ export async function listarLembretesPendentes(filtro: 'vencidos' | 'semana' | '
       const proximoMes = new Date(hoje);
       proximoMes.setMonth(proximoMes.getMonth() + 1);
       query = query.lte("data_proximo_lembrete", proximoMes.toISOString().split('T')[0]);
+    } else if (filtro.startsWith('mes_')) {
+      // Filter by specific month: mes_2025-01, mes_2025-02, etc.
+      const mesAno = filtro.replace('mes_', '');
+      const [ano, mes] = mesAno.split('-');
+      const inicioMes = `${ano}-${mes}-01`;
+      const ultimoDia = new Date(parseInt(ano), parseInt(mes), 0).getDate();
+      const fimMes = `${ano}-${mes}-${String(ultimoDia).padStart(2, '0')}`;
+      
+      query = query
+        .gte("data_proximo_lembrete", inicioMes)
+        .lte("data_proximo_lembrete", fimMes);
     }
 
     const { data, error } = await query;
