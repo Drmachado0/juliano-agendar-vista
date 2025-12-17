@@ -19,7 +19,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
-      navigate("/auth");
+      navigate("/auth", { replace: true });
     }
   }, [user, isAdmin, loading, navigate]);
 
