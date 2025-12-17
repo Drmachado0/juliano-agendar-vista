@@ -1137,13 +1137,13 @@ const Lembretes = () => {
                     <select
                       value={filtroLembrete}
                       onChange={(e) => setFiltroLembrete(e.target.value)}
-                      className="text-sm border rounded-md px-2 py-1 bg-background"
+                      className="text-sm border rounded-md px-2 py-1 bg-background min-w-[180px]"
                     >
                       <optgroup label="Por Status">
-                        <option value="vencidos">Vencidos</option>
+                        <option value="vencidos">Vencidos {estatisticasGerais?.vencidos ? `(${estatisticasGerais.vencidos})` : ''}</option>
                         <option value="semana">Esta semana</option>
                         <option value="mes">Próximo mês</option>
-                        <option value="todos">Todos pendentes</option>
+                        <option value="todos">Todos pendentes {estatisticasGerais?.pendentes ? `(${estatisticasGerais.pendentes})` : ''}</option>
                       </optgroup>
                       <optgroup label="Por Mês Específico">
                         {(() => {
@@ -1151,9 +1151,16 @@ const Lembretes = () => {
                           const meses = [];
                           for (let i = -2; i <= 12; i++) {
                             const data = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
-                            const valor = `mes_${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+                            const mesKey = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+                            const valor = `mes_${mesKey}`;
                             const label = data.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-                            meses.push(<option key={valor} value={valor}>{label.charAt(0).toUpperCase() + label.slice(1)}</option>);
+                            const estatMes = estatisticasMensais.find(e => e.mes === mesKey);
+                            const countLabel = estatMes?.pendentes ? ` (${estatMes.pendentes})` : '';
+                            meses.push(
+                              <option key={valor} value={valor}>
+                                {label.charAt(0).toUpperCase() + label.slice(1)}{countLabel}
+                              </option>
+                            );
                           }
                           return meses;
                         })()}
