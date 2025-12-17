@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
-import { enviarMensagemWhatsApp } from "@/services/integracoes";
+import { enviarMensagemWhatsApp, enviarImagemWhatsApp } from "@/services/integracoes";
 import { 
   buscarPacientesN8n, 
   listarLembretesPendentes, 
@@ -19,7 +19,8 @@ import {
   type EstatisticasGerais,
   type EstatisticaMensal
 } from "@/services/lembretesAnuais";
-import { Bell, Send, RefreshCw, Loader2, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Save, Filter, CheckCircle, Calendar as CalendarIconLucide, CalendarRange, ArrowRight, BarChart3, TrendingUp } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Bell, Send, RefreshCw, Loader2, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Save, Filter, CheckCircle, Calendar as CalendarIconLucide, CalendarRange, ArrowRight, BarChart3, TrendingUp, History, MessageCircle, ImagePlus, X, Shuffle, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { format, formatDistanceToNow, isPast, isWithinInterval, addDays, addMonths, eachDayOfInterval, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -31,9 +32,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from "recharts";
 
 interface LogEnvio {
   timestamp: Date;
@@ -43,6 +48,13 @@ interface LogEnvio {
   mensagemGerada: string;
   status: 'sucesso' | 'falha' | 'bloqueado';
   motivo?: string;
+}
+
+interface HistoricoLembrete {
+  id: string;
+  telefone: string;
+  conteudo: string;
+  created_at: string;
 }
 
 type EstadoEnvio = 'idle' | 'enviando' | 'aguardando_intervalo' | 'pausa_seguranca' | 'interrompido_limite';
@@ -163,6 +175,20 @@ const Lembretes = () => {
   const [pausaMaxMin, setPausaMaxMin] = useState(10);
   const [variacaoTextoAtiva, setVariacaoTextoAtiva] = useState(true);
 
+  // Template and image state
+  const [template, setTemplate] = useState(TEMPLATE_LEMBRETE_PADRAO);
+  const [imagemBase64, setImagemBase64] = useState<string | null>(null);
+  const [imagemPreview, setImagemPreview] = useState<string | null>(null);
+  const [imagemNome, setImagemNome] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [mensagemPreviewVariada, setMensagemPreviewVariada] = useState(() => 
+    gerarMensagemLembreteVariada("Maria")
+  );
+
+  // History from database
+  const [historico, setHistorico] = useState<HistoricoLembrete[]>([]);
+  const [loadingHistorico, setLoadingHistorico] = useState(false);
+
   // Tracking
   const [estadoEnvio, setEstadoEnvio] = useState<EstadoEnvio>('idle');
   const [enviosSessao, setEnviosSessao] = useState(0);
@@ -170,6 +196,7 @@ const Lembretes = () => {
   const [logsEnvio, setLogsEnvio] = useState<LogEnvio[]>([]);
   const [tempoRestante, setTempoRestante] = useState(0);
   const [pausaRestante, setPausaRestante] = useState(0);
+  const [logExpandido, setLogExpandido] = useState<number | null>(null);
 
   // Load daily limits from localStorage
   useEffect(() => {
@@ -202,6 +229,7 @@ const Lembretes = () => {
   // Load dashboard on mount
   useEffect(() => {
     carregarDashboard();
+    carregarHistorico();
   }, []);
 
   const carregarLembretesPendentes = async () => {
@@ -231,6 +259,21 @@ const Lembretes = () => {
     setLoadingDashboard(false);
   };
 
+  const carregarHistorico = async () => {
+    setLoadingHistorico(true);
+    const { data, error } = await supabase
+      .from("mensagens_whatsapp")
+      .select("id, telefone, conteudo, created_at")
+      .eq("tipo_mensagem", "lembrete")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (!error && data) {
+      setHistorico(data as HistoricoLembrete[]);
+    }
+    setLoadingHistorico(false);
+  };
+
   const validarLimitesEnvio = (): { permitido: boolean; motivo?: string } => {
     const agora = new Date();
     const hora = agora.getHours();
@@ -247,6 +290,53 @@ const Lembretes = () => {
     return { permitido: true };
   };
 
+  const isHorarioPermitido = () => {
+    const hora = new Date().getHours();
+    return hora >= HORARIO_INICIO && hora < HORARIO_FIM;
+  };
+
+  // Image handling
+  const handleImagemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: "Erro", description: "Selecione apenas arquivos de imagem.", variant: "destructive" });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Erro", description: "A imagem deve ter no máximo 5MB.", variant: "destructive" });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setImagemBase64(base64);
+      setImagemPreview(base64);
+      setImagemNome(file.name);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removerImagem = () => {
+    setImagemBase64(null);
+    setImagemPreview(null);
+    setImagemNome("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const gerarNovaMensagemPreview = () => {
+    setMensagemPreviewVariada(gerarMensagemLembreteVariada("Maria", mensagemPreviewVariada));
+  };
+
+  const renderizarTemplate = (nome: string) => {
+    return template.replace(/\{\{nome\}\}/g, nome);
+  };
+
   // === Import patients from n8n - now with date range ===
   const buscarPacientes = async () => {
     if (!dataInicio) {
@@ -254,11 +344,9 @@ const Lembretes = () => {
       return;
     }
 
-    // If only start date, use it as both start and end
     const inicio = dataInicio;
     const fim = dataFim || dataInicio;
     
-    // Validate date range (max 90 days to avoid too many requests)
     const diasDiferenca = differenceInDays(fim, inicio);
     if (diasDiferenca < 0) {
       toast({ title: "Intervalo inválido", description: "A data final deve ser após a data inicial.", variant: "destructive" });
@@ -273,11 +361,9 @@ const Lembretes = () => {
     setPacientesN8n([]);
     setSelectedImport(new Set());
 
-    // Get all dates in range
     const datasNoIntervalo = eachDayOfInterval({ start: inicio, end: fim });
     setProgressoBusca({ atual: 0, total: datasNoIntervalo.length });
 
-    // Get existing records once
     const { data: existentes } = await buscarTelefonesExistentes();
     
     let todosPacientes: PacienteN8n[] = [];
@@ -300,18 +386,15 @@ const Lembretes = () => {
       if (pacientes && pacientes.length > 0) {
         totalBuscados += pacientes.length;
         
-        // Filter duplicates and already saved
         const pacientesNovos = pacientes.filter(p => {
           const telefoneNorm = p.telefone.replace(/\D/g, '').slice(-8);
           const key = `${telefoneNorm}_${p.data_atendimento}`;
           
-          // Skip if already in database
           if (existentes?.has(key)) {
             totalJaExistem++;
             return false;
           }
           
-          // Skip if already seen in this batch (avoid duplicates across days)
           if (telefonesVistos.has(telefoneNorm)) {
             return false;
           }
@@ -323,7 +406,6 @@ const Lembretes = () => {
         todosPacientes = [...todosPacientes, ...pacientesNovos];
       }
 
-      // Small delay between requests to avoid overwhelming the API
       if (i < datasNoIntervalo.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 200));
       }
@@ -409,7 +491,6 @@ const Lembretes = () => {
 
       if (canceladoRef.current) break;
 
-      // Check limits before each send
       const validacaoAtual = validarLimitesEnvio();
       if (!validacaoAtual.permitido) {
         setEstadoEnvio('interrompido_limite');
@@ -423,13 +504,23 @@ const Lembretes = () => {
       // Generate message
       const mensagem = variacaoTextoAtiva 
         ? gerarMensagemLembreteVariada(primeiroNome, ultimaMensagem)
-        : TEMPLATE_LEMBRETE_PADRAO.replace('{{nome}}', primeiroNome);
+        : renderizarTemplate(primeiroNome);
       ultimaMensagem = mensagem;
+
+      // Calculate delay
+      const delay = Math.floor(Math.random() * (intervaloMax - intervaloMin + 1) + intervaloMin);
 
       setEstadoEnvio('enviando');
 
       try {
-        const resultado = await enviarMensagemWhatsApp(lembrete.telefone, mensagem);
+        let resultado;
+        
+        // Send image first if present (with message as caption)
+        if (imagemBase64) {
+          resultado = await enviarImagemWhatsApp(lembrete.telefone, imagemBase64, mensagem);
+        } else {
+          resultado = await enviarMensagemWhatsApp(lembrete.telefone, mensagem);
+        }
         
         if (resultado.success) {
           sucessos++;
@@ -437,11 +528,20 @@ const Lembretes = () => {
           setEnviosSessao(prev => prev + 1);
           setEnviosDiarios(prev => prev + 1);
           
+          // Save to database
+          await supabase.from("mensagens_whatsapp").insert({
+            telefone: lembrete.telefone,
+            conteudo: mensagem,
+            direcao: "OUT",
+            tipo_mensagem: "lembrete",
+            status_envio: "enviado",
+          });
+          
           setLogsEnvio(prev => [{
             timestamp: new Date(),
             telefone: lembrete.telefone,
             nome: lembrete.nome,
-            delayAplicado: 0,
+            delayAplicado: delay,
             mensagemGerada: mensagem,
             status: 'sucesso'
           }, ...prev]);
@@ -451,7 +551,7 @@ const Lembretes = () => {
             timestamp: new Date(),
             telefone: lembrete.telefone,
             nome: lembrete.nome,
-            delayAplicado: 0,
+            delayAplicado: delay,
             mensagemGerada: mensagem,
             status: 'falha',
             motivo: resultado.error || 'Erro desconhecido'
@@ -463,7 +563,7 @@ const Lembretes = () => {
           timestamp: new Date(),
           telefone: lembrete.telefone,
           nome: lembrete.nome,
-          delayAplicado: 0,
+          delayAplicado: delay,
           mensagemGerada: mensagem,
           status: 'falha',
           motivo: error.message
@@ -491,9 +591,9 @@ const Lembretes = () => {
       // Random delay between messages
       if (i < lembretesParaEnviar.length - 1 && !canceladoRef.current) {
         setEstadoEnvio('aguardando_intervalo');
-        const delay = Math.floor(Math.random() * (intervaloMax - intervaloMin + 1) + intervaloMin) * 1000;
+        const delayMs = delay * 1000;
         
-        let tempoRestanteDelay = delay;
+        let tempoRestanteDelay = delayMs;
         while (tempoRestanteDelay > 0 && !canceladoRef.current && !pausadoRef.current) {
           setTempoRestante(Math.ceil(tempoRestanteDelay / 1000));
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -507,6 +607,7 @@ const Lembretes = () => {
     setEstadoEnvio('idle');
     setSelectedLembretes(new Set());
     carregarLembretesPendentes();
+    carregarHistorico();
 
     toast({
       title: canceladoRef.current ? "Envio cancelado" : "Envio concluído",
@@ -555,6 +656,13 @@ const Lembretes = () => {
     }
   };
 
+  const countLogsByStatus = () => {
+    const sucesso = logsEnvio.filter(l => l.status === 'sucesso').length;
+    const falha = logsEnvio.filter(l => l.status === 'falha').length;
+    const bloqueado = logsEnvio.filter(l => l.status === 'bloqueado').length;
+    return { sucesso, falha, bloqueado };
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -569,15 +677,95 @@ const Lembretes = () => {
           </p>
         </div>
 
-        {/* Security Info */}
-        <Alert>
-          <Shield className="h-4 w-4" />
-          <AlertDescription className="flex items-center gap-4 flex-wrap">
-            <span><strong>Sessão:</strong> {enviosSessao}/{LIMITE_SESSAO}</span>
-            <span><strong>Diário:</strong> {enviosDiarios}/{LIMITE_DIARIO}</span>
-            <span><strong>Horário:</strong> {HORARIO_INICIO}h-{HORARIO_FIM}h</span>
-          </AlertDescription>
-        </Alert>
+        {/* Visual Security Bar with Tooltips */}
+        <TooltipProvider>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="text-center cursor-help">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <Shield className="h-4 w-4 text-emerald-600" />
+                    <span className="text-xs text-muted-foreground">Sessão</span>
+                  </div>
+                  <span className={cn(
+                    "text-lg font-bold",
+                    enviosSessao >= LIMITE_SESSAO ? "text-red-600" : "text-emerald-600"
+                  )}>
+                    {enviosSessao}/{LIMITE_SESSAO}
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Máximo de {LIMITE_SESSAO} mensagens por sessão</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="text-center cursor-help">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <CalendarIconLucide className="h-4 w-4 text-blue-600" />
+                    <span className="text-xs text-muted-foreground">Diário</span>
+                  </div>
+                  <span className={cn(
+                    "text-lg font-bold",
+                    enviosDiarios >= LIMITE_DIARIO ? "text-red-600" : "text-blue-600"
+                  )}>
+                    {enviosDiarios}/{LIMITE_DIARIO}
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Máximo de {LIMITE_DIARIO} mensagens por dia</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="text-center cursor-help">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <Clock className="h-4 w-4 text-amber-600" />
+                    <span className="text-xs text-muted-foreground">Horário</span>
+                  </div>
+                  <span className={cn(
+                    "text-lg font-bold",
+                    isHorarioPermitido() ? "text-amber-600" : "text-red-600"
+                  )}>
+                    {HORARIO_INICIO}h-{HORARIO_FIM}h
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Envio permitido apenas entre {HORARIO_INICIO}h e {HORARIO_FIM}h</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="text-center cursor-help">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <CheckCircle className="h-4 w-4 text-emerald-600" />
+                    <span className="text-xs text-muted-foreground">Status</span>
+                  </div>
+                  <Badge className={cn(
+                    "text-xs",
+                    isHorarioPermitido() && enviosSessao < LIMITE_SESSAO && enviosDiarios < LIMITE_DIARIO
+                      ? "bg-emerald-500 hover:bg-emerald-600"
+                      : "bg-red-500 hover:bg-red-600"
+                  )}>
+                    {isHorarioPermitido() && enviosSessao < LIMITE_SESSAO && enviosDiarios < LIMITE_DIARIO
+                      ? "Ativo"
+                      : "Bloqueado"
+                    }
+                  </Badge>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Sistema de envio {isHorarioPermitido() && enviosSessao < LIMITE_SESSAO && enviosDiarios < LIMITE_DIARIO ? "liberado" : "bloqueado"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </TooltipProvider>
 
         <Tabs defaultValue="dashboard" className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
@@ -715,7 +903,7 @@ const Lembretes = () => {
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis dataKey="mesFormatado" className="text-xs" />
                       <YAxis className="text-xs" />
-                      <Tooltip 
+                      <RechartsTooltip 
                         contentStyle={{ 
                           backgroundColor: 'hsl(var(--card))', 
                           border: '1px solid hsl(var(--border))',
@@ -807,7 +995,6 @@ const Lembretes = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-wrap gap-3 items-center">
-                  {/* Data Início */}
                   <Popover open={calendarInicioOpen} onOpenChange={setCalendarInicioOpen}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal", !dataInicio && "text-muted-foreground")}>
@@ -830,7 +1017,6 @@ const Lembretes = () => {
 
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />
 
-                  {/* Data Fim */}
                   <Popover open={calendarFimOpen} onOpenChange={setCalendarFimOpen}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal", !dataFim && "text-muted-foreground")}>
@@ -857,7 +1043,6 @@ const Lembretes = () => {
                   </Button>
                 </div>
 
-                {/* Progress during batch fetch */}
                 {loadingN8n && progressoBusca.total > 0 && (
                   <div className="space-y-2">
                     <Progress value={(progressoBusca.atual / progressoBusca.total) * 100} />
@@ -867,7 +1052,6 @@ const Lembretes = () => {
                   </div>
                 )}
 
-                {/* Date range info */}
                 {dataInicio && (
                   <Alert>
                     <CalendarRange className="h-4 w-4" />
@@ -1032,6 +1216,68 @@ const Lembretes = () => {
               </CardContent>
             </Card>
 
+            {/* Template Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5 text-primary" />
+                  Modelo da Mensagem
+                </CardTitle>
+                <CardDescription>Personalize a mensagem de lembrete anual</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Template (use {"{{nome}}"} para o nome do paciente)</Label>
+                    <Textarea
+                      value={template}
+                      onChange={(e) => setTemplate(e.target.value)}
+                      rows={12}
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Preview</Label>
+                    <div className="bg-muted p-4 rounded-lg text-sm whitespace-pre-wrap h-[280px] overflow-auto">
+                      {renderizarTemplate("Maria")}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Image Upload */}
+                <div className="space-y-2">
+                  <Label>Imagem (opcional)</Label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={handleImagemChange}
+                      className="hidden"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="gap-2"
+                    >
+                      <ImagePlus className="h-4 w-4" />
+                      Selecionar Imagem
+                    </Button>
+                    {imagemPreview && (
+                      <div className="flex items-center gap-2">
+                        <img src={imagemPreview} alt="Preview" className="h-12 w-12 object-cover rounded" />
+                        <span className="text-sm text-muted-foreground">{imagemNome}</span>
+                        <Button variant="ghost" size="sm" onClick={removerImagem}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">A imagem será enviada antes da mensagem de texto (máx. 5MB)</p>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Batch Sending Section */}
             {selectedLembretes.size > 0 && (
               <Card>
@@ -1051,68 +1297,131 @@ const Lembretes = () => {
                       <Button variant="outline" size="sm" className="w-full justify-between">
                         <span className="flex items-center gap-2">
                           <Settings2 className="h-4 w-4" />
-                          Configurações Avançadas
+                          Configurações Avançadas de Envio
                         </span>
-                        {configAvancadaAberta ? "▲" : "▼"}
+                        {configAvancadaAberta ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       </Button>
                     </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-4 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium">Intervalo mín. (seg)</label>
-                          <input
-                            type="number"
-                            value={intervaloMin}
-                            onChange={(e) => setIntervaloMin(Number(e.target.value))}
-                            className="w-full border rounded-md px-3 py-2 mt-1"
-                            min={30}
-                            max={300}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Intervalo máx. (seg)</label>
-                          <input
-                            type="number"
-                            value={intervaloMax}
-                            onChange={(e) => setIntervaloMax(Number(e.target.value))}
-                            className="w-full border rounded-md px-3 py-2 mt-1"
-                            min={30}
-                            max={300}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Pausar após X envios</label>
-                          <input
-                            type="number"
-                            value={pausarAposEnvios}
-                            onChange={(e) => setPausarAposEnvios(Number(e.target.value))}
-                            className="w-full border rounded-md px-3 py-2 mt-1"
-                            min={5}
-                            max={20}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Pausa mín. (min)</label>
-                          <input
-                            type="number"
-                            value={pausaMinMin}
-                            onChange={(e) => setPausaMinMin(Number(e.target.value))}
-                            className="w-full border rounded-md px-3 py-2 mt-1"
-                            min={1}
-                            max={30}
-                          />
+                    <CollapsibleContent className="mt-4 space-y-6">
+                      {/* Intervalos */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          Intervalos Aleatórios
+                        </h4>
+                        <p className="text-xs text-muted-foreground">Define o tempo aleatório entre cada mensagem</p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Mínimo (segundos)</Label>
+                            <Input
+                              type="number"
+                              value={intervaloMin}
+                              onChange={(e) => setIntervaloMin(Number(e.target.value))}
+                              min={30}
+                              max={300}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Máximo (segundos)</Label>
+                            <Input
+                              type="number"
+                              value={intervaloMax}
+                              onChange={(e) => setIntervaloMax(Number(e.target.value))}
+                              min={30}
+                              max={300}
+                            />
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium">Variação automática de texto</label>
-                        <Switch checked={variacaoTextoAtiva} onCheckedChange={setVariacaoTextoAtiva} />
+
+                      <Separator />
+
+                      {/* Pausas */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium flex items-center gap-2">
+                          <Coffee className="h-4 w-4 text-muted-foreground" />
+                          Pausas Estratégicas
+                        </h4>
+                        <p className="text-xs text-muted-foreground">Pausa após X mensagens para simular comportamento humano</p>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Pausar após</Label>
+                            <Input
+                              type="number"
+                              value={pausarAposEnvios}
+                              onChange={(e) => setPausarAposEnvios(Number(e.target.value))}
+                              min={5}
+                              max={20}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Pausa mín. (min)</Label>
+                            <Input
+                              type="number"
+                              value={pausaMinMin}
+                              onChange={(e) => setPausaMinMin(Number(e.target.value))}
+                              min={1}
+                              max={30}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Pausa máx. (min)</Label>
+                            <Input
+                              type="number"
+                              value={pausaMaxMin}
+                              onChange={(e) => setPausaMaxMin(Number(e.target.value))}
+                              min={1}
+                              max={30}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Variação de Texto */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="text-sm font-medium flex items-center gap-2">
+                              <Shuffle className="h-4 w-4 text-muted-foreground" />
+                              Variação Automática de Texto
+                            </h4>
+                            <p className="text-xs text-muted-foreground">Gera mensagens únicas para evitar detecção de spam</p>
+                          </div>
+                          <Switch checked={variacaoTextoAtiva} onCheckedChange={setVariacaoTextoAtiva} />
+                        </div>
+                        
+                        {variacaoTextoAtiva && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs">Preview de mensagem variada</Label>
+                              <Button variant="ghost" size="sm" onClick={gerarNovaMensagemPreview} className="gap-1">
+                                <Shuffle className="h-3 w-3" />
+                                Gerar novo exemplo
+                              </Button>
+                            </div>
+                            <div className="bg-muted/50 p-3 rounded-lg text-sm whitespace-pre-wrap border">
+                              {mensagemPreviewVariada}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </CollapsibleContent>
                   </Collapsible>
 
                   {/* Progress */}
                   {enviandoLote && (
-                    <div className="space-y-3">
+                    <div className="space-y-3 p-4 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        <span className="text-sm font-medium">
+                          {estadoEnvio === 'enviando' && 'Enviando mensagem...'}
+                          {estadoEnvio === 'aguardando_intervalo' && 'Aguardando intervalo...'}
+                          {estadoEnvio === 'pausa_seguranca' && 'Pausa de segurança...'}
+                          {estadoEnvio === 'interrompido_limite' && 'Limite atingido'}
+                        </span>
+                      </div>
                       <Progress value={(progressoLote.enviados / progressoLote.total) * 100} />
                       <div className="flex items-center justify-between text-sm">
                         <span>{progressoLote.enviados}/{progressoLote.total}</span>
@@ -1122,7 +1431,7 @@ const Lembretes = () => {
                       {estadoEnvio === 'aguardando_intervalo' && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Clock className="h-4 w-4 animate-pulse" />
-                          Aguardando intervalo: {tempoRestante}s
+                          Próximo envio em: {tempoRestante}s
                         </div>
                       )}
                       {estadoEnvio === 'pausa_seguranca' && (
@@ -1154,39 +1463,135 @@ const Lembretes = () => {
                       </>
                     )}
                   </div>
-
-                  {/* Logs */}
-                  {logsEnvio.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-medium">Logs de Envio</h4>
-                        <Button variant="ghost" size="sm" onClick={() => setLogsEnvio([])}>
-                          Limpar
-                        </Button>
-                      </div>
-                      <ScrollArea className="h-[200px] border rounded-lg">
-                        <div className="p-2 space-y-2">
-                          {logsEnvio.map((log, idx) => (
-                            <div key={idx} className={cn(
-                              "p-2 rounded text-sm",
-                              log.status === 'sucesso' ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"
-                            )}>
-                              <div className="flex items-center gap-2">
-                                {log.status === 'sucesso' ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                                <span className="font-medium">{log.nome}</span>
-                                <Badge variant="outline" className="text-xs">{log.telefone}</Badge>
-                                <span className="text-xs ml-auto">{format(log.timestamp, 'HH:mm:ss')}</span>
-                              </div>
-                              {log.motivo && <p className="text-xs mt-1 ml-6">{log.motivo}</p>}
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             )}
+
+            {/* Session Logs Card */}
+            {logsEnvio.length > 0 && (
+              <Card className="border-blue-500/30">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <History className="h-5 w-5 text-blue-600" />
+                      Logs de Envio da Sessão
+                    </CardTitle>
+                    <CardDescription>{logsEnvio.length} mensagem(s) nesta sessão</CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setLogsEnvio([])}>
+                    Limpar logs
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ScrollArea className="h-[300px]">
+                    <div className="space-y-2">
+                      {logsEnvio.map((log, idx) => (
+                        <Collapsible key={idx} open={logExpandido === idx} onOpenChange={() => setLogExpandido(logExpandido === idx ? null : idx)}>
+                          <div className={cn(
+                            "p-3 rounded-lg",
+                            log.status === 'sucesso' ? "bg-emerald-500/5 border border-emerald-500/20" : 
+                            log.status === 'falha' ? "bg-red-500/5 border border-red-500/20" :
+                            "bg-amber-500/5 border border-amber-500/20"
+                          )}>
+                            <div className="flex items-center gap-2">
+                              {log.status === 'sucesso' ? (
+                                <CheckCircle className="h-4 w-4 text-emerald-600" />
+                              ) : log.status === 'falha' ? (
+                                <XCircle className="h-4 w-4 text-red-600" />
+                              ) : (
+                                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                              )}
+                              <span className="font-medium text-sm">{log.nome}</span>
+                              <Badge variant="outline" className="text-xs">{log.telefone}</Badge>
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                {log.delayAplicado}s
+                              </div>
+                              <span className="text-xs text-muted-foreground ml-auto">{format(log.timestamp, 'HH:mm:ss')}</span>
+                              <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                              </CollapsibleTrigger>
+                            </div>
+                            {log.motivo && <p className="text-xs text-red-600 mt-1 ml-6">{log.motivo}</p>}
+                            <CollapsibleContent>
+                              <div className="mt-2 p-2 bg-muted rounded text-xs whitespace-pre-wrap">
+                                {log.mensagemGerada}
+                              </div>
+                            </CollapsibleContent>
+                          </div>
+                        </Collapsible>
+                      ))}
+                    </div>
+                  </ScrollArea>
+
+                  {/* Summary */}
+                  <div className="pt-4 border-t flex items-center gap-4 text-sm">
+                    <span className="flex items-center gap-1 text-emerald-600">
+                      <CheckCircle className="h-4 w-4" />
+                      {countLogsByStatus().sucesso} sucesso
+                    </span>
+                    <span className="flex items-center gap-1 text-red-600">
+                      <XCircle className="h-4 w-4" />
+                      {countLogsByStatus().falha} falha
+                    </span>
+                    <span className="flex items-center gap-1 text-amber-600">
+                      <AlertTriangle className="h-4 w-4" />
+                      {countLogsByStatus().bloqueado} bloqueado
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* History from Database Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <History className="h-5 w-5 text-primary" />
+                    Histórico de Lembretes Enviados
+                  </CardTitle>
+                  <CardDescription>Últimas 50 mensagens de lembrete enviadas</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={carregarHistorico} disabled={loadingHistorico}>
+                  <RefreshCw className={cn("h-4 w-4", loadingHistorico && "animate-spin")} />
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {loadingHistorico ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : historico.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhum lembrete enviado ainda
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[300px]">
+                    <div className="space-y-3">
+                      {historico.map((item) => (
+                        <div key={item.id} className="p-3 rounded-lg border bg-card">
+                          <div className="flex items-center justify-between mb-2">
+                            <Badge variant="outline" className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {item.telefone}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(item.created_at), { addSuffix: true, locale: ptBR })}
+                            </span>
+                          </div>
+                          <div className="text-sm bg-muted p-2 rounded whitespace-pre-wrap line-clamp-3">
+                            {item.conteudo}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
