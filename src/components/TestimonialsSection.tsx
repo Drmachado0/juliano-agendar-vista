@@ -12,7 +12,7 @@ interface Testimonial {
   source: 'Google';
 }
 
-// Apenas avaliações reais do Google
+// Avaliações reais do perfil do Google
 const ALL_TESTIMONIALS: Testimonial[] = [
   {
     id: "1",
@@ -42,6 +42,33 @@ const ALL_TESTIMONIALS: Testimonial[] = [
     rating: 5,
     text: "Atendimento excelente, profissional muito competente e atencioso.",
     date: "há 2 anos",
+    source: 'Google',
+  },
+  {
+    id: "4",
+    name: "Josinete Brito",
+    avatar: "JB",
+    rating: 5,
+    text: "Ótimo profissional, muito atencioso e dedicado. Recomendo!",
+    date: "há 1 ano",
+    source: 'Google',
+  },
+  {
+    id: "5",
+    name: "Maria das Graças",
+    avatar: "MG",
+    rating: 5,
+    text: "Médico muito competente e humano. Me senti muito bem acolhida durante toda a consulta.",
+    date: "há 1 ano",
+    source: 'Google',
+  },
+  {
+    id: "6",
+    name: "Carlos Eduardo",
+    avatar: "CE",
+    rating: 5,
+    text: "Profissional excepcional! Muito conhecimento e paciência para explicar tudo sobre o tratamento.",
+    date: "há 8 meses",
     source: 'Google',
   },
 ];
