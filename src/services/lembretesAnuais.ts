@@ -76,10 +76,7 @@ export async function listarLembretes(): Promise<{ data: LembreteAnual[] | null;
 }
 
 // List pending lembretes (not sent yet and due date <= today or within range)
-export async function listarLembretesPendentes(
-  filtro: 'vencidos' | 'semana' | 'mes' | 'todos' = 'todos',
-  mesEspecifico?: string // '01', '02', ..., '12' or undefined
-): Promise<{ data: LembreteAnual[] | null; error: string | null }> {
+export async function listarLembretesPendentes(filtro: 'vencidos' | 'semana' | 'mes' | 'todos' = 'todos'): Promise<{ data: LembreteAnual[] | null; error: string | null }> {
   try {
     const hoje = new Date();
     let query = supabase
@@ -103,19 +100,7 @@ export async function listarLembretesPendentes(
     const { data, error } = await query;
 
     if (error) throw error;
-
-    // Filter by specific month in JavaScript (since Supabase doesn't support EXTRACT directly)
-    let filteredData = data as LembreteAnual[];
-    if (mesEspecifico && mesEspecifico !== 'todos') {
-      const mesNum = parseInt(mesEspecifico, 10);
-      filteredData = filteredData.filter(item => {
-        if (!item.data_proximo_lembrete) return false;
-        const mes = new Date(item.data_proximo_lembrete).getMonth() + 1;
-        return mes === mesNum;
-      });
-    }
-
-    return { data: filteredData, error: null };
+    return { data: data as LembreteAnual[], error: null };
   } catch (error: any) {
     console.error("Erro ao listar lembretes pendentes:", error);
     return { data: null, error: error.message };
