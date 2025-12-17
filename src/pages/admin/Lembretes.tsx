@@ -12,10 +12,14 @@ import {
   salvarPacientesComoLembretes, 
   marcarLembreteEnviado,
   buscarTelefonesExistentes,
+  buscarEstatisticasGerais,
+  buscarEstatisticasPorMes,
   type PacienteN8n,
-  type LembreteAnual
+  type LembreteAnual,
+  type EstatisticasGerais,
+  type EstatisticaMensal
 } from "@/services/lembretesAnuais";
-import { Bell, Send, RefreshCw, Loader2, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Save, Filter, CheckCircle, Calendar as CalendarIconLucide, CalendarRange, ArrowRight } from "lucide-react";
+import { Bell, Send, RefreshCw, Loader2, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Save, Filter, CheckCircle, Calendar as CalendarIconLucide, CalendarRange, ArrowRight, BarChart3, TrendingUp } from "lucide-react";
 import { format, formatDistanceToNow, isPast, isWithinInterval, addDays, addMonths, eachDayOfInterval, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,6 +32,8 @@ import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 interface LogEnvio {
   timestamp: Date;
@@ -136,6 +142,11 @@ const Lembretes = () => {
   const [filtroLembrete, setFiltroLembrete] = useState<FiltroLembrete>('vencidos');
   const [selectedLembretes, setSelectedLembretes] = useState<Set<string>>(new Set());
 
+  // Dashboard statistics state
+  const [estatisticasGerais, setEstatisticasGerais] = useState<EstatisticasGerais | null>(null);
+  const [estatisticasMensais, setEstatisticasMensais] = useState<EstatisticaMensal[]>([]);
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
+
   // Batch sending state
   const [enviandoLote, setEnviandoLote] = useState(false);
   const [pausado, setPausado] = useState(false);
@@ -188,6 +199,11 @@ const Lembretes = () => {
     carregarLembretesPendentes();
   }, [filtroLembrete]);
 
+  // Load dashboard on mount
+  useEffect(() => {
+    carregarDashboard();
+  }, []);
+
   const carregarLembretesPendentes = async () => {
     setLoadingLembretes(true);
     const { data, error } = await listarLembretesPendentes(filtroLembrete);
@@ -197,6 +213,22 @@ const Lembretes = () => {
       setLembretesPendentes(data || []);
     }
     setLoadingLembretes(false);
+  };
+
+  const carregarDashboard = async () => {
+    setLoadingDashboard(true);
+    const [geraisResult, mensaisResult] = await Promise.all([
+      buscarEstatisticasGerais(),
+      buscarEstatisticasPorMes()
+    ]);
+    
+    if (geraisResult.data) {
+      setEstatisticasGerais(geraisResult.data);
+    }
+    if (mensaisResult.data) {
+      setEstatisticasMensais(mensaisResult.data);
+    }
+    setLoadingDashboard(false);
   };
 
   const validarLimitesEnvio = (): { permitido: boolean; motivo?: string } => {
@@ -547,8 +579,12 @@ const Lembretes = () => {
           </AlertDescription>
         </Alert>
 
-        <Tabs defaultValue="importar" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="dashboard" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="dashboard" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Dashboard
+            </TabsTrigger>
             <TabsTrigger value="importar" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Importar Pacientes
@@ -558,6 +594,204 @@ const Lembretes = () => {
               Lembretes Pendentes ({lembretesPendentes.length})
             </TabsTrigger>
           </TabsList>
+
+          {/* Dashboard Tab */}
+          <TabsContent value="dashboard" className="space-y-6">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                      <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total</p>
+                      {loadingDashboard ? (
+                        <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+                      ) : (
+                        <p className="text-2xl font-bold">{estatisticasGerais?.total || 0}</p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+                      <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Enviados</p>
+                      {loadingDashboard ? (
+                        <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+                      ) : (
+                        <>
+                          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{estatisticasGerais?.enviados || 0}</p>
+                          {estatisticasGerais && estatisticasGerais.total > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              {((estatisticasGerais.enviados / estatisticasGerais.total) * 100).toFixed(1)}%
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                      <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Pendentes</p>
+                      {loadingDashboard ? (
+                        <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+                      ) : (
+                        <>
+                          <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{estatisticasGerais?.pendentes || 0}</p>
+                          {estatisticasGerais && estatisticasGerais.total > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              {((estatisticasGerais.pendentes / estatisticasGerais.total) * 100).toFixed(1)}%
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
+                      <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Vencidos</p>
+                      {loadingDashboard ? (
+                        <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+                      ) : (
+                        <p className="text-2xl font-bold text-red-600 dark:text-red-400">{estatisticasGerais?.vencidos || 0}</p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Monthly Chart */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    Distribuição Mensal
+                  </CardTitle>
+                  <CardDescription>Lembretes por mês de vencimento</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={carregarDashboard} disabled={loadingDashboard}>
+                  <RefreshCw className={cn("h-4 w-4", loadingDashboard && "animate-spin")} />
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {loadingDashboard ? (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : estatisticasMensais.length === 0 ? (
+                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                    Nenhum dado disponível
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={estatisticasMensais} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="mesFormatado" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                        labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      />
+                      <Legend />
+                      <Bar dataKey="pendentes" name="Pendentes" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="enviados" name="Enviados" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Monthly Detail Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Detalhamento por Mês</CardTitle>
+                <CardDescription>Taxa de envio mensal de lembretes</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingDashboard ? (
+                  <div className="space-y-2">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="h-12 bg-muted animate-pulse rounded" />
+                    ))}
+                  </div>
+                ) : estatisticasMensais.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhum dado disponível
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[400px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Mês</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead className="text-right">Pendentes</TableHead>
+                          <TableHead className="text-right">Enviados</TableHead>
+                          <TableHead className="w-[200px]">Taxa de Envio</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {estatisticasMensais.map((mes) => {
+                          const taxaEnvio = mes.total > 0 ? (mes.enviados / mes.total) * 100 : 0;
+                          return (
+                            <TableRow key={mes.mes}>
+                              <TableCell className="font-medium">{mes.mesFormatado}</TableCell>
+                              <TableCell className="text-right">{mes.total}</TableCell>
+                              <TableCell className="text-right">
+                                <span className="text-amber-600 dark:text-amber-400">{mes.pendentes}</span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <span className="text-emerald-600 dark:text-emerald-400">{mes.enviados}</span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Progress value={taxaEnvio} className="h-2 flex-1" />
+                                  <span className="text-sm text-muted-foreground w-12 text-right">
+                                    {taxaEnvio.toFixed(0)}%
+                                  </span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Import Tab */}
           <TabsContent value="importar" className="space-y-4">

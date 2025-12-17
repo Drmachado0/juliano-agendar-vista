@@ -186,3 +186,97 @@ export async function deletarLembrete(id: string): Promise<{ success: boolean; e
     return { success: false, error: error.message };
   }
 }
+
+// Statistics interfaces
+export interface EstatisticasGerais {
+  total: number;
+  enviados: number;
+  pendentes: number;
+  vencidos: number;
+}
+
+export interface EstatisticaMensal {
+  mes: string;
+  mesFormatado: string;
+  total: number;
+  enviados: number;
+  pendentes: number;
+}
+
+// Get general statistics
+export async function buscarEstatisticasGerais(): Promise<{ data: EstatisticasGerais | null; error: string | null }> {
+  try {
+    const hoje = new Date().toISOString().split('T')[0];
+    
+    const { data, error } = await supabase
+      .from("lembretes_anuais")
+      .select("lembrete_enviado, data_proximo_lembrete");
+
+    if (error) throw error;
+
+    const total = data?.length || 0;
+    const enviados = data?.filter(l => l.lembrete_enviado).length || 0;
+    const pendentes = data?.filter(l => !l.lembrete_enviado).length || 0;
+    const vencidos = data?.filter(l => !l.lembrete_enviado && l.data_proximo_lembrete && l.data_proximo_lembrete <= hoje).length || 0;
+
+    return { 
+      data: { total, enviados, pendentes, vencidos }, 
+      error: null 
+    };
+  } catch (error: any) {
+    console.error("Erro ao buscar estatísticas gerais:", error);
+    return { data: null, error: error.message };
+  }
+}
+
+// Get monthly statistics grouped by data_proximo_lembrete
+export async function buscarEstatisticasPorMes(): Promise<{ data: EstatisticaMensal[] | null; error: string | null }> {
+  try {
+    const { data, error } = await supabase
+      .from("lembretes_anuais")
+      .select("lembrete_enviado, data_proximo_lembrete")
+      .not("data_proximo_lembrete", "is", null);
+
+    if (error) throw error;
+
+    // Group by month
+    const porMes: Record<string, { total: number; enviados: number; pendentes: number }> = {};
+
+    data?.forEach(lembrete => {
+      if (!lembrete.data_proximo_lembrete) return;
+      
+      const mesKey = lembrete.data_proximo_lembrete.substring(0, 7); // "2026-01"
+      
+      if (!porMes[mesKey]) {
+        porMes[mesKey] = { total: 0, enviados: 0, pendentes: 0 };
+      }
+      
+      porMes[mesKey].total++;
+      if (lembrete.lembrete_enviado) {
+        porMes[mesKey].enviados++;
+      } else {
+        porMes[mesKey].pendentes++;
+      }
+    });
+
+    // Convert to array and format
+    const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    
+    const resultado = Object.entries(porMes)
+      .map(([mes, stats]) => {
+        const [ano, mesNum] = mes.split('-');
+        const mesIndex = parseInt(mesNum, 10) - 1;
+        return {
+          mes,
+          mesFormatado: `${meses[mesIndex]}/${ano}`,
+          ...stats
+        };
+      })
+      .sort((a, b) => a.mes.localeCompare(b.mes));
+
+    return { data: resultado, error: null };
+  } catch (error: any) {
+    console.error("Erro ao buscar estatísticas por mês:", error);
+    return { data: null, error: error.message };
+  }
+}
