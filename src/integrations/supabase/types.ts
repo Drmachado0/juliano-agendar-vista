@@ -376,6 +376,48 @@ export type Database = {
         }
         Relationships: []
       }
+      lembretes_anuais: {
+        Row: {
+          created_at: string | null
+          data_proximo_lembrete: string | null
+          data_ultima_consulta: string
+          id: string
+          lembrete_enviado: boolean | null
+          lembrete_enviado_em: string | null
+          nome: string
+          origem: string | null
+          primeiro_nome: string | null
+          telefone: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_proximo_lembrete?: string | null
+          data_ultima_consulta: string
+          id?: string
+          lembrete_enviado?: boolean | null
+          lembrete_enviado_em?: string | null
+          nome: string
+          origem?: string | null
+          primeiro_nome?: string | null
+          telefone: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data_proximo_lembrete?: string | null
+          data_ultima_consulta?: string
+          id?: string
+          lembrete_enviado?: boolean | null
+          lembrete_enviado_em?: string | null
+          nome?: string
+          origem?: string | null
+          primeiro_nome?: string | null
+          telefone?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       mensagens_whatsapp: {
         Row: {
           agendamento_id: string | null
