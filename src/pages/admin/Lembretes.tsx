@@ -58,7 +58,7 @@ interface HistoricoLembrete {
 }
 
 type EstadoEnvio = 'idle' | 'enviando' | 'aguardando_intervalo' | 'pausa_seguranca' | 'interrompido_limite';
-type FiltroLembrete = 'vencidos' | 'semana' | 'mes' | 'todos';
+type FiltroLembrete = string; // 'vencidos' | 'semana' | 'mes' | 'todos' | 'mes_YYYY-MM'
 
 // Security limits
 const LIMITE_SESSAO = 40;
@@ -1136,13 +1136,28 @@ const Lembretes = () => {
                     <Filter className="h-4 w-4 text-muted-foreground" />
                     <select
                       value={filtroLembrete}
-                      onChange={(e) => setFiltroLembrete(e.target.value as FiltroLembrete)}
+                      onChange={(e) => setFiltroLembrete(e.target.value)}
                       className="text-sm border rounded-md px-2 py-1 bg-background"
                     >
-                      <option value="vencidos">Vencidos</option>
-                      <option value="semana">Esta semana</option>
-                      <option value="mes">Este mês</option>
-                      <option value="todos">Todos</option>
+                      <optgroup label="Por Status">
+                        <option value="vencidos">Vencidos</option>
+                        <option value="semana">Esta semana</option>
+                        <option value="mes">Próximo mês</option>
+                        <option value="todos">Todos pendentes</option>
+                      </optgroup>
+                      <optgroup label="Por Mês Específico">
+                        {(() => {
+                          const hoje = new Date();
+                          const meses = [];
+                          for (let i = -2; i <= 12; i++) {
+                            const data = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
+                            const valor = `mes_${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+                            const label = data.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+                            meses.push(<option key={valor} value={valor}>{label.charAt(0).toUpperCase() + label.slice(1)}</option>);
+                          }
+                          return meses;
+                        })()}
+                      </optgroup>
                     </select>
                     <Button variant="outline" size="sm" onClick={carregarLembretesPendentes}>
                       <RefreshCw className="h-4 w-4" />
