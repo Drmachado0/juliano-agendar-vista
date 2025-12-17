@@ -59,6 +59,9 @@ interface HistoricoLembrete {
 
 type EstadoEnvio = 'idle' | 'enviando' | 'aguardando_intervalo' | 'pausa_seguranca' | 'interrompido_limite';
 type FiltroLembrete = 'vencidos' | 'semana' | 'mes' | 'todos';
+type FiltroMesEspecifico = '01' | '02' | '03' | '04' | '05' | '06' | '07' | '08' | '09' | '10' | '11' | '12' | 'todos';
+
+const NOMES_MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
 // Security limits
 const LIMITE_SESSAO = 40;
@@ -152,6 +155,7 @@ const Lembretes = () => {
   const [lembretesPendentes, setLembretesPendentes] = useState<LembreteAnual[]>([]);
   const [loadingLembretes, setLoadingLembretes] = useState(true);
   const [filtroLembrete, setFiltroLembrete] = useState<FiltroLembrete>('vencidos');
+  const [filtroMesEspecifico, setFiltroMesEspecifico] = useState<FiltroMesEspecifico>('todos');
   const [selectedLembretes, setSelectedLembretes] = useState<Set<string>>(new Set());
 
   // Dashboard statistics state
@@ -224,7 +228,7 @@ const Lembretes = () => {
   // Load pending reminders on mount and filter change
   useEffect(() => {
     carregarLembretesPendentes();
-  }, [filtroLembrete]);
+  }, [filtroLembrete, filtroMesEspecifico]);
 
   // Load dashboard on mount
   useEffect(() => {
@@ -234,7 +238,8 @@ const Lembretes = () => {
 
   const carregarLembretesPendentes = async () => {
     setLoadingLembretes(true);
-    const { data, error } = await listarLembretesPendentes(filtroLembrete);
+    const mesParam = filtroMesEspecifico !== 'todos' ? filtroMesEspecifico : undefined;
+    const { data, error } = await listarLembretesPendentes(filtroLembrete, mesParam);
     if (error) {
       toast({ title: "Erro", description: error, variant: "destructive" });
     } else {
@@ -1132,7 +1137,7 @@ const Lembretes = () => {
                     </CardTitle>
                     <CardDescription>Pacientes que completam 1 ano da última consulta</CardDescription>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Filter className="h-4 w-4 text-muted-foreground" />
                     <select
                       value={filtroLembrete}
@@ -1144,6 +1149,31 @@ const Lembretes = () => {
                       <option value="mes">Este mês</option>
                       <option value="todos">Todos</option>
                     </select>
+                    <select
+                      value={filtroMesEspecifico}
+                      onChange={(e) => setFiltroMesEspecifico(e.target.value as FiltroMesEspecifico)}
+                      className="text-sm border rounded-md px-2 py-1 bg-background"
+                    >
+                      <option value="todos">Todos os meses</option>
+                      <option value="01">Janeiro</option>
+                      <option value="02">Fevereiro</option>
+                      <option value="03">Março</option>
+                      <option value="04">Abril</option>
+                      <option value="05">Maio</option>
+                      <option value="06">Junho</option>
+                      <option value="07">Julho</option>
+                      <option value="08">Agosto</option>
+                      <option value="09">Setembro</option>
+                      <option value="10">Outubro</option>
+                      <option value="11">Novembro</option>
+                      <option value="12">Dezembro</option>
+                    </select>
+                    {filtroMesEspecifico !== 'todos' && (
+                      <Badge variant="secondary" className="gap-1">
+                        <CalendarIconLucide className="h-3 w-3" />
+                        {NOMES_MESES[parseInt(filtroMesEspecifico) - 1]}
+                      </Badge>
+                    )}
                     <Button variant="outline" size="sm" onClick={carregarLembretesPendentes}>
                       <RefreshCw className="h-4 w-4" />
                     </Button>
