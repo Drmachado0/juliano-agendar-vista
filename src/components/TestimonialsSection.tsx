@@ -16,67 +16,6 @@ interface Testimonial {
 
 const AUTO_ROTATE_INTERVAL = 6000; // 6 seconds
 
-// Avaliações fallback (usadas se o banco estiver vazio)
-const FALLBACK_TESTIMONIALS: Testimonial[] = [
-  {
-    id: "1",
-    name: "Amanda Machado",
-    avatar: "AM",
-    image: "https://lh3.googleusercontent.com/a-/ALV-UjVr4IwRV0mKIccKAdcCNGLiadt03y_FVzG3JrNajeCrTYX2IcTI=w72-h72-p-rp-mo-br100",
-    rating: 5,
-    text: "Gostei muito da consulta! Excelente profissional, explica tudo muito bem, e nos deixa seguros.",
-    date: "há 2 anos",
-    source: 'Google',
-  },
-  {
-    id: "2",
-    name: "Gislene Alves da Silva",
-    avatar: "GA",
-    image: "https://lh3.googleusercontent.com/a/ACg8ocJDkwVCCYhIu0Ek2a-WYH0Pd5MSrjq_hPQ4dcFE_qlVuMfcYg=w72-h72-p-rp-mo-ba2-br100",
-    rating: 5,
-    text: "Excelente profissional!",
-    date: "há 2 anos",
-    source: 'Google',
-  },
-  {
-    id: "3",
-    name: "Ambulatórios Pedfamaz",
-    avatar: "AP",
-    image: "https://lh3.googleusercontent.com/a/ACg8ocLQnzEQT1_J76p0h2RmkkoKi-wQBPVKn2jYclq0fa-YFPSAPg=w72-h72-p-rp-mo-br100",
-    rating: 5,
-    text: "Atendimento excelente, profissional muito competente e atencioso.",
-    date: "há 2 anos",
-    source: 'Google',
-  },
-  {
-    id: "4",
-    name: "Josinete Brito",
-    avatar: "JB",
-    rating: 5,
-    text: "Ótimo profissional, muito atencioso e dedicado. Recomendo!",
-    date: "há 1 ano",
-    source: 'Google',
-  },
-  {
-    id: "5",
-    name: "Maria das Graças",
-    avatar: "MG",
-    rating: 5,
-    text: "Médico muito competente e humano. Me senti muito bem acolhida durante toda a consulta.",
-    date: "há 1 ano",
-    source: 'Google',
-  },
-  {
-    id: "6",
-    name: "Carlos Eduardo",
-    avatar: "CE",
-    rating: 5,
-    text: "Profissional excepcional! Muito conhecimento e paciência para explicar tudo sobre o tratamento.",
-    date: "há 8 meses",
-    source: 'Google',
-  },
-];
-
 // Converter avaliação do banco para formato de exibição
 function convertToTestimonial(avaliacao: AvaliacaoGoogle): Testimonial {
   const initials = avaliacao.author_name
@@ -113,12 +52,12 @@ const TestimonialsSection = () => {
     staleTime: 1000 * 60 * 30, // 30 minutos
   });
 
-  // Avaliações disponíveis (do banco ou fallback)
+  // Avaliações disponíveis (apenas do banco)
   const allTestimonials = useMemo(() => {
     if (avaliacoesGoogle && avaliacoesGoogle.length > 0) {
       return avaliacoesGoogle.map(convertToTestimonial);
     }
-    return FALLBACK_TESTIMONIALS;
+    return [];
   }, [avaliacoesGoogle]);
 
   // Shuffle array using Fisher-Yates algorithm
@@ -227,9 +166,16 @@ const TestimonialsSection = () => {
         </div>
 
         {/* Loading State */}
-        {isLoading && displayedTestimonials.length === 0 && (
+        {isLoading && (
           <div className="flex justify-center items-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && allTestimonials.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            <p>Nenhuma avaliação disponível no momento.</p>
           </div>
         )}
 
