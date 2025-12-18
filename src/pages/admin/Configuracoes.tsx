@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Building2, Stethoscope, Plus, Pencil, Clock, MapPin, Phone, Calendar, Link2, Unlink, Loader2, Shield, DollarSign, MessageSquare } from "lucide-react";
+import { Building2, Stethoscope, Plus, Pencil, Clock, MapPin, Phone, Calendar, Link2, Unlink, Loader2, Shield, DollarSign, MessageSquare, Star, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Clinica, 
@@ -46,6 +46,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import TwoFactorSetup from "@/components/admin/TwoFactorSetup";
 import TemplatesWhatsAppTab from "@/components/admin/TemplatesWhatsAppTab";
+import { sincronizarAvaliacoesManualmente } from "@/services/avaliacoesGoogle";
 
 export default function Configuracoes() {
   const { user } = useAuth();
@@ -59,6 +60,14 @@ export default function Configuracoes() {
   // Google Calendar state
   const [gcalStatus, setGcalStatus] = useState<GoogleCalendarStatus>({ connected: false });
   const [gcalLoading, setGcalLoading] = useState(false);
+  
+  // Google Reviews state
+  const [reviewsSyncing, setReviewsSyncing] = useState(false);
+  const [reviewsSyncResult, setReviewsSyncResult] = useState<{
+    success: boolean;
+    message: string;
+    synced?: number;
+  } | null>(null);
   
   // Modal states
   const [clinicaModalOpen, setClinicaModalOpen] = useState(false);
@@ -180,6 +189,22 @@ export default function Configuracoes() {
       toast.error(error || 'Erro ao desconectar');
     }
     setGcalLoading(false);
+  }
+
+  async function handleSyncGoogleReviews() {
+    setReviewsSyncing(true);
+    setReviewsSyncResult(null);
+    
+    const result = await sincronizarAvaliacoesManualmente();
+    setReviewsSyncResult(result);
+    
+    if (result.success) {
+      toast.success(`${result.synced || 0} avaliações sincronizadas!`);
+    } else {
+      toast.error(result.message || 'Erro ao sincronizar avaliações');
+    }
+    
+    setReviewsSyncing(false);
   }
 
   // Clinica handlers
@@ -701,6 +726,57 @@ export default function Configuracoes() {
                       </Button>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              {/* Google Reviews Sync */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-amber-500/10">
+                      <Star className="h-6 w-6 text-amber-500" />
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">Google Reviews</CardTitle>
+                      <CardDescription>
+                        Sincronize avaliações do Google Places automaticamente
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      As avaliações são sincronizadas automaticamente todos os dias às 6h. 
+                      Use o botão abaixo para sincronizar manualmente.
+                    </p>
+                    
+                    {reviewsSyncResult && (
+                      <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
+                        reviewsSyncResult.success 
+                          ? 'bg-green-500/10 text-green-600' 
+                          : 'bg-destructive/10 text-destructive'
+                      }`}>
+                        {reviewsSyncResult.success 
+                          ? <CheckCircle2 className="h-4 w-4" />
+                          : <XCircle className="h-4 w-4" />
+                        }
+                        <span>{reviewsSyncResult.message}</span>
+                      </div>
+                    )}
+                    
+                    <Button
+                      onClick={handleSyncGoogleReviews}
+                      disabled={reviewsSyncing}
+                      className="gap-2"
+                    >
+                      {reviewsSyncing 
+                        ? <Loader2 className="h-4 w-4 animate-spin" /> 
+                        : <RefreshCw className="h-4 w-4" />
+                      }
+                      {reviewsSyncing ? 'Sincronizando...' : 'Sincronizar Agora'}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
