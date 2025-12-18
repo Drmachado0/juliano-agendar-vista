@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Star, Quote } from "lucide-react";
+import { Star, Quote, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { buscarAvaliacoesGoogle, type AvaliacaoGoogle } from "@/services/avaliacoesGoogle";
 
 interface Testimonial {
   id: string;
@@ -14,8 +16,8 @@ interface Testimonial {
 
 const AUTO_ROTATE_INTERVAL = 6000; // 6 seconds
 
-// Avaliações reais do perfil do Google
-const ALL_TESTIMONIALS: Testimonial[] = [
+// Avaliações fallback (usadas se o banco estiver vazio)
+const FALLBACK_TESTIMONIALS: Testimonial[] = [
   {
     id: "1",
     name: "Amanda Machado",
@@ -75,6 +77,27 @@ const ALL_TESTIMONIALS: Testimonial[] = [
   },
 ];
 
+// Converter avaliação do banco para formato de exibição
+function convertToTestimonial(avaliacao: AvaliacaoGoogle): Testimonial {
+  const initials = avaliacao.author_name
+    .split(' ')
+    .map(n => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  return {
+    id: avaliacao.id,
+    name: avaliacao.author_name,
+    avatar: initials,
+    image: avaliacao.author_photo_url || undefined,
+    rating: (avaliacao.rating >= 4 ? avaliacao.rating : 4) as 4 | 5,
+    text: avaliacao.text || "Excelente atendimento!",
+    date: avaliacao.relative_time_description || "Avaliação recente",
+    source: 'Google',
+  };
+}
+
 const TestimonialsSection = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [displayedTestimonials, setDisplayedTestimonials] = useState<Testimonial[]>([]);
@@ -82,6 +105,21 @@ const TestimonialsSection = () => {
   const [isHovered, setIsHovered] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
   const autoRotateRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Buscar avaliações do banco de dados
+  const { data: avaliacoesGoogle, isLoading } = useQuery({
+    queryKey: ['avaliacoes-google'],
+    queryFn: buscarAvaliacoesGoogle,
+    staleTime: 1000 * 60 * 30, // 30 minutos
+  });
+
+  // Avaliações disponíveis (do banco ou fallback)
+  const allTestimonials = useMemo(() => {
+    if (avaliacoesGoogle && avaliacoesGoogle.length > 0) {
+      return avaliacoesGoogle.map(convertToTestimonial);
+    }
+    return FALLBACK_TESTIMONIALS;
+  }, [avaliacoesGoogle]);
 
   // Shuffle array using Fisher-Yates algorithm
   const shuffleArray = useCallback((array: Testimonial[]): Testimonial[] => {
@@ -97,21 +135,23 @@ const TestimonialsSection = () => {
   const loadNewTestimonials = useCallback(() => {
     setIsTransitioning(true);
     setTimeout(() => {
-      const shuffled = shuffleArray(ALL_TESTIMONIALS);
+      const shuffled = shuffleArray(allTestimonials);
       setDisplayedTestimonials(shuffled.slice(0, 3));
       setIsTransitioning(false);
     }, 300);
-  }, [shuffleArray]);
+  }, [shuffleArray, allTestimonials]);
 
-  // Initial load
+  // Initial load when testimonials change
   useEffect(() => {
-    const shuffled = shuffleArray(ALL_TESTIMONIALS);
-    setDisplayedTestimonials(shuffled.slice(0, 3));
-  }, [shuffleArray]);
+    if (allTestimonials.length > 0) {
+      const shuffled = shuffleArray(allTestimonials);
+      setDisplayedTestimonials(shuffled.slice(0, 3));
+    }
+  }, [shuffleArray, allTestimonials]);
 
   // Auto-rotate testimonials
   useEffect(() => {
-    if (isHovered) {
+    if (isHovered || allTestimonials.length <= 3) {
       if (autoRotateRef.current) {
         clearInterval(autoRotateRef.current);
         autoRotateRef.current = null;
@@ -128,7 +168,7 @@ const TestimonialsSection = () => {
         clearInterval(autoRotateRef.current);
       }
     };
-  }, [isHovered, loadNewTestimonials]);
+  }, [isHovered, loadNewTestimonials, allTestimonials.length]);
 
   // Calculate average rating dynamically
   const averageRating = useMemo(() => {
@@ -185,6 +225,13 @@ const TestimonialsSection = () => {
             <span>• Avaliações do Google</span>
           </div>
         </div>
+
+        {/* Loading State */}
+        {isLoading && displayedTestimonials.length === 0 && (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        )}
 
         {/* Testimonials Grid */}
         <div 

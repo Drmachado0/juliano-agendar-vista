@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.criar-lead]
 verify_jwt = false
+
+[functions.sincronizar-avaliacoes-google]
+verify_jwt = false

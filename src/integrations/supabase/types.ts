@@ -135,6 +135,51 @@ export type Database = {
           },
         ]
       }
+      avaliacoes_google: {
+        Row: {
+          ativo: boolean | null
+          author_name: string
+          author_photo_url: string | null
+          created_at: string | null
+          google_review_id: string
+          id: string
+          language: string | null
+          rating: number
+          relative_time_description: string | null
+          text: string | null
+          time_epoch: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          author_name: string
+          author_photo_url?: string | null
+          created_at?: string | null
+          google_review_id: string
+          id?: string
+          language?: string | null
+          rating: number
+          relative_time_description?: string | null
+          text?: string | null
+          time_epoch?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          author_name?: string
+          author_photo_url?: string | null
+          created_at?: string | null
+          google_review_id?: string
+          id?: string
+          language?: string | null
+          rating?: number
+          relative_time_description?: string | null
+          text?: string | null
+          time_epoch?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       bloqueios_agenda: {
         Row: {
           clinica_id: string
