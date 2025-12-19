@@ -120,7 +120,9 @@ serve(async (req) => {
 
     // Verify remaining numbers with Evolution API
     if (numerosParaVerificar.length > 0) {
-      console.log('Verificando números:', numerosParaVerificar.map(n => n.formatted));
+      // Deduplicate numbers before sending to Evolution API
+      const uniqueFormattedNumbers = [...new Set(numerosParaVerificar.map(n => n.formatted))];
+      console.log(`Verificando ${uniqueFormattedNumbers.length} números únicos (de ${numerosParaVerificar.length} total):`, uniqueFormattedNumbers);
 
       const evolutionUrl = `${EVOLUTION_API_BASE_URL}/chat/whatsappNumbers/${EVOLUTION_API_INSTANCE}`;
       
@@ -131,7 +133,7 @@ serve(async (req) => {
           'apikey': EVOLUTION_API_TOKEN,
         },
         body: JSON.stringify({
-          numbers: numerosParaVerificar.map(n => n.formatted),
+          numbers: uniqueFormattedNumbers,
         }),
       });
 
@@ -157,15 +159,18 @@ serve(async (req) => {
           });
         }
       } else {
-        // Process API results
+        // Process API results - Evolution API returns { message: [...] } format
+        const apiResults = Array.isArray(data) ? data : (data?.message || []);
+        console.log(`API retornou ${apiResults.length} resultados`);
+        
         const newVerifications: { telefone: string; existe_whatsapp: boolean; jid: string | null }[] = [];
 
         for (const num of numerosParaVerificar) {
           let exists = false;
           let jid: string | undefined;
 
-          if (Array.isArray(data)) {
-            const found = data.find((item: { jid?: string; exists?: boolean; number?: string }) => {
+          if (Array.isArray(apiResults)) {
+            const found = apiResults.find((item: { jid?: string; exists?: boolean; number?: string }) => {
               const itemNumber = item.number || item.jid?.replace('@s.whatsapp.net', '');
               return itemNumber === num.formatted || itemNumber === num.formatted.replace(/^55/, '');
             });

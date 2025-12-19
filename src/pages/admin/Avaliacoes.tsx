@@ -498,12 +498,16 @@ const Avaliacoes = () => {
     setPacientesLote(prev => prev.map(p => ({ ...p, whatsappVerificado: 'pendente' as const })));
     
     try {
-      // Pegar telefones únicos formatados
-      const telefones = pacientesLote.map(p => {
+      // Pegar telefones únicos formatados (deduplicar antes de enviar)
+      const telefonesSet = new Set<string>();
+      pacientesLote.forEach(p => {
         let numeros = p.telefone.replace(/\D/g, '');
         if (!numeros.startsWith('55')) numeros = '55' + numeros;
-        return numeros;
+        telefonesSet.add(numeros);
       });
+      const telefones = Array.from(telefonesSet);
+      
+      console.log(`Verificando ${telefones.length} telefones únicos (de ${pacientesLote.length} pacientes)`);
       
       // Dividir em lotes de 50
       const BATCH_SIZE = 50;
