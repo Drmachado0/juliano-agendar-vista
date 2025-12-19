@@ -45,10 +45,21 @@ interface ErrorInfo {
   code: string;
   userMessage: string;
   technical: string;
+  isClientError?: boolean;
 }
 
 function categorizeError(errorText: string, statusCode?: number): ErrorInfo {
   const lowerError = errorText.toLowerCase();
+  
+  // Check for "number doesn't exist on WhatsApp" - this is the most common error
+  if (lowerError.includes('"exists":false') || lowerError.includes('"exists": false')) {
+    return {
+      code: "NUMBER_NOT_EXISTS",
+      userMessage: "Número não encontrado no WhatsApp. Verifique se o número está correto e possui WhatsApp ativo.",
+      technical: errorText,
+      isClientError: true,
+    };
+  }
   
   if (lowerError.includes("connection closed") || lowerError.includes("connection refused")) {
     return {
@@ -315,6 +326,12 @@ async function sendWithRetryAndReconnect(
       return { success: true, data: result.data, reconnected };
     }
 
+    // Don't retry client errors (like NUMBER_NOT_EXISTS) - retrying won't help
+    if (result.error?.isClientError) {
+      console.log(`[enviar-whatsapp] ✗ Erro de cliente: ${result.error.code}. Não faz sentido tentar novamente.`);
+      return { success: false, error: result.error, reconnected };
+    }
+
     // Check if it's a connection error that warrants reconnection
     if (result.error?.code === "CONNECTION_CLOSED" || result.error?.code === "NOT_CONNECTED") {
       console.log(`[enviar-whatsapp] Erro de conexão detectado. Tentando reconectar...`);
@@ -455,6 +472,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Use 400 for client errors (like invalid phone number), 500 for server errors
+    const statusCode = result.error?.isClientError ? 400 : 500;
+    
     return new Response(
       JSON.stringify({
         success: false,
@@ -462,7 +482,7 @@ const handler = async (req: Request): Promise<Response> => {
         userMessage: result.error?.userMessage || "Erro desconhecido",
         technical: result.error?.technical,
       }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      { status: statusCode, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
 
   } catch (error: any) {
