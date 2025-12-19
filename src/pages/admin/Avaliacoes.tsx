@@ -127,46 +127,92 @@ const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const N8N_WEBHOOK_URL = "https://juliano-n8n.cloudfy.live/webhook/avaliacao-google-lovable";
 
 // ===== VALIDAÇÃO DE TELEFONE BRASILEIRO =====
-const validarTelefoneBrasileiro = (telefone: string): { valido: boolean; erro?: string } => {
-  const numeros = telefone.replace(/\D/g, '');
+const dddsValidos = [
+  11, 12, 13, 14, 15, 16, 17, 18, 19, // SP
+  21, 22, 24, // RJ
+  27, 28, // ES
+  31, 32, 33, 34, 35, 37, 38, // MG
+  41, 42, 43, 44, 45, 46, // PR
+  47, 48, 49, // SC
+  51, 53, 54, 55, // RS
+  61, // DF
+  62, 64, // GO
+  63, // TO
+  65, 66, // MT
+  67, // MS
+  68, // AC
+  69, // RO
+  71, 73, 74, 75, 77, // BA
+  79, // SE
+  81, 82, 83, 84, 85, 86, 87, 88, 89, // NE
+  91, 92, 93, 94, 95, 96, 97, 98, 99 // Norte
+];
+
+// Função para autocorrigir telefone (adiciona 9 se faltando)
+const autocorrigirTelefone = (telefone: string): { corrigido: string; foiCorrigido: boolean; formatado: string } => {
+  let numeros = telefone.replace(/\D/g, '');
+  let foiCorrigido = false;
   
-  // Deve ter 10 ou 11 dígitos (com ou sem 9 inicial do celular)
+  // Remove 55 do início se presente (código do Brasil)
+  if (numeros.startsWith('55') && numeros.length >= 12) {
+    numeros = numeros.slice(2);
+  }
+  
+  // Se tem 10 dígitos (DDD + 8 dígitos), adiciona o 9
+  if (numeros.length === 10) {
+    const ddd = numeros.slice(0, 2);
+    const numero = numeros.slice(2);
+    // Adiciona 9 após o DDD (padrão para celulares)
+    numeros = ddd + '9' + numero;
+    foiCorrigido = true;
+  }
+  
+  // Formata o número para exibição
+  let formatado = numeros;
+  if (numeros.length === 11) {
+    formatado = `+55 (${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7)}`;
+  } else if (numeros.length === 10) {
+    formatado = `+55 (${numeros.slice(0, 2)}) ${numeros.slice(2, 6)}-${numeros.slice(6)}`;
+  }
+  
+  return { corrigido: numeros, foiCorrigido, formatado };
+};
+
+const validarTelefoneBrasileiro = (telefone: string): { valido: boolean; erro?: string; podeCorrigir?: boolean } => {
+  let numeros = telefone.replace(/\D/g, '');
+  
+  // Remove 55 do início se presente
+  if (numeros.startsWith('55') && numeros.length >= 12) {
+    numeros = numeros.slice(2);
+  }
+  
+  // Se tem 10 dígitos, pode ser corrigido adicionando o 9
+  if (numeros.length === 10) {
+    const ddd = parseInt(numeros.slice(0, 2));
+    if (dddsValidos.includes(ddd)) {
+      return { 
+        valido: false, 
+        erro: 'Falta o dígito 9 após o DDD. Clique para corrigir.',
+        podeCorrigir: true
+      };
+    }
+  }
+  
+  // Deve ter 10 ou 11 dígitos
   if (numeros.length < 10 || numeros.length > 11) {
     return { 
       valido: false, 
-      erro: `Telefone deve ter 10 ou 11 dígitos (DDD + número). Você digitou ${numeros.length} dígitos.` 
+      erro: `Telefone deve ter 10 ou 11 dígitos. Atual: ${numeros.length} dígitos.` 
     };
   }
   
   // Extrair DDD (2 primeiros dígitos)
   const ddd = parseInt(numeros.slice(0, 2));
   
-  // DDDs válidos do Brasil (11-99, mas alguns não existem)
-  const dddsValidos = [
-    11, 12, 13, 14, 15, 16, 17, 18, 19, // SP
-    21, 22, 24, // RJ
-    27, 28, // ES
-    31, 32, 33, 34, 35, 37, 38, // MG
-    41, 42, 43, 44, 45, 46, // PR
-    47, 48, 49, // SC
-    51, 53, 54, 55, // RS
-    61, // DF
-    62, 64, // GO
-    63, // TO
-    65, 66, // MT
-    67, // MS
-    68, // AC
-    69, // RO
-    71, 73, 74, 75, 77, // BA
-    79, // SE
-    81, 82, 83, 84, 85, 86, 87, 88, 89, // NE
-    91, 92, 93, 94, 95, 96, 97, 98, 99 // Norte
-  ];
-  
   if (!dddsValidos.includes(ddd)) {
     return { 
       valido: false, 
-      erro: `DDD ${ddd} não é válido. Verifique o código de área.` 
+      erro: `DDD ${ddd} não é válido.` 
     };
   }
   
@@ -176,7 +222,7 @@ const validarTelefoneBrasileiro = (telefone: string): { valido: boolean; erro?: 
     if (primeiroDigitoNumero !== '9') {
       return { 
         valido: false, 
-        erro: 'Celular com 11 dígitos deve começar com 9 após o DDD.' 
+        erro: 'Celular deve começar com 9 após o DDD.' 
       };
     }
   }
@@ -397,6 +443,51 @@ const Avaliacoes = () => {
   const cancelarEdicaoTelefone = () => {
     setEditandoTelefone(null);
     setTelefoneEditado("");
+  };
+
+  // Autocorrigir telefone de um paciente específico
+  const autocorrigirTelefonePaciente = (id: string) => {
+    setPacientesLote(prev => prev.map(p => {
+      if (p.id === id) {
+        const { corrigido, formatado } = autocorrigirTelefone(p.telefone);
+        return { ...p, telefone: corrigido, telefone_formatado: formatado };
+      }
+      return p;
+    }));
+  };
+
+  // Autocorrigir todos os telefones inválidos da lista
+  const autocorrigirTodosTelefones = () => {
+    let corrigidos = 0;
+    setPacientesLote(prev => prev.map(p => {
+      const validacao = validarTelefoneBrasileiro(p.telefone);
+      if (!validacao.valido && validacao.podeCorrigir) {
+        const { corrigido, formatado } = autocorrigirTelefone(p.telefone);
+        corrigidos++;
+        return { ...p, telefone: corrigido, telefone_formatado: formatado };
+      }
+      return p;
+    }));
+    
+    if (corrigidos > 0) {
+      toast({
+        title: "Telefones corrigidos!",
+        description: `${corrigidos} telefone(s) tiveram o dígito 9 adicionado automaticamente.`,
+      });
+    } else {
+      toast({
+        title: "Nenhuma correção necessária",
+        description: "Todos os telefones já estão no formato correto.",
+      });
+    }
+  };
+
+  // Contar telefones inválidos que podem ser corrigidos
+  const contarTelefonesCorrigiveis = () => {
+    return pacientesLote.filter(p => {
+      const v = validarTelefoneBrasileiro(p.telefone);
+      return !v.valido && v.podeCorrigir;
+    }).length;
   };
 
   const carregarPacientesAtendidos = async () => {
@@ -877,8 +968,11 @@ const Avaliacoes = () => {
       return;
     }
 
-    // Validar formato do telefone brasileiro
-    const validacao = validarTelefoneBrasileiro(telefoneAvulso);
+    // Autocorrigir telefone se possível
+    const { corrigido: telefoneCorrigido, foiCorrigido } = autocorrigirTelefone(telefoneAvulso);
+    
+    // Validar formato do telefone brasileiro (já corrigido)
+    const validacao = validarTelefoneBrasileiro(telefoneCorrigido);
     if (!validacao.valido) {
       toast({
         title: "Telefone inválido",
@@ -888,9 +982,16 @@ const Avaliacoes = () => {
       return;
     }
 
+    if (foiCorrigido) {
+      toast({
+        title: "Telefone corrigido automaticamente",
+        description: "O dígito 9 foi adicionado após o DDD.",
+      });
+    }
+
     setEnviandoAvulso(true);
     try {
-      await enviarAvaliacaoSequencial(telefoneAvulso, nomeAvulso.trim());
+      await enviarAvaliacaoSequencial(telefoneCorrigido, nomeAvulso.trim());
 
       toast({
         title: "Avaliação enviada!",
@@ -1289,9 +1390,22 @@ const Avaliacoes = () => {
                       Selecionar todos ({pacientesLote.length})
                     </Label>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    {selectedIds.size} selecionado(s)
+                  <div className="flex items-center gap-3">
+                    {contarTelefonesCorrigiveis() > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={autocorrigirTodosTelefones}
+                        className="text-amber-600 border-amber-500/50 hover:bg-amber-500/10"
+                      >
+                        <Zap className="h-3.5 w-3.5 mr-1.5" />
+                        Corrigir {contarTelefonesCorrigiveis()} telefone(s)
+                      </Button>
+                    )}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      {selectedIds.size} selecionado(s)
+                    </div>
                   </div>
                 </div>
 
@@ -1395,21 +1509,51 @@ const Avaliacoes = () => {
                                 </div>
                               ) : (
                                 <>
-                                  <span className={!validarTelefoneBrasileiro(paciente.telefone).valido ? "text-red-500" : ""}>
-                                    {paciente.telefone_formatado}
-                                  </span>
-                                  {!validarTelefoneBrasileiro(paciente.telefone).valido && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
-                                        </TooltipTrigger>
-                                        <TooltipContent className="max-w-xs">
-                                          <p className="text-xs">{validarTelefoneBrasileiro(paciente.telefone).erro}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
+                                  {(() => {
+                                    const validacao = validarTelefoneBrasileiro(paciente.telefone);
+                                    return (
+                                      <>
+                                        <span className={!validacao.valido ? "text-red-500" : "text-green-600"}>
+                                          {paciente.telefone_formatado}
+                                        </span>
+                                        {!validacao.valido && validacao.podeCorrigir && (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  className="h-5 px-1.5 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-500/10"
+                                                  onClick={() => autocorrigirTelefonePaciente(paciente.id)}
+                                                >
+                                                  <Zap className="h-3 w-3 mr-1" />
+                                                  +9
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p className="text-xs">Adicionar dígito 9 automaticamente</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        )}
+                                        {!validacao.valido && !validacao.podeCorrigir && (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+                                              </TooltipTrigger>
+                                              <TooltipContent className="max-w-xs">
+                                                <p className="text-xs">{validacao.erro}</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        )}
+                                        {validacao.valido && (
+                                          <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                                        )}
+                                      </>
+                                    );
+                                  })()}
                                   {paciente.data_atendimento_formatada && (
                                     <>
                                       <span className="text-muted-foreground/50">•</span>
@@ -1719,18 +1863,47 @@ const Avaliacoes = () => {
                     }
                   />
                   {telefoneAvulso.length > 0 && (
-                    <div className="flex items-center gap-1.5 text-xs">
-                      {validarTelefoneBrasileiro(telefoneAvulso).valido ? (
-                        <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
-                          <CheckCircle className="h-3 w-3" />
-                          Formato válido
-                        </span>
-                      ) : (
-                        <span className="text-red-600 dark:text-red-400 flex items-center gap-1">
-                          <AlertTriangle className="h-3 w-3" />
-                          {validarTelefoneBrasileiro(telefoneAvulso).erro}
-                        </span>
-                      )}
+                    <div className="flex items-center gap-2 text-xs">
+                      {(() => {
+                        const validacao = validarTelefoneBrasileiro(telefoneAvulso);
+                        if (validacao.valido) {
+                          return (
+                            <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3" />
+                              Formato válido
+                            </span>
+                          );
+                        } else if (validacao.podeCorrigir) {
+                          return (
+                            <div className="flex items-center gap-2">
+                              <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                Falta dígito 9
+                              </span>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-5 px-2 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-500/10"
+                                onClick={() => {
+                                  const { formatado } = autocorrigirTelefone(telefoneAvulso);
+                                  setTelefoneAvulso(formatado);
+                                }}
+                              >
+                                <Zap className="h-3 w-3 mr-1" />
+                                Corrigir
+                              </Button>
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <span className="text-red-600 dark:text-red-400 flex items-center gap-1">
+                              <AlertTriangle className="h-3 w-3" />
+                              {validacao.erro}
+                            </span>
+                          );
+                        }
+                      })()}
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground">
