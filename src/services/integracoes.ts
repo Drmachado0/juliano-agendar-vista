@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Agendamento } from "./agendamentos";
+import { compressImage, formatFileSize } from "@/lib/imageCompression";
 
 // WhatsApp Evolution API integration - Enviar texto
 export async function enviarMensagemWhatsApp(
@@ -40,51 +41,121 @@ export async function enviarMensagemWhatsApp(
   }
 }
 
+// Upload image to Supabase Storage and get public URL
+async function uploadImageToStorage(imageBase64: string): Promise<{ url: string | null; error: string | null }> {
+  try {
+    // Compress the image first
+    console.log("[integracoes] Comprimindo imagem antes do upload...");
+    const compressed = await compressImage(imageBase64);
+    console.log("[integracoes] Imagem comprimida:", {
+      originalSize: formatFileSize(compressed.originalSize),
+      compressedSize: formatFileSize(compressed.compressedSize),
+      dimensions: `${compressed.width}x${compressed.height}`,
+    });
+
+    // Generate unique filename
+    const filename = `whatsapp_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+    const filePath = filename;
+
+    // Upload to storage
+    const { data, error } = await supabase.storage
+      .from('whatsapp-images')
+      .upload(filePath, compressed.blob, {
+        contentType: 'image/jpeg',
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) {
+      console.error("[integracoes] Erro ao fazer upload da imagem:", error);
+      return { url: null, error: error.message };
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('whatsapp-images')
+      .getPublicUrl(data.path);
+
+    console.log("[integracoes] Imagem uploaded com sucesso:", urlData.publicUrl);
+    return { url: urlData.publicUrl, error: null };
+  } catch (err: any) {
+    console.error("[integracoes] Erro ao processar imagem para upload:", err);
+    return { url: null, error: err.message || "Erro ao processar imagem" };
+  }
+}
+
+// Helper function for retry with exponential backoff
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelayMs: number = 1000
+): Promise<T> {
+  let lastError: any;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`[integracoes] Tentativa ${attempt}/${maxRetries} falhou:`, error.message);
+      
+      if (attempt < maxRetries) {
+        const delay = baseDelayMs * Math.pow(2, attempt - 1);
+        console.log(`[integracoes] Aguardando ${delay}ms antes da próxima tentativa...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
 // WhatsApp Evolution API integration - Enviar imagem (com caption opcional)
+// Agora usa Storage + URL + compressão + retry
 export async function enviarImagemWhatsApp(
   telefone: string,
   imageBase64: string,
   caption?: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
-    console.log("[integracoes] Preparando envio de imagem via WhatsApp", {
+    console.log("[integracoes] Preparando envio de imagem via WhatsApp (com Storage)", {
       telefone,
       temBase64: !!imageBase64,
-      tamanhoBase64: imageBase64?.length,
+      tamanhoBase64Original: imageBase64?.length,
       temCaption: !!caption,
-      captionPreview: caption ? (caption.length > 50 ? caption.slice(0, 47) + "..." : caption) : null,
     });
 
-    // Remover prefixo data:image/...;base64, se presente
-    let base64Puro = imageBase64;
-    if (imageBase64 && imageBase64.includes(";base64,")) {
-      base64Puro = imageBase64.split(";base64,")[1];
-      console.log("[integracoes] Prefixo base64 removido, novo tamanho:", base64Puro.length);
+    // Upload image to storage and get public URL
+    const { url: imageUrl, error: uploadError } = await uploadImageToStorage(imageBase64);
+    
+    if (uploadError || !imageUrl) {
+      console.error("[integracoes] Falha no upload da imagem:", uploadError);
+      return { success: false, error: uploadError || "Falha ao fazer upload da imagem" };
     }
 
-    const { data, error } = await supabase.functions.invoke("enviar-whatsapp-imagem", {
-      body: { telefone, imageBase64: base64Puro, caption },
-    });
+    console.log("[integracoes] Enviando imagem via URL:", imageUrl);
 
-    console.log("[integracoes] Resposta da função enviar-whatsapp-imagem", { data, error });
+    // Send with retry mechanism
+    const result = await retryWithBackoff(async () => {
+      const { data, error } = await supabase.functions.invoke("enviar-whatsapp-imagem", {
+        body: { telefone, imageUrl, caption },
+      });
 
-    if (error) {
-      console.error("[integracoes] Erro Supabase ao enviar imagem WhatsApp:", error);
-      return { success: false, error: error.message };
-    }
+      if (error) {
+        throw new Error(error.message);
+      }
 
-    if (data && typeof data === "object" && "success" in data && (data as any).success === false) {
-      const dataAny: any = data;
-      console.error("[integracoes] Função enviar-whatsapp-imagem retornou falha:", dataAny);
-      return {
-        success: false,
-        error: dataAny.error || "Falha ao enviar imagem via WhatsApp",
-      };
-    }
+      if (data && typeof data === "object" && "success" in data && (data as any).success === false) {
+        throw new Error((data as any).error || "Falha ao enviar imagem via WhatsApp");
+      }
 
-    return { success: true, error: null };
+      return { success: true, error: null };
+    }, 3, 2000);
+
+    console.log("[integracoes] Imagem enviada com sucesso via URL");
+    return result;
   } catch (err: any) {
-    console.error("[integracoes] Erro inesperado ao enviar imagem WhatsApp:", err);
+    console.error("[integracoes] Erro ao enviar imagem WhatsApp:", err);
     return { success: false, error: err.message || "Erro desconhecido" };
   }
 }

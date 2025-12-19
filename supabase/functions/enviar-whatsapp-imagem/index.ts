@@ -21,16 +21,10 @@ serve(async (req) => {
       );
     }
 
-    // Limpar prefixo data URL do base64 se presente
-    let imageBase64 = rawImageBase64;
-    if (rawImageBase64 && rawImageBase64.includes(';base64,')) {
-      imageBase64 = rawImageBase64.split(';base64,')[1];
-      console.log('Prefixo data URL removido do base64');
-    }
-
-    if (!imageBase64 && !imageUrl) {
+    // Prefer imageUrl over base64 (more reliable and lighter)
+    if (!imageUrl && !rawImageBase64) {
       return new Response(
-        JSON.stringify({ success: false, error: 'imageBase64 ou imageUrl é obrigatório' }),
+        JSON.stringify({ success: false, error: 'imageUrl ou imageBase64 é obrigatório' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -58,14 +52,30 @@ serve(async (req) => {
     console.log('EVOLUTION_API_BASE_URL:', EVOLUTION_API_BASE_URL);
     console.log('Token presente:', EVOLUTION_API_TOKEN ? 'Sim' : 'Não');
     console.log('Telefone formatado:', telefoneFormatado);
-    console.log('Tem imageBase64:', !!imageBase64);
-    console.log('Tamanho base64:', imageBase64 ? imageBase64.length : 0);
-    console.log('Tem imageUrl:', !!imageUrl);
+    console.log('Usando imageUrl:', !!imageUrl);
+    console.log('Usando imageBase64:', !imageUrl && !!rawImageBase64);
     console.log('Tem caption:', !!caption);
-    console.log('Caption preview:', caption ? (caption.length > 100 ? caption.slice(0, 97) + '...' : caption) : 'SEM CAPTION');
 
     const evolutionUrl = `${EVOLUTION_API_BASE_URL}/message/sendMedia/${EVOLUTION_API_INSTANCE}`;
     console.log('URL completa da Evolution:', evolutionUrl);
+
+    // Determine media source - prefer URL over base64
+    let mediaSource: string;
+    
+    if (imageUrl) {
+      // Use URL directly (preferred - lighter and more reliable)
+      mediaSource = imageUrl;
+      console.log('Enviando via URL:', imageUrl.substring(0, 100) + '...');
+    } else {
+      // Fallback to base64 if no URL provided
+      let imageBase64 = rawImageBase64;
+      if (rawImageBase64 && rawImageBase64.includes(';base64,')) {
+        imageBase64 = rawImageBase64.split(';base64,')[1];
+        console.log('Prefixo data URL removido do base64');
+      }
+      mediaSource = imageBase64;
+      console.log('Tamanho base64:', imageBase64?.length);
+    }
 
     // Build request body
     const requestBody: {
@@ -76,12 +86,13 @@ serve(async (req) => {
     } = {
       number: telefoneFormatado,
       mediatype: 'image',
-      media: imageUrl || imageBase64,
+      media: mediaSource,
     };
 
     // Only add caption if provided
     if (caption) {
       requestBody.caption = caption;
+      console.log('Caption preview:', caption.length > 100 ? caption.slice(0, 97) + '...' : caption);
     }
 
     const response = await fetch(evolutionUrl, {
@@ -99,7 +110,7 @@ serve(async (req) => {
     if (!response.ok) {
       console.error('Erro da Evolution API:', response.status, responseText);
       return new Response(
-        JSON.stringify({ success: false, error: `Erro Evolution API: ${response.status}` }),
+        JSON.stringify({ success: false, error: `Erro Evolution API: ${response.status}`, details: responseText }),
         { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
