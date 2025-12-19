@@ -111,7 +111,7 @@ async function retryWithBackoff<T>(
 }
 
 // WhatsApp Evolution API integration - Enviar imagem (com caption opcional)
-// Agora usa Storage + URL + compressão + retry
+// Agora usa Storage + URL + compressão + retry + fallback para base64
 export async function enviarImagemWhatsApp(
   telefone: string,
   imageBase64: string,
@@ -125,20 +125,34 @@ export async function enviarImagemWhatsApp(
       temCaption: !!caption,
     });
 
+    // Compress the image first (for fallback)
+    const compressed = await compressImage(imageBase64);
+    const compressedBase64 = await blobToBase64(compressed.blob);
+    
+    console.log("[integracoes] Imagem comprimida:", {
+      originalSize: formatFileSize(compressed.originalSize),
+      compressedSize: formatFileSize(compressed.compressedSize),
+      dimensions: `${compressed.width}x${compressed.height}`,
+    });
+
     // Upload image to storage and get public URL
     const { url: imageUrl, error: uploadError } = await uploadImageToStorage(imageBase64);
     
     if (uploadError || !imageUrl) {
-      console.error("[integracoes] Falha no upload da imagem:", uploadError);
-      return { success: false, error: uploadError || "Falha ao fazer upload da imagem" };
+      console.warn("[integracoes] Falha no upload, usando apenas base64:", uploadError);
+    } else {
+      console.log("[integracoes] URL do Storage:", imageUrl);
     }
 
-    console.log("[integracoes] Enviando imagem via URL:", imageUrl);
-
-    // Send with retry mechanism
+    // Send with retry mechanism - sends BOTH url and base64 for server-side fallback
     const result = await retryWithBackoff(async () => {
       const { data, error } = await supabase.functions.invoke("enviar-whatsapp-imagem", {
-        body: { telefone, imageUrl, caption },
+        body: { 
+          telefone, 
+          imageUrl: imageUrl || undefined,  // URL (preferred)
+          imageBase64: compressedBase64,     // Base64 (fallback)
+          caption 
+        },
       });
 
       if (error) {
@@ -152,12 +166,27 @@ export async function enviarImagemWhatsApp(
       return { success: true, error: null };
     }, 3, 2000);
 
-    console.log("[integracoes] Imagem enviada com sucesso via URL");
+    console.log("[integracoes] Imagem enviada com sucesso");
     return result;
   } catch (err: any) {
     console.error("[integracoes] Erro ao enviar imagem WhatsApp:", err);
     return { success: false, error: err.message || "Erro desconhecido" };
   }
+}
+
+// Helper to convert blob to base64
+async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      // Return just the base64 part without data URL prefix
+      const base64 = result.split(',')[1] || result;
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 // n8n Webhook notification
