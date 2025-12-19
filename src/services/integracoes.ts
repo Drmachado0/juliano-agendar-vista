@@ -2,6 +2,34 @@ import { supabase } from "@/integrations/supabase/client";
 import { Agendamento } from "./agendamentos";
 import { compressImage, formatFileSize } from "@/lib/imageCompression";
 
+// Helper to extract user-friendly error message from API response
+function extractUserFriendlyError(data: any): string {
+  // Check for userMessage from our improved edge function
+  if (data?.userMessage) {
+    return data.userMessage;
+  }
+  
+  // Check for error string
+  if (data?.error && typeof data.error === "string") {
+    // Map known error codes to friendly messages
+    const errorMap: Record<string, string> = {
+      "CONNECTION_CLOSED": "WhatsApp desconectado. Verifique a instância e tente novamente.",
+      "TIMEOUT": "Tempo limite excedido. Tente novamente.",
+      "AUTH_ERROR": "Erro de autenticação. Contate o suporte.",
+      "INSTANCE_NOT_FOUND": "Instância não encontrada. Verifique a configuração.",
+      "NOT_CONNECTED": "WhatsApp não conectado. Escaneie o QR Code.",
+      "MAX_RETRIES": "Falha após várias tentativas. Tente mais tarde.",
+    };
+    
+    if (errorMap[data.error]) {
+      return errorMap[data.error];
+    }
+  }
+  
+  // Fallback to generic message
+  return data?.error || "Erro ao enviar mensagem. Tente novamente.";
+}
+
 // WhatsApp Evolution API integration - Enviar texto
 export async function enviarMensagemWhatsApp(
   telefone: string, 
@@ -20,24 +48,29 @@ export async function enviarMensagemWhatsApp(
 
     console.log("[integracoes] Resposta da função enviar-whatsapp", { data, error });
 
+    // Supabase invoke error (network, etc)
     if (error) {
       console.error("[integracoes] Erro Supabase ao enviar WhatsApp:", error);
-      return { success: false, error: error.message };
+      return { 
+        success: false, 
+        error: "Erro de conexão com o servidor. Verifique sua internet e tente novamente." 
+      };
     }
 
-    if (data && typeof data === "object" && "success" in data && (data as any).success === false) {
-      const dataAny: any = data;
-      console.error("[integracoes] Função enviar-whatsapp retornou falha:", dataAny);
-      return {
-        success: false,
-        error: dataAny.error || "Falha ao enviar mensagem via WhatsApp",
-      };
+    // Edge function returned error
+    if (data && typeof data === "object" && "success" in data && data.success === false) {
+      console.error("[integracoes] Função enviar-whatsapp retornou falha:", data);
+      const friendlyError = extractUserFriendlyError(data);
+      return { success: false, error: friendlyError };
     }
 
     return { success: true, error: null };
   } catch (err: any) {
     console.error("[integracoes] Erro inesperado ao enviar WhatsApp:", err);
-    return { success: false, error: err.message || "Erro desconhecido" };
+    return { 
+      success: false, 
+      error: "Erro inesperado. Tente novamente em alguns instantes." 
+    };
   }
 }
 
