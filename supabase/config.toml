@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.sincronizar-avaliacoes-google]
 verify_jwt = false
+
+[functions.verificar-status-evolution]
+verify_jwt = false
