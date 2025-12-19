@@ -126,6 +126,64 @@ Oftalmologia`;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const N8N_WEBHOOK_URL = "https://juliano-n8n.cloudfy.live/webhook/avaliacao-google-lovable";
 
+// ===== VALIDAÇÃO DE TELEFONE BRASILEIRO =====
+const validarTelefoneBrasileiro = (telefone: string): { valido: boolean; erro?: string } => {
+  const numeros = telefone.replace(/\D/g, '');
+  
+  // Deve ter 10 ou 11 dígitos (com ou sem 9 inicial do celular)
+  if (numeros.length < 10 || numeros.length > 11) {
+    return { 
+      valido: false, 
+      erro: `Telefone deve ter 10 ou 11 dígitos (DDD + número). Você digitou ${numeros.length} dígitos.` 
+    };
+  }
+  
+  // Extrair DDD (2 primeiros dígitos)
+  const ddd = parseInt(numeros.slice(0, 2));
+  
+  // DDDs válidos do Brasil (11-99, mas alguns não existem)
+  const dddsValidos = [
+    11, 12, 13, 14, 15, 16, 17, 18, 19, // SP
+    21, 22, 24, // RJ
+    27, 28, // ES
+    31, 32, 33, 34, 35, 37, 38, // MG
+    41, 42, 43, 44, 45, 46, // PR
+    47, 48, 49, // SC
+    51, 53, 54, 55, // RS
+    61, // DF
+    62, 64, // GO
+    63, // TO
+    65, 66, // MT
+    67, // MS
+    68, // AC
+    69, // RO
+    71, 73, 74, 75, 77, // BA
+    79, // SE
+    81, 82, 83, 84, 85, 86, 87, 88, 89, // NE
+    91, 92, 93, 94, 95, 96, 97, 98, 99 // Norte
+  ];
+  
+  if (!dddsValidos.includes(ddd)) {
+    return { 
+      valido: false, 
+      erro: `DDD ${ddd} não é válido. Verifique o código de área.` 
+    };
+  }
+  
+  // Se tem 11 dígitos, deve começar com 9 (celular)
+  if (numeros.length === 11) {
+    const primeiroDigitoNumero = numeros[2];
+    if (primeiroDigitoNumero !== '9') {
+      return { 
+        valido: false, 
+        erro: 'Celular com 11 dígitos deve começar com 9 após o DDD.' 
+      };
+    }
+  }
+  
+  return { valido: true };
+};
+
 // Função para gerar mensagem variada
 const gerarMensagemVariada = (nome: string, ultimaMensagem?: string): string => {
   let mensagem = '';
@@ -819,6 +877,17 @@ const Avaliacoes = () => {
       return;
     }
 
+    // Validar formato do telefone brasileiro
+    const validacao = validarTelefoneBrasileiro(telefoneAvulso);
+    if (!validacao.valido) {
+      toast({
+        title: "Telefone inválido",
+        description: validacao.erro,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setEnviandoAvulso(true);
     try {
       await enviarAvaliacaoSequencial(telefoneAvulso, nomeAvulso.trim());
@@ -1326,7 +1395,21 @@ const Avaliacoes = () => {
                                 </div>
                               ) : (
                                 <>
-                                  <span>{paciente.telefone_formatado}</span>
+                                  <span className={!validarTelefoneBrasileiro(paciente.telefone).valido ? "text-red-500" : ""}>
+                                    {paciente.telefone_formatado}
+                                  </span>
+                                  {!validarTelefoneBrasileiro(paciente.telefone).valido && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-xs">
+                                          <p className="text-xs">{validarTelefoneBrasileiro(paciente.telefone).erro}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
                                   {paciente.data_atendimento_formatada && (
                                     <>
                                       <span className="text-muted-foreground/50">•</span>
@@ -1621,13 +1704,39 @@ const Avaliacoes = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="telefone">Telefone (WhatsApp)</Label>
-                <Input
-                  id="telefone"
-                  value={telefoneAvulso}
-                  onChange={handleTelefoneChange}
-                  placeholder="(91) 99999-9999"
-                  maxLength={15}
-                />
+                <div className="space-y-1">
+                  <Input
+                    id="telefone"
+                    value={telefoneAvulso}
+                    onChange={handleTelefoneChange}
+                    placeholder="(91) 99130-0174"
+                    maxLength={15}
+                    className={telefoneAvulso.length > 0 && !validarTelefoneBrasileiro(telefoneAvulso).valido 
+                      ? "border-red-500 focus:ring-red-500" 
+                      : telefoneAvulso.length >= 14 && validarTelefoneBrasileiro(telefoneAvulso).valido
+                        ? "border-green-500 focus:ring-green-500"
+                        : ""
+                    }
+                  />
+                  {telefoneAvulso.length > 0 && (
+                    <div className="flex items-center gap-1.5 text-xs">
+                      {validarTelefoneBrasileiro(telefoneAvulso).valido ? (
+                        <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3" />
+                          Formato válido
+                        </span>
+                      ) : (
+                        <span className="text-red-600 dark:text-red-400 flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          {validarTelefoneBrasileiro(telefoneAvulso).erro}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Formato: DDD + número (ex: 91 99130-0174)
+                  </p>
+                </div>
               </div>
 
               {imagemBase64 && (
