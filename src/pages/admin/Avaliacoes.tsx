@@ -20,6 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -198,6 +199,9 @@ const Avaliacoes = () => {
   // Estados para edição de telefone na lista
   const [editandoTelefone, setEditandoTelefone] = useState<string | null>(null);
   const [telefoneEditado, setTelefoneEditado] = useState("");
+  
+  // Estado para confirmação de exclusão
+  const [pacienteParaExcluir, setPacienteParaExcluir] = useState<PacienteN8n | null>(null);
 
   // ===== NOVOS ESTADOS PARA DISPARO SEGURO =====
   const [configAvancadaAberta, setConfigAvancadaAberta] = useState(false);
@@ -296,17 +300,24 @@ const Avaliacoes = () => {
   };
 
   // Funções para gerenciar lista de pacientes do lote
-  const removerPacienteLote = (id: string) => {
-    setPacientesLote(prev => prev.filter(p => p.id !== id));
-    setSelectedIds(prev => {
-      const updated = new Set(prev);
-      updated.delete(id);
-      return updated;
-    });
-    if (editandoTelefone === id) {
-      setEditandoTelefone(null);
-      setTelefoneEditado("");
+  const confirmarRemocaoPaciente = () => {
+    if (pacienteParaExcluir) {
+      setPacientesLote(prev => prev.filter(p => p.id !== pacienteParaExcluir.id));
+      setSelectedIds(prev => {
+        const updated = new Set(prev);
+        updated.delete(pacienteParaExcluir.id);
+        return updated;
+      });
+      if (editandoTelefone === pacienteParaExcluir.id) {
+        setEditandoTelefone(null);
+        setTelefoneEditado("");
+      }
+      setPacienteParaExcluir(null);
     }
+  };
+
+  const abrirDialogExclusao = (paciente: PacienteN8n) => {
+    setPacienteParaExcluir(paciente);
   };
 
   const iniciarEdicaoTelefone = (paciente: PacienteN8n) => {
@@ -1352,7 +1363,7 @@ const Avaliacoes = () => {
                                       size="icon" 
                                       variant="ghost" 
                                       className="h-8 w-8 hover:bg-destructive/10"
-                                      onClick={() => removerPacienteLote(paciente.id)}
+                                      onClick={() => abrirDialogExclusao(paciente)}
                                     >
                                       <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                                     </Button>
@@ -1923,6 +1934,28 @@ const Avaliacoes = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Dialog de confirmação de exclusão */}
+      <AlertDialog open={!!pacienteParaExcluir} onOpenChange={(open) => !open && setPacienteParaExcluir(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover paciente da lista?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover <strong>{pacienteParaExcluir?.primeiro_nome || pacienteParaExcluir?.nome}</strong> da lista de envio? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmarRemocaoPaciente}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 };
