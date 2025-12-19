@@ -95,10 +95,13 @@ const NovaMensagemWhatsAppModal = ({
       onMessageSent?.();
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      
       toast({
-        title: "Erro ao enviar",
-        description: error instanceof Error ? error.message : "Tente novamente",
+        title: "Erro ao enviar mensagem",
+        description: errorMessage,
         variant: "destructive",
+        duration: 6000, // Show longer for error messages
       });
     } finally {
       setEnviando(false);
