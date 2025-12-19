@@ -51,6 +51,7 @@ interface PacienteN8n {
   telefone_formatado: string;
   data_atendimento: string;
   data_atendimento_formatada: string;
+  whatsappVerificado?: 'pendente' | 'valido' | 'invalido';
 }
 
 interface N8nResponse {
@@ -307,6 +308,10 @@ const Avaliacoes = () => {
   // Estado para confirmação de exclusão
   const [pacienteParaExcluir, setPacienteParaExcluir] = useState<PacienteN8n | null>(null);
 
+  // Estados para verificação WhatsApp
+  const [verificandoWhatsApp, setVerificandoWhatsApp] = useState(false);
+  const [verificacaoConcluida, setVerificacaoConcluida] = useState(false);
+
   // ===== NOVOS ESTADOS PARA DISPARO SEGURO =====
   const [configAvancadaAberta, setConfigAvancadaAberta] = useState(false);
   
@@ -482,12 +487,120 @@ const Avaliacoes = () => {
     }
   };
 
+  // Verificar números via Evolution API
+  const verificarNumerosWhatsApp = async () => {
+    if (pacientesLote.length === 0) return;
+    
+    setVerificandoWhatsApp(true);
+    setVerificacaoConcluida(false);
+    
+    // Marcar todos como pendentes
+    setPacientesLote(prev => prev.map(p => ({ ...p, whatsappVerificado: 'pendente' as const })));
+    
+    try {
+      // Pegar telefones únicos formatados
+      const telefones = pacientesLote.map(p => {
+        let numeros = p.telefone.replace(/\D/g, '');
+        if (!numeros.startsWith('55')) numeros = '55' + numeros;
+        return numeros;
+      });
+      
+      // Dividir em lotes de 50
+      const BATCH_SIZE = 50;
+      const batches = [];
+      for (let i = 0; i < telefones.length; i += BATCH_SIZE) {
+        batches.push(telefones.slice(i, i + BATCH_SIZE));
+      }
+      
+      const allResults: { telefone: string; telefoneFormatado: string; existeWhatsApp: boolean }[] = [];
+      
+      for (const batch of batches) {
+        const { data, error } = await supabase.functions.invoke('verificar-numeros-whatsapp', {
+          body: { telefones: batch }
+        });
+        
+        if (error) throw error;
+        
+        if (data?.resultados) {
+          allResults.push(...data.resultados);
+        }
+      }
+      
+      // Atualizar status dos pacientes
+      setPacientesLote(prev => prev.map(p => {
+        let telefoneNormalizado = p.telefone.replace(/\D/g, '');
+        if (!telefoneNormalizado.startsWith('55')) telefoneNormalizado = '55' + telefoneNormalizado;
+        
+        const resultado = allResults.find(r => r.telefoneFormatado === telefoneNormalizado);
+        
+        return {
+          ...p,
+          whatsappVerificado: resultado?.existeWhatsApp ? 'valido' as const : 'invalido' as const
+        };
+      }));
+      
+      setVerificacaoConcluida(true);
+      
+      const validos = allResults.filter(r => r.existeWhatsApp).length;
+      const invalidos = allResults.filter(r => !r.existeWhatsApp).length;
+      
+      toast({
+        title: "Verificação concluída!",
+        description: `${validos} número(s) válido(s), ${invalidos} não encontrado(s) no WhatsApp.`,
+      });
+      
+    } catch (error) {
+      console.error("Erro ao verificar números:", error);
+      toast({
+        title: "Erro na verificação",
+        description: "Não foi possível verificar os números. Tente novamente.",
+        variant: "destructive",
+      });
+      // Reset status
+      setPacientesLote(prev => prev.map(p => ({ ...p, whatsappVerificado: undefined })));
+    } finally {
+      setVerificandoWhatsApp(false);
+    }
+  };
+
+  // Filtrar números inválidos (remover da lista)
+  const removerNumerosInvalidos = () => {
+    const invalidos = pacientesLote.filter(p => p.whatsappVerificado === 'invalido');
+    if (invalidos.length === 0) {
+      toast({
+        title: "Nenhum número inválido",
+        description: "Todos os números verificados são válidos.",
+      });
+      return;
+    }
+    
+    setPacientesLote(prev => prev.filter(p => p.whatsappVerificado !== 'invalido'));
+    setSelectedIds(prev => {
+      const updated = new Set(prev);
+      invalidos.forEach(p => updated.delete(p.id));
+      return updated;
+    });
+    
+    toast({
+      title: "Números removidos!",
+      description: `${invalidos.length} número(s) sem WhatsApp foram removidos da lista.`,
+    });
+  };
+
   // Contar telefones inválidos que podem ser corrigidos
   const contarTelefonesCorrigiveis = () => {
     return pacientesLote.filter(p => {
       const v = validarTelefoneBrasileiro(p.telefone);
       return !v.valido && v.podeCorrigir;
     }).length;
+  };
+
+  // Contar números verificados por status
+  const contarNumerosVerificados = () => {
+    const validos = pacientesLote.filter(p => p.whatsappVerificado === 'valido').length;
+    const invalidos = pacientesLote.filter(p => p.whatsappVerificado === 'invalido').length;
+    const pendentes = pacientesLote.filter(p => !p.whatsappVerificado || p.whatsappVerificado === 'pendente').length;
+    return { validos, invalidos, pendentes };
   };
 
   const carregarPacientesAtendidos = async () => {
@@ -575,6 +688,7 @@ const Avaliacoes = () => {
     setPacientesLote([]);
     setSelectedIds(new Set());
     setTelefonesDiarioJaEnviados(new Set());
+    setVerificacaoConcluida(false);
 
     const dataFormatada = format(dataFiltro, 'yyyy-MM-dd');
 
@@ -1390,7 +1504,48 @@ const Avaliacoes = () => {
                       Selecionar todos ({pacientesLote.length})
                     </Label>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Botão de verificação WhatsApp */}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={verificarNumerosWhatsApp}
+                            disabled={verificandoWhatsApp || enviandoLote}
+                            className="text-emerald-600 border-emerald-500/50 hover:bg-emerald-500/10"
+                          >
+                            {verificandoWhatsApp ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                Verificando...
+                              </>
+                            ) : (
+                              <>
+                                <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
+                                Verificar WhatsApp
+                              </>
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Verifica quais números existem no WhatsApp antes de enviar</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    {/* Botão para remover inválidos */}
+                    {verificacaoConcluida && contarNumerosVerificados().invalidos > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={removerNumerosInvalidos}
+                        className="text-red-600 border-red-500/50 hover:bg-red-500/10"
+                      >
+                        <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                        Remover {contarNumerosVerificados().invalidos} inválido(s)
+                      </Button>
+                    )}
+                    
                     {contarTelefonesCorrigiveis() > 0 && (
                       <Button
                         variant="outline"
@@ -1406,6 +1561,22 @@ const Avaliacoes = () => {
                       <Users className="h-4 w-4" />
                       {selectedIds.size} selecionado(s)
                     </div>
+                    
+                    {/* Status da verificação */}
+                    {verificacaoConcluida && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          {contarNumerosVerificados().validos} válidos
+                        </Badge>
+                        {contarNumerosVerificados().invalidos > 0 && (
+                          <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            {contarNumerosVerificados().invalidos} sem WhatsApp
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1548,8 +1719,36 @@ const Avaliacoes = () => {
                                             </Tooltip>
                                           </TooltipProvider>
                                         )}
-                                        {validacao.valido && (
+                                        {validacao.valido && !paciente.whatsappVerificado && (
                                           <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                                        )}
+                                        {/* Status de verificação WhatsApp */}
+                                        {paciente.whatsappVerificado === 'pendente' && (
+                                          <Loader2 className="h-3.5 w-3.5 text-muted-foreground animate-spin" />
+                                        )}
+                                        {paciente.whatsappVerificado === 'valido' && (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <MessageCircle className="h-3.5 w-3.5 text-emerald-500 fill-emerald-500" />
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p className="text-xs">Número verificado no WhatsApp</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        )}
+                                        {paciente.whatsappVerificado === 'invalido' && (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <MessageCircle className="h-3.5 w-3.5 text-red-500" />
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p className="text-xs">Número não encontrado no WhatsApp</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
                                         )}
                                       </>
                                     );
