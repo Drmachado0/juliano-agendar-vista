@@ -8,10 +8,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, RefreshCw } from "lucide-react";
+import { Search, RefreshCw, MessageSquarePlus } from "lucide-react";
 import { LeadComMensagens, listarLeadsComMensagens } from "@/services/mensagens";
 import WhatsAppLeadItem from "./WhatsAppLeadItem";
 import { Skeleton } from "@/components/ui/skeleton";
+import NovaMensagemWhatsAppModal from "./NovaMensagemWhatsAppModal";
 
 interface WhatsAppLeadsListProps {
   selectedLeadId: string | null;
@@ -28,6 +29,7 @@ const WhatsAppLeadsList = ({
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("TODOS");
+  const [novaMensagemModalOpen, setNovaMensagemModalOpen] = useState(false);
 
   const fetchLeads = async () => {
     setLoading(true);
@@ -88,9 +90,20 @@ const WhatsAppLeadsList = ({
       <div className="p-4 border-b border-border space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-foreground">Conversas</h2>
-          <Button variant="ghost" size="icon" onClick={fetchLeads} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setNovaMensagemModalOpen(true)}
+              className="gap-1.5"
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+              Nova
+            </Button>
+            <Button variant="ghost" size="icon" onClick={fetchLeads} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
         </div>
 
         {/* Search */}
@@ -154,6 +167,12 @@ const WhatsAppLeadsList = ({
           ))
         )}
       </div>
+
+      <NovaMensagemWhatsAppModal
+        open={novaMensagemModalOpen}
+        onOpenChange={setNovaMensagemModalOpen}
+        onMessageSent={fetchLeads}
+      />
     </div>
   );
 };
