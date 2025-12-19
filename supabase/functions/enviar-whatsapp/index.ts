@@ -3,8 +3,10 @@ import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 // Configuration
 const MAX_RETRIES = 3;
-const BASE_DELAY_MS = 2000;
+const RETRY_DELAYS = [2000, 4000, 8000]; // 2s, 4s, 8s exponential backoff
 const REQUEST_TIMEOUT_MS = 30000;
+const RECONNECT_WAIT_MS = 5000;
+const CONNECT_WAIT_MS = 3000;
 
 // Allowed origins for CORS
 const allowedOrigins = [
@@ -21,36 +23,24 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 
   if (origin) {
     const isAllowed = allowedOrigins.some((allowed) => {
-      if (typeof allowed === "string") {
-        return allowed === origin;
-      }
+      if (typeof allowed === "string") return allowed === origin;
       return allowed.test(origin);
     });
-
-    if (isAllowed) {
-      headers["Access-Control-Allow-Origin"] = origin;
-    }
+    if (isAllowed) headers["Access-Control-Allow-Origin"] = origin;
   }
 
   return headers;
 }
 
-// Schema validation for WhatsApp request
+// Schema validation
 const whatsAppRequestSchema = z.object({
-  telefone: z
-    .string()
-    .min(10, "Telefone deve ter no mínimo 10 dígitos")
-    .max(15, "Telefone deve ter no máximo 15 dígitos")
-    .regex(/^[\d\s\-\(\)\+]+$/, "Telefone contém caracteres inválidos"),
-  mensagem: z
-    .string()
-    .min(1, "Mensagem não pode estar vazia")
-    .max(4096, "Mensagem muito longa (máximo 4096 caracteres)"),
+  telefone: z.string().min(10).max(15).regex(/^[\d\s\-\(\)\+]+$/),
+  mensagem: z.string().min(1).max(4096),
 });
 
 type WhatsAppRequest = z.infer<typeof whatsAppRequestSchema>;
 
-// Error types for user-friendly messages
+// Error types
 interface ErrorInfo {
   code: string;
   userMessage: string;
@@ -63,7 +53,7 @@ function categorizeError(errorText: string, statusCode?: number): ErrorInfo {
   if (lowerError.includes("connection closed") || lowerError.includes("connection refused")) {
     return {
       code: "CONNECTION_CLOSED",
-      userMessage: "Não foi possível conectar ao WhatsApp. A instância pode estar desconectada. Tente novamente em alguns minutos.",
+      userMessage: "Conexão com WhatsApp perdida. Tentando reconectar automaticamente...",
       technical: errorText,
     };
   }
@@ -71,48 +61,46 @@ function categorizeError(errorText: string, statusCode?: number): ErrorInfo {
   if (lowerError.includes("timeout") || lowerError.includes("aborted")) {
     return {
       code: "TIMEOUT",
-      userMessage: "A requisição demorou muito para responder. Verifique a conexão e tente novamente.",
+      userMessage: "A requisição demorou muito. Tente novamente.",
       technical: errorText,
     };
   }
   
-  if (statusCode === 401 || lowerError.includes("unauthorized") || lowerError.includes("invalid api key")) {
+  if (statusCode === 401 || lowerError.includes("unauthorized")) {
     return {
       code: "AUTH_ERROR",
-      userMessage: "Erro de autenticação com a Evolution API. Verifique as credenciais configuradas.",
+      userMessage: "Erro de autenticação com a Evolution API.",
       technical: errorText,
     };
   }
   
-  if (statusCode === 404 || lowerError.includes("not found") || lowerError.includes("instance not found")) {
+  if (statusCode === 404 || lowerError.includes("not found")) {
     return {
       code: "INSTANCE_NOT_FOUND",
-      userMessage: "Instância do WhatsApp não encontrada. Verifique se a instância está configurada corretamente.",
+      userMessage: "Instância do WhatsApp não encontrada.",
       technical: errorText,
     };
   }
   
-  if (lowerError.includes("not connected") || lowerError.includes("disconnected") || lowerError.includes("qr code")) {
+  if (lowerError.includes("not connected") || lowerError.includes("disconnected")) {
     return {
       code: "NOT_CONNECTED",
-      userMessage: "WhatsApp não está conectado. Escaneie o QR Code na Evolution API para reconectar.",
+      userMessage: "WhatsApp não está conectado. Escaneie o QR Code.",
       technical: errorText,
     };
   }
   
   return {
     code: "UNKNOWN_ERROR",
-    userMessage: "Erro ao enviar mensagem. Tente novamente em alguns instantes.",
+    userMessage: "Erro ao enviar mensagem. Tente novamente.",
     technical: errorText,
   };
 }
 
-// Delay helper
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Normalize phone number
 function normalizePhone(telefone: string): string {
   let phoneFormatted = telefone.replace(/\D/g, "");
   if (!phoneFormatted.startsWith("55")) {
@@ -121,97 +109,267 @@ function normalizePhone(telefone: string): string {
   return phoneFormatted;
 }
 
-// Send message with retry
-async function sendWithRetry(
+// ============ CONNECTION MANAGEMENT ============
+
+async function checkConnectionState(
+  baseUrl: string,
+  instanceName: string,
+  apiKey: string
+): Promise<{ connected: boolean; state: string }> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(`${baseUrl}/instance/connectionState/${instanceName}`, {
+      method: "GET",
+      headers: { "apikey": apiKey },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.log(`[enviar-whatsapp] Check estado falhou: ${response.status}`);
+      return { connected: false, state: "error" };
+    }
+
+    const data = await response.json();
+    const state = data?.instance?.state || data?.state || "unknown";
+    console.log(`[enviar-whatsapp] Estado da conexão: ${state}`);
+    return { connected: state === "open", state };
+  } catch (err: any) {
+    console.error(`[enviar-whatsapp] Erro ao verificar conexão:`, err.message);
+    return { connected: false, state: "error" };
+  }
+}
+
+async function restartInstance(
+  baseUrl: string,
+  instanceName: string,
+  apiKey: string
+): Promise<boolean> {
+  try {
+    console.log(`[enviar-whatsapp] Reiniciando instância ${instanceName}...`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const response = await fetch(`${baseUrl}/instance/restart/${instanceName}`, {
+      method: "POST",
+      headers: { "apikey": apiKey },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    console.log(`[enviar-whatsapp] Restart status: ${response.status}`);
+    return response.ok;
+  } catch (err: any) {
+    console.error(`[enviar-whatsapp] Erro ao reiniciar:`, err.message);
+    return false;
+  }
+}
+
+async function connectInstance(
+  baseUrl: string,
+  instanceName: string,
+  apiKey: string
+): Promise<boolean> {
+  try {
+    console.log(`[enviar-whatsapp] Forçando conexão ${instanceName}...`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const response = await fetch(`${baseUrl}/instance/connect/${instanceName}`, {
+      method: "GET",
+      headers: { "apikey": apiKey },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    console.log(`[enviar-whatsapp] Connect status: ${response.status}`);
+    return response.ok;
+  } catch (err: any) {
+    console.error(`[enviar-whatsapp] Erro ao conectar:`, err.message);
+    return false;
+  }
+}
+
+async function ensureConnected(
+  baseUrl: string,
+  instanceName: string,
+  apiKey: string
+): Promise<{ ready: boolean; reconnected: boolean; error?: string }> {
+  // Step 1: Check current state
+  const initial = await checkConnectionState(baseUrl, instanceName, apiKey);
+  
+  if (initial.connected) {
+    console.log("[enviar-whatsapp] ✓ Conexão OK");
+    return { ready: true, reconnected: false };
+  }
+
+  console.log(`[enviar-whatsapp] ⚠ Estado: ${initial.state}. Iniciando reconexão automática...`);
+
+  // Step 2: Restart instance
+  await restartInstance(baseUrl, instanceName, apiKey);
+  
+  // Step 3: Wait 5 seconds
+  console.log("[enviar-whatsapp] Aguardando 5s após restart...");
+  await delay(RECONNECT_WAIT_MS);
+
+  // Step 4: Check state again
+  const afterRestart = await checkConnectionState(baseUrl, instanceName, apiKey);
+  
+  if (afterRestart.connected) {
+    console.log("[enviar-whatsapp] ✓ Reconectado após restart");
+    return { ready: true, reconnected: true };
+  }
+
+  // Step 5: Try connect
+  console.log("[enviar-whatsapp] Tentando forçar conexão...");
+  await connectInstance(baseUrl, instanceName, apiKey);
+  
+  // Step 6: Wait 3 seconds
+  console.log("[enviar-whatsapp] Aguardando 3s após connect...");
+  await delay(CONNECT_WAIT_MS);
+
+  // Step 7: Final check
+  const finalState = await checkConnectionState(baseUrl, instanceName, apiKey);
+  
+  if (finalState.connected) {
+    console.log("[enviar-whatsapp] ✓ Reconectado após connect");
+    return { ready: true, reconnected: true };
+  }
+
+  console.error(`[enviar-whatsapp] ✗ Falha na reconexão. Estado final: ${finalState.state}`);
+  return { 
+    ready: false, 
+    reconnected: false, 
+    error: `Não foi possível reconectar. Estado: ${finalState.state}. Pode ser necessário escanear o QR Code novamente.`
+  };
+}
+
+// ============ SEND MESSAGE ============
+
+async function sendMessage(
   url: string,
   body: object,
-  headers: Record<string, string>,
-  maxRetries: number
+  headers: Record<string, string>
 ): Promise<{ success: boolean; data?: any; error?: ErrorInfo }> {
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    console.log(`[enviar-whatsapp] Tentativa ${attempt}/${maxRetries}`);
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    const responseText = await response.text();
     
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    console.log(`[enviar-whatsapp] Send status: ${response.status}, Response: ${responseText.substring(0, 300)}`);
+
+    if (response.ok) {
+      try {
+        return { success: true, data: JSON.parse(responseText) };
+      } catch {
+        return { success: true, data: responseText };
+      }
+    }
+
+    return { success: false, error: categorizeError(responseText, response.status) };
+  } catch (err: any) {
+    const isTimeout = err.name === "AbortError";
+    return {
+      success: false,
+      error: categorizeError(isTimeout ? "Request timeout" : err.message),
+    };
+  }
+}
+
+async function sendWithRetryAndReconnect(
+  baseUrl: string,
+  instanceName: string,
+  apiKey: string,
+  phoneFormatted: string,
+  mensagem: string
+): Promise<{ success: boolean; data?: any; error?: ErrorInfo; reconnected?: boolean }> {
+  const url = `${baseUrl}/message/sendText/${instanceName}`;
+  const headers = {
+    "Content-Type": "application/json",
+    "apikey": apiKey,
+  };
+  const body = { number: phoneFormatted, text: mensagem };
+
+  let reconnected = false;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const delayMs = RETRY_DELAYS[attempt - 1] || RETRY_DELAYS[RETRY_DELAYS.length - 1];
+    console.log(`[enviar-whatsapp] Tentativa ${attempt}/${MAX_RETRIES}`);
+
+    const result = await sendMessage(url, body, headers);
+
+    if (result.success) {
+      console.log("[enviar-whatsapp] ✓ Mensagem enviada com sucesso!");
+      return { success: true, data: result.data, reconnected };
+    }
+
+    // Check if it's a connection error that warrants reconnection
+    if (result.error?.code === "CONNECTION_CLOSED" || result.error?.code === "NOT_CONNECTED") {
+      console.log(`[enviar-whatsapp] Erro de conexão detectado. Tentando reconectar...`);
       
-      const response = await fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
+      const reconnectResult = await ensureConnected(baseUrl, instanceName, apiKey);
       
-      clearTimeout(timeoutId);
-      
-      const responseText = await response.text();
-      console.log(`[enviar-whatsapp] Status: ${response.status}, Response: ${responseText.substring(0, 500)}`);
-      
-      if (response.ok) {
-        try {
-          const data = JSON.parse(responseText);
-          console.log("[enviar-whatsapp] Mensagem enviada com sucesso!");
-          return { success: true, data };
-        } catch {
-          return { success: true, data: responseText };
+      if (reconnectResult.ready) {
+        reconnected = true;
+        console.log("[enviar-whatsapp] Reconectado! Retentando envio...");
+        // Don't count this as an attempt, retry immediately
+        const retryResult = await sendMessage(url, body, headers);
+        if (retryResult.success) {
+          return { success: true, data: retryResult.data, reconnected: true };
         }
+      } else {
+        // Can't reconnect, return error
+        return {
+          success: false,
+          error: {
+            code: "RECONNECT_FAILED",
+            userMessage: reconnectResult.error || "Não foi possível reconectar ao WhatsApp.",
+            technical: "Auto-reconnect failed",
+          },
+          reconnected: false,
+        };
       }
-      
-      // Parse error response
-      const errorInfo = categorizeError(responseText, response.status);
-      
-      // Determine if we should retry
-      const isRetryable = [
-        "CONNECTION_CLOSED",
-        "TIMEOUT",
-      ].includes(errorInfo.code);
-      
-      if (isRetryable && attempt < maxRetries) {
-        const delayMs = BASE_DELAY_MS * attempt;
-        console.log(`[enviar-whatsapp] Erro retryável (${errorInfo.code}). Aguardando ${delayMs}ms...`);
-        await delay(delayMs);
-        continue;
-      }
-      
-      // Non-retryable or last attempt
-      console.error(`[enviar-whatsapp] Erro não recuperável: ${errorInfo.code}`);
-      return { success: false, error: errorInfo };
-      
-    } catch (err: any) {
-      console.error(`[enviar-whatsapp] Exceção na tentativa ${attempt}:`, err.message);
-      
-      const isAbortError = err.name === "AbortError";
-      const errorInfo = categorizeError(
-        isAbortError ? "Request timeout - aborted" : err.message
-      );
-      
-      if (attempt < maxRetries) {
-        const delayMs = BASE_DELAY_MS * attempt;
-        console.log(`[enviar-whatsapp] Aguardando ${delayMs}ms antes da próxima tentativa...`);
-        await delay(delayMs);
-        continue;
-      }
-      
-      return { success: false, error: errorInfo };
+    }
+
+    // For other errors, apply exponential backoff
+    if (attempt < MAX_RETRIES) {
+      console.log(`[enviar-whatsapp] Erro: ${result.error?.code}. Aguardando ${delayMs}ms...`);
+      await delay(delayMs);
+    } else {
+      console.error(`[enviar-whatsapp] ✗ Falha após ${MAX_RETRIES} tentativas`);
+      return { success: false, error: result.error, reconnected };
     }
   }
-  
+
   return {
     success: false,
     error: {
       code: "MAX_RETRIES",
-      userMessage: "Não foi possível enviar após várias tentativas. Tente novamente mais tarde.",
-      technical: `Failed after ${maxRetries} attempts`,
+      userMessage: "Não foi possível enviar após várias tentativas.",
+      technical: `Failed after ${MAX_RETRIES} attempts`,
     },
+    reconnected,
   };
 }
+
+// ============ HANDLER ============
 
 const handler = async (req: Request): Promise<Response> => {
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
 
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -221,72 +379,66 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const body = await req.json();
-    
-    // Validate input
     const validationResult = whatsAppRequestSchema.safeParse(body);
-    
+
     if (!validationResult.success) {
       console.error("[enviar-whatsapp] Erro de validação:", validationResult.error.errors);
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           success: false,
           error: "Dados inválidos",
           userMessage: validationResult.error.errors.map(e => e.message).join(", "),
-          details: validationResult.error.errors,
         }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
     const { telefone, mensagem }: WhatsAppRequest = validationResult.data;
 
-    // Get environment variables
     const evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
     const evolutionToken = Deno.env.get("EVOLUTION_API_TOKEN");
     const instanceName = Deno.env.get("EVOLUTION_API_INSTANCE") || "SITEIA";
 
-    console.log("[enviar-whatsapp] Config:", {
-      baseUrl: evolutionBaseUrl,
-      instance: instanceName,
-      tokenPresent: !!evolutionToken,
-    });
+    console.log("[enviar-whatsapp] Config:", { baseUrl: evolutionBaseUrl, instance: instanceName });
 
     if (!evolutionBaseUrl || !evolutionToken) {
-      console.error("[enviar-whatsapp] Variáveis de ambiente não configuradas");
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           success: false,
           error: "Configuração incompleta",
-          userMessage: "A Evolution API não está configurada corretamente. Contate o suporte.",
+          userMessage: "A Evolution API não está configurada.",
         }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Normalize phone
     const phoneFormatted = normalizePhone(telefone);
-    console.log("[enviar-whatsapp] Telefone formatado:", phoneFormatted);
-    console.log("[enviar-whatsapp] Mensagem (preview):", mensagem.substring(0, 100) + "...");
+    console.log("[enviar-whatsapp] Telefone:", phoneFormatted);
 
-    // Build URL
-    const fullUrl = `${evolutionBaseUrl}/message/sendText/${instanceName}`;
-    console.log("[enviar-whatsapp] URL:", fullUrl);
+    // Step 1: Ensure connection before sending
+    console.log("[enviar-whatsapp] Verificando conexão antes do envio...");
+    const connectionCheck = await ensureConnected(evolutionBaseUrl, instanceName, evolutionToken);
 
-    // Send with retry
-    const result = await sendWithRetry(
-      fullUrl,
-      { number: phoneFormatted, text: mensagem },
-      {
-        "Content-Type": "application/json",
-        "apikey": evolutionToken,
-      },
-      MAX_RETRIES
+    if (!connectionCheck.ready) {
+      const elapsed = Date.now() - startTime;
+      console.error(`[enviar-whatsapp] ✗ Conexão não disponível após ${elapsed}ms`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "NOT_CONNECTED",
+          userMessage: connectionCheck.error || "WhatsApp não conectado. Escaneie o QR Code.",
+        }),
+        { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Step 2: Send with retry and reconnect logic
+    const result = await sendWithRetryAndReconnect(
+      evolutionBaseUrl,
+      instanceName,
+      evolutionToken,
+      phoneFormatted,
+      mensagem
     );
 
     const elapsed = Date.now() - startTime;
@@ -294,42 +446,37 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (result.success) {
       return new Response(
-        JSON.stringify({ success: true, data: result.data }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
+        JSON.stringify({ 
+          success: true, 
+          data: result.data,
+          reconnected: result.reconnected,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: false, 
+      JSON.stringify({
+        success: false,
         error: result.error?.code || "UNKNOWN",
         userMessage: result.error?.userMessage || "Erro desconhecido",
         technical: result.error?.technical,
       }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
 
   } catch (error: any) {
     const elapsed = Date.now() - startTime;
     console.error(`[enviar-whatsapp] Erro fatal após ${elapsed}ms:`, error);
-    
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: false,
         error: "INTERNAL_ERROR",
-        userMessage: "Erro interno ao processar a requisição. Tente novamente.",
+        userMessage: "Erro interno. Tente novamente.",
         technical: error.message,
       }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 };

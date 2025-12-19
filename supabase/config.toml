@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.verificar-status-evolution]
 verify_jwt = false
+
+[functions.gerenciar-conexao-evolution]
+verify_jwt = false

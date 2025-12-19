@@ -7,27 +7,81 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { 
   RefreshCw, 
-  Wifi, 
-  WifiOff, 
   ExternalLink, 
   CheckCircle2, 
   XCircle, 
   AlertTriangle,
   Smartphone,
   QrCode,
-  Settings2
+  Settings2,
+  RotateCcw,
+  Plug,
+  Zap
 } from "lucide-react";
 import { useEvolutionStatus } from "@/hooks/useEvolutionStatus";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const ConfiguracoesEvolution = () => {
-  const { status, loading, lastChecked, refresh } = useEvolutionStatus(true, 30000);
+  const { 
+    status, 
+    loading, 
+    actionLoading,
+    lastChecked, 
+    refresh,
+    reiniciar,
+    conectar,
+    reconectar
+  } = useEvolutionStatus(true, 30000);
+  
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await refresh();
     setIsRefreshing(false);
+  };
+
+  const handleReiniciar = async () => {
+    toast.loading("Reiniciando instância...", { id: "restart" });
+    const result = await reiniciar();
+    toast.dismiss("restart");
+    
+    if (result.success && result.connected) {
+      toast.success("Instância reiniciada e conectada!");
+    } else if (result.success) {
+      toast.info("Instância reiniciada. Aguarde a conexão ou escaneie o QR Code.");
+    } else {
+      toast.error(result.error || "Erro ao reiniciar instância");
+    }
+  };
+
+  const handleConectar = async () => {
+    toast.loading("Forçando conexão...", { id: "connect" });
+    const result = await conectar();
+    toast.dismiss("connect");
+    
+    if (result.success && result.connected) {
+      toast.success("Conectado com sucesso!");
+    } else if (result.success) {
+      toast.info("Comando enviado. Se necessário, escaneie o QR Code no painel.");
+    } else {
+      toast.error(result.error || "Erro ao conectar");
+    }
+  };
+
+  const handleReconectar = async () => {
+    toast.loading("Executando reconexão completa...", { id: "reconnect" });
+    const result = await reconectar();
+    toast.dismiss("reconnect");
+    
+    if (result.success && result.connected) {
+      toast.success("Reconectado com sucesso!");
+    } else if (result.success) {
+      toast.info("Reconexão parcial. Pode ser necessário escanear o QR Code.");
+    } else {
+      toast.error(result.error || "Falha na reconexão");
+    }
   };
 
   const getStatusDisplay = () => {
@@ -97,6 +151,7 @@ const ConfiguracoesEvolution = () => {
 
   const statusDisplay = getStatusDisplay();
   const StatusIcon = statusDisplay.icon;
+  const isDisconnected = status && !status.connected;
 
   return (
     <AdminLayout>
@@ -150,6 +205,37 @@ const ConfiguracoesEvolution = () => {
               </div>
             </div>
 
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReiniciar}
+                disabled={actionLoading}
+              >
+                <RotateCcw className={cn("h-4 w-4 mr-2", actionLoading && "animate-spin")} />
+                Reiniciar Instância
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleConectar}
+                disabled={actionLoading}
+              >
+                <Plug className={cn("h-4 w-4 mr-2")} />
+                Forçar Conexão
+              </Button>
+              <Button
+                variant={isDisconnected ? "default" : "outline"}
+                size="sm"
+                onClick={handleReconectar}
+                disabled={actionLoading}
+              >
+                <Zap className={cn("h-4 w-4 mr-2", actionLoading && "animate-spin")} />
+                Reconexão Completa
+              </Button>
+            </div>
+
             {/* Last Checked */}
             {lastChecked && (
               <p className="text-xs text-muted-foreground text-right">
@@ -165,6 +251,16 @@ const ConfiguracoesEvolution = () => {
                 <AlertDescription>{status.error}</AlertDescription>
               </Alert>
             )}
+
+            {/* Auto-reconnect info */}
+            <Alert>
+              <Zap className="h-4 w-4" />
+              <AlertTitle>Reconexão Automática</AlertTitle>
+              <AlertDescription>
+                O sistema tenta reconectar automaticamente antes de cada envio de mensagem. 
+                Se falhar, use o botão "Reconexão Completa" acima.
+              </AlertDescription>
+            </Alert>
           </CardContent>
         </Card>
 
@@ -213,7 +309,7 @@ const ConfiguracoesEvolution = () => {
                 <div>
                   <h4 className="font-medium">Selecione a instância</h4>
                   <p className="text-sm text-muted-foreground">
-                    Na lista de instâncias, clique na instância <Badge variant="outline">{status?.instanceName || "Atendente"}</Badge> para abrir as opções.
+                    Na lista de instâncias, clique na instância <Badge variant="outline">{status?.instanceName || "Secretaria"}</Badge> para abrir as opções.
                   </p>
                 </div>
               </div>
@@ -291,6 +387,10 @@ const ConfiguracoesEvolution = () => {
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                 <span>Evite usar o mesmo número em múltiplas instâncias da Evolution API.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Zap className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                <span><strong>Novo:</strong> O envio de mensagens agora tenta reconectar automaticamente se detectar desconexão.</span>
               </li>
             </ul>
           </CardContent>
