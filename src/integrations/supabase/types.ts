@@ -765,6 +765,36 @@ export type Database = {
         }
         Relationships: []
       }
+      verificacoes_whatsapp: {
+        Row: {
+          created_at: string | null
+          existe_whatsapp: boolean
+          id: string
+          jid: string | null
+          telefone: string
+          updated_at: string | null
+          verificado_em: string
+        }
+        Insert: {
+          created_at?: string | null
+          existe_whatsapp: boolean
+          id?: string
+          jid?: string | null
+          telefone: string
+          updated_at?: string | null
+          verificado_em?: string
+        }
+        Update: {
+          created_at?: string | null
+          existe_whatsapp?: boolean
+          id?: string
+          jid?: string | null
+          telefone?: string
+          updated_at?: string | null
+          verificado_em?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -512,7 +512,7 @@ const Avaliacoes = () => {
         batches.push(telefones.slice(i, i + BATCH_SIZE));
       }
       
-      const allResults: { telefone: string; telefoneFormatado: string; existeWhatsApp: boolean }[] = [];
+      const allResults: { telefone: string; telefoneFormatado: string; existeWhatsApp: boolean; fromCache?: boolean }[] = [];
       
       for (const batch of batches) {
         const { data, error } = await supabase.functions.invoke('verificar-numeros-whatsapp', {
@@ -543,10 +543,13 @@ const Avaliacoes = () => {
       
       const validos = allResults.filter(r => r.existeWhatsApp).length;
       const invalidos = allResults.filter(r => !r.existeWhatsApp).length;
+      const doCache = allResults.filter(r => r.fromCache).length;
       
       toast({
         title: "Verificação concluída!",
-        description: `${validos} número(s) válido(s), ${invalidos} não encontrado(s) no WhatsApp.`,
+        description: doCache > 0 
+          ? `${validos} válido(s), ${invalidos} inválido(s). ${doCache} do cache.`
+          : `${validos} número(s) válido(s), ${invalidos} não encontrado(s) no WhatsApp.`,
       });
       
     } catch (error) {
