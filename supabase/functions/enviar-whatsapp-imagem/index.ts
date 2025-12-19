@@ -134,8 +134,18 @@ serve(async (req) => {
 
     if (!result.ok) {
       console.error('Erro da Evolution API:', result.status, result.text);
+      
+      // Check if it's a "number doesn't exist on WhatsApp" error
+      let userFriendlyError = `Erro Evolution API: ${result.status}`;
+      if (result.data?.response?.message) {
+        const messages = result.data.response.message;
+        if (Array.isArray(messages) && messages.some((m: { exists?: boolean }) => m.exists === false)) {
+          userFriendlyError = 'Número não encontrado no WhatsApp. Verifique se o número está correto e possui WhatsApp ativo.';
+        }
+      }
+      
       return new Response(
-        JSON.stringify({ success: false, error: `Erro Evolution API: ${result.status}`, details: result.text }),
+        JSON.stringify({ success: false, error: userFriendlyError, details: result.text }),
         { status: result.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
