@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarMensagemWhatsApp, enviarImagemWhatsApp } from "@/services/integracoes";
-import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Shuffle } from "lucide-react";
+import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Shuffle, Pencil, Trash2, Check } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -194,6 +194,10 @@ const Avaliacoes = () => {
   const [progressoLote, setProgressoLote] = useState({ enviados: 0, total: 0, sucesso: 0, falha: 0 });
   const [telefonesDiarioJaEnviados, setTelefonesDiarioJaEnviados] = useState<Set<string>>(new Set());
   const [calendarOpen, setCalendarOpen] = useState(false);
+  
+  // Estados para edição de telefone na lista
+  const [editandoTelefone, setEditandoTelefone] = useState<string | null>(null);
+  const [telefoneEditado, setTelefoneEditado] = useState("");
 
   // ===== NOVOS ESTADOS PARA DISPARO SEGURO =====
   const [configAvancadaAberta, setConfigAvancadaAberta] = useState(false);
@@ -289,6 +293,41 @@ const Avaliacoes = () => {
     }
     
     return { permitido: true };
+  };
+
+  // Funções para gerenciar lista de pacientes do lote
+  const removerPacienteLote = (id: string) => {
+    setPacientesLote(prev => prev.filter(p => p.id !== id));
+    setSelectedIds(prev => {
+      const updated = new Set(prev);
+      updated.delete(id);
+      return updated;
+    });
+    if (editandoTelefone === id) {
+      setEditandoTelefone(null);
+      setTelefoneEditado("");
+    }
+  };
+
+  const iniciarEdicaoTelefone = (paciente: PacienteN8n) => {
+    setEditandoTelefone(paciente.id);
+    setTelefoneEditado(paciente.telefone_formatado);
+  };
+
+  const salvarTelefoneEditado = (id: string) => {
+    const telefoneNumeros = telefoneEditado.replace(/\D/g, '');
+    setPacientesLote(prev => prev.map(p => 
+      p.id === id 
+        ? { ...p, telefone: telefoneNumeros, telefone_formatado: telefoneEditado }
+        : p
+    ));
+    setEditandoTelefone(null);
+    setTelefoneEditado("");
+  };
+
+  const cancelarEdicaoTelefone = () => {
+    setEditandoTelefone(null);
+    setTelefoneEditado("");
   };
 
   const carregarPacientesAtendidos = async () => {
@@ -1248,15 +1287,81 @@ const Avaliacoes = () => {
                             </div>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground mt-0.5">
                               <Phone className="h-3 w-3" />
-                              <span>{paciente.telefone_formatado}</span>
-                              {paciente.data_atendimento_formatada && (
+                              {editandoTelefone === paciente.id ? (
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    value={telefoneEditado}
+                                    onChange={(e) => setTelefoneEditado(e.target.value)}
+                                    className="w-36 h-7 text-sm px-2"
+                                    placeholder="(91) 99999-9999"
+                                    autoFocus
+                                  />
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-7 w-7"
+                                    onClick={() => salvarTelefoneEditado(paciente.id)}
+                                  >
+                                    <Check className="h-4 w-4 text-emerald-600" />
+                                  </Button>
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-7 w-7"
+                                    onClick={cancelarEdicaoTelefone}
+                                  >
+                                    <X className="h-4 w-4 text-muted-foreground" />
+                                  </Button>
+                                </div>
+                              ) : (
                                 <>
-                                  <span className="text-muted-foreground/50">•</span>
-                                  <span className="text-xs">{paciente.data_atendimento_formatada}</span>
+                                  <span>{paciente.telefone_formatado}</span>
+                                  {paciente.data_atendimento_formatada && (
+                                    <>
+                                      <span className="text-muted-foreground/50">•</span>
+                                      <span className="text-xs">{paciente.data_atendimento_formatada}</span>
+                                    </>
+                                  )}
                                 </>
                               )}
                             </div>
                           </div>
+                          
+                          {/* Botões de ação */}
+                          {!enviandoLote && !jaEnviou && editandoTelefone !== paciente.id && (
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button 
+                                      size="icon" 
+                                      variant="ghost" 
+                                      className="h-8 w-8 hover:bg-muted"
+                                      onClick={() => iniciarEdicaoTelefone(paciente)}
+                                    >
+                                      <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Editar telefone</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button 
+                                      size="icon" 
+                                      variant="ghost" 
+                                      className="h-8 w-8 hover:bg-destructive/10"
+                                      onClick={() => removerPacienteLote(paciente.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Remover da lista</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
