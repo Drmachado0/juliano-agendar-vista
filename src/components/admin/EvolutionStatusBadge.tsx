@@ -1,7 +1,8 @@
+import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { RefreshCw, Wifi, WifiOff, Loader2 } from "lucide-react";
+import { RefreshCw, Wifi, WifiOff, Loader2, Settings } from "lucide-react";
 import { useEvolutionStatus } from "@/hooks/useEvolutionStatus";
 import { cn } from "@/lib/utils";
 
@@ -78,13 +79,16 @@ export function EvolutionStatusBadge({ className, showRefresh = true }: Evolutio
     <div className={cn("flex items-center gap-2", className)}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant={info.variant} className="gap-1.5 cursor-help">
-            <Icon className={cn("h-3 w-3", info.iconClass)} />
-            {info.label}
-          </Badge>
+          <Link to="/admin/configuracoes/evolution">
+            <Badge variant={info.variant} className="gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
+              <Icon className={cn("h-3 w-3", info.iconClass)} />
+              {info.label}
+            </Badge>
+          </Link>
         </TooltipTrigger>
         <TooltipContent className="whitespace-pre-line">
           {tooltipContent()}
+          {"\n"}Clique para ver instruções
         </TooltipContent>
       </Tooltip>
 

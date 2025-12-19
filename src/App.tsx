@@ -19,6 +19,7 @@ import AdminProfissionais from "./pages/admin/Profissionais";
 import AdminConfiguracoes from "./pages/admin/Configuracoes";
 import AdminAvaliacoes from "./pages/admin/Avaliacoes";
 import AdminLembretes from "./pages/admin/Lembretes";
+import AdminConfiguracoesEvolution from "./pages/admin/ConfiguracoesEvolution";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/admin/avaliacoes" element={<AdminAvaliacoes />} />
               <Route path="/admin/whatsapp" element={<AdminWhatsApp />} />
               <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
+              <Route path="/admin/configuracoes/evolution" element={<AdminConfiguracoesEvolution />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
