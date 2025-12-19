@@ -5,6 +5,48 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+async function sendToEvolution(
+  evolutionUrl: string,
+  token: string,
+  telefone: string,
+  media: string,
+  caption?: string
+): Promise<{ ok: boolean; status: number; data: any; text: string }> {
+  const requestBody: {
+    number: string;
+    mediatype: string;
+    media: string;
+    caption?: string;
+  } = {
+    number: telefone,
+    mediatype: 'image',
+    media: media,
+  };
+
+  if (caption) {
+    requestBody.caption = caption;
+  }
+
+  const response = await fetch(evolutionUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': token,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  const text = await response.text();
+  let data = null;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = text;
+  }
+
+  return { ok: response.ok, status: response.status, data, text };
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -21,7 +63,6 @@ serve(async (req) => {
       );
     }
 
-    // Prefer imageUrl over base64 (more reliable and lighter)
     if (!imageUrl && !rawImageBase64) {
       return new Response(
         JSON.stringify({ success: false, error: 'imageUrl ou imageBase64 é obrigatório' }),
@@ -49,76 +90,60 @@ serve(async (req) => {
     }
 
     console.log('=== DEBUG EVOLUTION API (IMAGEM) ===');
-    console.log('EVOLUTION_API_BASE_URL:', EVOLUTION_API_BASE_URL);
-    console.log('Token presente:', EVOLUTION_API_TOKEN ? 'Sim' : 'Não');
     console.log('Telefone formatado:', telefoneFormatado);
-    console.log('Usando imageUrl:', !!imageUrl);
-    console.log('Usando imageBase64:', !imageUrl && !!rawImageBase64);
+    console.log('Tem imageUrl:', !!imageUrl);
+    console.log('Tem imageBase64:', !!rawImageBase64);
     console.log('Tem caption:', !!caption);
 
     const evolutionUrl = `${EVOLUTION_API_BASE_URL}/message/sendMedia/${EVOLUTION_API_INSTANCE}`;
-    console.log('URL completa da Evolution:', evolutionUrl);
 
-    // Determine media source - prefer URL over base64
-    let mediaSource: string;
-    
+    // Clean base64 if needed
+    let imageBase64 = rawImageBase64;
+    if (rawImageBase64 && rawImageBase64.includes(';base64,')) {
+      imageBase64 = rawImageBase64.split(';base64,')[1];
+    }
+
+    // Strategy: Try URL first, fallback to base64 if URL fails
+    let result: { ok: boolean; status: number; data: any; text: string };
+    let usedMethod = '';
+
     if (imageUrl) {
-      // Use URL directly (preferred - lighter and more reliable)
-      mediaSource = imageUrl;
-      console.log('Enviando via URL:', imageUrl.substring(0, 100) + '...');
-    } else {
-      // Fallback to base64 if no URL provided
-      let imageBase64 = rawImageBase64;
-      if (rawImageBase64 && rawImageBase64.includes(';base64,')) {
-        imageBase64 = rawImageBase64.split(';base64,')[1];
-        console.log('Prefixo data URL removido do base64');
+      // Try URL first
+      console.log('Tentando enviar via URL:', imageUrl.substring(0, 80) + '...');
+      result = await sendToEvolution(evolutionUrl, EVOLUTION_API_TOKEN, telefoneFormatado, imageUrl, caption);
+      usedMethod = 'URL';
+
+      // Check if URL method failed with connection error - fallback to base64
+      if (!result.ok && imageBase64) {
+        const errorText = result.text.toLowerCase();
+        if (errorText.includes('connection closed') || errorText.includes('timeout') || errorText.includes('fetch')) {
+          console.log('URL falhou com erro de conexão, tentando base64 como fallback...');
+          result = await sendToEvolution(evolutionUrl, EVOLUTION_API_TOKEN, telefoneFormatado, imageBase64, caption);
+          usedMethod = 'base64 (fallback)';
+        }
       }
-      mediaSource = imageBase64;
-      console.log('Tamanho base64:', imageBase64?.length);
+    } else {
+      // No URL, use base64 directly
+      console.log('Enviando via base64 (sem URL disponível)');
+      result = await sendToEvolution(evolutionUrl, EVOLUTION_API_TOKEN, telefoneFormatado, imageBase64!, caption);
+      usedMethod = 'base64';
     }
 
-    // Build request body
-    const requestBody: {
-      number: string;
-      mediatype: string;
-      media: string;
-      caption?: string;
-    } = {
-      number: telefoneFormatado,
-      mediatype: 'image',
-      media: mediaSource,
-    };
+    console.log('Método usado:', usedMethod);
+    console.log('Resposta Evolution:', result.status, result.text.substring(0, 200));
 
-    // Only add caption if provided
-    if (caption) {
-      requestBody.caption = caption;
-      console.log('Caption preview:', caption.length > 100 ? caption.slice(0, 97) + '...' : caption);
-    }
-
-    const response = await fetch(evolutionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': EVOLUTION_API_TOKEN,
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    const responseText = await response.text();
-    console.log('Resposta Evolution (Imagem):', responseText);
-
-    if (!response.ok) {
-      console.error('Erro da Evolution API:', response.status, responseText);
+    if (!result.ok) {
+      console.error('Erro da Evolution API:', result.status, result.text);
       return new Response(
-        JSON.stringify({ success: false, error: `Erro Evolution API: ${response.status}`, details: responseText }),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: `Erro Evolution API: ${result.status}`, details: result.text }),
+        { status: result.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const data = JSON.parse(responseText);
+    console.log('Imagem enviada com sucesso via', usedMethod);
 
     return new Response(
-      JSON.stringify({ success: true, data }),
+      JSON.stringify({ success: true, data: result.data, method: usedMethod }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
