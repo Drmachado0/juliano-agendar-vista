@@ -2,9 +2,11 @@ import { useState, useCallback } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import WhatsAppLeadsList from "@/components/admin/WhatsAppLeadsList";
 import WhatsAppChat from "@/components/admin/WhatsAppChat";
+import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
 import { LeadComMensagens, MensagemWhatsApp } from "@/services/mensagens";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
 import { cn } from "@/lib/utils";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const AdminWhatsApp = () => {
   const [selectedLead, setSelectedLead] = useState<LeadComMensagens | null>(null);
@@ -78,15 +80,19 @@ const AdminWhatsApp = () => {
   };
 
   return (
-    <AdminLayout>
-      <div className="h-[calc(100vh-8rem)] lg:h-[calc(100vh-4rem)] flex flex-col">
-        {/* Header */}
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold text-foreground">WhatsApp</h1>
-          <p className="text-sm text-muted-foreground">
-            Acompanhe e gerencie conversas com leads em tempo real
-          </p>
-        </div>
+    <TooltipProvider>
+      <AdminLayout>
+        <div className="h-[calc(100vh-8rem)] lg:h-[calc(100vh-4rem)] flex flex-col">
+          {/* Header */}
+          <div className="mb-4 flex items-start justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">WhatsApp</h1>
+              <p className="text-sm text-muted-foreground">
+                Acompanhe e gerencie conversas com leads em tempo real
+              </p>
+            </div>
+            <EvolutionStatusBadge />
+          </div>
 
         {/* Main content */}
         <div className="flex-1 bg-card rounded-xl border border-border overflow-hidden">
@@ -122,6 +128,7 @@ const AdminWhatsApp = () => {
         </div>
       </div>
     </AdminLayout>
+    </TooltipProvider>
   );
 };
 
