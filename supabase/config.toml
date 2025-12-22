@@ -3,6 +3,9 @@ project_id = "cnpifhaszbonwlqruwnn"
 [functions.enviar-whatsapp]
 verify_jwt = false
 
+[functions.enviar-whatsapp-queue]
+verify_jwt = false
+
 [functions.enviar-whatsapp-imagem]
 verify_jwt = false
 
