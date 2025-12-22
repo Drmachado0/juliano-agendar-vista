@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import StepIndicator from "./StepIndicator";
 import PersonalDataStep from "./PersonalDataStep";
 import ConsultationDetailsStep from "./ConsultationDetailsStep";
@@ -10,6 +10,7 @@ import { criarAgendamento } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { useGoogleTag } from "@/hooks/useGoogleTag";
 
 export interface FormData {
   fullName: string;
@@ -57,8 +58,16 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { trackScheduleStart, trackScheduleComplete, trackLead } = useGoogleTag();
 
   const totalSteps = 4;
+
+  // Track schedule start when modal opens
+  useEffect(() => {
+    if (isOpen && currentStep === 1) {
+      trackScheduleStart();
+    }
+  }, [isOpen]);
 
   const updateFormData = (data: Partial<FormData>) => {
     setFormData((prev) => ({ ...prev, ...data }));
@@ -144,7 +153,6 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
         hora_agendamento: formData.selectedTime,
         aceita_primeiro_horario: formData.acceptFirstAvailable,
         aceita_contato_whatsapp_email: formData.acceptNotifications,
-        // status_crm will be automatically determined by the service based on location
         origem: "site",
       };
 
@@ -164,8 +172,9 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
         await notificarN8n('agendamento_criado', data);
       }
 
-      // TODO: Futura integração com Google Calendar/Calendly
-      // await criarEventoCalendario(data);
+      // Track Google Tag conversion
+      trackScheduleComplete(formData.appointmentTypeName, formData.locationName);
+      trackLead('agendamento');
 
       setIsSubmitted(true);
     } catch (err) {
