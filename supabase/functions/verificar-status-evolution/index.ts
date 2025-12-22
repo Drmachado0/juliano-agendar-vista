@@ -21,7 +21,7 @@ serve(async (req) => {
   console.log("[verificar-status-evolution] Verificando status da instância...");
 
   try {
-    const evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
+    let evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
     const evolutionToken = Deno.env.get("EVOLUTION_API_TOKEN");
     const instanceName = Deno.env.get("EVOLUTION_API_INSTANCE") || "SITEIA";
 
@@ -37,6 +37,9 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Remove trailing slash from base URL to prevent double slashes
+    evolutionBaseUrl = evolutionBaseUrl.replace(/\/+$/, "");
 
     // Check instance connection state
     const statusUrl = `${evolutionBaseUrl}/instance/connectionState/${instanceName}`;
