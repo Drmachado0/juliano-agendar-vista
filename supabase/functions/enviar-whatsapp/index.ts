@@ -97,11 +97,9 @@ serve(async (req: Request): Promise<Response> => {
     const phoneFormatted = normalizePhone(telefone);
 
     // 2. Get Evolution API config
-    const evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
+    let evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
     const evolutionToken = Deno.env.get("EVOLUTION_API_TOKEN");
     const instanceName = Deno.env.get("EVOLUTION_API_INSTANCE") || "SITEIA";
-
-    console.log("[enviar-whatsapp] Config:", { instance: instanceName, telefone: phoneFormatted });
 
     if (!evolutionBaseUrl || !evolutionToken) {
       return new Response(
@@ -113,6 +111,11 @@ serve(async (req: Request): Promise<Response> => {
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    // Remove trailing slash from base URL to prevent double slashes
+    evolutionBaseUrl = evolutionBaseUrl.replace(/\/+$/, "");
+
+    console.log("[enviar-whatsapp] Config:", { baseUrl: evolutionBaseUrl, instance: instanceName, telefone: phoneFormatted });
 
     // 3. Send message directly - NO connection check, NO retries
     const url = `${evolutionBaseUrl}/message/sendText/${instanceName}`;

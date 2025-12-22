@@ -60,7 +60,7 @@ serve(async (req: Request): Promise<Response> => {
     });
 
     // 2. Get Evolution API config
-    const evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
+    let evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
     const evolutionToken = Deno.env.get("EVOLUTION_API_TOKEN");
     const instanceName = Deno.env.get("EVOLUTION_API_INSTANCE") || "SITEIA";
 
@@ -75,6 +75,11 @@ serve(async (req: Request): Promise<Response> => {
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    // Remove trailing slash from base URL to prevent double slashes
+    evolutionBaseUrl = evolutionBaseUrl.replace(/\/+$/, "");
+
+    console.log("[enviar-whatsapp-queue] Config:", { baseUrl: evolutionBaseUrl, instance: instanceName });
 
     // 3. Send directly to Evolution API - NO connection check, NO retries
     console.log("[enviar-whatsapp-queue] Enviando para Evolution API...");
