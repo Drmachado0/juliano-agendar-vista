@@ -98,7 +98,33 @@ Este documento descreve todos os eventos personalizados enviados ao `dataLayer` 
 
 ---
 
-### 5. `page_view` - Visualização de Página
+### 5. `cta_click` - Clique em CTA
+
+**Quando dispara:** Usuário clica em um botão de Call-to-Action.
+
+```javascript
+{
+  event: 'cta_click',
+  cta_name: 'agendar_consulta' | 'saiba_mais',
+  cta_location: 'hero' | 'about' | 'procedures' | 'footer',
+  cta_text: 'Agendar consulta'
+}
+```
+
+**Parâmetros:**
+| Parâmetro | Descrição | Exemplo |
+|-----------|-----------|---------|
+| `cta_name` | Identificador do CTA | agendar_consulta, saiba_mais |
+| `cta_location` | Seção onde está o CTA | hero, about, procedures |
+| `cta_text` | Texto exibido no botão | Agendar consulta |
+
+**Uso recomendado:**
+- GA4: Análise de engajamento por seção
+- Heatmaps: Identificar CTAs mais clicados
+
+---
+
+### 6. `page_view` - Visualização de Página
 
 **Quando dispara:** Navegação entre páginas (SPA).
 

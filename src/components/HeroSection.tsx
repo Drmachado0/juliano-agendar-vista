@@ -2,12 +2,16 @@ import { Button } from "@/components/ui/button";
 import { Award, MapPin, Users, Glasses, Eye, Scissors, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 import drJulianoPhoto from "@/assets/dr-juliano-machado.jpg";
+import { useGoogleTag } from "@/hooks/useGoogleTag";
+
 interface HeroSectionProps {
   onScheduleClick: () => void;
 }
+
 const HeroSection = ({
   onScheduleClick
 }: HeroSectionProps) => {
+  const { trackEvent } = useGoogleTag();
   const [scrollY, setScrollY] = useState(0);
   useEffect(() => {
     const handleScroll = () => {
@@ -108,12 +112,36 @@ const HeroSection = ({
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start mb-10">
-              <Button variant="hero" size="lg" onClick={onScheduleClick} className="w-full sm:w-auto text-base py-6 sm:py-3 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all opacity-0 animate-slide-up animation-delay-500">
+              <Button 
+                variant="hero" 
+                size="lg" 
+                onClick={() => {
+                  trackEvent('cta_click', {
+                    cta_name: 'agendar_consulta',
+                    cta_location: 'hero',
+                    cta_text: 'Agendar consulta'
+                  });
+                  onScheduleClick();
+                }} 
+                className="w-full sm:w-auto text-base py-6 sm:py-3 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all opacity-0 animate-slide-up animation-delay-500"
+              >
                 Agendar consulta
               </Button>
-              <Button variant="outline" size="lg" onClick={() => document.getElementById("sobre")?.scrollIntoView({
-              behavior: "smooth"
-            })} className="w-full sm:w-auto text-base py-6 sm:py-3 border-2 opacity-0 animate-slide-up animation-delay-600">
+              <Button 
+                variant="outline" 
+                size="lg" 
+                onClick={() => {
+                  trackEvent('cta_click', {
+                    cta_name: 'saiba_mais',
+                    cta_location: 'hero',
+                    cta_text: 'Saiba mais'
+                  });
+                  document.getElementById("sobre")?.scrollIntoView({
+                    behavior: "smooth"
+                  });
+                }} 
+                className="w-full sm:w-auto text-base py-6 sm:py-3 border-2 opacity-0 animate-slide-up animation-delay-600"
+              >
                 Saiba mais
               </Button>
             </div>
