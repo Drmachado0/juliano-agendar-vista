@@ -197,7 +197,7 @@ serve(async (req) => {
   console.log("[gerenciar-conexao] ========== NOVA REQUISIÇÃO ==========");
 
   try {
-    const evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
+    let evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
     const evolutionToken = Deno.env.get("EVOLUTION_API_TOKEN");
     const instanceName = Deno.env.get("EVOLUTION_API_INSTANCE") || "SITEIA";
 
@@ -212,6 +212,9 @@ serve(async (req) => {
       );
     }
 
+    // Remove trailing slash from base URL to prevent double slashes
+    evolutionBaseUrl = evolutionBaseUrl.replace(/\/+$/, "");
+
     // Parse action from request body
     let action = "check";
     try {
@@ -221,7 +224,7 @@ serve(async (req) => {
       // Default to check if no body
     }
 
-    console.log(`[gerenciar-conexao] Ação: ${action}, Instância: ${instanceName}`);
+    console.log(`[gerenciar-conexao] Ação: ${action}, Instância: ${instanceName}, BaseUrl: ${evolutionBaseUrl}`);
 
     let result: ConnectionResult;
 
