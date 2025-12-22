@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarMensagemWhatsApp, enviarImagemWhatsApp } from "@/services/integracoes";
-import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Shuffle, Pencil, Trash2, Check } from "lucide-react";
+import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Shuffle, Pencil, Trash2, Check, Wifi, WifiOff } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,11 +20,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
+import { useEvolutionStatus } from "@/hooks/useEvolutionStatus";
 
 interface PacienteAtendido {
   id: string;
@@ -269,6 +272,10 @@ Oftalmologia`;
 };
 
 const Avaliacoes = () => {
+  // Hook para status da conexão Evolution API
+  const { status: evolutionStatus, loading: evolutionLoading, reconectar, refresh: refreshEvolution } = useEvolutionStatus(true, 30000);
+  const isWhatsAppConnected = evolutionStatus?.connected ?? false;
+  
   const [template, setTemplate] = useState(TEMPLATE_PADRAO);
   const [nomeAvulso, setNomeAvulso] = useState("");
   const [telefoneAvulso, setTelefoneAvulso] = useState("");
@@ -1251,7 +1258,7 @@ const Avaliacoes = () => {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
               <Star className="h-6 w-6 text-yellow-500" />
@@ -1261,7 +1268,50 @@ const Avaliacoes = () => {
               Envie pedidos de avaliação para pacientes atendidos
             </p>
           </div>
+          <EvolutionStatusBadge />
         </div>
+
+        {/* Alert de WhatsApp Desconectado */}
+        {!evolutionLoading && !isWhatsAppConnected && (
+          <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
+            <WifiOff className="h-4 w-4" />
+            <AlertTitle>WhatsApp Desconectado</AlertTitle>
+            <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-3 mt-2">
+              <span>Não é possível verificar números ou enviar mensagens enquanto o WhatsApp estiver desconectado.</span>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={async () => {
+                    const result = await reconectar();
+                    if (result.success) {
+                      toast({
+                        title: "Reconexão iniciada",
+                        description: "Aguarde a conexão ser restabelecida.",
+                      });
+                    } else {
+                      toast({
+                        title: "Falha na reconexão",
+                        description: result.error || "Tente novamente ou acesse as configurações.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className="gap-1.5"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Reconectar
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                  <Link to="/admin/configuracoes/evolution" className="gap-1.5">
+                    <Settings2 className="h-3.5 w-3.5" />
+                    Configurações
+                  </Link>
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* ===== SEÇÃO: Disparo em Lote Seguro ===== */}
         <Card className="border-yellow-500/30 bg-gradient-to-r from-card to-yellow-500/5">
@@ -1559,13 +1609,18 @@ const Avaliacoes = () => {
                             variant="outline"
                             size="sm"
                             onClick={verificarNumerosWhatsApp}
-                            disabled={verificandoWhatsApp || enviandoLote}
+                            disabled={verificandoWhatsApp || enviandoLote || !isWhatsAppConnected}
                             className="text-emerald-600 border-emerald-500/50 hover:bg-emerald-500/10"
                           >
                             {verificandoWhatsApp ? (
                               <>
                                 <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                                 Verificando...
+                              </>
+                            ) : !isWhatsAppConnected ? (
+                              <>
+                                <WifiOff className="h-3.5 w-3.5 mr-1.5" />
+                                WhatsApp Offline
                               </>
                             ) : (
                               <>
@@ -1575,7 +1630,12 @@ const Avaliacoes = () => {
                             )}
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Verifica quais números existem no WhatsApp antes de enviar</TooltipContent>
+                        <TooltipContent>
+                          {!isWhatsAppConnected 
+                            ? "Reconecte o WhatsApp para verificar números"
+                            : "Verifica quais números existem no WhatsApp antes de enviar"
+                          }
+                        </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                     
@@ -1925,24 +1985,42 @@ const Avaliacoes = () => {
                       </Button>
                     </>
                   )}
-                  <Button
-                    onClick={enviarEmLote}
-                    disabled={selectedIds.size === 0 || enviandoLote}
-                    className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white"
-                    size="lg"
-                  >
-                    {enviandoLote ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        {pausado ? "Pausado" : "Enviando"} {progressoLote.enviados}/{progressoLote.total}...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="h-4 w-4 mr-2" />
-                        Enviar para {selectedIds.size} paciente(s)
-                      </>
-                    )}
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="flex-1">
+                          <Button
+                            onClick={enviarEmLote}
+                            disabled={selectedIds.size === 0 || enviandoLote || !isWhatsAppConnected}
+                            className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
+                            size="lg"
+                          >
+                            {enviandoLote ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                {pausado ? "Pausado" : "Enviando"} {progressoLote.enviados}/{progressoLote.total}...
+                              </>
+                            ) : !isWhatsAppConnected ? (
+                              <>
+                                <WifiOff className="h-4 w-4 mr-2" />
+                                WhatsApp Desconectado
+                              </>
+                            ) : (
+                              <>
+                                <Send className="h-4 w-4 mr-2" />
+                                Enviar para {selectedIds.size} paciente(s)
+                              </>
+                            )}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {!isWhatsAppConnected && (
+                        <TooltipContent>
+                          Reconecte o WhatsApp para enviar mensagens
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
             )}
@@ -2164,18 +2242,33 @@ const Avaliacoes = () => {
                 </div>
               )}
 
-              <Button
-                onClick={enviarAvaliacaoAvulsa}
-                disabled={enviandoAvulso || !nomeAvulso.trim() || !telefoneAvulso.trim()}
-                className="w-full"
-              >
-                {enviandoAvulso ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4 mr-2" />
-                )}
-                {enviandoAvulso ? "Enviando..." : "Enviar Avaliação"}
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="w-full">
+                      <Button
+                        onClick={enviarAvaliacaoAvulsa}
+                        disabled={enviandoAvulso || !nomeAvulso.trim() || !telefoneAvulso.trim() || !isWhatsAppConnected}
+                        className="w-full"
+                      >
+                        {enviandoAvulso ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : !isWhatsAppConnected ? (
+                          <WifiOff className="h-4 w-4 mr-2" />
+                        ) : (
+                          <Send className="h-4 w-4 mr-2" />
+                        )}
+                        {enviandoAvulso ? "Enviando..." : !isWhatsAppConnected ? "WhatsApp Desconectado" : "Enviar Avaliação"}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {!isWhatsAppConnected && (
+                    <TooltipContent>
+                      Reconecte o WhatsApp para enviar mensagens
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </CardContent>
           </Card>
         </div>
