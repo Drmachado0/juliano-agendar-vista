@@ -21,6 +21,69 @@ interface CachedVerification {
   verificado_em: string;
 }
 
+// Check Evolution API connection status before verifying
+async function checkEvolutionConnection(
+  baseUrl: string,
+  instanceName: string,
+  token: string
+): Promise<{ connected: boolean; state: string; error?: string }> {
+  try {
+    const url = `${baseUrl}/instance/connectionState/${instanceName}`;
+    console.log('Verificando conexão Evolution antes de verificar números:', url);
+    
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'apikey': token,
+      },
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeout);
+    
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('Erro ao verificar conexão:', response.status, text);
+      return { connected: false, state: 'error', error: text };
+    }
+    
+    const data = await response.json();
+    console.log('Status da conexão:', data);
+    
+    // Check connection state
+    const state = data?.instance?.state || data?.state || 'unknown';
+    const connected = state === 'open' || state === 'connected';
+    
+    return { connected, state };
+  } catch (error) {
+    console.error('Erro ao verificar conexão Evolution:', error);
+    return { 
+      connected: false, 
+      state: 'error', 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+// Check if error is a connection error
+function isConnectionError(statusCode: number, responseText: string, data: unknown): boolean {
+  if (responseText.includes('Connection Closed')) return true;
+  if (responseText.includes('Precondition Required')) return true;
+  if (statusCode === 428) return true;
+  
+  // Check nested error structures
+  const output = (data as { output?: { payload?: { message?: string } } })?.output;
+  if (output?.payload?.message === 'Connection Closed') return true;
+  
+  const response = (data as { response?: { message?: string[] } })?.response;
+  if (response?.message?.includes('Error: Connection Closed')) return true;
+  
+  return false;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -55,6 +118,29 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Check connection FIRST before doing anything else
+    console.log('=== VERIFICANDO CONEXÃO EVOLUTION ANTES DE VERIFICAR NÚMEROS ===');
+    const connectionStatus = await checkEvolutionConnection(
+      EVOLUTION_API_BASE_URL,
+      EVOLUTION_API_INSTANCE,
+      EVOLUTION_API_TOKEN
+    );
+
+    if (!connectionStatus.connected) {
+      console.error('WhatsApp desconectado:', connectionStatus.state);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'WhatsApp desconectado. Reconecte o WhatsApp nas configurações antes de verificar números.',
+          isConnectionError: true,
+          connectionState: connectionStatus.state
+        }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Conexão OK, prosseguindo com verificação...');
 
     // Initialize Supabase client
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
@@ -148,16 +234,30 @@ serve(async (req) => {
       }
 
       if (!response.ok) {
-        console.error('Erro ao verificar números:', response.status, text);
-        // Return cached results + mark unchecked as unknown
-        for (const num of numerosParaVerificar) {
-          results.push({
-            telefone: num.original,
-            telefoneFormatado: num.formatted,
-            existeWhatsApp: false,
-            fromCache: false,
-          });
+        // Check if this is a connection error - DO NOT save to cache or mark as invalid
+        if (isConnectionError(response.status, text, data)) {
+          console.error('Erro de conexão detectado - NÃO salvando no cache');
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'WhatsApp desconectado. Reconecte o WhatsApp nas configurações antes de verificar números.',
+              isConnectionError: true,
+              connectionState: 'disconnected'
+            }),
+            { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
+
+        console.error('Erro ao verificar números:', response.status, text);
+        // For other errors, return partial results but DON'T mark as invalid
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Erro na API: ${response.status}`,
+            resultadosParciais: results,
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       } else {
         // Process API results - Evolution API returns { message: [...] } format
         const apiResults = Array.isArray(data) ? data : (data?.message || []);

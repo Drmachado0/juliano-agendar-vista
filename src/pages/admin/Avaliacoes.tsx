@@ -523,7 +523,38 @@ const Avaliacoes = () => {
           body: { telefones: batch }
         });
         
-        if (error) throw error;
+        // Check for connection error FIRST
+        if (data?.isConnectionError) {
+          toast({
+            title: "WhatsApp Desconectado",
+            description: "Reconecte o WhatsApp nas configurações antes de verificar números.",
+            variant: "destructive",
+          });
+          // Reset status - DO NOT mark as invalid
+          setPacientesLote(prev => prev.map(p => ({ ...p, whatsappVerificado: undefined })));
+          setVerificandoWhatsApp(false);
+          return;
+        }
+        
+        if (error) {
+          // Check if the error body contains connection error info
+          const errorBody = typeof error === 'object' && error !== null 
+            ? JSON.parse((error as { message?: string }).message || '{}') 
+            : {};
+          
+          if (errorBody?.isConnectionError) {
+            toast({
+              title: "WhatsApp Desconectado",
+              description: "Reconecte o WhatsApp nas configurações antes de verificar números.",
+              variant: "destructive",
+            });
+            // Reset status - DO NOT mark as invalid
+            setPacientesLote(prev => prev.map(p => ({ ...p, whatsappVerificado: undefined })));
+            setVerificandoWhatsApp(false);
+            return;
+          }
+          throw error;
+        }
         
         if (data?.resultados) {
           allResults.push(...data.resultados);
