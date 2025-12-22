@@ -523,8 +523,32 @@ const Avaliacoes = () => {
           body: { telefones: batch }
         });
         
-        // Check for connection error FIRST
-        if (data?.isConnectionError) {
+        // Check for connection error in data OR error response
+        const isConnectionErr = data?.isConnectionError || 
+          (error && typeof error === 'object' && 'context' in error);
+        
+        // For 503 responses, Supabase may put the body in error.context or data
+        let errorData = data;
+        if (error && typeof error === 'object') {
+          try {
+            // Try to get the response body from error context
+            const errorObj = error as { context?: { body?: string }; message?: string };
+            if (errorObj.context?.body) {
+              errorData = JSON.parse(errorObj.context.body);
+            } else if (errorObj.message) {
+              // Sometimes the error message contains the JSON
+              const match = errorObj.message.match(/\{.*\}/);
+              if (match) {
+                errorData = JSON.parse(match[0]);
+              }
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }
+        
+        // Check for connection error
+        if (errorData?.isConnectionError) {
           toast({
             title: "WhatsApp Desconectado",
             description: "Reconecte o WhatsApp nas configurações antes de verificar números.",
@@ -536,28 +560,12 @@ const Avaliacoes = () => {
           return;
         }
         
-        if (error) {
-          // Check if the error body contains connection error info
-          const errorBody = typeof error === 'object' && error !== null 
-            ? JSON.parse((error as { message?: string }).message || '{}') 
-            : {};
-          
-          if (errorBody?.isConnectionError) {
-            toast({
-              title: "WhatsApp Desconectado",
-              description: "Reconecte o WhatsApp nas configurações antes de verificar números.",
-              variant: "destructive",
-            });
-            // Reset status - DO NOT mark as invalid
-            setPacientesLote(prev => prev.map(p => ({ ...p, whatsappVerificado: undefined })));
-            setVerificandoWhatsApp(false);
-            return;
-          }
+        if (error && !errorData?.resultados) {
           throw error;
         }
         
-        if (data?.resultados) {
-          allResults.push(...data.resultados);
+        if (errorData?.resultados || data?.resultados) {
+          allResults.push(...(errorData?.resultados || data?.resultados));
         }
       }
       
