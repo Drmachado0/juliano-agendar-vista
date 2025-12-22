@@ -5,6 +5,53 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Check Evolution API connection status before sending
+async function checkEvolutionConnection(
+  baseUrl: string,
+  instanceName: string,
+  token: string
+): Promise<{ connected: boolean; state: string; error?: string }> {
+  try {
+    const url = `${baseUrl}/instance/connectionState/${instanceName}`;
+    console.log('Verificando conexão Evolution:', url);
+    
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'apikey': token,
+      },
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeout);
+    
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('Erro ao verificar conexão:', response.status, text);
+      return { connected: false, state: 'error', error: text };
+    }
+    
+    const data = await response.json();
+    console.log('Status da conexão:', data);
+    
+    // Check connection state
+    const state = data?.instance?.state || data?.state || 'unknown';
+    const connected = state === 'open' || state === 'connected';
+    
+    return { connected, state };
+  } catch (error) {
+    console.error('Erro ao verificar conexão Evolution:', error);
+    return { 
+      connected: false, 
+      state: 'error', 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
 async function sendToEvolution(
   evolutionUrl: string,
   token: string,
@@ -82,6 +129,29 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Check connection before sending
+    console.log('=== VERIFICANDO CONEXÃO EVOLUTION ANTES DE ENVIAR ===');
+    const connectionStatus = await checkEvolutionConnection(
+      EVOLUTION_API_BASE_URL,
+      EVOLUTION_API_INSTANCE,
+      EVOLUTION_API_TOKEN
+    );
+
+    if (!connectionStatus.connected) {
+      console.error('WhatsApp desconectado:', connectionStatus.state);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'WhatsApp desconectado. Reconecte o WhatsApp nas configurações antes de enviar mensagens.',
+          isConnectionError: true,
+          connectionState: connectionStatus.state
+        }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Conexão OK, prosseguindo com envio...');
 
     // Format phone number
     let telefoneFormatado = telefone.replace(/\D/g, '');
