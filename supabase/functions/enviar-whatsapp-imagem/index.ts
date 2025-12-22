@@ -118,11 +118,11 @@ serve(async (req) => {
     }
 
     // Get Evolution API configuration
-    const EVOLUTION_API_BASE_URL = Deno.env.get('EVOLUTION_API_BASE_URL');
+    let evolutionBaseUrl = Deno.env.get('EVOLUTION_API_BASE_URL');
     const EVOLUTION_API_INSTANCE = Deno.env.get('EVOLUTION_API_INSTANCE');
     const EVOLUTION_API_TOKEN = Deno.env.get('EVOLUTION_API_TOKEN');
 
-    if (!EVOLUTION_API_BASE_URL || !EVOLUTION_API_INSTANCE || !EVOLUTION_API_TOKEN) {
+    if (!evolutionBaseUrl || !EVOLUTION_API_INSTANCE || !EVOLUTION_API_TOKEN) {
       console.error('Variáveis de ambiente da Evolution API não configuradas');
       return new Response(
         JSON.stringify({ success: false, error: 'Configuração da Evolution API incompleta' }),
@@ -130,10 +130,13 @@ serve(async (req) => {
       );
     }
 
+    // Remove trailing slash from base URL to prevent double slashes
+    evolutionBaseUrl = evolutionBaseUrl.replace(/\/+$/, "");
+
     // Check connection before sending
     console.log('=== VERIFICANDO CONEXÃO EVOLUTION ANTES DE ENVIAR ===');
     const connectionStatus = await checkEvolutionConnection(
-      EVOLUTION_API_BASE_URL,
+      evolutionBaseUrl,
       EVOLUTION_API_INSTANCE,
       EVOLUTION_API_TOKEN
     );
@@ -165,7 +168,7 @@ serve(async (req) => {
     console.log('Tem imageBase64:', !!rawImageBase64);
     console.log('Tem caption:', !!caption);
 
-    const evolutionUrl = `${EVOLUTION_API_BASE_URL}/message/sendMedia/${EVOLUTION_API_INSTANCE}`;
+    const evolutionUrl = `${evolutionBaseUrl}/message/sendMedia/${EVOLUTION_API_INSTANCE}`;
 
     // Clean base64 if needed
     let imageBase64 = rawImageBase64;
