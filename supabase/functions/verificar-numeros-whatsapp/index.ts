@@ -106,23 +106,26 @@ serve(async (req) => {
       );
     }
 
-    const EVOLUTION_API_BASE_URL = Deno.env.get('EVOLUTION_API_BASE_URL');
+    let evolutionBaseUrl = Deno.env.get('EVOLUTION_API_BASE_URL');
     const EVOLUTION_API_INSTANCE = Deno.env.get('EVOLUTION_API_INSTANCE');
     const EVOLUTION_API_TOKEN = Deno.env.get('EVOLUTION_API_TOKEN');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!EVOLUTION_API_BASE_URL || !EVOLUTION_API_INSTANCE || !EVOLUTION_API_TOKEN) {
+    if (!evolutionBaseUrl || !EVOLUTION_API_INSTANCE || !EVOLUTION_API_TOKEN) {
       return new Response(
         JSON.stringify({ success: false, error: 'Configuração da Evolution API incompleta' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // Remove trailing slash from base URL to prevent double slashes
+    evolutionBaseUrl = evolutionBaseUrl.replace(/\/+$/, "");
+
     // Check connection FIRST before doing anything else
     console.log('=== VERIFICANDO CONEXÃO EVOLUTION ANTES DE VERIFICAR NÚMEROS ===');
     const connectionStatus = await checkEvolutionConnection(
-      EVOLUTION_API_BASE_URL,
+      evolutionBaseUrl,
       EVOLUTION_API_INSTANCE,
       EVOLUTION_API_TOKEN
     );
@@ -210,7 +213,7 @@ serve(async (req) => {
       const uniqueFormattedNumbers = [...new Set(numerosParaVerificar.map(n => n.formatted))];
       console.log(`Verificando ${uniqueFormattedNumbers.length} números únicos (de ${numerosParaVerificar.length} total):`, uniqueFormattedNumbers);
 
-      const evolutionUrl = `${EVOLUTION_API_BASE_URL}/chat/whatsappNumbers/${EVOLUTION_API_INSTANCE}`;
+      const evolutionUrl = `${evolutionBaseUrl}/chat/whatsappNumbers/${EVOLUTION_API_INSTANCE}`;
       
       const response = await fetch(evolutionUrl, {
         method: 'POST',
