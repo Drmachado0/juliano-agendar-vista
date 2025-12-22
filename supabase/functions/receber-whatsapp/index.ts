@@ -207,9 +207,18 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Instância:", body.instance);
     console.log(`Rate limit remaining: ${rateLimit.remaining}`);
 
-    // Get secrets for authentication
+    // Get secrets for authentication - MANDATORY
     const webhookSecret = Deno.env.get("EVOLUTION_WEBHOOK_SECRET");
     const evolutionApiToken = Deno.env.get("EVOLUTION_API_TOKEN");
+    
+    // SECURITY: Require at least one authentication secret to be configured
+    if (!webhookSecret && !evolutionApiToken) {
+      console.error("❌ CRITICAL: No authentication secrets configured for webhook");
+      return new Response(
+        JSON.stringify({ success: false, error: "Webhook authentication not configured" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
     
     // Try multiple authentication methods
     let isAuthenticated = false;
@@ -240,17 +249,13 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
     
-    // If no authentication method succeeded and secrets are configured, reject
-    if (!isAuthenticated && (webhookSecret || evolutionApiToken)) {
-      console.error("Autenticação falhou - apikey ou assinatura inválida");
+    // SECURITY: Reject unauthenticated requests
+    if (!isAuthenticated) {
+      console.error(`❌ Authentication failed for IP: ${clientIP} - invalid apikey or signature`);
       return new Response(
         JSON.stringify({ success: false, error: "Não autorizado" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
-    }
-    
-    if (!webhookSecret && !evolutionApiToken) {
-      console.warn("⚠️ Nenhum secret configurado - validação de autenticação desabilitada");
     }
 
     // Validate payload structure with Zod
