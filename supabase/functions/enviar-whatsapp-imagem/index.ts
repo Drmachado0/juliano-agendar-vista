@@ -135,17 +135,35 @@ serve(async (req) => {
     if (!result.ok) {
       console.error('Erro da Evolution API:', result.status, result.text);
       
-      // Check if it's a "number doesn't exist on WhatsApp" error
+      // Check for specific error types
       let userFriendlyError = `Erro Evolution API: ${result.status}`;
-      if (result.data?.response?.message) {
-        const messages = result.data.response.message;
+      let isConnectionError = false;
+      
+      const errorText = result.text.toLowerCase();
+      const responseMessage = result.data?.response?.message;
+      
+      // Check for connection closed error
+      if (errorText.includes('connection closed') || 
+          (Array.isArray(responseMessage) && responseMessage.some((m: string) => 
+            typeof m === 'string' && m.toLowerCase().includes('connection closed')))) {
+        userFriendlyError = 'WhatsApp desconectado. Reconecte o WhatsApp nas configurações da Evolution API antes de enviar mensagens.';
+        isConnectionError = true;
+      }
+      // Check if it's a "number doesn't exist on WhatsApp" error
+      else if (responseMessage) {
+        const messages = responseMessage;
         if (Array.isArray(messages) && messages.some((m: { exists?: boolean }) => m.exists === false)) {
           userFriendlyError = 'Número não encontrado no WhatsApp. Verifique se o número está correto e possui WhatsApp ativo.';
         }
       }
       
       return new Response(
-        JSON.stringify({ success: false, error: userFriendlyError, details: result.text }),
+        JSON.stringify({ 
+          success: false, 
+          error: userFriendlyError, 
+          details: result.text,
+          isConnectionError 
+        }),
         { status: result.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
