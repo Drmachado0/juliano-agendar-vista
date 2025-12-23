@@ -5,6 +5,18 @@
 
 ---
 
+## IDs de Referência
+
+| Plataforma | ID | Descrição |
+|------------|-----|-----------|
+| GTM Container | GTM-NQ2GJ4GX | Google Tag Manager |
+| GA4 Principal | G-79BDCX4R2L | drjulianomachado.com |
+| GA4 Secundário | G-380EGEFL1S | site Dr Juliano Machado |
+| Google Ads | AW-436492720 | Conta de Ads |
+| Meta Pixel | 1358767025715686 | Facebook/Instagram |
+
+---
+
 ## Visão Geral
 
 Este documento descreve todos os eventos personalizados enviados ao `dataLayer` do Google Tag Manager no site Dr. Juliano Machado. Esses eventos podem ser usados para criar tags de GA4, Google Ads, Meta Pixel e outras plataformas.
@@ -157,7 +169,7 @@ Para cada evento, criar um **Trigger de Evento Personalizado**:
 
 ```
 Tipo: Google Analytics: Evento GA4
-ID de medição: G-XXXXXXXXXX
+ID de medição: G-79BDCX4R2L (principal) ou G-380EGEFL1S (secundário)
 Nome do evento: [nome do evento]
 Parâmetros do evento:
   - event_category: {{dlv - event_category}}
@@ -169,8 +181,8 @@ Acionador: [trigger correspondente]
 
 ```
 Tipo: Google Ads: Acompanhamento de conversões
-ID de conversão: AW-XXXXXXXXXX
-Rótulo de conversão: XXXXXXXXXXXX
+ID de conversão: AW-436492720
+Rótulo de conversão: [criar no Google Ads]
 Acionador: purchase (agendamento confirmado)
 ```
 
@@ -186,6 +198,9 @@ Criar as seguintes variáveis para capturar dados extras:
 | dlv - location | location |
 | dlv - method | method |
 | dlv - page_path | page_path |
+| dlv - cta_name | cta_name |
+| dlv - cta_location | cta_location |
+| dlv - cta_text | cta_text |
 
 ---
 
@@ -198,15 +213,18 @@ Criar as seguintes variáveis para capturar dados extras:
 │                                                          │
 │  1. page_view (/)           ← Visitante chega ao site   │
 │         ↓                                                │
-│  2. begin_checkout          ← Abre modal de agendamento │
+│  2. cta_click (hero)        ← Clica em "Agendar"        │
 │         ↓                                                │
-│  3. purchase + generate_lead ← Confirma agendamento     │
+│  3. begin_checkout          ← Abre modal de agendamento │
+│         ↓                                                │
+│  4. purchase + generate_lead ← Confirma agendamento     │
 │                                                          │
 ├─────────────────────────────────────────────────────────┤
 │                    EVENTOS PARALELOS                     │
 ├─────────────────────────────────────────────────────────┤
 │                                                          │
 │  • contact (whatsapp)       ← Clica no WhatsApp         │
+│  • cta_click (about/footer) ← Clica em outros CTAs      │
 │                                                          │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -228,6 +246,10 @@ Criar as seguintes variáveis para capturar dados extras:
    - Dimensão: `appointment_type`
    - Métrica: Contagem de `purchase`
 
+4. **CTAs Mais Clicados**
+   - Dimensão: `cta_location`
+   - Métrica: Contagem de `cta_click`
+
 ### Google Ads - Conversões
 
 | Ação de conversão | Evento GTM | Valor | Contagem |
@@ -235,6 +257,7 @@ Criar as seguintes variáveis para capturar dados extras:
 | Agendamento Confirmado | purchase | Definir valor | Todas |
 | Início de Agendamento | begin_checkout | - | Única |
 | Contato WhatsApp | contact | - | Todas |
+| Clique CTA | cta_click | - | Todas |
 
 ---
 
@@ -246,3 +269,4 @@ Para adicionar novos eventos ou modificar os existentes, entre em contato com a 
 - `src/hooks/useGoogleTag.ts` - Hook de rastreamento
 - `src/components/scheduling/SchedulingModal.tsx` - Modal de agendamento
 - `src/components/WhatsAppButton.tsx` - Botão do WhatsApp
+- `src/components/HeroSection.tsx` - CTAs do Hero
