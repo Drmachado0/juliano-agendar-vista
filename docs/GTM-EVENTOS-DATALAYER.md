@@ -7,19 +7,57 @@
 
 ## IDs de Referência
 
-| Plataforma | ID | Descrição |
-|------------|-----|-----------|
-| GTM Container | GTM-NQ2GJ4GX | Google Tag Manager |
-| GA4 Principal | G-79BDCX4R2L | drjulianomachado.com |
-| GA4 Secundário | G-380EGEFL1S | site Dr Juliano Machado |
-| Google Ads | AW-436492720 | Conta de Ads |
-| Meta Pixel | 1358767025715686 | Facebook/Instagram |
+| Plataforma | ID | Descrição | Status |
+|------------|-----|-----------|--------|
+| GTM Container | GTM-NQ2GJ4GX | Google Tag Manager | ✅ Ativo |
+| GA4 Principal | G-79BDCX4R2L | drjulianomachado.com | ✅ gtag.js direto |
+| GA4 Secundário | G-380EGEFL1S | site Dr Juliano Machado | ✅ gtag.js direto |
+| Google Ads | AW-436492720 | Conta de Ads | Via GTM |
+| Meta Pixel | 1358767025715686 | Facebook/Instagram | ✅ Ativo |
 
 ---
 
-## Visão Geral
+## Arquitetura de Tracking
 
-Este documento descreve todos os eventos personalizados enviados ao `dataLayer` do Google Tag Manager no site Dr. Juliano Machado. Esses eventos podem ser usados para criar tags de GA4, Google Ads, Meta Pixel e outras plataformas.
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    ARQUITETURA DE TRACKING                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  index.html                                                      │
+│  ├── Meta Pixel (1358767025715686) → PageView automático        │
+│  ├── gtag.js → G-79BDCX4R2L (Principal)                         │
+│  │         └→ G-380EGEFL1S (Secundário)                         │
+│  └── GTM (GTM-NQ2GJ4GX) → Tags configuradas via painel          │
+│                                                                  │
+│  useGoogleTag.ts (DataLayer)                                     │
+│  ├── trackScheduleStart() → begin_checkout                      │
+│  ├── trackScheduleComplete() → purchase                         │
+│  ├── trackContact() → contact                                   │
+│  ├── trackLead() → generate_lead                                │
+│  ├── trackCTAClick() → cta_click                                │
+│  └── trackEvent() → eventos customizados                        │
+│                                                                  │
+│  useMetaPixel.ts (Facebook Pixel)                                │
+│  ├── trackViewContent() → ViewContent                           │
+│  ├── trackLead() → Lead                                         │
+│  ├── trackSchedule() → Schedule                                 │
+│  └── trackCompleteRegistration() → CompleteRegistration         │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Mapeamento de Arquivos → Eventos
+
+| Arquivo | Evento(s) Disparado(s) | Método |
+|---------|------------------------|--------|
+| `src/components/HeroSection.tsx` | `cta_click` | `trackCTAClick()` |
+| `src/components/InsuranceSection.tsx` | `cta_click` | `trackCTAClick()` |
+| `src/components/WhatsAppButton.tsx` | `contact` | `trackContact()` |
+| `src/components/scheduling/SchedulingModal.tsx` | `begin_checkout`, `purchase`, `generate_lead` | `trackScheduleStart()`, `trackScheduleComplete()`, `trackLead()` |
+| `src/pages/Agendar.tsx` | `begin_checkout`, `purchase`, `generate_lead` | `trackScheduleStart()`, `trackScheduleComplete()`, `trackLead()` |
 
 ---
 
@@ -27,7 +65,7 @@ Este documento descreve todos os eventos personalizados enviados ao `dataLayer` 
 
 ### 1. `begin_checkout` - Início do Agendamento
 
-**Quando dispara:** Usuário abre o modal de agendamento.
+**Quando dispara:** Usuário abre o modal/página de agendamento.
 
 ```javascript
 {
@@ -118,7 +156,7 @@ Este documento descreve todos os eventos personalizados enviados ao `dataLayer` 
 {
   event: 'cta_click',
   cta_name: 'agendar_consulta' | 'saiba_mais',
-  cta_location: 'hero' | 'about' | 'procedures' | 'footer',
+  cta_location: 'hero' | 'convenios' | 'about' | 'procedures' | 'footer',
   cta_text: 'Agendar consulta'
 }
 ```
@@ -127,7 +165,7 @@ Este documento descreve todos os eventos personalizados enviados ao `dataLayer` 
 | Parâmetro | Descrição | Exemplo |
 |-----------|-----------|---------|
 | `cta_name` | Identificador do CTA | agendar_consulta, saiba_mais |
-| `cta_location` | Seção onde está o CTA | hero, about, procedures |
+| `cta_location` | Seção onde está o CTA | hero, convenios, about, procedures |
 | `cta_text` | Texto exibido no botão | Agendar consulta |
 
 **Uso recomendado:**
@@ -136,23 +174,18 @@ Este documento descreve todos os eventos personalizados enviados ao `dataLayer` 
 
 ---
 
-### 6. `page_view` - Visualização de Página
-
-**Quando dispara:** Navegação entre páginas (SPA).
-
-```javascript
-{
-  event: 'page_view',
-  page_path: '/agendar'
-}
-```
-
-**Uso recomendado:**
-- GA4: Pageview (já configurado automaticamente)
-
----
-
 ## Configuração no GTM
+
+### ⚠️ Importante: Evitar Duplicação de Pageviews
+
+O `gtag.js` está instalado diretamente no `index.html` para ambas as propriedades GA4 (G-79BDCX4R2L e G-380EGEFL1S). 
+
+**NÃO crie tags GA4 Configuration com trigger "All Pages" no GTM**, pois isso causará duplicação de pageviews.
+
+Use GTM apenas para:
+- Tags de eventos personalizados (purchase, begin_checkout, etc.)
+- Tags de Google Ads
+- Tags que precisam de triggers específicos
 
 ### Criar Triggers (Acionadores)
 
@@ -169,7 +202,7 @@ Para cada evento, criar um **Trigger de Evento Personalizado**:
 
 ```
 Tipo: Google Analytics: Evento GA4
-ID de medição: G-79BDCX4R2L (principal) ou G-380EGEFL1S (secundário)
+ID de medição: G-79BDCX4R2L
 Nome do evento: [nome do evento]
 Parâmetros do evento:
   - event_category: {{dlv - event_category}}
@@ -197,7 +230,6 @@ Criar as seguintes variáveis para capturar dados extras:
 | dlv - appointment_type | appointment_type |
 | dlv - location | location |
 | dlv - method | method |
-| dlv - page_path | page_path |
 | dlv - cta_name | cta_name |
 | dlv - cta_location | cta_location |
 | dlv - cta_text | cta_text |
@@ -211,20 +243,20 @@ Criar as seguintes variáveis para capturar dados extras:
 │                    FUNIL DE AGENDAMENTO                  │
 ├─────────────────────────────────────────────────────────┤
 │                                                          │
-│  1. page_view (/)           ← Visitante chega ao site   │
+│  1. PageView (gtag automático)  ← Visitante chega       │
 │         ↓                                                │
-│  2. cta_click (hero)        ← Clica em "Agendar"        │
+│  2. cta_click (hero/convenios)  ← Clica em "Agendar"    │
 │         ↓                                                │
-│  3. begin_checkout          ← Abre modal de agendamento │
+│  3. begin_checkout              ← Abre agendamento      │
 │         ↓                                                │
-│  4. purchase + generate_lead ← Confirma agendamento     │
+│  4. purchase + generate_lead    ← Confirma agendamento  │
 │                                                          │
 ├─────────────────────────────────────────────────────────┤
 │                    EVENTOS PARALELOS                     │
 ├─────────────────────────────────────────────────────────┤
 │                                                          │
-│  • contact (whatsapp)       ← Clica no WhatsApp         │
-│  • cta_click (about/footer) ← Clica em outros CTAs      │
+│  • contact (whatsapp)           ← Clica no WhatsApp     │
+│  • cta_click (about/footer)     ← Outros CTAs           │
 │                                                          │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -265,8 +297,4 @@ Criar as seguintes variáveis para capturar dados extras:
 
 Para adicionar novos eventos ou modificar os existentes, entre em contato com a equipe de desenvolvimento.
 
-**Arquivos relacionados:**
-- `src/hooks/useGoogleTag.ts` - Hook de rastreamento
-- `src/components/scheduling/SchedulingModal.tsx` - Modal de agendamento
-- `src/components/WhatsAppButton.tsx` - Botão do WhatsApp
-- `src/components/HeroSection.tsx` - CTAs do Hero
+**Hook principal:** `src/hooks/useGoogleTag.ts`
