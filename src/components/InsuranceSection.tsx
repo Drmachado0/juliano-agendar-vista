@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useGoogleTag } from "@/hooks/useGoogleTag";
 
 // Logos dos convênios
 import logoBradesco from "@/assets/convenios/bradesco-saude.png";
@@ -14,6 +15,7 @@ interface InsuranceSectionProps {
 }
 
 const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
+  const { trackCTAClick } = useGoogleTag();
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
 
@@ -87,7 +89,15 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
             <p className="text-muted-foreground mb-8">
               Escolha o melhor horário para você. Nossa equipe entrará em contato para confirmar.
             </p>
-            <Button variant="hero" size="lg" onClick={onScheduleClick} className="shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all">
+            <Button 
+              variant="hero" 
+              size="lg" 
+              onClick={() => {
+                trackCTAClick('agendar_consulta', 'convenios', 'Agendar consulta');
+                onScheduleClick();
+              }} 
+              className="shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+            >
               Agendar consulta
             </Button>
           </div>

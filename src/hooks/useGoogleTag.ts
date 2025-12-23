@@ -12,13 +12,6 @@ export const useGoogleTag = () => {
     }
   };
 
-  const trackPageView = (pagePath?: string) => {
-    pushToDataLayer({
-      event: 'page_view',
-      page_path: pagePath || window.location.pathname,
-    });
-  };
-
   const trackEvent = (eventName: string, parameters?: Record<string, any>) => {
     pushToDataLayer({
       event: eventName,
@@ -61,12 +54,21 @@ export const useGoogleTag = () => {
     });
   };
 
+  const trackCTAClick = (ctaName: string, ctaLocation: string, ctaText: string) => {
+    pushToDataLayer({
+      event: 'cta_click',
+      cta_name: ctaName,
+      cta_location: ctaLocation,
+      cta_text: ctaText,
+    });
+  };
+
   return {
-    trackPageView,
     trackEvent,
     trackScheduleStart,
     trackScheduleComplete,
     trackContact,
     trackLead,
+    trackCTAClick,
   };
 };

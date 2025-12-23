@@ -11,7 +11,7 @@ interface HeroSectionProps {
 const HeroSection = ({
   onScheduleClick
 }: HeroSectionProps) => {
-  const { trackEvent } = useGoogleTag();
+  const { trackCTAClick } = useGoogleTag();
   const [scrollY, setScrollY] = useState(0);
   useEffect(() => {
     const handleScroll = () => {
@@ -116,11 +116,7 @@ const HeroSection = ({
                 variant="hero" 
                 size="lg" 
                 onClick={() => {
-                  trackEvent('cta_click', {
-                    cta_name: 'agendar_consulta',
-                    cta_location: 'hero',
-                    cta_text: 'Agendar consulta'
-                  });
+                  trackCTAClick('agendar_consulta', 'hero', 'Agendar consulta');
                   onScheduleClick();
                 }} 
                 className="w-full sm:w-auto text-base py-6 sm:py-3 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all opacity-0 animate-slide-up animation-delay-500"
@@ -131,11 +127,7 @@ const HeroSection = ({
                 variant="outline" 
                 size="lg" 
                 onClick={() => {
-                  trackEvent('cta_click', {
-                    cta_name: 'saiba_mais',
-                    cta_location: 'hero',
-                    cta_text: 'Saiba mais'
-                  });
+                  trackCTAClick('saiba_mais', 'hero', 'Saiba mais');
                   document.getElementById("sobre")?.scrollIntoView({
                     behavior: "smooth"
                   });
