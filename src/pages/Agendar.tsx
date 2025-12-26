@@ -148,7 +148,7 @@ const Agendar = () => {
       const localAtendimento = formData.locationName || formData.location;
 
       if (leadId) {
-        // Converter lead existente em agendamento
+        // Converter lead existente em agendamento (com validação de disponibilidade)
         const { error } = await converterLeadEmAgendamento(
           leadId,
           {
@@ -161,11 +161,21 @@ const Agendar = () => {
         );
 
         if (error) {
+          // Check if it's an availability error
+          const isAvailabilityError = error.message.includes('disponível') || 
+                                       error.message.includes('bloqueado') || 
+                                       error.message.includes('ocupado');
+          
           toast({
-            title: "Erro ao agendar",
+            title: isAvailabilityError ? "Horário indisponível" : "Erro ao agendar",
             description: error.message || "Não foi possível finalizar seu agendamento. Tente novamente.",
             variant: "destructive",
           });
+          
+          // If availability error, go back to date/time selection
+          if (isAvailabilityError) {
+            setCurrentStep(3);
+          }
           return;
         }
 

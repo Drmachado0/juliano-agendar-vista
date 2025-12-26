@@ -53,3 +53,7 @@ verify_jwt = false
 
 [functions.gerenciar-conexao-evolution]
 verify_jwt = false
+
+[functions.validar-agendamento]
+verify_jwt = false
+

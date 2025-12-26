@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validarDisponibilidade } from "../_shared/validarDisponibilidade.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -173,6 +174,27 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // *** VALIDATE AVAILABILITY BEFORE INSERTING ***
+    console.log(`[criar-agendamento] Validando disponibilidade...`);
+    const validacaoDisponibilidade = await validarDisponibilidade(
+      body.local_atendimento,
+      body.data_agendamento,
+      body.hora_agendamento
+    );
+
+    if (!validacaoDisponibilidade.disponivel) {
+      console.log(`[criar-agendamento] Horário indisponível: ${validacaoDisponibilidade.motivo}`);
+      return new Response(
+        JSON.stringify({ 
+          error: validacaoDisponibilidade.motivo || 'Horário não disponível',
+          code: validacaoDisponibilidade.codigo || 'HORARIO_INDISPONIVEL'
+        }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[criar-agendamento] Disponibilidade confirmada, prosseguindo com criação...`);
 
     // Prepare sanitized data
     const autoStatusCrm = determineStatusCrmByLocation(body.local_atendimento);
