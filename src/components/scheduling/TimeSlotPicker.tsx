@@ -20,6 +20,13 @@ const TimeSlotPicker = ({ selectedDate, selectedTime, onSelectTime, localAtendim
   useEffect(() => {
     if (selectedDate) {
       carregarHorarios();
+      
+      // Refresh automático a cada 30 segundos para evitar conflitos
+      const interval = setInterval(() => {
+        carregarHorarios();
+      }, 30000);
+      
+      return () => clearInterval(interval);
     } else {
       setSlots([]);
     }
