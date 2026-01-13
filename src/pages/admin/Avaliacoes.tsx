@@ -70,11 +70,11 @@ interface LogEnvio {
   nome: string;
   delayAplicado: number;
   mensagemGerada: string;
-  status: 'sucesso' | 'falha' | 'bloqueado';
+  status: 'sucesso' | 'falha' | 'bloqueado' | 'conexao_perdida';
   motivo?: string;
 }
 
-type EstadoEnvio = 'idle' | 'enviando' | 'aguardando_intervalo' | 'pausa_seguranca' | 'interrompido_limite';
+type EstadoEnvio = 'idle' | 'enviando' | 'aguardando_intervalo' | 'pausa_seguranca' | 'interrompido_limite' | 'conexao_perdida';
 
 // ===== CONSTANTES DE SEGURANÇA (Hard Rules - NÃO EDITÁVEIS) =====
 const LIMITE_SESSAO = 40;
@@ -940,16 +940,33 @@ const Avaliacoes = () => {
         console.error(`Erro ao enviar para ${paciente.nome}:`, error);
         falhas++;
         
-        // Registrar log de falha
+        const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+        const isConnectionError = (error as any)?.isConnectionError || 
+          errorMessage.toLowerCase().includes('desconectado') ||
+          errorMessage.toLowerCase().includes('connection closed');
+        
+        // Registrar log de falha com mensagem REAL
         setLogsEnvio(prev => [...prev, {
           timestamp: new Date(),
           telefone: paciente.telefone,
           nome: paciente.primeiro_nome,
-          delayAplicado: delayAplicadoSegundos,
+          delayAplicado: 0,
           mensagemGerada: mensagem,
-          status: 'falha',
-          motivo: error instanceof Error ? error.message : 'Erro desconhecido'
+          status: isConnectionError ? 'conexao_perdida' : 'falha',
+          motivo: errorMessage
         }]);
+        
+        // Se for erro de conexão, interromper o lote
+        if (isConnectionError) {
+          setEstadoEnvio('conexao_perdida');
+          toast({
+            title: "WhatsApp Desconectado",
+            description: "O envio foi interrompido. Reconecte o WhatsApp e tente novamente.",
+            variant: "destructive",
+            duration: 8000,
+          });
+          break; // Sair do loop
+        }
       }
 
       setProgressoLote({ enviados: i + 1, total: pacientesSelecionados.length, sucesso: sucessos, falha: falhas });
@@ -1100,12 +1117,18 @@ const Avaliacoes = () => {
       if (imagemBase64) {
         const resultImagem = await enviarImagemWhatsApp(telefoneNumeros, imagemBase64, mensagem);
         if (!resultImagem.success) {
-          throw new Error(resultImagem.error || "Erro ao enviar imagem com texto");
+          // Propagar erro com flag de conexão se disponível
+          const error = new Error(resultImagem.error || "Erro ao enviar imagem com texto");
+          (error as any).isConnectionError = resultImagem.isConnectionError;
+          throw error;
         }
       } else {
         const resultTexto = await enviarMensagemWhatsApp(telefoneNumeros, mensagem);
         if (!resultTexto.success) {
-          throw new Error(resultTexto.error || "Erro ao enviar mensagem");
+          // Propagar erro com flag de conexão se disponível
+          const error = new Error(resultTexto.error || "Erro ao enviar mensagem");
+          (error as any).isConnectionError = resultTexto.isConnectionError;
+          throw error;
         }
       }
 
