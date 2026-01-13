@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface KanbanCardProps {
@@ -17,6 +17,11 @@ interface KanbanCardProps {
 // Verifica se é um lead incompleto (sem data/hora de agendamento)
 const isLeadIncompleto = (agendamento: Agendamento) => {
   return (agendamento as any).status_funil === 'lead' || !agendamento.data_agendamento || !agendamento.hora_agendamento;
+};
+
+// Verifica se está na coluna ATENDIDO
+const isAtendido = (agendamento: Agendamento) => {
+  return agendamento.status_crm === 'ATENDIDO';
 };
 
 const localBadgeColors: Record<string, string> = {
@@ -33,13 +38,15 @@ const KanbanCard = ({
   isDragging 
 }: KanbanCardProps) => {
   const isLead = isLeadIncompleto(agendamento);
+  const atendido = isAtendido(agendamento);
   
   return (
     <div
       className={cn(
         "bg-card border border-border rounded-lg p-4 space-y-3 shadow-sm transition-all cursor-grab active:cursor-grabbing",
         isDragging && "shadow-lg ring-2 ring-primary/50 opacity-90",
-        isLead && "border-l-4 border-l-emerald-500"
+        isLead && "border-l-4 border-l-emerald-500",
+        atendido && "opacity-70 border-l-4 border-l-gray-400"
       )}
     >
       {/* Lead Indicator */}
@@ -47,6 +54,14 @@ const KanbanCard = ({
         <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded">
           <AlertTriangle className="h-3 w-3" />
           <span>Aguardando agendamento</span>
+        </div>
+      )}
+      
+      {/* Atendido Indicator */}
+      {atendido && (
+        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-xs font-medium bg-gray-100 dark:bg-gray-800/50 px-2 py-1 rounded">
+          <CheckCircle2 className="h-3 w-3" />
+          <span>Atendido</span>
         </div>
       )}
       

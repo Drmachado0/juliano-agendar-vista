@@ -14,6 +14,7 @@ const columns = [
   { status: "CLINICOR", title: "Clinicor", color: "bg-blue-500" },
   { status: "HGP", title: "HGP", color: "bg-purple-500" },
   { status: "BELÉM", title: "Belém", color: "bg-amber-500" },
+  { status: "ATENDIDO", title: "Atendido", color: "bg-gray-500" },
 ];
 
 const AdminCRM = () => {
@@ -22,6 +23,7 @@ const AdminCRM = () => {
     "CLINICOR": [],
     "HGP": [],
     "BELÉM": [],
+    "ATENDIDO": [],
   });
   const [loading, setLoading] = useState(true);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);

@@ -55,7 +55,7 @@ const agendamentoInsertSchema = z.object({
   aceita_primeiro_horario: z.boolean().optional(),
   aceita_contato_whatsapp_email: z.boolean().optional(),
   status_crm: z
-    .enum(["NOVO LEAD", "CLINICOR", "HGP", "BELÉM"])
+    .enum(["NOVO LEAD", "CLINICOR", "HGP", "BELÉM", "ATENDIDO"])
     .optional()
     .default("NOVO LEAD"),
   origem: z
@@ -264,6 +264,7 @@ export async function listarAgendamentos(
 }
 
 // Get agendamentos by CRM status (for Kanban) - Separando leads de agendamentos
+// Ordenado por data de agendamento (ou created_at) dentro de cada coluna
 export async function listarAgendamentosPorStatus(): Promise<{ 
   data: Record<string, Agendamento[]>; 
   error: Error | null 
@@ -280,17 +281,18 @@ export async function listarAgendamentosPorStatus(): Promise<{
     if (error.message?.includes('JWT expired') || error.code === 'PGRST303') {
       await supabase.auth.signOut();
       window.location.href = '/auth';
-      return { data: { 'NOVO LEAD': [], 'CLINICOR': [], 'HGP': [], 'BELÉM': [] }, error: new Error('Sessão expirada. Redirecionando para login...') };
+      return { data: { 'NOVO LEAD': [], 'CLINICOR': [], 'HGP': [], 'BELÉM': [], 'ATENDIDO': [] }, error: new Error('Sessão expirada. Redirecionando para login...') };
     }
     
-    return { data: { 'NOVO LEAD': [], 'CLINICOR': [], 'HGP': [], 'BELÉM': [] }, error: new Error(error.message) };
+    return { data: { 'NOVO LEAD': [], 'CLINICOR': [], 'HGP': [], 'BELÉM': [], 'ATENDIDO': [] }, error: new Error(error.message) };
   }
 
   const grouped: Record<string, Agendamento[]> = {
     'NOVO LEAD': [],
     'CLINICOR': [],
     'HGP': [],
-    'BELÉM': []
+    'BELÉM': [],
+    'ATENDIDO': []
   };
 
   (data || []).forEach((agendamento) => {
@@ -303,6 +305,15 @@ export async function listarAgendamentosPorStatus(): Promise<{
     } else if (grouped[status]) {
       grouped[status].push(agendamento as Agendamento);
     }
+  });
+
+  // Ordenar cada coluna por data (data_agendamento ou created_at)
+  Object.keys(grouped).forEach(key => {
+    grouped[key].sort((a, b) => {
+      const dateA = a.data_agendamento || a.created_at;
+      const dateB = b.data_agendamento || b.created_at;
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
   });
 
   return { data: grouped, error: null };
