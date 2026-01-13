@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarMensagemWhatsApp, enviarImagemWhatsApp } from "@/services/integracoes";
 import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Shuffle, Pencil, Trash2, Check, Wifi, WifiOff } from "lucide-react";
@@ -961,9 +962,36 @@ const Avaliacoes = () => {
           setEstadoEnvio('conexao_perdida');
           toast({
             title: "WhatsApp Desconectado",
-            description: "O envio foi interrompido. Reconecte o WhatsApp e tente novamente.",
+            description: "O envio foi interrompido. Clique para reconectar.",
             variant: "destructive",
-            duration: 8000,
+            duration: 15000,
+            action: (
+              <ToastAction 
+                altText="Reconectar WhatsApp" 
+                onClick={async () => {
+                  const result = await reconectar();
+                  if (result?.success) {
+                    toast({
+                      title: "Reconectando...",
+                      description: result.details?.qrcode 
+                        ? "QR Code gerado. Acesse as configurações para escanear."
+                        : "Tentando reconectar automaticamente...",
+                    });
+                    // Atualizar status após reconexão
+                    setTimeout(() => refreshEvolution(), 3000);
+                  } else {
+                    toast({
+                      title: "Erro ao reconectar",
+                      description: result?.error || "Tente novamente ou acesse as configurações.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Reconectar
+              </ToastAction>
+            ),
           });
           break; // Sair do loop
         }
