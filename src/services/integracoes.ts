@@ -36,7 +36,7 @@ export async function enviarMensagemWhatsApp(
   telefone: string, 
   mensagem: string,
   options?: { campaign?: string; priority?: "high" | "normal" | "low" }
-): Promise<{ success: boolean; error: string | null }> {
+): Promise<{ success: boolean; error: string | null; isConnectionError?: boolean }> {
   try {
     const preview = mensagem.length > 80 ? mensagem.slice(0, 77) + "..." : mensagem;
     console.log("[integracoes] Enviando WhatsApp (Fire & Forget)", {
@@ -62,25 +62,33 @@ export async function enviarMensagemWhatsApp(
       console.error("[integracoes] Erro Supabase:", error);
       return { 
         success: false, 
-        error: "Erro de conexão. Verifique sua internet." 
+        error: "Erro de conexão. Verifique sua internet.",
+        isConnectionError: false
       };
     }
 
     // Edge function retornou erro
     if (data && typeof data === "object" && "success" in data && data.success === false) {
       console.error("[integracoes] Falha no envio:", data);
+      const isConnectionError = data.isConnectionError || 
+        data.error?.toLowerCase().includes('desconectado') ||
+        data.error?.toLowerCase().includes('connection closed');
       return { 
         success: false, 
-        error: data.message || extractUserFriendlyError(data) 
+        error: data.message || extractUserFriendlyError(data),
+        isConnectionError
       };
     }
 
-    return { success: true, error: null };
+    return { success: true, error: null, isConnectionError: false };
   } catch (err: any) {
     console.error("[integracoes] Erro inesperado:", err);
+    const isConnectionError = err.message?.toLowerCase().includes('desconectado') ||
+      err.message?.toLowerCase().includes('connection closed');
     return { 
       success: false, 
-      error: "Erro inesperado. Tente novamente." 
+      error: "Erro inesperado. Tente novamente.",
+      isConnectionError
     };
   }
 }
@@ -160,7 +168,7 @@ export async function enviarImagemWhatsApp(
   telefone: string,
   imageBase64: string,
   caption?: string
-): Promise<{ success: boolean; error: string | null }> {
+): Promise<{ success: boolean; error: string | null; isConnectionError?: boolean }> {
   try {
     console.log("[integracoes] Preparando envio de imagem via WhatsApp (com Storage)", {
       telefone,
@@ -204,17 +212,31 @@ export async function enviarImagemWhatsApp(
       }
 
       if (data && typeof data === "object" && "success" in data && (data as any).success === false) {
-        throw new Error((data as any).error || "Falha ao enviar imagem via WhatsApp");
+        // Check if it's a connection error
+        const errorData = data as any;
+        if (errorData.isConnectionError) {
+          const connError = new Error(errorData.error || "WhatsApp desconectado");
+          (connError as any).isConnectionError = true;
+          throw connError;
+        }
+        throw new Error(errorData.error || "Falha ao enviar imagem via WhatsApp");
       }
 
-      return { success: true, error: null };
+      return { success: true, error: null, isConnectionError: false };
     }, 3, 2000);
 
     console.log("[integracoes] Imagem enviada com sucesso");
     return result;
   } catch (err: any) {
     console.error("[integracoes] Erro ao enviar imagem WhatsApp:", err);
-    return { success: false, error: err.message || "Erro desconhecido" };
+    const isConnectionError = err.isConnectionError || 
+      err.message?.toLowerCase().includes('desconectado') ||
+      err.message?.toLowerCase().includes('connection closed');
+    return { 
+      success: false, 
+      error: err.message || "Erro desconhecido",
+      isConnectionError 
+    };
   }
 }
 
