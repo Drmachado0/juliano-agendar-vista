@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
-import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle } from "lucide-react";
+import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 const columns = [
   { status: "NOVO LEAD", title: "Novo Lead", color: "bg-emerald-500" },
@@ -162,6 +163,24 @@ const AdminCRM = () => {
     (a) => (a as any).status_funil === 'lead' || !a.data_agendamento || !a.hora_agendamento
   ).length;
   const agendamentosConfirmados = totalItems - leadsIncompletos;
+  
+  // Estatísticas de conversão
+  const atendidos = agendamentosPorStatus['ATENDIDO']?.length || 0;
+  const emAndamento = (agendamentosPorStatus['CLINICOR']?.length || 0) + 
+                      (agendamentosPorStatus['HGP']?.length || 0) + 
+                      (agendamentosPorStatus['BELÉM']?.length || 0);
+  
+  // Taxa de conversão: leads que viraram agendamentos confirmados
+  const totalLeadsHistorico = agendamentosConfirmados + leadsIncompletos;
+  const taxaConversao = totalLeadsHistorico > 0 
+    ? Math.round((agendamentosConfirmados / totalLeadsHistorico) * 100) 
+    : 0;
+  
+  // Taxa de conclusão: agendados que foram atendidos
+  const totalAgendados = agendamentosConfirmados;
+  const taxaConclusao = totalAgendados > 0 
+    ? Math.round((atendidos / totalAgendados) * 100) 
+    : 0;
 
   return (
     <AdminLayout>
@@ -173,23 +192,26 @@ const AdminCRM = () => {
               <LayoutGrid className="h-6 w-6" />
               CRM Kanban
             </h1>
-            <div className="flex items-center gap-4 mt-2">
-              <div className="flex items-center gap-2 text-sm">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  <span className="font-medium">{leadsIncompletos}</span>
-                  <span className="text-amber-600/80 dark:text-amber-400/80">leads</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
-                  <CalendarCheck className="h-3.5 w-3.5" />
-                  <span className="font-medium">{agendamentosConfirmados}</span>
-                  <span className="text-emerald-600/80 dark:text-emerald-400/80">agendados</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
-                  <Users className="h-3.5 w-3.5" />
-                  <span className="font-medium">{totalItems}</span>
-                  <span>total</span>
-                </div>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-sm">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span className="font-medium">{leadsIncompletos}</span>
+                <span className="text-amber-600/80 dark:text-amber-400/80">leads</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-sm">
+                <CalendarCheck className="h-3.5 w-3.5" />
+                <span className="font-medium">{agendamentosConfirmados}</span>
+                <span className="text-emerald-600/80 dark:text-emerald-400/80">agendados</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800/50 text-gray-700 dark:text-gray-400 text-sm">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span className="font-medium">{atendidos}</span>
+                <span className="text-gray-600/80 dark:text-gray-400/80">atendidos</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-sm">
+                <Users className="h-3.5 w-3.5" />
+                <span className="font-medium">{totalItems}</span>
+                <span>total</span>
               </div>
             </div>
           </div>
@@ -197,6 +219,64 @@ const AdminCRM = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Atualizar
           </Button>
+        </div>
+
+        {/* Estatísticas de Conversão */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Taxa de Conversão: Leads → Agendados */}
+          <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <TrendingUp className="h-4 w-4 text-emerald-500" />
+                <span>Taxa de Conversão</span>
+              </div>
+              <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                {taxaConversao}%
+              </span>
+            </div>
+            <Progress value={taxaConversao} className="h-2" />
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3 text-amber-500" />
+                <span>{leadsIncompletos} leads</span>
+              </div>
+              <ArrowRight className="h-3 w-3" />
+              <div className="flex items-center gap-1">
+                <CalendarCheck className="h-3 w-3 text-emerald-500" />
+                <span>{agendamentosConfirmados} agendados</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Taxa de Conclusão: Agendados → Atendidos */}
+          <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                <span>Taxa de Conclusão</span>
+              </div>
+              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {taxaConclusao}%
+              </span>
+            </div>
+            <Progress value={taxaConclusao} className="h-2" />
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <CalendarCheck className="h-3 w-3 text-emerald-500" />
+                <span>{agendamentosConfirmados} agendados</span>
+              </div>
+              <ArrowRight className="h-3 w-3" />
+              <div className="flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3 text-gray-500" />
+                <span>{atendidos} atendidos</span>
+              </div>
+            </div>
+            {emAndamento > 0 && (
+              <div className="text-xs text-muted-foreground pt-1 border-t border-border">
+                <span className="font-medium text-blue-500">{emAndamento}</span> em andamento (CLINICOR/HGP/Belém)
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Kanban board */}
