@@ -830,6 +830,43 @@ const Avaliacoes = () => {
       return;
     }
 
+    // ===== VERIFICAÇÃO DE CONEXÃO WHATSAPP ANTES DE INICIAR =====
+    if (!isWhatsAppConnected) {
+      toast({
+        title: "WhatsApp Desconectado",
+        description: "Conecte o WhatsApp antes de iniciar o envio.",
+        variant: "destructive",
+        duration: 10000,
+        action: (
+          <ToastAction 
+            altText="Reconectar WhatsApp" 
+            onClick={async () => {
+              const result = await reconectar();
+              if (result?.success) {
+                toast({
+                  title: "Reconectando...",
+                  description: result.details?.qrcode 
+                    ? "QR Code gerado. Acesse as configurações para escanear."
+                    : "Tentando reconectar automaticamente...",
+                });
+                setTimeout(() => refreshEvolution(), 3000);
+              } else {
+                toast({
+                  title: "Erro ao reconectar",
+                  description: result?.error || "Tente novamente ou acesse as configurações.",
+                  variant: "destructive",
+                });
+              }
+            }}
+          >
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Reconectar
+          </ToastAction>
+        ),
+      });
+      return;
+    }
+
     // Validar limites iniciais
     const validacao = validarLimitesEnvio();
     if (!validacao.permitido) {
