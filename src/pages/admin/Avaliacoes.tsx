@@ -381,9 +381,9 @@ const Avaliacoes = () => {
     }));
   }, [enviosDiarios]);
 
-  // Carregar configurações avançadas do localStorage
+  // Carregar configurações avançadas do localStorage (compartilhada entre páginas)
   useEffect(() => {
-    const config = localStorage.getItem('avaliacoes_config_avancada');
+    const config = localStorage.getItem('envio_lote_config_avancada');
     if (config) {
       try {
         const parsed = JSON.parse(config);
@@ -402,9 +402,9 @@ const Avaliacoes = () => {
     }
   }, []);
 
-  // Persistir configurações avançadas
+  // Persistir configurações avançadas (compartilhada entre páginas)
   useEffect(() => {
-    localStorage.setItem('avaliacoes_config_avancada', JSON.stringify({
+    localStorage.setItem('envio_lote_config_avancada', JSON.stringify({
       intervaloMin,
       intervaloMax,
       pausarAposEnvios,
