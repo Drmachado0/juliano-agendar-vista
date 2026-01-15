@@ -28,6 +28,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
 import { useEvolutionStatus } from "@/hooks/useEvolutionStatus";
+import { useEnvioLoteConfig, LIMITE_SESSAO, LIMITE_DIARIO } from "@/hooks/useEnvioLoteConfig";
 
 interface PacienteAtendido {
   id: string;
@@ -76,12 +77,6 @@ interface LogEnvio {
 }
 
 type EstadoEnvio = 'idle' | 'enviando' | 'aguardando_intervalo' | 'pausa_seguranca' | 'interrompido_limite' | 'conexao_perdida';
-
-// ===== CONSTANTES DE SEGURANÇA (Hard Rules - NÃO EDITÁVEIS) =====
-const LIMITE_SESSAO = 40;
-const LIMITE_DIARIO = 100;
-const HORARIO_INICIO = 9;
-const HORARIO_FIM = 18;
 
 // ===== SISTEMA DE VARIAÇÃO DE MENSAGENS =====
 const SAUDACOES = [
@@ -320,26 +315,35 @@ const Avaliacoes = () => {
   const [verificandoWhatsApp, setVerificandoWhatsApp] = useState(false);
   const [verificacaoConcluida, setVerificacaoConcluida] = useState(false);
 
-  // ===== NOVOS ESTADOS PARA DISPARO SEGURO =====
+  // ===== CONFIGURAÇÕES DE ENVIO EM LOTE (via hook compartilhado) =====
+  const {
+    intervaloMin,
+    setIntervaloMin,
+    intervaloMax,
+    setIntervaloMax,
+    pausarAposEnvios,
+    setPausarAposEnvios,
+    pausaMinMin,
+    setPausaMinMin,
+    pausaMaxMin,
+    setPausaMaxMin,
+    variacaoTextoAtiva,
+    setVariacaoTextoAtiva,
+    modoEnvioSemRestricao,
+    setModoEnvioSemRestricao,
+    horarioInicio,
+    setHorarioInicio,
+    horarioFim,
+    setHorarioFim,
+    isHorarioPermitido,
+    validarLimitesEnvio: validarLimitesEnvioHook,
+    gerarDelayAleatorio,
+    gerarPausaAleatoria,
+    resetarConfiguracoes,
+  } = useEnvioLoteConfig();
+
   const [configAvancadaAberta, setConfigAvancadaAberta] = useState(false);
-  
-  // Intervalos aleatórios
-  const [intervaloMin, setIntervaloMin] = useState(45);
-  const [intervaloMax, setIntervaloMax] = useState(120);
-  
-  // Pausas estratégicas
-  const [pausarAposEnvios, setPausarAposEnvios] = useState(10);
-  const [pausaMinMin, setPausaMinMin] = useState(5);
-  const [pausaMaxMin, setPausaMaxMin] = useState(10);
-  
-  // Variação de texto
-  const [variacaoTextoAtiva, setVariacaoTextoAtiva] = useState(true);
   const [mensagemPreviewVariada, setMensagemPreviewVariada] = useState(() => gerarMensagemVariada("Maria"));
-  
-  // Configurações de horário de envio
-  const [modoEnvioSemRestricao, setModoEnvioSemRestricao] = useState(false);
-  const [horarioInicio, setHorarioInicio] = useState(HORARIO_INICIO);
-  const [horarioFim, setHorarioFim] = useState(HORARIO_FIM);
   
   // Tracking de limites
   const [estadoEnvio, setEstadoEnvio] = useState<EstadoEnvio>('idle');
@@ -350,6 +354,9 @@ const Avaliacoes = () => {
   // Contagem regressiva visual
   const [tempoRestante, setTempoRestante] = useState(0);
   const [pausaRestante, setPausaRestante] = useState(0);
+
+  // Wrapper para validar limites usando contadores locais
+  const validarLimitesEnvio = () => validarLimitesEnvioHook(enviosSessao, enviosDiarios);
 
   // Função para tocar som de notificação
   const tocarNotificacao = () => {
@@ -381,42 +388,6 @@ const Avaliacoes = () => {
     }));
   }, [enviosDiarios]);
 
-  // Carregar configurações avançadas do localStorage (compartilhada entre páginas)
-  useEffect(() => {
-    const config = localStorage.getItem('envio_lote_config_avancada');
-    if (config) {
-      try {
-        const parsed = JSON.parse(config);
-        if (parsed.intervaloMin !== undefined) setIntervaloMin(parsed.intervaloMin);
-        if (parsed.intervaloMax !== undefined) setIntervaloMax(parsed.intervaloMax);
-        if (parsed.pausarAposEnvios !== undefined) setPausarAposEnvios(parsed.pausarAposEnvios);
-        if (parsed.pausaMinMin !== undefined) setPausaMinMin(parsed.pausaMinMin);
-        if (parsed.pausaMaxMin !== undefined) setPausaMaxMin(parsed.pausaMaxMin);
-        if (parsed.variacaoTextoAtiva !== undefined) setVariacaoTextoAtiva(parsed.variacaoTextoAtiva);
-        if (parsed.modoEnvioSemRestricao !== undefined) setModoEnvioSemRestricao(parsed.modoEnvioSemRestricao);
-        if (parsed.horarioInicio !== undefined) setHorarioInicio(parsed.horarioInicio);
-        if (parsed.horarioFim !== undefined) setHorarioFim(parsed.horarioFim);
-      } catch (e) {
-        console.error('Erro ao carregar configurações avançadas:', e);
-      }
-    }
-  }, []);
-
-  // Persistir configurações avançadas (compartilhada entre páginas)
-  useEffect(() => {
-    localStorage.setItem('envio_lote_config_avancada', JSON.stringify({
-      intervaloMin,
-      intervaloMax,
-      pausarAposEnvios,
-      pausaMinMin,
-      pausaMaxMin,
-      variacaoTextoAtiva,
-      modoEnvioSemRestricao,
-      horarioInicio,
-      horarioFim
-    }));
-  }, [intervaloMin, intervaloMax, pausarAposEnvios, pausaMinMin, pausaMaxMin, variacaoTextoAtiva, modoEnvioSemRestricao, horarioInicio, horarioFim]);
-
   useEffect(() => {
     carregarPacientesAtendidos();
     carregarAvaliacoesEnviadas();
@@ -426,38 +397,6 @@ const Avaliacoes = () => {
   // Atualizar preview de mensagem variada
   const gerarNovoPreview = () => {
     setMensagemPreviewVariada(gerarMensagemVariada("Maria", mensagemPreviewVariada));
-  };
-
-  // Validar limites de envio
-  const validarLimitesEnvio = (): { permitido: boolean; motivo?: string } => {
-    const agora = new Date();
-    const hora = agora.getHours();
-    
-    // Se modo "enviar normalmente" está ativo, ignora restrição de horário
-    if (!modoEnvioSemRestricao) {
-      if (hora < horarioInicio || hora >= horarioFim) {
-        return { 
-          permitido: false, 
-          motivo: `Envio permitido apenas entre ${horarioInicio}h e ${horarioFim}h` 
-        };
-      }
-    }
-    
-    if (enviosSessao >= LIMITE_SESSAO) {
-      return { 
-        permitido: false, 
-        motivo: `Limite de ${LIMITE_SESSAO} mensagens por sessão atingido` 
-      };
-    }
-    
-    if (enviosDiarios >= LIMITE_DIARIO) {
-      return { 
-        permitido: false, 
-        motivo: `Limite diário de ${LIMITE_DIARIO} mensagens atingido` 
-      };
-    }
-    
-    return { permitido: true };
   };
 
   // Funções para gerenciar lista de pacientes do lote
