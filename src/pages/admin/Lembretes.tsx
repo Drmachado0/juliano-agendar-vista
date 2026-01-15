@@ -39,6 +39,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from "recharts";
+import { useEnvioLoteConfig, LIMITE_SESSAO, LIMITE_DIARIO } from "@/hooks/useEnvioLoteConfig";
 
 interface LogEnvio {
   timestamp: Date;
@@ -59,12 +60,6 @@ interface HistoricoLembrete {
 
 type EstadoEnvio = 'idle' | 'enviando' | 'aguardando_intervalo' | 'pausa_seguranca' | 'interrompido_limite';
 type FiltroLembrete = string; // 'vencidos' | 'semana' | 'mes' | 'todos' | 'mes_YYYY-MM'
-
-// Security limits
-const LIMITE_SESSAO = 40;
-const LIMITE_DIARIO = 100;
-const HORARIO_INICIO = 9;
-const HORARIO_FIM = 18;
 
 // Message variations for annual reminder
 const SAUDACOES_LEMBRETE = ["Olá", "Oi", "Olá 😊", "Oi 👋", "Olá!"];
@@ -166,19 +161,34 @@ const Lembretes = () => {
   const canceladoRef = useRef(false);
   const [progressoLote, setProgressoLote] = useState({ enviados: 0, total: 0, sucesso: 0, falha: 0 });
 
-  // Advanced config
+  // ===== CONFIGURAÇÕES DE ENVIO EM LOTE (via hook compartilhado) =====
+  const {
+    intervaloMin,
+    setIntervaloMin,
+    intervaloMax,
+    setIntervaloMax,
+    pausarAposEnvios,
+    setPausarAposEnvios,
+    pausaMinMin,
+    setPausaMinMin,
+    pausaMaxMin,
+    setPausaMaxMin,
+    variacaoTextoAtiva,
+    setVariacaoTextoAtiva,
+    modoEnvioSemRestricao,
+    setModoEnvioSemRestricao,
+    horarioInicio,
+    setHorarioInicio,
+    horarioFim,
+    setHorarioFim,
+    isHorarioPermitido,
+    validarLimitesEnvio: validarLimitesEnvioHook,
+    gerarDelayAleatorio,
+    gerarPausaAleatoria,
+    resetarConfiguracoes,
+  } = useEnvioLoteConfig();
+
   const [configAvancadaAberta, setConfigAvancadaAberta] = useState(false);
-  const [intervaloMin, setIntervaloMin] = useState(45);
-  const [intervaloMax, setIntervaloMax] = useState(120);
-  const [pausarAposEnvios, setPausarAposEnvios] = useState(10);
-  const [pausaMinMin, setPausaMinMin] = useState(5);
-  const [pausaMaxMin, setPausaMaxMin] = useState(10);
-  const [variacaoTextoAtiva, setVariacaoTextoAtiva] = useState(true);
-  
-  // Configurações de horário de envio
-  const [modoEnvioSemRestricao, setModoEnvioSemRestricao] = useState(false);
-  const [horarioInicio, setHorarioInicio] = useState(HORARIO_INICIO);
-  const [horarioFim, setHorarioFim] = useState(HORARIO_FIM);
 
   // Template and image state
   const [template, setTemplate] = useState(TEMPLATE_LEMBRETE_PADRAO);
@@ -203,6 +213,9 @@ const Lembretes = () => {
   const [pausaRestante, setPausaRestante] = useState(0);
   const [logExpandido, setLogExpandido] = useState<number | null>(null);
 
+  // Wrapper para validar limites usando contadores locais
+  const validarLimitesEnvio = () => validarLimitesEnvioHook(enviosSessao, enviosDiarios);
+
   // Load daily limits from localStorage
   useEffect(() => {
     const hoje = new Date().toISOString().split('T')[0];
@@ -225,42 +238,6 @@ const Lembretes = () => {
       enviados: enviosDiarios
     }));
   }, [enviosDiarios]);
-
-  // Carregar configurações avançadas do localStorage (compartilhada entre páginas)
-  useEffect(() => {
-    const config = localStorage.getItem('envio_lote_config_avancada');
-    if (config) {
-      try {
-        const parsed = JSON.parse(config);
-        if (parsed.intervaloMin !== undefined) setIntervaloMin(parsed.intervaloMin);
-        if (parsed.intervaloMax !== undefined) setIntervaloMax(parsed.intervaloMax);
-        if (parsed.pausarAposEnvios !== undefined) setPausarAposEnvios(parsed.pausarAposEnvios);
-        if (parsed.pausaMinMin !== undefined) setPausaMinMin(parsed.pausaMinMin);
-        if (parsed.pausaMaxMin !== undefined) setPausaMaxMin(parsed.pausaMaxMin);
-        if (parsed.variacaoTextoAtiva !== undefined) setVariacaoTextoAtiva(parsed.variacaoTextoAtiva);
-        if (parsed.modoEnvioSemRestricao !== undefined) setModoEnvioSemRestricao(parsed.modoEnvioSemRestricao);
-        if (parsed.horarioInicio !== undefined) setHorarioInicio(parsed.horarioInicio);
-        if (parsed.horarioFim !== undefined) setHorarioFim(parsed.horarioFim);
-      } catch (e) {
-        console.error('Erro ao carregar configurações avançadas:', e);
-      }
-    }
-  }, []);
-
-  // Persistir configurações avançadas (compartilhada entre páginas)
-  useEffect(() => {
-    localStorage.setItem('envio_lote_config_avancada', JSON.stringify({
-      intervaloMin,
-      intervaloMax,
-      pausarAposEnvios,
-      pausaMinMin,
-      pausaMaxMin,
-      variacaoTextoAtiva,
-      modoEnvioSemRestricao,
-      horarioInicio,
-      horarioFim
-    }));
-  }, [intervaloMin, intervaloMax, pausarAposEnvios, pausaMinMin, pausaMaxMin, variacaoTextoAtiva, modoEnvioSemRestricao, horarioInicio, horarioFim]);
 
   // Load pending reminders on mount and filter change
   useEffect(() => {
@@ -313,32 +290,6 @@ const Lembretes = () => {
       setHistorico(data as HistoricoLembrete[]);
     }
     setLoadingHistorico(false);
-  };
-
-  const validarLimitesEnvio = (): { permitido: boolean; motivo?: string } => {
-    const agora = new Date();
-    const hora = agora.getHours();
-    
-    // Se modo "enviar normalmente" está ativo, ignora restrição de horário
-    if (!modoEnvioSemRestricao) {
-      if (hora < horarioInicio || hora >= horarioFim) {
-        return { permitido: false, motivo: `Envio permitido apenas entre ${horarioInicio}h e ${horarioFim}h` };
-      }
-    }
-    
-    if (enviosSessao >= LIMITE_SESSAO) {
-      return { permitido: false, motivo: `Limite de ${LIMITE_SESSAO} mensagens por sessão atingido` };
-    }
-    if (enviosDiarios >= LIMITE_DIARIO) {
-      return { permitido: false, motivo: `Limite diário de ${LIMITE_DIARIO} mensagens atingido` };
-    }
-    return { permitido: true };
-  };
-
-  const isHorarioPermitido = () => {
-    if (modoEnvioSemRestricao) return true;
-    const hora = new Date().getHours();
-    return hora >= horarioInicio && hora < horarioFim;
   };
 
   // Image handling
