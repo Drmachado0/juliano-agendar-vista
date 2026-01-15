@@ -381,6 +381,42 @@ const Avaliacoes = () => {
     }));
   }, [enviosDiarios]);
 
+  // Carregar configurações avançadas do localStorage
+  useEffect(() => {
+    const config = localStorage.getItem('avaliacoes_config_avancada');
+    if (config) {
+      try {
+        const parsed = JSON.parse(config);
+        if (parsed.intervaloMin !== undefined) setIntervaloMin(parsed.intervaloMin);
+        if (parsed.intervaloMax !== undefined) setIntervaloMax(parsed.intervaloMax);
+        if (parsed.pausarAposEnvios !== undefined) setPausarAposEnvios(parsed.pausarAposEnvios);
+        if (parsed.pausaMinMin !== undefined) setPausaMinMin(parsed.pausaMinMin);
+        if (parsed.pausaMaxMin !== undefined) setPausaMaxMin(parsed.pausaMaxMin);
+        if (parsed.variacaoTextoAtiva !== undefined) setVariacaoTextoAtiva(parsed.variacaoTextoAtiva);
+        if (parsed.modoEnvioSemRestricao !== undefined) setModoEnvioSemRestricao(parsed.modoEnvioSemRestricao);
+        if (parsed.horarioInicio !== undefined) setHorarioInicio(parsed.horarioInicio);
+        if (parsed.horarioFim !== undefined) setHorarioFim(parsed.horarioFim);
+      } catch (e) {
+        console.error('Erro ao carregar configurações avançadas:', e);
+      }
+    }
+  }, []);
+
+  // Persistir configurações avançadas
+  useEffect(() => {
+    localStorage.setItem('avaliacoes_config_avancada', JSON.stringify({
+      intervaloMin,
+      intervaloMax,
+      pausarAposEnvios,
+      pausaMinMin,
+      pausaMaxMin,
+      variacaoTextoAtiva,
+      modoEnvioSemRestricao,
+      horarioInicio,
+      horarioFim
+    }));
+  }, [intervaloMin, intervaloMax, pausarAposEnvios, pausaMinMin, pausaMaxMin, variacaoTextoAtiva, modoEnvioSemRestricao, horarioInicio, horarioFim]);
+
   useEffect(() => {
     carregarPacientesAtendidos();
     carregarAvaliacoesEnviadas();
