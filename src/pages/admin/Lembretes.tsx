@@ -174,6 +174,11 @@ const Lembretes = () => {
   const [pausaMinMin, setPausaMinMin] = useState(5);
   const [pausaMaxMin, setPausaMaxMin] = useState(10);
   const [variacaoTextoAtiva, setVariacaoTextoAtiva] = useState(true);
+  
+  // Configurações de horário de envio
+  const [modoEnvioSemRestricao, setModoEnvioSemRestricao] = useState(false);
+  const [horarioInicio, setHorarioInicio] = useState(HORARIO_INICIO);
+  const [horarioFim, setHorarioFim] = useState(HORARIO_FIM);
 
   // Template and image state
   const [template, setTemplate] = useState(TEMPLATE_LEMBRETE_PADRAO);
@@ -278,9 +283,13 @@ const Lembretes = () => {
     const agora = new Date();
     const hora = agora.getHours();
     
-    if (hora < HORARIO_INICIO || hora >= HORARIO_FIM) {
-      return { permitido: false, motivo: `Envio permitido apenas entre ${HORARIO_INICIO}h e ${HORARIO_FIM}h` };
+    // Se modo "enviar normalmente" está ativo, ignora restrição de horário
+    if (!modoEnvioSemRestricao) {
+      if (hora < horarioInicio || hora >= horarioFim) {
+        return { permitido: false, motivo: `Envio permitido apenas entre ${horarioInicio}h e ${horarioFim}h` };
+      }
     }
+    
     if (enviosSessao >= LIMITE_SESSAO) {
       return { permitido: false, motivo: `Limite de ${LIMITE_SESSAO} mensagens por sessão atingido` };
     }
@@ -291,8 +300,9 @@ const Lembretes = () => {
   };
 
   const isHorarioPermitido = () => {
+    if (modoEnvioSemRestricao) return true;
     const hora = new Date().getHours();
-    return hora >= HORARIO_INICIO && hora < HORARIO_FIM;
+    return hora >= horarioInicio && hora < horarioFim;
   };
 
   // Image handling
@@ -731,12 +741,17 @@ const Lembretes = () => {
                     "text-lg font-bold",
                     isHorarioPermitido() ? "text-amber-600" : "text-red-600"
                   )}>
-                    {HORARIO_INICIO}h-{HORARIO_FIM}h
+                    {modoEnvioSemRestricao ? "Livre" : `${horarioInicio}h-${horarioFim}h`}
                   </span>
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Envio permitido apenas entre {HORARIO_INICIO}h e {HORARIO_FIM}h</p>
+                <p>
+                  {modoEnvioSemRestricao 
+                    ? "Envios permitidos a qualquer horário" 
+                    : `Envio permitido apenas entre ${horarioInicio}h e ${horarioFim}h`
+                  }
+                </p>
               </TooltipContent>
             </Tooltip>
 
@@ -1425,6 +1440,55 @@ const Lembretes = () => {
                             </div>
                             <div className="bg-muted/50 p-3 rounded-lg text-sm whitespace-pre-wrap border">
                               {mensagemPreviewVariada}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <Separator />
+
+                      {/* Configuração de Horário de Envio */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="text-sm font-medium flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              Restrição de Horário de Envio
+                            </h4>
+                            <p className="text-xs text-muted-foreground">
+                              {modoEnvioSemRestricao 
+                                ? "⚡ Modo livre: Envios permitidos a qualquer horário (use com cautela)"
+                                : `Envios apenas entre ${horarioInicio}h e ${horarioFim}h`
+                              }
+                            </p>
+                          </div>
+                          <Switch 
+                            checked={!modoEnvioSemRestricao} 
+                            onCheckedChange={(checked) => setModoEnvioSemRestricao(!checked)} 
+                          />
+                        </div>
+                        
+                        {!modoEnvioSemRestricao && (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Início (hora)</Label>
+                              <Input
+                                type="number"
+                                value={horarioInicio}
+                                onChange={(e) => setHorarioInicio(Math.max(0, Math.min(horarioFim - 1, Number(e.target.value))))}
+                                min={0}
+                                max={horarioFim - 1}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Fim (hora)</Label>
+                              <Input
+                                type="number"
+                                value={horarioFim}
+                                onChange={(e) => setHorarioFim(Math.max(horarioInicio + 1, Math.min(24, Number(e.target.value))))}
+                                min={horarioInicio + 1}
+                                max={24}
+                              />
                             </div>
                           </div>
                         )}
