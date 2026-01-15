@@ -336,6 +336,11 @@ const Avaliacoes = () => {
   const [variacaoTextoAtiva, setVariacaoTextoAtiva] = useState(true);
   const [mensagemPreviewVariada, setMensagemPreviewVariada] = useState(() => gerarMensagemVariada("Maria"));
   
+  // Configurações de horário de envio
+  const [modoEnvioSemRestricao, setModoEnvioSemRestricao] = useState(false);
+  const [horarioInicio, setHorarioInicio] = useState(HORARIO_INICIO);
+  const [horarioFim, setHorarioFim] = useState(HORARIO_FIM);
+  
   // Tracking de limites
   const [estadoEnvio, setEstadoEnvio] = useState<EstadoEnvio>('idle');
   const [enviosSessao, setEnviosSessao] = useState(0);
@@ -392,11 +397,14 @@ const Avaliacoes = () => {
     const agora = new Date();
     const hora = agora.getHours();
     
-    if (hora < HORARIO_INICIO || hora >= HORARIO_FIM) {
-      return { 
-        permitido: false, 
-        motivo: `Envio permitido apenas entre ${HORARIO_INICIO}h e ${HORARIO_FIM}h` 
-      };
+    // Se modo "enviar normalmente" está ativo, ignora restrição de horário
+    if (!modoEnvioSemRestricao) {
+      if (hora < horarioInicio || hora >= horarioFim) {
+        return { 
+          permitido: false, 
+          motivo: `Envio permitido apenas entre ${horarioInicio}h e ${horarioFim}h` 
+        };
+      }
     }
     
     if (enviosSessao >= LIMITE_SESSAO) {
@@ -1493,11 +1501,18 @@ const Avaliacoes = () => {
                       <div className="flex flex-col items-center gap-1 cursor-help">
                         <Clock className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                         <span className="text-xs text-muted-foreground">Horário</span>
-                        <span className="font-bold text-sm">{HORARIO_INICIO}h-{HORARIO_FIM}h</span>
+                        <span className="font-bold text-sm">
+                          {modoEnvioSemRestricao ? "Livre" : `${horarioInicio}h-${horarioFim}h`}
+                        </span>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Envio apenas em horário comercial</p>
+                      <p>
+                        {modoEnvioSemRestricao 
+                          ? "Envios permitidos a qualquer horário" 
+                          : "Envio apenas em horário configurado"
+                        }
+                      </p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -1658,6 +1673,57 @@ const Avaliacoes = () => {
                       </div>
                       <div className="bg-background p-3 rounded-lg border text-sm whitespace-pre-wrap max-h-40 overflow-y-auto">
                         {mensagemPreviewVariada}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+
+                {/* Configuração de Horário de Envio */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2 text-sm font-semibold">
+                      <Clock className="h-4 w-4" />
+                      Restrição de Horário de Envio
+                    </Label>
+                    <Switch
+                      checked={!modoEnvioSemRestricao}
+                      onCheckedChange={(checked) => setModoEnvioSemRestricao(!checked)}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {modoEnvioSemRestricao 
+                      ? "⚡ Modo livre: Envios permitidos a qualquer horário (use com cautela)"
+                      : `Envios apenas entre ${horarioInicio}h e ${horarioFim}h`
+                    }
+                  </p>
+                  
+                  {!modoEnvioSemRestricao && (
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs whitespace-nowrap">Início:</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={horarioFim - 1}
+                          value={horarioInicio}
+                          onChange={(e) => setHorarioInicio(Math.max(0, Math.min(horarioFim - 1, Number(e.target.value))))}
+                          className="w-16"
+                        />
+                        <span className="text-xs text-muted-foreground">h</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs whitespace-nowrap">Fim:</Label>
+                        <Input
+                          type="number"
+                          min={horarioInicio + 1}
+                          max={24}
+                          value={horarioFim}
+                          onChange={(e) => setHorarioFim(Math.max(horarioInicio + 1, Math.min(24, Number(e.target.value))))}
+                          className="w-16"
+                        />
+                        <span className="text-xs text-muted-foreground">h</span>
                       </div>
                     </div>
                   )}
