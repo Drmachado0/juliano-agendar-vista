@@ -28,7 +28,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
   }, []);
 
   return (
-    <section className="relative min-h-[92dvh] flex items-center pt-20 sm:pt-24 pb-10 hero-gradient overflow-hidden">
+    <section className="relative min-h-[92dvh] flex items-center pt-16 sm:pt-24 pb-10 hero-gradient overflow-hidden">
       {/* Background decorations */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* Radial glow behind photo area */}
