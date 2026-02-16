@@ -35,7 +35,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
   }, []);
 
   return (
-    <section className="relative min-h-[100dvh] flex items-center pt-20 pb-12 hero-gradient overflow-hidden">
+    <section className="relative min-h-[92dvh] flex items-center pt-24 pb-12 hero-gradient overflow-hidden">
       {/* Ambient background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
