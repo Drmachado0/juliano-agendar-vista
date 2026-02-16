@@ -1,4 +1,4 @@
-import { Menu, X, Settings, LogIn, CalendarCheck } from "lucide-react";
+import { Menu, X, Settings, LogIn, CalendarCheck, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
@@ -56,19 +56,19 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
         ? "bg-background/95 backdrop-blur-xl border-b border-border/40 shadow-sm shadow-black/10"
         : "bg-background/70 backdrop-blur-md border-b border-transparent"
     }`}>
-      <div className="container mx-auto px-4 py-3">
+      <div className="container mx-auto px-3 sm:px-4 py-2.5 sm:py-3">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center gap-2.5 group"
+            className="flex items-center gap-2 sm:gap-2.5 group shrink-0"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/25 flex items-center justify-center overflow-hidden group-hover:border-primary/40 transition-colors">
-              <img src={logoImage} alt="Logo" className="w-8 h-8 object-contain" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/25 flex items-center justify-center overflow-hidden group-hover:border-primary/40 transition-colors">
+              <img src={logoImage} alt="Logo" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
             </div>
             <div className="flex flex-col">
-              <span className="font-semibold text-foreground text-sm leading-tight">Dr. Juliano Machado</span>
-              <span className="text-[11px] text-primary/80 font-medium">Oftalmologista</span>
+              <span className="font-semibold text-foreground text-[13px] sm:text-sm leading-tight">Dr. Juliano Machado</span>
+              <span className="text-[10px] sm:text-[11px] text-primary/80 font-medium">Oftalmologista</span>
             </div>
           </button>
 
@@ -78,7 +78,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
               <button
                 key={item.id}
                 onClick={() => scrollToSection(item.id)}
-                className={`px-3.5 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${
+                className={`px-3 py-1.5 text-[13px] font-medium rounded-lg transition-all duration-300 ${
                   activeSection === item.id
                     ? "text-primary bg-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -89,35 +89,44 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
             ))}
           </nav>
 
-          {/* CTA */}
+          {/* CTA Desktop */}
           <div className="hidden md:flex items-center gap-2">
             {user ? (
               <Link to="/admin/dashboard">
-                <Button variant="outline" size="default" className="gap-2">
+                <Button variant="outline" size="sm" className="gap-2">
                   <Settings className="h-4 w-4" />
                   {isAdmin ? "Admin" : "Painel"}
                 </Button>
               </Link>
             ) : (
               <Link to="/auth">
-                <Button variant="ghost" size="default" className="gap-2 text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
                   <LogIn className="h-4 w-4" />
                   Entrar
                 </Button>
               </Link>
             )}
             <Link to="/agendar">
-              <Button variant="hero" size="default" className="gap-1.5">
+              <Button variant="hero" size="sm" className="gap-1.5">
                 <CalendarCheck className="h-4 w-4" />
                 Agendar Online
               </Button>
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="flex md:hidden items-center gap-2">
+          {/* Mobile Actions */}
+          <div className="flex md:hidden items-center gap-1.5">
+            <a
+              href="https://api.whatsapp.com/send?phone=5591981653200"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+              aria-label="WhatsApp"
+            >
+              <Phone className="w-4 h-4" />
+            </a>
             <Link to="/agendar">
-              <Button variant="hero" size="sm" className="gap-1.5 text-xs px-3">
+              <Button variant="hero" size="sm" className="gap-1 text-xs px-2.5 py-1.5 h-auto">
                 <CalendarCheck className="h-3.5 w-3.5" />
                 Agendar
               </Button>
@@ -125,6 +134,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
             <button
               className="text-foreground p-2 rounded-lg hover:bg-secondary transition-colors"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label={isMenuOpen ? "Fechar menu" : "Abrir menu"}
             >
               {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -132,13 +142,15 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
         </div>
 
         {/* Mobile Menu */}
-        <div className={`md:hidden overflow-hidden transition-all duration-300 ${isMenuOpen ? 'max-h-96 mt-4 pb-4 border-t border-border/30 pt-4' : 'max-h-0'}`}>
-          <nav className="flex flex-col gap-1">
+        <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
+          isMenuOpen ? 'max-h-[28rem] mt-3 pb-4 border-t border-border/30 pt-3' : 'max-h-0'
+        }`}>
+          <nav className="flex flex-col gap-0.5">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => scrollToSection(item.id)}
-                className={`text-sm font-medium text-left px-4 py-3 rounded-lg transition-all duration-300 ${
+                className={`text-sm font-medium text-left px-4 py-2.5 rounded-lg transition-all duration-300 ${
                   activeSection === item.id
                     ? "text-primary bg-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -147,16 +159,17 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
                 {item.label}
               </button>
             ))}
+            <div className="h-px bg-border/30 my-2" />
             {user ? (
               <Link to="/admin/dashboard" onClick={() => setIsMenuOpen(false)}>
-                <Button variant="outline" className="w-full gap-2 mt-2">
+                <Button variant="outline" size="sm" className="w-full gap-2">
                   <Settings className="h-4 w-4" />
                   {isAdmin ? "Admin" : "Painel"}
                 </Button>
               </Link>
             ) : (
               <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                <Button variant="ghost" className="w-full gap-2 mt-2">
+                <Button variant="ghost" size="sm" className="w-full gap-2 justify-start px-4">
                   <LogIn className="h-4 w-4" />
                   Entrar
                 </Button>

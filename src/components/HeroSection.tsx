@@ -35,7 +35,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
   }, []);
 
   return (
-    <section className="relative min-h-[92dvh] flex items-center pt-24 pb-12 hero-gradient overflow-hidden">
+    <section className="relative min-h-[92dvh] flex items-center pt-16 sm:pt-24 pb-8 sm:pb-12 hero-gradient overflow-hidden">
       {/* Ambient background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
@@ -66,14 +66,14 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </div>
 
             {/* Main heading */}
-            <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-bold leading-[1.1] mb-6 opacity-0 animate-slide-up animation-delay-100">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-bold leading-[1.1] mb-5 sm:mb-6 opacity-0 animate-slide-up animation-delay-100">
               <span className="text-foreground">Sua visão merece</span>
               <br />
               <span className="gradient-text">cuidado especializado</span>
             </h1>
 
             {/* Subtitle with value proposition */}
-            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0 opacity-0 animate-slide-up animation-delay-200">
+            <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed mb-6 sm:mb-8 max-w-lg mx-auto lg:mx-0 opacity-0 animate-slide-up animation-delay-200">
               Dr. Juliano Machado — <span className="text-foreground font-medium">+13 anos</span> transformando vidas
               com oftalmologia de excelência em{" "}
               <span className="text-primary font-medium">Paragominas</span> e{" "}
@@ -81,7 +81,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </p>
 
             {/* CTA Group */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-10 opacity-0 animate-slide-up animation-delay-400">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8 sm:mb-10 opacity-0 animate-slide-up animation-delay-400">
               <Button
                 variant="hero"
                 size="lg"
@@ -149,7 +149,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
               <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/15 rounded-[2rem] blur-3xl scale-90 animate-glow" />
 
               {/* Photo */}
-              <div className="relative w-72 h-80 md:w-[22rem] md:h-[26rem] rounded-[2rem] overflow-hidden border border-primary/15 shadow-2xl shadow-primary/10">
+              <div className="relative w-60 h-72 sm:w-72 sm:h-80 md:w-[22rem] md:h-[26rem] rounded-[2rem] overflow-hidden border border-primary/15 shadow-2xl shadow-primary/10">
                 <img
                   src={drJulianoPhoto}
                   alt="Dr. Juliano Machado - Médico Oftalmologista"
