@@ -165,6 +165,14 @@ Sua consulta foi *reagendada* para:
 ⚠️ *Lembre-se:* O atendimento será por *ordem de chegada*.
 
 Qualquer dúvida, estamos à disposição! 🙏`,
+
+  boas_vindas_lead: `Olá, {{nome}}! Aqui é da clínica *Dr. Juliano Machado - Oftalmologista*. 👋
+
+Vimos seu interesse em agendar uma {{tipo_atendimento}} no local *{{local}}*.
+
+Qual data e horário seriam melhores para você? 📅
+
+Aguardamos seu retorno! 🙏`,
 };
 
 // Mapeamento de ícones por tipo de template
@@ -174,4 +182,5 @@ export const tipoIcones: Record<string, string> = {
   resposta_confirmacao: '✅',
   resposta_cancelamento: '❌',
   reagendamento: '🔄',
+  boas_vindas_lead: '👋',
 };
