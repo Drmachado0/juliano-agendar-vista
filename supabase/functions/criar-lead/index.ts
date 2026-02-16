@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendWhatsappTextMessage, normalizePhoneNumber } from "../_shared/evolutionApiClient.ts";
+import { buscarTemplate, renderizarTemplate } from "../_shared/templateRenderer.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,7 +20,6 @@ interface LeadData {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -37,13 +38,7 @@ Deno.serve(async (req) => {
 
     // Validação básica
     if (!data.nome_completo || !data.telefone_whatsapp || !data.tipo_atendimento || !data.local_atendimento || !data.convenio) {
-      console.error('[criar-lead] Campos obrigatórios faltando:', {
-        nome_completo: !!data.nome_completo,
-        telefone_whatsapp: !!data.telefone_whatsapp,
-        tipo_atendimento: !!data.tipo_atendimento,
-        local_atendimento: !!data.local_atendimento,
-        convenio: !!data.convenio,
-      });
+      console.error('[criar-lead] Campos obrigatórios faltando');
       return new Response(
         JSON.stringify({ error: 'Campos obrigatórios faltando' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -54,12 +49,14 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Criar lead com status_funil = 'lead' e sem data/hora de agendamento
+    const phoneClean = data.telefone_whatsapp.replace(/\D/g, '');
+
+    // Criar lead
     const { data: lead, error } = await supabase
       .from('agendamentos')
       .insert({
         nome_completo: data.nome_completo.trim(),
-        telefone_whatsapp: data.telefone_whatsapp.replace(/\D/g, ''),
+        telefone_whatsapp: phoneClean,
         data_nascimento: data.data_nascimento || null,
         email: data.email?.trim() || null,
         tipo_atendimento: data.tipo_atendimento,
@@ -85,6 +82,49 @@ Deno.serve(async (req) => {
     }
 
     console.log('Lead criado com sucesso:', lead.id);
+
+    // === ENVIO AUTOMÁTICO DE WHATSAPP ===
+    try {
+      console.log('[criar-lead] Preparando mensagem automática de boas-vindas...');
+
+      const template = await buscarTemplate('boas_vindas_lead');
+      
+      // Fallback caso template não exista
+      const templateFinal = template || `Olá, {{nome}}! Aqui é da clínica *Dr. Juliano Machado - Oftalmologista*. 👋\n\nVimos seu interesse em agendar uma {{tipo_atendimento}} no local *{{local}}*.\n\nQual data e horário seriam melhores para você? 📅\n\nAguardamos seu retorno! 🙏`;
+
+      const mensagem = renderizarTemplate(templateFinal, {
+        nome: data.nome_completo.trim().split(' ')[0], // Primeiro nome
+        tipo_atendimento: data.tipo_atendimento.toLowerCase(),
+        local: data.local_atendimento,
+        convenio: data.convenio,
+      });
+
+      console.log('[criar-lead] Mensagem renderizada, enviando via WhatsApp...');
+
+      const resultado = await sendWhatsappTextMessage(phoneClean, mensagem);
+
+      // Persistir mensagem na tabela mensagens_whatsapp
+      const normalizedPhone = normalizePhoneNumber(phoneClean);
+      await supabase.from('mensagens_whatsapp').insert({
+        agendamento_id: lead.id,
+        telefone: normalizedPhone,
+        direcao: 'OUT',
+        conteudo: mensagem,
+        status_envio: resultado.success ? 'enviado' : 'erro',
+        mensagem_externa_id: resultado.messageId || null,
+        error_message: resultado.errorMessage || null,
+        tipo_mensagem: 'boas_vindas',
+      });
+
+      if (resultado.success) {
+        console.log('[criar-lead] ✓ Mensagem de boas-vindas enviada com sucesso');
+      } else {
+        console.error('[criar-lead] ✗ Falha ao enviar mensagem:', resultado.errorMessage);
+      }
+    } catch (whatsappError) {
+      // Não falhar a criação do lead por erro no WhatsApp
+      console.error('[criar-lead] Erro ao enviar WhatsApp (não-bloqueante):', whatsappError);
+    }
 
     return new Response(
       JSON.stringify({ success: true, lead_id: lead.id }),
