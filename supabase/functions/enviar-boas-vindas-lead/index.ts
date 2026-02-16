@@ -99,7 +99,13 @@ Deno.serve(async (req) => {
         });
 
         if (resultado.success) {
-          console.log(`[boas-vindas] ✓ Enviado para ${normalizedPhone} (lead ${lead.id})`);
+          // Mover lead para "AGUARDANDO" no CRM
+          await supabase.from('agendamentos').update({ 
+            status_crm: 'AGUARDANDO',
+            updated_at: new Date().toISOString()
+          }).eq('id', lead.id);
+
+          console.log(`[boas-vindas] ✓ Enviado para ${normalizedPhone} (lead ${lead.id}) → AGUARDANDO`);
           enviados++;
         } else {
           console.error(`[boas-vindas] ✗ Falha para ${normalizedPhone}:`, resultado.errorMessage);
