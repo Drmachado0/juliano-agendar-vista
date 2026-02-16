@@ -1,31 +1,23 @@
 
 
-# Atualizar Credenciais da Evolution API
+# Atualizar N8N_WEBHOOK_URL
 
-## Resumo
+## O que sera feito
 
-Atualizar os 3 secrets da Evolution API no backend para apontar para a nova instancia.
+Atualizar o secret `N8N_WEBHOOK_URL` para apontar para o novo webhook:
 
-## Passo 1 -- Solicitar os novos valores via ferramenta de secrets
+| Secret | Valor Atual | Novo Valor |
+|--------|------------|------------|
+| `N8N_WEBHOOK_URL` | (valor antigo em juliano-n8n) | `https://drmachado-n8n.cloudfy.live/webhook/agendamento-notificacao` |
 
-Usar a ferramenta `add_secret` para cada um dos 3 secrets:
+## Passos
 
-| Secret | Novo Valor |
-|--------|-----------|
-| `EVOLUTION_API_BASE_URL` | `https://drmachado-evolution.cloudfy.live` |
-| `EVOLUTION_API_INSTANCE` | `n8n` |
-| `EVOLUTION_API_TOKEN` | (voce informara o novo token) |
-
-Os dois primeiros ja tem valores conhecidos. Para o token, sera solicitado que voce cole o valor.
-
-## Passo 2 -- Testar a conexao
-
-Chamar a edge function `verificar-status-evolution` para confirmar que a nova instancia responde corretamente.
+1. Atualizar o secret `N8N_WEBHOOK_URL` usando a ferramenta de secrets
+2. Testar chamando a edge function `notificar-n8n` para confirmar que o novo endpoint responde
 
 ## Detalhes tecnicos
 
-- Nenhuma alteracao de codigo necessaria
-- Todas as edge functions leem os valores dinamicamente via `Deno.env.get()`
-- O `evolutionApiClient.ts` compartilhado ja normaliza a URL removendo barras finais
-- O badge de status no admin refletira o novo estado automaticamente
+- Apenas 1 secret precisa ser atualizado
+- Nenhuma alteracao de codigo -- a edge function `notificar-n8n` ja le o valor dinamicamente via `Deno.env.get("N8N_WEBHOOK_URL")`
+- As URLs hardcoded no frontend (`/webhook/confirmacao` e `/webhook/avaliacao-google-lovable`) nao serao alteradas conforme solicitado
 
