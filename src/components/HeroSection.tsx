@@ -48,10 +48,10 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
           <div className="flex justify-center lg:justify-end order-1 lg:order-1 opacity-0 animate-scale-in animation-delay-100">
             <div className="relative">
               {/* Glow ring */}
-              <div className="absolute -inset-3 rounded-full bg-gradient-to-br from-primary/20 via-primary/5 to-transparent blur-2xl animate-glow" />
+              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-primary/20 via-primary/5 to-transparent blur-2xl animate-glow" />
 
               {/* Photo container */}
-              <div className="relative w-48 h-48 sm:w-56 sm:h-56 md:w-72 md:h-72 lg:w-80 lg:h-80 rounded-full overflow-hidden border-2 border-primary/25 shadow-2xl shadow-primary/10">
+              <div className="relative w-56 h-64 sm:w-64 sm:h-72 md:w-72 md:h-80 lg:w-80 lg:h-[22rem] rounded-2xl overflow-hidden border-2 border-primary/25 shadow-2xl shadow-primary/10">
                 <img
                   src={drJulianoHero}
                   alt="Dr. Juliano Machado - Médico Oftalmologista"
