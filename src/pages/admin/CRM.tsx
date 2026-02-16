@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 
 const columns = [
   { status: "NOVO LEAD", title: "Novo Lead", color: "bg-emerald-500" },
+  { status: "AGUARDANDO", title: "Aguardando", color: "bg-yellow-500" },
   { status: "CLINICOR", title: "Clinicor", color: "bg-blue-500" },
   { status: "HGP", title: "HGP", color: "bg-purple-500" },
   { status: "BELÉM", title: "Belém", color: "bg-amber-500" },
@@ -21,6 +22,7 @@ const columns = [
 const AdminCRM = () => {
   const [agendamentosPorStatus, setAgendamentosPorStatus] = useState<Record<string, Agendamento[]>>({
     "NOVO LEAD": [],
+    "AGUARDANDO": [],
     "CLINICOR": [],
     "HGP": [],
     "BELÉM": [],
