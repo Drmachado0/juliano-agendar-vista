@@ -1,91 +1,59 @@
 
+# Correcao: Mensagem de boas-vindas nao esta sendo enviada
 
-# Redesign profissional do Hero Section
+## Problema identificado
+O cron job `enviar-boas-vindas-lead` esta sendo executado a cada 2 minutos, porem **todas as chamadas estao retornando "Unauthorized"** (erro 401).
 
-## Problema atual
-- A foto atual (com bebe) nao transmite profissionalismo medico
-- Layout generico, nao diferenciado de sites de clinicas comuns
-- Muito espaco vazio entre o header e o conteudo
-- Badges flutuantes (Paragominas, Belem, Google rating) ficam cortados ou desalinhados
-- Falta hierarquia visual clara para converter visitantes em agendamentos
+**Causa raiz:** O cron job foi configurado com um token de autorizacao hardcoded errado (`lembrete-drjuliano-2024-xK9mP3nQ7wR2`), que nao corresponde ao valor real do secret `CRON_SECRET` configurado no backend.
+
+## Evidencia dos logs
+```
+18:04:00 ERROR [boas-vindas] Unauthorized
+18:02:02 ERROR [boas-vindas] Unauthorized
+18:00:05 ERROR [boas-vindas] Unauthorized
+17:58:00 ERROR [boas-vindas] Unauthorized
+(repete a cada 2 minutos...)
+```
 
 ## Solucao
 
-### 1. Trocar a foto do Hero
-- Usar a nova foto profissional enviada (jaleco branco no consultorio) como imagem principal do Hero
-- Copiar o arquivo `user-uploads://unnamed.png` para `src/assets/dr-juliano-hero.png`
-- Apresentacao circular ou com moldura elegante ao inves do retangulo grande atual
+### Passo 1 - Remover o cron job antigo
+Deletar o cron job existente que usa o token errado.
 
-### 2. Redesign completo do Hero Section
-- **Layout centralizado**: conteudo principal centralizado para impacto maximo, com a foto do doutor em destaque acima ou ao lado
-- **Headline mais impactante**: manter "Sua visao merece cuidado especializado" mas com tipografia maior e mais impactante
-- **Subtitulo focado em conversao**: texto curto e direto que gera confianca
-- **CTA mais proeminente**: botao "Agendar minha consulta" com mais destaque visual, maior e com animacao sutil
-- **Social proof integrado**: stats (+6.000 pacientes, 5.0 Google, +13 anos) em cards com fundo sutil ao inves de apenas texto
-- **Remover badges flutuantes**: integrar locais e rating de forma mais limpa dentro do layout
-- **Reduzir espaco vazio**: conteudo mais compacto e vertical para mobile
+### Passo 2 - Recriar o cron job com o token correto
+Recriar usando o secret `CRON_SECRET` real. Como o cron job SQL nao consegue ler secrets dinamicamente, precisamos usar uma abordagem alternativa:
 
-### 3. Melhorias de layout mobile
-- Foto do doutor menor e circular no mobile
-- Headline e CTA acima da dobra (sem scroll necessario)
-- Stats em linha horizontal compacta
-- Padding reduzido para aproveitar melhor o espaco
+**Opcao A (recomendada):** Atualizar o secret `CRON_SECRET` para o valor que ja esta hardcoded no cron (`lembrete-drjuliano-2024-xK9mP3nQ7wR2`), assim o token bate.
 
-### 4. Microinteracoes e polish
-- Badge de confianca ("Membro SBO") mais discreto e elegante
-- Gradiente de fundo mais sofisticado com particulas sutis ou linhas decorativas
-- Transicoes de entrada mais suaves e sequenciais
+**Opcao B:** Pedir ao usuario o valor atual do `CRON_SECRET` e recriar o cron job com esse valor.
+
+Na pratica, a opcao mais simples e atualizar o `CRON_SECRET` para corresponder ao token usado no cron job, ja que nao ha como ler o valor atual do secret.
 
 ## Detalhes tecnicos
 
-### Arquivos modificados
-| Arquivo | Alteracao |
-|---------|-----------|
-| `src/assets/dr-juliano-hero.png` | **Novo** - foto profissional no consultorio |
-| `src/components/HeroSection.tsx` | Redesign completo do componente |
+### SQL a executar
+```sql
+-- Remover cron antigo
+SELECT cron.unschedule('enviar-boas-vindas-lead');
 
-### Estrutura do novo Hero (desktop)
-
-```text
-+-------------------------------------------------------+
-|  [Badge SBO]                                           |
-|                                                        |
-|   [Foto circular]    Sua visao merece                  |
-|   [Dr. Juliano]      cuidado especializado             |
-|                                                        |
-|   Dr. Juliano Machado - +13 anos de excelencia         |
-|   em oftalmologia em Paragominas e Belem               |
-|                                                        |
-|   [=== Agendar minha consulta ===] [Procedimentos]     |
-|                                                        |
-|   +6.000 pacientes  |  5.0 Google  |  +13 anos        |
-+-------------------------------------------------------+
+-- Recriar com token correto
+SELECT cron.schedule(
+  'enviar-boas-vindas-lead',
+  '*/2 * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://cnpifhaszbonwlqruwnn.supabase.co/functions/v1/enviar-boas-vindas-lead',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer lembrete-drjuliano-2024-xK9mP3nQ7wR2"}'::jsonb,
+    body := '{"source": "pg_cron"}'::jsonb
+  ) AS request_id;
+  $$
+);
 ```
 
-### Estrutura mobile
+### Secret a atualizar
+Atualizar `CRON_SECRET` para o valor: `lembrete-drjuliano-2024-xK9mP3nQ7wR2`
 
-```text
-+---------------------------+
-|     [Foto circular]       |
-|     Dr. Juliano Machado   |
-|     Oftalmologista        |
-|                           |
-|   Sua visao merece        |
-|   cuidado especializado   |
-|                           |
-|   +13 anos de excelencia  |
-|                           |
-|  [Agendar minha consulta] |
-|  [Conhecer procedimentos] |
-|                           |
-|  +6k  |  5.0  |  +13a    |
-+---------------------------+
-```
-
-### Aspectos visuais
-- Foto com borda dourada sutil e sombra glow
-- Background com gradiente navy mais rico e linhas decorativas sutis
-- Stats em mini-cards com icone e fundo `bg-card/50`
-- CTA com gradiente dourado mais vibrante e efeito shimmer
-- Animacoes de entrada sequenciais mantidas mas refinadas
-
+### Verificacao pos-correcao
+- Aguardar 2 minutos apos a correcao
+- Verificar nos logs se o status muda de "Unauthorized" para execucao normal
+- Criar um lead de teste e confirmar que apos 5 minutos a mensagem de boas-vindas e enviada
