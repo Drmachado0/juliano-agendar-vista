@@ -31,7 +31,7 @@ export interface N8nResponse {
   pacientes: PacienteN8n[];
 }
 
-const N8N_WEBHOOK_URL = "https://juliano-n8n.cloudfy.live/webhook/avaliacao-google-lovable";
+const N8N_WEBHOOK_URL = "https://drmachado-n8n.cloudfy.live/webhook/avaliacao-google-lovable";
 
 // Fetch patients from n8n webhook
 export async function buscarPacientesN8n(dataAtendimento: string): Promise<{ data: PacienteN8n[] | null; error: string | null }> {

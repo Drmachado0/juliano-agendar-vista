@@ -124,7 +124,7 @@ Dr. Juliano Machado
 Oftalmologia`;
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
-const N8N_WEBHOOK_URL = "https://juliano-n8n.cloudfy.live/webhook/avaliacao-google-lovable";
+const N8N_WEBHOOK_URL = "https://drmachado-n8n.cloudfy.live/webhook/avaliacao-google-lovable";
 
 // ===== VALIDAÇÃO DE TELEFONE BRASILEIRO =====
 const dddsValidos = [
