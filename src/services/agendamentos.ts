@@ -300,9 +300,11 @@ export async function listarAgendamentosPorStatus(): Promise<{
     const statusFunil = (agendamento as any).status_funil || 'agendado';
     const status = agendamento.status_crm || 'NOVO LEAD';
     
-    // Leads incompletos sempre vão para NOVO LEAD
-    if (statusFunil === 'lead') {
+    // Leads incompletos: respeitar status_crm quando já atualizado
+    if (statusFunil === 'lead' && status === 'NOVO LEAD') {
       grouped['NOVO LEAD'].push(agendamento as Agendamento);
+    } else if (statusFunil === 'lead' && status === 'AGUARDANDO') {
+      grouped['AGUARDANDO'].push(agendamento as Agendamento);
     } else if (grouped[status]) {
       grouped[status].push(agendamento as Agendamento);
     }
