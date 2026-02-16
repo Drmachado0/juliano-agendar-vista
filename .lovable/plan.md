@@ -1,23 +1,20 @@
 
+# Corrigir URLs do n8n com dominio antigo
 
-# Atualizar N8N_WEBHOOK_URL
+## Problema
+Quatro arquivos ainda usam o dominio antigo `juliano-n8n.cloudfy.live`, causando erros "Failed to fetch" na pagina de Avaliacoes e potencialmente em outros fluxos.
 
-## O que sera feito
+## Alteracoes
 
-Atualizar o secret `N8N_WEBHOOK_URL` para apontar para o novo webhook:
-
-| Secret | Valor Atual | Novo Valor |
-|--------|------------|------------|
-| `N8N_WEBHOOK_URL` | (valor antigo em juliano-n8n) | `https://drmachado-n8n.cloudfy.live/webhook/agendamento-notificacao` |
-
-## Passos
-
-1. Atualizar o secret `N8N_WEBHOOK_URL` usando a ferramenta de secrets
-2. Testar chamando a edge function `notificar-n8n` para confirmar que o novo endpoint responde
+| Arquivo | Linha | URL antiga | URL nova |
+|---------|-------|-----------|----------|
+| `src/pages/admin/Avaliacoes.tsx` | 127 | `juliano-n8n.cloudfy.live/webhook/avaliacao-google-lovable` | `drmachado-n8n.cloudfy.live/webhook/avaliacao-google-lovable` |
+| `src/services/lembretesAnuais.ts` | 34 | `juliano-n8n.cloudfy.live/webhook/avaliacao-google-lovable` | `drmachado-n8n.cloudfy.live/webhook/avaliacao-google-lovable` |
+| `src/components/scheduling/SchedulingModal.tsx` | 78 | `juliano-n8n.cloudfy.live/webhook/confirmacao` | `drmachado-n8n.cloudfy.live/webhook/confirmacao` |
+| `src/pages/Agendar.tsx` | 56 | `juliano-n8n.cloudfy.live/webhook/confirmacao` | `drmachado-n8n.cloudfy.live/webhook/confirmacao` |
 
 ## Detalhes tecnicos
-
-- Apenas 1 secret precisa ser atualizado
-- Nenhuma alteracao de codigo -- a edge function `notificar-n8n` ja le o valor dinamicamente via `Deno.env.get("N8N_WEBHOOK_URL")`
-- As URLs hardcoded no frontend (`/webhook/confirmacao` e `/webhook/avaliacao-google-lovable`) nao serao alteradas conforme solicitado
-
+- Substituicao simples de dominio em 4 arquivos
+- Os paths dos webhooks permanecem iguais (`/webhook/avaliacao-google-lovable` e `/webhook/confirmacao`)
+- Nenhuma alteracao de logica, apenas atualizacao do dominio
+- Corrige os erros "Failed to fetch" vistos na pagina de Avaliacoes e tambem previne falhas no fluxo de agendamento do site
