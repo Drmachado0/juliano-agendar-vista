@@ -60,3 +60,6 @@ verify_jwt = false
 [functions.migrar-atendidos]
 verify_jwt = false
 
+[functions.enviar-boas-vindas-lead]
+verify_jwt = false
+
