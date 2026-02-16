@@ -17,19 +17,59 @@ const Index = () => {
   const openScheduling = () => setIsSchedulingOpen(true);
   const closeScheduling = () => setIsSchedulingOpen(false);
 
+  // Structured data for SEO
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Physician",
+    "name": "Dr. Juliano Machado",
+    "description": "Oftalmologista especializado em catarata, pterígio, exames de campo visual e OCT. Atendimento em Paragominas e Belém.",
+    "medicalSpecialty": "Ophthalmology",
+    "address": [
+      {
+        "@type": "PostalAddress",
+        "streetAddress": "Rua Eixo W1, R. Célio Miranda, N° 729",
+        "addressLocality": "Paragominas",
+        "addressRegion": "PA",
+        "addressCountry": "BR"
+      },
+      {
+        "@type": "PostalAddress",
+        "streetAddress": "Av. Generalíssimo Deodoro, 904 - Nazaré",
+        "addressLocality": "Belém",
+        "addressRegion": "PA",
+        "addressCountry": "BR"
+      }
+    ],
+    "telephone": "+559181653200",
+    "url": "https://drjulianomachado.com",
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "5.0",
+      "reviewCount": "100"
+    }
+  };
+
   return (
     <>
       <Helmet>
-        <title>Dr. Juliano Machado – Oftalmologista em Paragominas e Belém</title>
+        <title>Dr. Juliano Machado – Oftalmologista em Paragominas e Belém | Agende Online</title>
         <meta
           name="description"
-          content="Agende sua consulta com Dr. Juliano Machado, oftalmologista especializado em catarata, pterígio, exames de campo visual e OCT. Atendimento em Paragominas e Belém."
+          content="Agende sua consulta oftalmológica com Dr. Juliano Machado. +13 anos de experiência, +6.000 pacientes atendidos. Cirurgia de catarata, pterígio, OCT e mais. Paragominas e Belém."
         />
         <meta
           name="keywords"
-          content="oftalmologista, Paragominas, Belém, catarata, pterígio, OCT, campo visual, Dr. Juliano Machado"
+          content="oftalmologista Paragominas, oftalmologista Belém, catarata, pterígio, OCT, campo visual, Dr. Juliano Machado, agendar consulta oftalmologista"
         />
         <link rel="canonical" href="https://drjulianomachado.com" />
+        <meta property="og:title" content="Dr. Juliano Machado – Oftalmologista em Paragominas e Belém" />
+        <meta property="og:description" content="Agende sua consulta oftalmológica. +13 anos de experiência. Cirurgia de catarata, pterígio, exames e mais." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://drjulianomachado.com" />
+        <meta name="robots" content="index, follow" />
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
       </Helmet>
 
       <div className="min-h-screen bg-background">

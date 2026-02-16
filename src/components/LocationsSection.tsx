@@ -1,4 +1,4 @@
-import { MapPin, Phone, Clock, ExternalLink, Hospital, Heart, Eye, Glasses } from "lucide-react";
+import { MapPin, Phone, Clock, ExternalLink, Hospital, Heart, Eye, Glasses, Navigation } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 const LocationsSection = () => {
@@ -16,11 +16,7 @@ const LocationsSection = () => {
       },
       { threshold: 0.1 }
     );
-
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
-    }
-
+    if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
   }, []);
 
@@ -70,60 +66,60 @@ const LocationsSection = () => {
   const activeLocationData = locations[activeLocation];
 
   return (
-    <section id="locais" className="py-24 bg-card" ref={sectionRef}>
+    <section id="locais" className="py-20 md:py-28 bg-card relative" ref={sectionRef}>
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+
       <div className="container mx-auto px-4">
-        <div className={`text-center mb-16 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <span className="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary font-semibold text-sm mb-4">
+        <div className={`text-center mb-14 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 border border-primary/15 text-primary font-semibold text-sm mb-6">
+            <Navigation className="w-3.5 h-3.5" />
             Locais de atendimento
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Onde encontrar o Dr. Juliano
+            Onde encontrar o <span className="gradient-text">Dr. Juliano</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Atendimento em clínicas e hospitais de referência em Paragominas e Belém para sua comodidade.
+            Atendimento em clínicas e hospitais de referência em Paragominas e Belém.
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
           {/* Location Cards */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             {locations.map((location, index) => {
               const IconComponent = location.icon;
+              const isActive = activeLocation === index;
               return (
                 <button
                   key={index}
                   onClick={() => setActiveLocation(index)}
-                  className={`w-full text-left card-glass rounded-xl p-5 transition-all duration-500 ${
-                    activeLocation === index
-                      ? "border-primary/50 bg-primary/5 shadow-lg shadow-primary/10"
-                      : "hover:border-primary/30 hover:bg-primary/5"
+                  className={`w-full text-left card-glass rounded-2xl p-5 transition-all duration-400 ${
+                    isActive
+                      ? "border-primary/40 bg-primary/5 shadow-lg shadow-primary/8 scale-[1.01]"
+                      : "hover:border-primary/25 hover:bg-primary/3"
                   } ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}`}
-                  style={{ transitionDelay: isVisible ? `${index * 100}ms` : '0ms' }}
+                  style={{ transitionDelay: isVisible ? `${index * 80}ms` : '0ms' }}
                 >
                   <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                      activeLocation === index 
-                        ? "bg-primary text-primary-foreground" 
-                        : "bg-primary/10 text-primary"
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 ${
+                      isActive ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "bg-primary/10 text-primary"
                     }`}>
-                      <IconComponent className="w-6 h-6" />
+                      <IconComponent className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className={`font-semibold truncate transition-colors ${
-                          activeLocation === index ? "text-primary" : "text-foreground"
-                        }`}>
+                        <h3 className={`font-semibold text-sm truncate transition-colors font-sans ${isActive ? "text-primary" : "text-foreground"}`}>
                           {location.name}
                         </h3>
-                        <span className="px-2 py-0.5 rounded-full bg-secondary text-xs text-muted-foreground shrink-0">
+                        <span className="px-2 py-0.5 rounded-md bg-secondary text-[10px] font-semibold text-muted-foreground shrink-0 uppercase tracking-wider">
                           {location.city}
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{location.address}</p>
-                      <div className="flex items-center gap-4 mt-2">
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="w-3 h-3" />
-                          {location.hours}
+                      <p className="text-xs text-muted-foreground line-clamp-1">{location.address}</p>
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Phone className="w-3 h-3 text-primary" />
+                          {location.phone}
                         </span>
                       </div>
                     </div>
@@ -134,8 +130,7 @@ const LocationsSection = () => {
           </div>
 
           {/* Map and Details */}
-          <div className={`card-glass rounded-2xl overflow-hidden transition-all duration-700 delay-300 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}>
-            {/* Map */}
+          <div className={`card-glass rounded-2xl overflow-hidden transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}>
             <div className="aspect-video bg-secondary relative">
               <iframe
                 src={activeLocationData.mapUrl}
@@ -149,33 +144,27 @@ const LocationsSection = () => {
                 title={`Mapa - ${activeLocationData.name}`}
               />
             </div>
-
-            {/* Location Details */}
             <div className="p-6">
-              <h3 className="text-xl font-bold text-foreground mb-4">
-                {activeLocationData.name}
-              </h3>
-              
+              <h3 className="text-lg font-bold text-foreground mb-4 font-sans">{activeLocationData.name}</h3>
               <div className="space-y-3 mb-6">
                 <div className="flex items-start gap-3 text-muted-foreground">
-                  <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                   <span className="text-sm">{activeLocationData.address}</span>
                 </div>
                 <div className="flex items-center gap-3 text-muted-foreground">
-                  <Phone className="w-5 h-5 text-primary shrink-0" />
+                  <Phone className="w-4 h-4 text-primary shrink-0" />
                   <span className="text-sm">{activeLocationData.phone}</span>
                 </div>
                 <div className="flex items-center gap-3 text-muted-foreground">
-                  <Clock className="w-5 h-5 text-primary shrink-0" />
+                  <Clock className="w-4 h-4 text-primary shrink-0" />
                   <span className="text-sm">{activeLocationData.hours}</span>
                 </div>
               </div>
-
               <a
                 href={activeLocationData.mapsLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
               >
                 <ExternalLink className="w-4 h-4" />
                 Abrir no Google Maps

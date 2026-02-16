@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Award, MapPin, Users, Glasses, Eye, Scissors, Star } from "lucide-react";
+import { Award, MapPin, Users, Star, Shield, CalendarCheck, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import drJulianoPhoto from "@/assets/dr-juliano-machado.jpg";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
@@ -8,179 +8,188 @@ interface HeroSectionProps {
   onScheduleClick: () => void;
 }
 
-const HeroSection = ({
-  onScheduleClick
-}: HeroSectionProps) => {
+const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
   const { trackCTAClick } = useGoogleTag();
   const [scrollY, setScrollY] = useState(0);
+  const [count, setCount] = useState(0);
+
   useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-    window.addEventListener("scroll", handleScroll, {
-      passive: true
-    });
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-  const stats = [{
-    icon: Users,
-    value: "+6.000",
-    label: "pacientes atendidos"
-  }, {
-    icon: Award,
-    value: "+13 anos",
-    label: "ajudando pessoas a enxergarem melhor"
-  }, {
-    icon: MapPin,
-    value: "Paragominas",
-    label: ""
-  }];
-  const statsSecondary = [{
-    icon: MapPin,
-    value: "Belém",
-    label: ""
-  }, {
-    icon: Star,
-    value: "Referência",
-    label: "em nossa região"
-  }];
-  const services = [{
-    icon: Glasses,
-    label: "Consultas"
-  }, {
-    icon: Eye,
-    label: "Exames"
-  }, {
-    icon: Scissors,
-    label: "Cirurgias"
-  }];
-  return <section className="relative min-h-screen flex items-center pt-20 hero-gradient overflow-hidden">
-      {/* Parallax Background decoration */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 -right-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl transition-transform duration-100" style={{
-        transform: `translateY(${scrollY * 0.3}px) translateX(${scrollY * 0.1}px)`
-      }} />
-        <div className="absolute bottom-1/4 -left-20 w-80 h-80 bg-accent/10 rounded-full blur-3xl transition-transform duration-100" style={{
-        transform: `translateY(${scrollY * 0.2}px) translateX(${-scrollY * 0.05}px)`
-      }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl transition-transform duration-100" style={{
-        transform: `translate(-50%, -50%) scale(${1 + scrollY * 0.0005})`
-      }} />
-        {/* Floating particles */}
-        <div className="absolute top-20 left-1/4 w-2 h-2 bg-primary/30 rounded-full" style={{
-        transform: `translateY(${scrollY * 0.5}px)`
-      }} />
-        <div className="absolute top-40 right-1/3 w-3 h-3 bg-accent/20 rounded-full" style={{
-        transform: `translateY(${scrollY * 0.4}px)`
-      }} />
-        <div className="absolute bottom-40 left-1/3 w-2 h-2 bg-primary/20 rounded-full" style={{
-        transform: `translateY(${scrollY * 0.6}px)`
-      }} />
+
+  // Animated counter for patients
+  useEffect(() => {
+    const target = 6000;
+    const duration = 2000;
+    const start = Date.now();
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.floor(eased * target));
+      if (progress >= 1) clearInterval(timer);
+    }, 16);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <section className="relative min-h-[100dvh] flex items-center pt-20 pb-12 hero-gradient overflow-hidden">
+      {/* Ambient background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div
+          className="absolute top-1/4 -right-32 w-[500px] h-[500px] bg-primary/8 rounded-full blur-[100px]"
+          style={{ transform: `translateY(${scrollY * 0.15}px)` }}
+        />
+        <div
+          className="absolute bottom-1/3 -left-24 w-[400px] h-[400px] bg-accent/6 rounded-full blur-[80px]"
+          style={{ transform: `translateY(${scrollY * 0.1}px)` }}
+        />
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 opacity-[0.02]" style={{
+          backgroundImage: `linear-gradient(hsl(42 87% 55% / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(42 87% 55% / 0.3) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px'
+        }} />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Content */}
           <div className="text-center lg:text-left order-2 lg:order-1">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/50 border border-border/50 mb-6 opacity-0 animate-fade-in">
-              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-sm text-muted-foreground">Especialista em Oftalmologia</span>
+            {/* Trust badge */}
+            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-primary/8 border border-primary/15 mb-8 opacity-0 animate-fade-in">
+              <Shield className="w-4 h-4 text-primary" />
+              <span className="text-sm text-foreground/80 font-medium">
+                Membro da Sociedade Brasileira de Oftalmologia
+              </span>
             </div>
 
             {/* Main heading */}
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 opacity-0 animate-slide-up animation-delay-100">
-              <span className="text-foreground">Dr. Juliano</span>
+            <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-bold leading-[1.1] mb-6 opacity-0 animate-slide-up animation-delay-100">
+              <span className="text-foreground">Sua visão merece</span>
               <br />
-              <span className="gradient-text mx-[150px]">Machado</span>
+              <span className="gradient-text">cuidado especializado</span>
             </h1>
 
-            {/* Subtitle */}
-            <p className="text-lg md:text-xl text-muted-foreground mb-6 max-w-xl mx-auto lg:mx-0 opacity-0 animate-slide-up animation-delay-200">
-              Oftalmologia que combina <span className="text-primary font-medium">experiência</span> e <span className="text-primary font-medium">tecnologia</span>.
+            {/* Subtitle with value proposition */}
+            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0 opacity-0 animate-slide-up animation-delay-200">
+              Dr. Juliano Machado — <span className="text-foreground font-medium">+13 anos</span> transformando vidas
+              com oftalmologia de excelência em{" "}
+              <span className="text-primary font-medium">Paragominas</span> e{" "}
+              <span className="text-primary font-medium">Belém</span>.
             </p>
 
-            {/* Services Pills */}
-            <div className="flex flex-wrap gap-3 justify-center lg:justify-start mb-8">
-              {services.map((service, index) => <div key={index} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 opacity-0 animate-scale-in hover:bg-primary/20 transition-colors" style={{
-              animationDelay: `${0.3 + index * 0.1}s`
-            }}>
-                  <service.icon className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-medium text-foreground">{service.label}</span>
-                </div>)}
-            </div>
-
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start mb-10">
-              <Button 
-                variant="hero" 
-                size="lg" 
+            {/* CTA Group */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-10 opacity-0 animate-slide-up animation-delay-400">
+              <Button
+                variant="hero"
+                size="lg"
                 onClick={() => {
-                  trackCTAClick('agendar_consulta', 'hero', 'Agendar consulta');
+                  trackCTAClick('agendar_consulta', 'hero', 'Agendar minha consulta');
                   onScheduleClick();
-                }} 
-                className="w-full sm:w-auto text-base py-6 sm:py-3 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all opacity-0 animate-slide-up animation-delay-500"
+                }}
+                className="w-full sm:w-auto text-base py-6 sm:py-3 group relative overflow-hidden"
               >
-                Agendar consulta
+                <CalendarCheck className="w-5 h-5 mr-1" />
+                Agendar minha consulta
+                <span className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
               </Button>
-              <Button 
-                variant="outline" 
-                size="lg" 
+              <Button
+                variant="outline"
+                size="lg"
                 onClick={() => {
-                  trackCTAClick('saiba_mais', 'hero', 'Saiba mais');
-                  document.getElementById("sobre")?.scrollIntoView({
-                    behavior: "smooth"
-                  });
-                }} 
-                className="w-full sm:w-auto text-base py-6 sm:py-3 border-2 opacity-0 animate-slide-up animation-delay-600"
+                  trackCTAClick('saiba_mais', 'hero', 'Conhecer procedimentos');
+                  document.getElementById("procedimentos")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="w-full sm:w-auto text-base py-6 sm:py-3 border-border/60"
               >
-                Saiba mais
+                Conhecer procedimentos
               </Button>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              {stats.map((stat, index) => <div key={index} className="text-center sm:text-left p-3 sm:p-0 rounded-lg sm:rounded-none bg-secondary/30 sm:bg-transparent opacity-0 animate-slide-right" style={{
-              animationDelay: `${0.6 + index * 0.1}s`
-            }}>
-                  <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
-                    <stat.icon className="w-5 h-5 text-primary" />
-                    <span className="text-base sm:text-lg font-bold text-foreground">{stat.value}</span>
-                  </div>
-                  {stat.label && <span className="text-xs text-muted-foreground">{stat.label}</span>}
-                </div>)}
-            </div>
-
-            {/* Secondary Stats */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4">
-              {statsSecondary.map((stat, index) => <div key={index} className="text-center sm:text-left p-3 sm:p-0 rounded-lg sm:rounded-none bg-secondary/30 sm:bg-transparent opacity-0 animate-slide-right" style={{
-              animationDelay: `${0.9 + index * 0.1}s`
-            }}>
-                  <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
-                    <stat.icon className="w-5 h-5 text-primary" />
-                    <span className="text-base sm:text-lg font-bold text-foreground">{stat.value}</span>
-                  </div>
-                  {stat.label && <span className="text-xs text-muted-foreground">{stat.label}</span>}
-                </div>)}
+            {/* Social proof stats */}
+            <div className="grid grid-cols-3 gap-4 lg:gap-6 opacity-0 animate-slide-up animation-delay-600">
+              <div className="text-center lg:text-left">
+                <div className="flex items-center justify-center lg:justify-start gap-1.5 mb-1">
+                  <Users className="w-4 h-4 text-primary" />
+                  <span className="text-xl lg:text-2xl font-bold text-foreground tabular-nums">
+                    +{count.toLocaleString('pt-BR')}
+                  </span>
+                </div>
+                <span className="text-xs text-muted-foreground leading-tight block">
+                  pacientes atendidos
+                </span>
+              </div>
+              <div className="text-center lg:text-left">
+                <div className="flex items-center justify-center lg:justify-start gap-1.5 mb-1">
+                  <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                  <span className="text-xl lg:text-2xl font-bold text-foreground">5.0</span>
+                </div>
+                <span className="text-xs text-muted-foreground leading-tight block">
+                  avaliação no Google
+                </span>
+              </div>
+              <div className="text-center lg:text-left">
+                <div className="flex items-center justify-center lg:justify-start gap-1.5 mb-1">
+                  <Award className="w-4 h-4 text-primary" />
+                  <span className="text-xl lg:text-2xl font-bold text-foreground">+13 anos</span>
+                </div>
+                <span className="text-xs text-muted-foreground leading-tight block">
+                  de experiência
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Doctor Photo */}
           <div className="order-1 lg:order-2 flex justify-center opacity-0 animate-scale-in animation-delay-200">
             <div className="relative">
-              {/* Glow effect behind photo */}
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 rounded-3xl blur-3xl scale-90 animate-glow" />
-              
-              {/* Photo container */}
-              <div className="relative w-72 h-72 md:w-96 md:h-96 rounded-3xl overflow-hidden border-2 border-primary/20 shadow-2xl">
-                <img src={drJulianoPhoto} alt="Dr. Juliano Machado - Médico Oftalmologista" className="w-full h-full object-cover object-top" />
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent" />
+              {/* Glow */}
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/15 rounded-[2rem] blur-3xl scale-90 animate-glow" />
+
+              {/* Photo */}
+              <div className="relative w-72 h-80 md:w-[22rem] md:h-[26rem] rounded-[2rem] overflow-hidden border border-primary/15 shadow-2xl shadow-primary/10">
+                <img
+                  src={drJulianoPhoto}
+                  alt="Dr. Juliano Machado - Médico Oftalmologista"
+                  className="w-full h-full object-cover object-top"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
+
+                {/* Name overlay */}
+                <div className="absolute bottom-0 inset-x-0 p-5">
+                  <p className="text-foreground font-bold text-lg font-sans">Dr. Juliano Machado</p>
+                  <p className="text-primary text-sm font-medium font-sans">Oftalmologista</p>
+                </div>
               </div>
 
-              {/* Floating badge */}
-              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full bg-card border border-border shadow-lg opacity-0 animate-slide-up animation-delay-500">
-                <span className="text-sm font-semibold text-foreground">Oftalmologista</span>
+              {/* Location badges */}
+              <div className="absolute -left-3 md:-left-6 top-1/3 flex flex-col gap-2 opacity-0 animate-slide-right animation-delay-500">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card/90 backdrop-blur-md border border-border/60 shadow-lg">
+                  <MapPin className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">Paragominas</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card/90 backdrop-blur-md border border-border/60 shadow-lg">
+                  <MapPin className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">Belém</span>
+                </div>
+              </div>
+
+              {/* Google rating badge */}
+              <div className="absolute -right-3 md:-right-6 top-8 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card/90 backdrop-blur-md border border-border/60 shadow-lg opacity-0 animate-scale-in animation-delay-700">
+                <div className="flex gap-0.5">
+                  {[1,2,3,4,5].map(i => (
+                    <Star key={i} className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <span className="text-sm font-bold text-foreground">5.0</span>
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>
               </div>
             </div>
           </div>
@@ -188,11 +197,16 @@ const HeroSection = ({
       </div>
 
       {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-float hidden lg:block">
-        <div className="w-6 h-10 rounded-full border-2 border-muted-foreground/30 flex items-start justify-center p-2">
-          <div className="w-1.5 h-3 bg-primary rounded-full animate-pulse-slow" />
-        </div>
-      </div>
-    </section>;
+      <button
+        onClick={() => document.getElementById("sobre")?.scrollIntoView({ behavior: "smooth" })}
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 animate-float hidden lg:flex flex-col items-center gap-2 text-muted-foreground/40 hover:text-primary/60 transition-colors cursor-pointer"
+        aria-label="Rolar para baixo"
+      >
+        <span className="text-[10px] uppercase tracking-[0.2em] font-medium font-sans">Saiba mais</span>
+        <ChevronDown className="w-5 h-5" />
+      </button>
+    </section>
+  );
 };
+
 export default HeroSection;
