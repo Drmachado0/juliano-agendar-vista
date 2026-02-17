@@ -59,13 +59,6 @@ interface PacienteN8n {
   whatsappVerificado?: 'pendente' | 'valido' | 'invalido';
 }
 
-interface N8nResponse {
-  sucesso: boolean;
-  data_consulta: string;
-  total_pacientes: number;
-  pacientes: PacienteN8n[];
-}
-
 interface LogEnvio {
   timestamp: Date;
   telefone: string;
@@ -124,7 +117,6 @@ Dr. Juliano Machado
 Oftalmologia`;
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
-const N8N_WEBHOOK_URL = "https://drmachado-n8n.cloudfy.live/webhook/avaliacao-google-lovable";
 
 // ===== VALIDAÇÃO DE TELEFONE BRASILEIRO =====
 const dddsValidos = [
@@ -730,34 +722,70 @@ const Avaliacoes = () => {
     const dataFormatada = format(dataFiltro, 'yyyy-MM-dd');
 
     try {
-      const response = await fetch(N8N_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data_atendimento: dataFormatada }),
-      });
+      // Busca direto no Supabase - pacientes atendidos na data selecionada
+      const { data: agendamentosData, error: agendamentosError } = await supabase
+        .from("agendamentos")
+        .select("id, nome_completo, telefone_whatsapp, data_agendamento, hora_agendamento, local_atendimento, status_crm")
+        .eq("data_agendamento", dataFormatada)
+        .not("telefone_whatsapp", "is", null)
+        .order("hora_agendamento", { ascending: true });
 
-      if (!response.ok) {
-        throw new Error(`Erro HTTP: ${response.status}`);
+      if (agendamentosError) {
+        throw new Error(`Erro ao buscar agendamentos: ${agendamentosError.message}`);
       }
 
-      const data: N8nResponse = await response.json();
+      const agendamentos = agendamentosData || [];
 
-      if (!data.sucesso) {
-        throw new Error("Falha ao buscar pacientes do sistema");
-      }
+      // Mapear para o formato PacienteN8n
+      const formatarTelefone = (tel: string) => {
+        const numeros = tel.replace(/\D/g, '');
+        let digits = numeros;
+        if (digits.startsWith('55') && digits.length >= 12) {
+          digits = digits.slice(2);
+        }
+        if (digits.length === 11) {
+          return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+        }
+        if (digits.length === 10) {
+          return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+        }
+        return tel;
+      };
 
-      const pacientesN8n = data.pacientes || [];
+      const pacientesN8n: PacienteN8n[] = agendamentos
+        .filter(a => a.telefone_whatsapp && a.telefone_whatsapp.trim() !== '')
+        .map(a => {
+          const nomeCompleto = a.nome_completo || 'Sem nome';
+          const primeiroNome = nomeCompleto.split(' ')[0];
+          const telefoneNumeros = (a.telefone_whatsapp || '').replace(/\D/g, '');
+          let telSemDDI = telefoneNumeros;
+          if (telSemDDI.startsWith('55') && telSemDDI.length >= 12) {
+            telSemDDI = telSemDDI.slice(2);
+          }
+          
+          return {
+            id: a.id,
+            nome: nomeCompleto,
+            primeiro_nome: primeiroNome,
+            telefone: telSemDDI,
+            telefone_formatado: formatarTelefone(a.telefone_whatsapp || ''),
+            data_atendimento: a.data_agendamento || dataFormatada,
+            data_atendimento_formatada: format(dataFiltro, 'dd/MM/yyyy'),
+          };
+        });
+
       const totalN8n = pacientesN8n.length;
 
       if (totalN8n === 0) {
         setPacientesLote([]);
         toast({
           title: "Nenhum paciente encontrado",
-          description: `Não há pacientes atendidos em ${format(dataFiltro, 'dd/MM/yyyy')}.`,
+          description: `Não há pacientes com telefone em ${format(dataFiltro, 'dd/MM/yyyy')}.`,
         });
         return;
       }
 
+      // Filtrar pacientes que já receberam avaliação
       const { data: mensagensEnviadas } = await supabase
         .from("mensagens_whatsapp")
         .select("telefone")
@@ -788,11 +816,11 @@ const Avaliacoes = () => {
         });
       }
     } catch (error: any) {
-      console.error("Erro ao buscar pacientes n8n:", error);
-      setErroLote(error.message || "Erro ao conectar com o sistema");
+      console.error("Erro ao buscar pacientes:", error);
+      setErroLote(error.message || "Erro ao buscar pacientes");
       toast({
         title: "Erro ao buscar pacientes",
-        description: error.message || "Não foi possível conectar ao sistema SaudeViaNet.",
+        description: error.message || "Não foi possível buscar os pacientes.",
         variant: "destructive",
       });
     } finally {
