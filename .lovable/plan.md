@@ -1,36 +1,20 @@
 
-# Corrigir movimentacao automatica de leads para "Aguardando"
 
-## Problema
-Na funcao `listarAgendamentosPorStatus` em `src/services/agendamentos.ts` (linha 304), ha uma regra que forca **todos** os registros com `status_funil = 'lead'` para a coluna "NOVO LEAD", independentemente do valor de `status_crm`. Isso impede que leads movidos para "AGUARDANDO" pela edge function aparecam na coluna correta.
+# Adicionar Google Analytics (G-T9ERC72SJE) ao site
 
-## Solucao
-Alterar a logica de agrupamento para respeitar o `status_crm` do lead quando ele ja foi atualizado para "AGUARDANDO". A regra passa a ser:
-- Se `status_funil = 'lead'` **e** `status_crm = 'NOVO LEAD'` (ou vazio) --> coluna "NOVO LEAD"
-- Se `status_funil = 'lead'` **e** `status_crm = 'AGUARDANDO'` --> coluna "AGUARDANDO"
-- Demais registros seguem o `status_crm` normalmente
+## O que sera feito
+Adicionar o script do Google Analytics com o ID **G-T9ERC72SJE** no arquivo `index.html` do projeto.
 
-## Arquivo afetado
-- **`src/services/agendamentos.ts`** (linhas 303-308): Ajustar a condicional para que leads com `status_crm = 'AGUARDANDO'` sejam agrupados na coluna correta em vez de serem forcados para "NOVO LEAD".
+## Contexto atual
+O `index.html` nao possui nenhum script de analytics instalado diretamente. O projeto ja tem um hook `useGoogleTag.ts` para eventos do DataLayer e documentacao mencionando outros IDs GA4 (G-79BDCX4R2L, G-380EGEFL1S), mas nenhum esta no HTML atualmente.
 
-## Codigo atual (problema)
-```typescript
-if (statusFunil === 'lead') {
-  grouped['NOVO LEAD'].push(agendamento as Agendamento);
-} else if (grouped[status]) {
-  grouped[status].push(agendamento as Agendamento);
-}
-```
+## Alteracao
 
-## Codigo corrigido
-```typescript
-if (statusFunil === 'lead' && status === 'NOVO LEAD') {
-  grouped['NOVO LEAD'].push(agendamento as Agendamento);
-} else if (statusFunil === 'lead' && status === 'AGUARDANDO') {
-  grouped['AGUARDANDO'].push(agendamento as Agendamento);
-} else if (grouped[status]) {
-  grouped[status].push(agendamento as Agendamento);
-}
-```
+### Arquivo: `index.html`
+Adicionar os dois scripts do gtag.js dentro do `<head>`, antes do fechamento:
 
-Isso permite que a automacao de boas-vindas mova o card corretamente para "Aguardando" quando a mensagem e enviada.
+1. Script async carregando a biblioteca do gtag.js
+2. Script inline configurando o `dataLayer` e o `gtag('config', 'G-T9ERC72SJE')`
+
+Isso ativara o rastreamento automatico de pageviews e permitira que o hook `useGoogleTag.ts` existente envie eventos customizados para essa propriedade.
+
