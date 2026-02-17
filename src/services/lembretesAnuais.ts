@@ -29,33 +29,30 @@ export interface N8nResponse {
   data_consulta: string;
   total_pacientes: number;
   pacientes: PacienteN8n[];
+  erro?: string;
 }
 
-const N8N_WEBHOOK_URL = "https://drmachado-n8n.cloudfy.live/webhook/avaliacao-google-lovable";
-
-// Fetch patients from n8n webhook
+// Fetch patients from SaúdeViaNet via Edge Function
 export async function buscarPacientesN8n(dataAtendimento: string): Promise<{ data: PacienteN8n[] | null; error: string | null }> {
   try {
-    const response = await fetch(N8N_WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data_atendimento: dataAtendimento }),
+    const { data, error } = await supabase.functions.invoke('buscar-pacientes-saudevianet', {
+      body: { data_atendimento: dataAtendimento },
     });
 
-    if (!response.ok) {
-      throw new Error(`Erro HTTP: ${response.status}`);
+    if (error) {
+      throw new Error(`Erro ao chamar SaúdeViaNet: ${error.message}`);
     }
 
-    const data: N8nResponse = await response.json();
+    const response = data as N8nResponse;
 
-    if (!data.sucesso) {
-      throw new Error("Falha ao buscar pacientes do sistema");
+    if (!response?.sucesso) {
+      throw new Error(response?.erro || "Falha ao buscar pacientes do sistema");
     }
 
-    return { data: data.pacientes || [], error: null };
+    return { data: response.pacientes || [], error: null };
   } catch (error: any) {
-    console.error("Erro ao buscar pacientes n8n:", error);
-    return { data: null, error: error.message || "Erro ao conectar com o sistema" };
+    console.error("Erro ao buscar pacientes SaúdeViaNet:", error);
+    return { data: null, error: error.message || "Erro ao conectar com o SaúdeViaNet" };
   }
 }
 

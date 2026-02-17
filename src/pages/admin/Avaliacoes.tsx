@@ -700,7 +700,7 @@ const Avaliacoes = () => {
     }
   };
 
-  // ===== Funções para Disparo em Lote (n8n) =====
+  // ===== Funções para Disparo em Lote (SaúdeViaNet) =====
 
   const buscarPacientesN8n = async () => {
     if (!dataFiltro) {
@@ -722,58 +722,21 @@ const Avaliacoes = () => {
     const dataFormatada = format(dataFiltro, 'yyyy-MM-dd');
 
     try {
-      // Busca direto no Supabase - pacientes atendidos na data selecionada
-      const { data: agendamentosData, error: agendamentosError } = await supabase
-        .from("agendamentos")
-        .select("id, nome_completo, telefone_whatsapp, data_agendamento, hora_agendamento, local_atendimento, status_crm")
-        .eq("data_agendamento", dataFormatada)
-        .not("telefone_whatsapp", "is", null)
-        .order("hora_agendamento", { ascending: true });
+      // Busca pacientes via Edge Function (que consulta SaúdeViaNet API)
+      const { data: responseData, error: invokeError } = await supabase.functions.invoke(
+        'buscar-pacientes-saudevianet',
+        { body: { data_atendimento: dataFormatada } }
+      );
 
-      if (agendamentosError) {
-        throw new Error(`Erro ao buscar agendamentos: ${agendamentosError.message}`);
+      if (invokeError) {
+        throw new Error(`Erro ao chamar SaúdeViaNet: ${invokeError.message}`);
       }
 
-      const agendamentos = agendamentosData || [];
+      if (!responseData?.sucesso) {
+        throw new Error(responseData?.erro || "Falha ao buscar pacientes do SaúdeViaNet");
+      }
 
-      // Mapear para o formato PacienteN8n
-      const formatarTelefone = (tel: string) => {
-        const numeros = tel.replace(/\D/g, '');
-        let digits = numeros;
-        if (digits.startsWith('55') && digits.length >= 12) {
-          digits = digits.slice(2);
-        }
-        if (digits.length === 11) {
-          return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-        }
-        if (digits.length === 10) {
-          return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-        }
-        return tel;
-      };
-
-      const pacientesN8n: PacienteN8n[] = agendamentos
-        .filter(a => a.telefone_whatsapp && a.telefone_whatsapp.trim() !== '')
-        .map(a => {
-          const nomeCompleto = a.nome_completo || 'Sem nome';
-          const primeiroNome = nomeCompleto.split(' ')[0];
-          const telefoneNumeros = (a.telefone_whatsapp || '').replace(/\D/g, '');
-          let telSemDDI = telefoneNumeros;
-          if (telSemDDI.startsWith('55') && telSemDDI.length >= 12) {
-            telSemDDI = telSemDDI.slice(2);
-          }
-          
-          return {
-            id: a.id,
-            nome: nomeCompleto,
-            primeiro_nome: primeiroNome,
-            telefone: telSemDDI,
-            telefone_formatado: formatarTelefone(a.telefone_whatsapp || ''),
-            data_atendimento: a.data_agendamento || dataFormatada,
-            data_atendimento_formatada: format(dataFiltro, 'dd/MM/yyyy'),
-          };
-        });
-
+      const pacientesN8n: PacienteN8n[] = responseData.pacientes || [];
       const totalN8n = pacientesN8n.length;
 
       if (totalN8n === 0) {

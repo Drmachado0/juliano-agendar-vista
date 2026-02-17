@@ -75,49 +75,9 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
 
   // Send data to webhook when step 3 is completed
   const sendToWebhook = async (data: FormData) => {
-    const webhookUrl = "https://drmachado-n8n.cloudfy.live/webhook/confirmacao";
-    
-    const payload = {
-      // Step 1 - Dados Pessoais
-      dados_pessoais: {
-        nome_completo: data.fullName,
-        telefone_whatsapp: data.phone,
-        data_nascimento: data.birthDate || null,
-        email: data.email || null,
-      },
-      // Step 2 - Detalhes da Consulta
-      detalhes_consulta: {
-        tipo_atendimento: data.appointmentType,
-        local_atendimento: data.location,
-        convenio: data.insurance,
-        convenio_outro: data.insurance === "outro" ? data.otherInsurance : null,
-      },
-      // Step 3 - Data e Horário
-      data_horario: {
-        data_agendamento: data.selectedDate ? format(data.selectedDate, 'yyyy-MM-dd') : null,
-        hora_agendamento: data.selectedTime,
-        aceita_primeiro_horario: data.acceptFirstAvailable,
-        aceita_contato_whatsapp_email: data.acceptNotifications,
-      },
-      // Metadata
-      metadata: {
-        origem: "site",
-        timestamp: new Date().toISOString(),
-      },
-    };
-
-    try {
-      await fetch(webhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-      console.log("Dados enviados ao webhook com sucesso");
-    } catch (error) {
-      console.error("Erro ao enviar dados ao webhook:", error);
-    }
+    // TODO: Reconfigurar quando novo servidor n8n estiver ativo
+    // O agendamento já é salvo no Supabase, esta notificação é extra
+    console.log("Webhook de confirmação desabilitado (servidor n8n em migração)");
   };
 
   const nextStep = async () => {
