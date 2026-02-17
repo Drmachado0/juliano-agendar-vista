@@ -63,3 +63,6 @@ verify_jwt = false
 [functions.enviar-boas-vindas-lead]
 verify_jwt = false
 
+[functions.buscar-pacientes-saudevianet]
+verify_jwt = false
+
