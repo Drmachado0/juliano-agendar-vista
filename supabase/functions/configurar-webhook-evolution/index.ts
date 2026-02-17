@@ -68,9 +68,10 @@ serve(async (req: Request) => {
       console.log(`[Webhook] Configurando webhook: ${webhookUrl}`);
 
       const response = await fetch(`${baseUrl}/webhook/set/${instance}`, {
-        method: "PUT",
+        method: "POST",
         headers: { "Content-Type": "application/json", apikey: token },
         body: JSON.stringify({
+          enabled: true,
           url: webhookUrl,
           webhook_by_events: false,
           webhook_base64: false,
