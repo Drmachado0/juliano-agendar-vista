@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,14 +16,11 @@ import {
   Settings2,
   RotateCcw,
   Plug,
-  Zap,
-  Webhook,
-  Loader2,
+  Zap
 } from "lucide-react";
 import { useEvolutionStatus } from "@/hooks/useEvolutionStatus";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 const ConfiguracoesEvolution = () => {
   const { 
@@ -38,57 +35,6 @@ const ConfiguracoesEvolution = () => {
   } = useEvolutionStatus(true, 30000);
   
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [webhookStatus, setWebhookStatus] = useState<{
-    configured: boolean;
-    currentUrl: string | null;
-    loading: boolean;
-  }>({ configured: false, currentUrl: null, loading: true });
-  const [webhookActionLoading, setWebhookActionLoading] = useState(false);
-
-  const checkWebhookStatus = async () => {
-    try {
-      setWebhookStatus(prev => ({ ...prev, loading: true }));
-      const { data, error } = await supabase.functions.invoke("configurar-webhook-evolution", {
-        body: { action: "status" },
-      });
-      if (error) throw error;
-      setWebhookStatus({
-        configured: data?.configured || false,
-        currentUrl: data?.currentUrl || null,
-        loading: false,
-      });
-    } catch (err) {
-      console.error("Erro ao verificar webhook:", err);
-      setWebhookStatus({ configured: false, currentUrl: null, loading: false });
-    }
-  };
-
-  const handleConfigurarWebhook = async () => {
-    setWebhookActionLoading(true);
-    toast.loading("Configurando webhook...", { id: "webhook" });
-    try {
-      const { data, error } = await supabase.functions.invoke("configurar-webhook-evolution", {
-        body: { action: "set" },
-      });
-      toast.dismiss("webhook");
-      if (error) throw error;
-      if (data?.success) {
-        toast.success("Webhook configurado com sucesso!");
-        await checkWebhookStatus();
-      } else {
-        toast.error(data?.error || "Erro ao configurar webhook");
-      }
-    } catch (err) {
-      toast.dismiss("webhook");
-      toast.error("Erro ao configurar webhook");
-    } finally {
-      setWebhookActionLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    checkWebhookStatus();
-  }, []);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -318,87 +264,7 @@ const ConfiguracoesEvolution = () => {
           </CardContent>
         </Card>
 
-        {/* Webhook Configuration Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Webhook className="h-5 w-5" />
-                  Webhook de Mensagens Recebidas
-                </CardTitle>
-                <CardDescription>
-                  Configure o webhook para receber as respostas dos pacientes automaticamente
-                </CardDescription>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={checkWebhookStatus}
-                disabled={webhookStatus.loading}
-              >
-                <RefreshCw className={cn("h-4 w-4 mr-2", webhookStatus.loading && "animate-spin")} />
-                Verificar
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-              <div className="p-3 rounded-full bg-background">
-                {webhookStatus.loading ? (
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                ) : webhookStatus.configured ? (
-                  <CheckCircle2 className="h-8 w-8 text-green-500" />
-                ) : (
-                  <XCircle className="h-8 w-8 text-destructive" />
-                )}
-              </div>
-              <div className="flex-1">
-                <span className="font-semibold text-lg">
-                  {webhookStatus.loading
-                    ? "Verificando..."
-                    : webhookStatus.configured
-                    ? "Webhook Configurado"
-                    : "Webhook Não Configurado"}
-                </span>
-                <p className="text-sm text-muted-foreground">
-                  {webhookStatus.configured
-                    ? "As respostas dos pacientes estão sendo recebidas automaticamente."
-                    : "As respostas dos pacientes NÃO estão sendo recebidas. Clique em configurar."}
-                </p>
-                {webhookStatus.currentUrl && (
-                  <p className="text-xs text-muted-foreground mt-1 break-all">
-                    URL: {webhookStatus.currentUrl}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {!webhookStatus.configured && !webhookStatus.loading && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Ação necessária</AlertTitle>
-                <AlertDescription>
-                  O webhook não está configurado. Sem ele, o sistema não recebe as mensagens enviadas pelos pacientes via WhatsApp.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <Button
-              onClick={handleConfigurarWebhook}
-              disabled={webhookActionLoading || webhookStatus.loading}
-              className="w-full"
-              variant={webhookStatus.configured ? "outline" : "default"}
-            >
-              {webhookActionLoading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Webhook className="h-4 w-4 mr-2" />
-              )}
-              {webhookStatus.configured ? "Reconfigurar Webhook" : "Configurar Webhook Agora"}
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Instructions Card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

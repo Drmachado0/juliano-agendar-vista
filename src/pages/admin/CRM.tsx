@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import KanbanColumn from "@/components/admin/KanbanColumn";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
@@ -8,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
-import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, BellRing } from "lucide-react";
+import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 const columns = [
@@ -37,32 +36,6 @@ const AdminCRM = () => {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
 
-  const [notificationSound] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      return ctx;
-    }
-    return null;
-  });
-  const isInitialLoad = useRef(true);
-
-  const playNotificationSound = useCallback(() => {
-    if (!notificationSound) return;
-    try {
-      const osc = notificationSound.createOscillator();
-      const gain = notificationSound.createGain();
-      osc.connect(gain);
-      gain.connect(notificationSound.destination);
-      osc.frequency.setValueAtTime(830, notificationSound.currentTime);
-      gain.gain.setValueAtTime(0.3, notificationSound.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, notificationSound.currentTime + 0.5);
-      osc.start(notificationSound.currentTime);
-      osc.stop(notificationSound.currentTime + 0.5);
-    } catch (e) {
-      // AudioContext may be blocked until user interaction
-    }
-  }, [notificationSound]);
-
   const fetchAgendamentos = async () => {
     setLoading(true);
     const { data, error } = await listarAgendamentosPorStatus();
@@ -80,61 +53,8 @@ const AdminCRM = () => {
   };
 
   useEffect(() => {
-    fetchAgendamentos().then(() => {
-      // After first load, allow notifications
-      setTimeout(() => { isInitialLoad.current = false; }, 2000);
-    });
-
-    const channel = supabase
-      .channel('crm-kanban-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'agendamentos',
-        },
-        (payload) => {
-          fetchAgendamentos();
-          if (!isInitialLoad.current) {
-            const nome = (payload.new as any)?.nome_completo || 'Novo paciente';
-            playNotificationSound();
-            toast({
-              title: "🔔 Novo lead!",
-              description: `${nome} acabou de entrar no funil.`,
-              duration: 8000,
-            });
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'agendamentos',
-        },
-        () => {
-          fetchAgendamentos();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'agendamentos',
-        },
-        () => {
-          fetchAgendamentos();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [playNotificationSound]);
+    fetchAgendamentos();
+  }, []);
 
   const handleDragStart = (e: React.DragEvent, agendamento: Agendamento) => {
     setDraggingAgendamento(agendamento);
