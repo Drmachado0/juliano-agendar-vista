@@ -63,3 +63,6 @@ verify_jwt = false
 [functions.enviar-boas-vindas-lead]
 verify_jwt = false
 
+[functions.configurar-webhook-evolution]
+verify_jwt = false
+
