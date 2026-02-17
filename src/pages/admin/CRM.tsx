@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
 import KanbanColumn from "@/components/admin/KanbanColumn";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
@@ -54,6 +55,26 @@ const AdminCRM = () => {
 
   useEffect(() => {
     fetchAgendamentos();
+
+    // Realtime subscription for automatic updates
+    const channel = supabase
+      .channel('crm-kanban-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'agendamentos',
+        },
+        () => {
+          fetchAgendamentos();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleDragStart = (e: React.DragEvent, agendamento: Agendamento) => {
