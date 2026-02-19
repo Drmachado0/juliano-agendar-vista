@@ -81,13 +81,13 @@ const Footer = () => {
             <h4 className="text-foreground font-semibold text-sm mb-4 font-sans border-b border-primary/20 pb-2 inline-block">Contato</h4>
             <div className="space-y-3">
               <a
-                href="https://api.whatsapp.com/send?phone=5591981653200"
+              href="https://api.whatsapp.com/send?phone=5519982273901"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <MessageCircle className="w-4 h-4 text-primary" />
-                (91) 98165-3200
+                (19) 98227-3901
               </a>
               <a
                 href="https://www.instagram.com/drjulianomachado.oftalmo/"
@@ -114,7 +114,7 @@ const Footer = () => {
             <a href="https://www.instagram.com/drjulianomachado.oftalmo/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Instagram">
               <Instagram className="w-4 h-4" />
             </a>
-            <a href="https://api.whatsapp.com/send?phone=5591981653200" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="WhatsApp">
+            <a href="https://api.whatsapp.com/send?phone=5519982273901" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="WhatsApp">
               <MessageCircle className="w-4 h-4" />
             </a>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground/50">
