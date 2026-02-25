@@ -818,6 +818,7 @@ export type Database = {
       }
     }
     Functions: {
+      buscar_paciente: { Args: { p_phone_number: string }; Returns: Json }
       decrypt_sensitive_data: {
         Args: { encrypted_data: string }
         Returns: string
@@ -841,13 +842,13 @@ export type Database = {
       }
       registrar_mensagem: {
         Args: {
-          p_conteudo?: string
+          p_conteudo: string
           p_direcao?: string
           p_message_id?: string
           p_metadata?: Json
-          p_nome?: string
+          p_nome: string
           p_phone_number: string
-          p_remote_jid?: string
+          p_remote_jid: string
           p_tipo_mensagem?: string
         }
         Returns: Json
