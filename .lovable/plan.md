@@ -1,20 +1,76 @@
 
 
-# Adicionar Google Analytics (G-T9ERC72SJE) ao site
+# Criar Edge Function `listar-horarios-disponiveis`
 
-## O que sera feito
-Adicionar o script do Google Analytics com o ID **G-T9ERC72SJE** no arquivo `index.html` do projeto.
+## Objetivo
+Criar uma Edge Function que receba `data` e `local_atendimento` e retorne todos os horarios disponiveis para aquele dia, reutilizando a logica ja existente em `_shared/validarDisponibilidade.ts`.
 
-## Contexto atual
-O `index.html` nao possui nenhum script de analytics instalado diretamente. O projeto ja tem um hook `useGoogleTag.ts` para eventos do DataLayer e documentacao mencionando outros IDs GA4 (G-79BDCX4R2L, G-380EGEFL1S), mas nenhum esta no HTML atualmente.
+## Endpoint
 
-## Alteracao
+- **URL**: `POST /functions/v1/listar-horarios-disponiveis`
+- **JWT**: desabilitado (publico, para integracoes externas)
 
-### Arquivo: `index.html`
-Adicionar os dois scripts do gtag.js dentro do `<head>`, antes do fechamento:
+### Request
+```json
+{
+  "data": "2026-03-01",
+  "local_atendimento": "Clinicor – Paragominas"
+}
+```
 
-1. Script async carregando a biblioteca do gtag.js
-2. Script inline configurando o `dataLayer` e o `gtag('config', 'G-T9ERC72SJE')`
+### Response (sucesso)
+```json
+{
+  "data": "2026-03-01",
+  "local_atendimento": "Clinicor – Paragominas",
+  "horarios_disponiveis": ["08:00", "08:30", "09:00", "10:30", "14:00"],
+  "total": 5
+}
+```
 
-Isso ativara o rastreamento automatico de pageviews e permitira que o hook `useGoogleTag.ts` existente envie eventos customizados para essa propriedade.
+### Response (sem disponibilidade)
+```json
+{
+  "data": "2026-03-01",
+  "local_atendimento": "Clinicor – Paragominas",
+  "horarios_disponiveis": [],
+  "total": 0,
+  "motivo": "Não há expediente neste dia da semana"
+}
+```
+
+## Implementacao
+
+### Arquivo: `supabase/functions/listar-horarios-disponiveis/index.ts`
+
+A funcao vai:
+
+1. Validar campos obrigatorios (`data` no formato YYYY-MM-DD)
+2. Reutilizar as funcoes auxiliares de `_shared/validarDisponibilidade.ts` (`getClinicaSlugsFromLocal`, `gerarSlots`, `horarioDentroBloqueio`)
+3. Seguir a mesma logica do frontend (`disponibilidadePublica.ts`) mas executada server-side:
+   - Verificar se a data e passada
+   - Buscar clinica IDs pelo local
+   - Verificar bloqueios de dia inteiro/feriado
+   - Verificar disponibilidade especifica (overrides)
+   - Se nao houver override, usar disponibilidade semanal
+   - Gerar todos os slots possiveis
+   - Remover horarios bloqueados por intervalo
+   - Remover horarios ja ocupados por agendamentos existentes
+   - Remover horarios ja passados (para o dia de hoje)
+4. Retornar array de horarios disponiveis
+
+### Arquivo: `supabase/config.toml`
+
+Adicionar entrada:
+```toml
+[functions.listar-horarios-disponiveis]
+verify_jwt = false
+```
+
+## Detalhes tecnicos
+
+- A funcao cria seu proprio cliente Supabase com `SUPABASE_SERVICE_ROLE_KEY` para acessar todas as tabelas sem restricao de RLS
+- `local_atendimento` e opcional; se omitido retorna horarios globais (sem filtro de clinica)
+- Horarios de hoje filtram slots com margem de 30 minutos (mesmo comportamento do frontend)
+- CORS habilitado para todas as origens (uso em integracoes externas)
 
