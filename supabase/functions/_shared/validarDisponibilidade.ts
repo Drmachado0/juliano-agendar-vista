@@ -1,257 +1,370 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// supabase/functions/_shared/validarDisponibilidade.ts
+// Lógica adaptada ao schema do LOVABLE
+// Tabelas: disponibilidade_semanal, bloqueios_agenda, agendamentos, clinicas
 
-export interface ValidacaoResult {
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+
+// ─────────────────────────────────────────────
+// IDs das clínicas no banco do Lovable
+// ─────────────────────────────────────────────
+export const CLINICAS: Record<string, { id: string; nome: string }> = {
+  clinicor: {
+    id: "657e4784-e292-45c6-a033-40f3d115f984",
+    nome: "Clinicor – Paragominas",
+  },
+  hgp: {
+    id: "5f2f3bcb-5945-4220-912a-4d7c79b9b056",
+    nome: "Hospital Geral de Paragominas",
+  },
+  iob: {
+    id: "f72d4685-7e91-4b27-b4e6-8c47db742bef",
+    nome: "Instituto de Olhos de Belém (IOB)",
+  },
+  vitria: {
+    id: "dee8244b-a4f0-492a-aa59-89cfb8848463",
+    nome: "Vitria Oftalmologia",
+  },
+};
+
+// ─────────────────────────────────────────────
+// Tipos
+// ─────────────────────────────────────────────
+export interface SlotDisponivel {
+  horario: string;       // HH:MM
+  data_hora: string;     // ISO 8601
+  local: string;         // Nome da clínica
+  clinica_id: string;
+  dia_semana: string;
+}
+
+export interface ResultadoValidacao {
   disponivel: boolean;
   motivo?: string;
-  codigo?: 'BLOQUEIO_DIA_INTEIRO' | 'BLOQUEIO_INTERVALO' | 'SEM_DISPONIBILIDADE' | 'HORARIO_OCUPADO' | 'DATA_PASSADA' | 'FORA_EXPEDIENTE';
 }
 
-// Map location to clinic slugs
-export function getClinicaSlugsFromLocal(localAtendimento: string): string[] {
-  const localLower = localAtendimento.toLowerCase();
-  
-  if (localLower.includes("clinicor")) {
-    return ["clinicor"];
-  }
-  if (localLower.includes("hgp") || localLower.includes("hospital geral")) {
-    return ["hgp"];
-  }
-  if (localLower.includes("belém") || localLower.includes("belem") || localLower.includes("iob") || localLower.includes("vitria")) {
-    return ["belem", "iob", "vitria"];
-  }
-  return [];
+export interface ResultadoAgendamento {
+  sucesso: boolean;
+  agendamento_id?: string;
+  mensagem: string;
+  detalhes?: Record<string, unknown>;
+  erro?: string;
 }
 
-// Generate time slots from start to end
-export function gerarSlots(horaInicio: string, horaFim: string, intervaloMinutos: number): string[] {
-  const slots: string[] = [];
-  const [startHour, startMin] = horaInicio.split(':').map(Number);
-  const [endHour, endMin] = horaFim.split(':').map(Number);
-  
-  let currentMinutes = startHour * 60 + startMin;
-  const endMinutes = endHour * 60 + endMin;
-  
-  while (currentMinutes < endMinutes) {
-    const hours = Math.floor(currentMinutes / 60);
-    const mins = currentMinutes % 60;
-    slots.push(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`);
-    currentMinutes += intervaloMinutos;
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+const DIAS_SEMANA: Record<number, string> = {
+  0: "Domingo",
+  1: "Segunda-feira",
+  2: "Terça-feira",
+  3: "Quarta-feira",
+  4: "Quinta-feira",
+  5: "Sexta-feira",
+  6: "Sábado",
+};
+
+export function getNomeDiaSemana(dia: number): string {
+  return DIAS_SEMANA[dia] || "Desconhecido";
+}
+
+/** Resolve nome do local para clinica_id */
+export function resolverClinica(local: string): { id: string; nome: string } | null {
+  const key = local.toLowerCase().trim()
+    .replace("hospital geral de paragominas", "hgp")
+    .replace("clinicor – paragominas", "clinicor")
+    .replace("clinicor - paragominas", "clinicor");
+
+  // Busca direta
+  if (CLINICAS[key]) return CLINICAS[key];
+
+  // Busca parcial
+  for (const [k, v] of Object.entries(CLINICAS)) {
+    if (key.includes(k) || v.nome.toLowerCase().includes(key)) return v;
   }
-  
+
+  return null;
+}
+
+/** Gera slots baseado na disponibilidade_semanal */
+export function gerarSlots(
+  data: string,
+  horaInicio: string,
+  horaFim: string,
+  intervaloMinutos: number,
+  clinicaId: string,
+  clinicaNome: string,
+  diaSemana: string
+): SlotDisponivel[] {
+  const slots: SlotDisponivel[] = [];
+  const [hI, mI] = horaInicio.split(":").map(Number);
+  const [hF, mF] = horaFim.split(":").map(Number);
+
+  let minAtual = hI * 60 + mI;
+  const minFim = hF * 60 + mF;
+
+  while (minAtual + intervaloMinutos <= minFim) {
+    const h = String(Math.floor(minAtual / 60)).padStart(2, "0");
+    const m = String(minAtual % 60).padStart(2, "0");
+    slots.push({
+      horario: `${h}:${m}`,
+      data_hora: `${data}T${h}:${m}:00-03:00`,
+      local: clinicaNome,
+      clinica_id: clinicaId,
+      dia_semana: diaSemana,
+    });
+    minAtual += intervaloMinutos;
+  }
   return slots;
 }
 
-// Check if time is within a block
-export function horarioDentroBloqueio(horario: string, horaInicio: string | null, horaFim: string | null): boolean {
-  if (!horaInicio || !horaFim) return false;
-  
-  const [h, m] = horario.split(':').map(Number);
-  const [startH, startM] = horaInicio.split(':').map(Number);
-  const [endH, endM] = horaFim.split(':').map(Number);
-  
-  const timeMinutes = h * 60 + m;
-  const startMinutes = startH * 60 + startM;
-  const endMinutes = endH * 60 + endM;
-  
-  return timeMinutes >= startMinutes && timeMinutes < endMinutes;
+// ─────────────────────────────────────────────
+// Funções principais
+// ─────────────────────────────────────────────
+
+export function criarClienteSupabase(): SupabaseClient {
+  const url = Deno.env.get("SUPABASE_URL")!;
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  return createClient(url, key);
 }
 
-export async function validarDisponibilidade(
-  localAtendimento: string,
-  dataAgendamento: string,
-  horaAgendamento: string
-): Promise<ValidacaoResult> {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+/** Lista horários disponíveis para uma data */
+export async function listarHorariosDisponiveis(
+  supabase: SupabaseClient,
+  data: string,
+  local?: string
+): Promise<SlotDisponivel[]> {
+  const dataObj = new Date(data + "T12:00:00-03:00");
+  const diaSemana = dataObj.getUTCDay();
+  const nomeDia = getNomeDiaSemana(diaSemana);
 
-  // Normalize time to HH:MM format
-  const horaNormalizada = horaAgendamento.substring(0, 5);
-  
-  console.log(`[validarDisponibilidade] Validando: ${dataAgendamento} ${horaNormalizada} - ${localAtendimento}`);
-
-  // 1. Check if date is in the past
+  // Não permite datas passadas
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
-  const dataCheck = new Date(dataAgendamento + 'T00:00:00');
-  
-  if (dataCheck < hoje) {
-    console.log(`[validarDisponibilidade] Data no passado: ${dataAgendamento}`);
-    return {
-      disponivel: false,
-      motivo: 'Não é possível agendar em datas passadas',
-      codigo: 'DATA_PASSADA'
-    };
+  if (new Date(data + "T00:00:00-03:00") < hoje) return [];
+
+  // Resolver clinica_id se local foi informado
+  let clinicaFilter: { id: string; nome: string } | null = null;
+  if (local) {
+    clinicaFilter = resolverClinica(local);
+    if (!clinicaFilter) return [];
   }
 
-  // 2. Get clinic IDs for the location
-  const slugs = getClinicaSlugsFromLocal(localAtendimento);
-  let clinicaIds: string[] = [];
-  
-  if (slugs.length > 0) {
-    const { data: clinicas } = await supabase
-      .from('clinicas')
-      .select('id')
-      .in('slug', slugs)
-      .eq('ativo', true);
-    
-    clinicaIds = clinicas?.map(c => c.id) || [];
+  // 1. Buscar disponibilidade_semanal (grade horária)
+  let query = supabase
+    .from("disponibilidade_semanal")
+    .select("*, clinicas(id, nome)")
+    .eq("dia_semana", diaSemana)
+    .eq("ativo", true);
+
+  if (clinicaFilter) {
+    query = query.eq("clinica_id", clinicaFilter.id);
   }
 
-  console.log(`[validarDisponibilidade] Clínicas encontradas: ${clinicaIds.length}`);
+  const { data: disponibilidades, error: errD } = await query;
+  if (errD || !disponibilidades?.length) return [];
 
-  // 3. Check for full-day blocks (feriado, dia_inteiro)
-  const { data: bloqueiosDiaInteiro } = await supabase
-    .from('bloqueios_agenda')
-    .select('*')
-    .eq('data', dataAgendamento)
-    .in('tipo_bloqueio', ['dia_inteiro', 'feriado']);
-  
-  // Filter by clinic if we have clinic IDs
-  const bloqueiosDiaFiltrados = bloqueiosDiaInteiro?.filter(b => 
-    clinicaIds.length === 0 || clinicaIds.includes(b.clinica_id)
-  ) || [];
+  // 2. Buscar bloqueios para esta data
+  const { data: bloqueios } = await supabase
+    .from("bloqueios_agenda")
+    .select("clinica_id, hora_inicio, hora_fim")
+    .eq("data", data);
 
-  if (bloqueiosDiaFiltrados.length > 0) {
-    const bloqueio = bloqueiosDiaFiltrados[0];
-    console.log(`[validarDisponibilidade] Bloqueio dia inteiro encontrado: ${bloqueio.tipo_bloqueio}`);
-    return {
-      disponivel: false,
-      motivo: bloqueio.motivo || 'Esta data está bloqueada para agendamentos',
-      codigo: 'BLOQUEIO_DIA_INTEIRO'
-    };
-  }
+  // 3. Buscar agendamentos existentes nesta data
+  const { data: agendamentos } = await supabase
+    .from("agendamentos")
+    .select("hora_agendamento, clinica_id")
+    .eq("data_agendamento", data)
+    .not("status_crm", "in", "(cancelado)");
 
-  // 4. Check for interval blocks
-  const { data: bloqueiosIntervalo } = await supabase
-    .from('bloqueios_agenda')
-    .select('*')
-    .eq('data', dataAgendamento)
-    .in('tipo_bloqueio', ['intervalo', 'ausencia_profissional']);
-  
-  const bloqueiosIntervaloFiltrados = bloqueiosIntervalo?.filter(b => 
-    clinicaIds.length === 0 || clinicaIds.includes(b.clinica_id)
-  ) || [];
+  const ocupados = new Set(
+    (agendamentos || []).map((a: any) => {
+      const h = String(a.hora_agendamento).substring(0, 5); // "HH:MM"
+      return `${a.clinica_id}|${h}`;
+    })
+  );
 
-  for (const bloqueio of bloqueiosIntervaloFiltrados) {
-    if (horarioDentroBloqueio(horaNormalizada, bloqueio.hora_inicio, bloqueio.hora_fim)) {
-      console.log(`[validarDisponibilidade] Horário dentro de bloqueio: ${bloqueio.hora_inicio} - ${bloqueio.hora_fim}`);
-      return {
-        disponivel: false,
-        motivo: bloqueio.motivo || 'Este horário está bloqueado',
-        codigo: 'BLOQUEIO_INTERVALO'
-      };
-    }
-  }
+  // 4. Gerar slots e filtrar
+  const todosSlots: SlotDisponivel[] = [];
 
-  // 5. Check specific availability (override rules)
-  const { data: disponibilidadeEspecifica } = await supabase
-    .from('disponibilidade_especifica')
-    .select('*')
-    .eq('data', dataAgendamento);
-  
-  const dispEspecificaFiltrada = disponibilidadeEspecifica?.filter(d => 
-    d.clinica_id === null || clinicaIds.length === 0 || clinicaIds.includes(d.clinica_id)
-  ) || [];
+  for (const d of disponibilidades as any[]) {
+    const clinicaId = d.clinica_id;
+    const clinicaNome = d.clinicas?.nome || local || "Clínica";
 
-  // If there's specific availability for this date
-  if (dispEspecificaFiltrada.length > 0) {
-    let encontrouHorario = false;
-    
-    for (const disp of dispEspecificaFiltrada) {
-      if (!disp.disponivel) continue;
-      if (!disp.hora_inicio || !disp.hora_fim) continue;
-      
-      const slots = gerarSlots(disp.hora_inicio, disp.hora_fim, disp.intervalo_minutos || 30);
-      if (slots.includes(horaNormalizada)) {
-        encontrouHorario = true;
-        break;
+    // Verificar bloqueio total do dia para esta clínica
+    const bloqueioTotal = (bloqueios || []).some(
+      (b: any) =>
+        (b.clinica_id === clinicaId || b.clinica_id === null) &&
+        b.hora_inicio === null
+    );
+    if (bloqueioTotal) continue;
+
+    const slots = gerarSlots(
+      data,
+      d.hora_inicio,
+      d.hora_fim,
+      d.intervalo_minutos || 30,
+      clinicaId,
+      clinicaNome,
+      nomeDia
+    );
+
+    for (const slot of slots) {
+      const chave = `${clinicaId}|${slot.horario}`;
+
+      // Pular se ocupado
+      if (ocupados.has(chave)) continue;
+
+      // Pular se bloqueado parcialmente
+      const bloqueado = (bloqueios || []).some((b: any) => {
+        if (b.clinica_id !== clinicaId && b.clinica_id !== null) return false;
+        if (!b.hora_inicio || !b.hora_fim) return false;
+        const bInicio = b.hora_inicio.substring(0, 5);
+        const bFim = b.hora_fim.substring(0, 5);
+        return slot.horario >= bInicio && slot.horario < bFim;
+      });
+      if (bloqueado) continue;
+
+      // Se for hoje, pular horários passados (margem de 1h)
+      if (data === new Date().toISOString().split("T")[0]) {
+        const agora = new Date();
+        const slotDate = new Date(slot.data_hora);
+        if (slotDate.getTime() - agora.getTime() < 60 * 60 * 1000) continue;
       }
-    }
-    
-    if (!encontrouHorario) {
-      // Check if the date is marked as unavailable
-      const indisponivel = dispEspecificaFiltrada.find(d => !d.disponivel);
-      if (indisponivel) {
-        console.log(`[validarDisponibilidade] Data marcada como indisponível`);
-        return {
-          disponivel: false,
-          motivo: indisponivel.motivo || 'Esta data não está disponível',
-          codigo: 'SEM_DISPONIBILIDADE'
-        };
-      }
-      
-      console.log(`[validarDisponibilidade] Horário fora da disponibilidade específica`);
-      return {
-        disponivel: false,
-        motivo: 'Este horário não está disponível nesta data',
-        codigo: 'FORA_EXPEDIENTE'
-      };
-    }
-  } else {
-    // 6. Check weekly availability
-    const diaSemana = new Date(dataAgendamento + 'T12:00:00').getDay();
-    
-    const { data: disponibilidadeSemanal } = await supabase
-      .from('disponibilidade_semanal')
-      .select('*')
-      .eq('dia_semana', diaSemana)
-      .eq('ativo', true);
-    
-    const dispSemanalFiltrada = disponibilidadeSemanal?.filter(d => 
-      d.clinica_id === null || clinicaIds.length === 0 || clinicaIds.includes(d.clinica_id)
-    ) || [];
 
-    if (dispSemanalFiltrada.length === 0) {
-      console.log(`[validarDisponibilidade] Sem disponibilidade semanal para dia ${diaSemana}`);
-      return {
-        disponivel: false,
-        motivo: 'Não há expediente neste dia da semana',
-        codigo: 'SEM_DISPONIBILIDADE'
-      };
-    }
-
-    // Check if time is within any weekly availability
-    let encontrouHorario = false;
-    for (const disp of dispSemanalFiltrada) {
-      const slots = gerarSlots(disp.hora_inicio, disp.hora_fim, disp.intervalo_minutos);
-      if (slots.includes(horaNormalizada)) {
-        encontrouHorario = true;
-        break;
-      }
-    }
-
-    if (!encontrouHorario) {
-      console.log(`[validarDisponibilidade] Horário fora do expediente semanal`);
-      return {
-        disponivel: false,
-        motivo: 'Este horário está fora do expediente',
-        codigo: 'FORA_EXPEDIENTE'
-      };
+      todosSlots.push(slot);
     }
   }
 
-  // 7. Check for existing appointments at the same time
-  const { data: agendamentosExistentes } = await supabase
-    .from('agendamentos')
-    .select('id, nome_completo')
-    .eq('data_agendamento', dataAgendamento)
-    .eq('hora_agendamento', horaNormalizada)
-    .neq('status_funil', 'cancelado');
-  
-  // Filter by location/clinic if needed
-  // For now, we consider any appointment at the same time as a conflict
-  if (agendamentosExistentes && agendamentosExistentes.length > 0) {
-    console.log(`[validarDisponibilidade] Já existe agendamento neste horário: ${agendamentosExistentes.length}`);
-    return {
-      disponivel: false,
-      motivo: 'Este horário já está ocupado',
-      codigo: 'HORARIO_OCUPADO'
-    };
+  return todosSlots.sort((a, b) =>
+    a.local === b.local
+      ? a.horario.localeCompare(b.horario)
+      : a.local.localeCompare(b.local)
+  );
+}
+
+/** Valida se um horário específico está disponível */
+export async function validarDisponibilidade(
+  supabase: SupabaseClient,
+  data: string,
+  hora: string,
+  local: string
+): Promise<ResultadoValidacao> {
+  const clinica = resolverClinica(local);
+  if (!clinica) {
+    return { disponivel: false, motivo: `Clínica "${local}" não encontrada.` };
   }
 
-  console.log(`[validarDisponibilidade] Horário disponível!`);
+  const slots = await listarHorariosDisponiveis(supabase, data, local);
+  const encontrado = slots.find(
+    (s) => s.horario === hora && s.clinica_id === clinica.id
+  );
+
+  if (encontrado) {
+    return { disponivel: true };
+  }
+
+  const alternativas = slots
+    .filter((s) => s.clinica_id === clinica.id)
+    .slice(0, 5)
+    .map((s) => s.horario);
+
   return {
-    disponivel: true
+    disponivel: false,
+    motivo: `Horário ${hora} no ${clinica.nome} em ${data} não está disponível.${
+      alternativas.length > 0
+        ? ` Horários livres: ${alternativas.join(", ")}`
+        : " Nenhum horário livre nesta data."
+    }`,
+  };
+}
+
+/** Cria agendamento usando schema do Lovable */
+export async function criarAgendamento(
+  supabase: SupabaseClient,
+  params: {
+    nome_completo: string;
+    telefone_whatsapp: string;
+    tipo_atendimento: string;
+    local_atendimento: string;
+    convenio: string;
+    data_agendamento: string;
+    hora_agendamento: string;
+  }
+): Promise<ResultadoAgendamento> {
+  const clinica = resolverClinica(params.local_atendimento);
+  if (!clinica) {
+    return {
+      sucesso: false,
+      mensagem: "Clínica não encontrada",
+      erro: `"${params.local_atendimento}" não é uma clínica válida. Use: HGP, Clinicor, IOB ou Vitria.`,
+    };
+  }
+
+  // 1. Validar disponibilidade
+  const validacao = await validarDisponibilidade(
+    supabase,
+    params.data_agendamento,
+    params.hora_agendamento,
+    params.local_atendimento
+  );
+
+  if (!validacao.disponivel) {
+    return {
+      sucesso: false,
+      mensagem: "Horário indisponível",
+      erro: validacao.motivo,
+    };
+  }
+
+  // 2. Definir convênio
+  const conveniosAceitos = ["bradesco", "unimed", "cassi", "sulamerica", "sulamérica"];
+  const convNorm = params.convenio.toLowerCase().replace(/\s/g, "");
+  const isConvenio = conveniosAceitos.includes(convNorm);
+
+  // 3. Inserir no schema do Lovable
+  const { data: agendamento, error: errA } = await supabase
+    .from("agendamentos")
+    .insert({
+      nome_completo: params.nome_completo,
+      telefone_whatsapp: params.telefone_whatsapp,
+      tipo_atendimento: params.tipo_atendimento || "consulta",
+      local_atendimento: clinica.nome,
+      clinica_id: clinica.id,
+      convenio: isConvenio ? params.convenio : null,
+      data_agendamento: params.data_agendamento,
+      hora_agendamento: params.hora_agendamento,
+      status_crm: "agendado",
+      origem: "mcp",
+      aceita_contato_whatsapp_email: true,
+      observacoes_internas: `Agendado via WhatsApp (Sofia IA) - ${new Date().toISOString()}`,
+    })
+    .select("id")
+    .single();
+
+  if (errA || !agendamento) {
+    return {
+      sucesso: false,
+      mensagem: "Erro ao criar agendamento",
+      erro: errA?.message || "Falha no insert",
+    };
+  }
+
+  const diaSemana = new Date(params.data_agendamento + "T12:00:00-03:00").getUTCDay();
+  const nomeDia = getNomeDiaSemana(diaSemana);
+  const dataFormatada = params.data_agendamento.split("-").reverse().join("/");
+
+  return {
+    sucesso: true,
+    agendamento_id: agendamento.id,
+    mensagem: `Consulta agendada com sucesso! ${nomeDia}, ${dataFormatada} às ${params.hora_agendamento} na ${clinica.nome}.`,
+    detalhes: {
+      data: dataFormatada,
+      horario: params.hora_agendamento,
+      local: clinica.nome,
+      clinica_id: clinica.id,
+      tipo: params.tipo_atendimento,
+      convenio: isConvenio ? params.convenio : "particular",
+      origem: "mcp",
+    },
   };
 }
