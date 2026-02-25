@@ -69,3 +69,6 @@ verify_jwt = false
 [functions.listar-horarios-disponiveis]
 verify_jwt = false
 
+[functions.mcp-agendamento]
+verify_jwt = false
+
