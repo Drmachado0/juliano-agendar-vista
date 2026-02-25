@@ -514,6 +514,13 @@ export type Database = {
             referencedRelation: "agendamentos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "mensagens_whatsapp_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -797,7 +804,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      pacientes: {
+        Row: {
+          convenio: string | null
+          id: string | null
+          nome: string | null
+          phone_number: string | null
+          tags: string | null
+          total_atendimentos: number | null
+          total_mensagens: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       decrypt_sensitive_data: {
@@ -820,6 +838,19 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      registrar_mensagem: {
+        Args: {
+          p_conteudo?: string
+          p_direcao?: string
+          p_message_id?: string
+          p_metadata?: Json
+          p_nome?: string
+          p_phone_number: string
+          p_remote_jid?: string
+          p_tipo_mensagem?: string
+        }
+        Returns: Json
       }
       setup_totp: {
         Args: { p_backup_codes: string; p_secret: string; p_user_id: string }
