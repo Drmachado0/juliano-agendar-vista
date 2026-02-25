@@ -9,6 +9,7 @@ import DateTimeStep from "@/components/scheduling/DateTimeStep";
 import ConfirmationStep from "@/components/scheduling/ConfirmationStep";
 import SuccessStep from "@/components/scheduling/SuccessStep";
 import { criarLead, converterLeadEmAgendamento } from "@/services/leads";
+import { supabase } from "@/integrations/supabase/client";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -154,6 +155,43 @@ const Agendar = () => {
           local_atendimento: localAtendimento,
           data_agendamento: formData.selectedDate ? format(formData.selectedDate, 'yyyy-MM-dd') : '',
           hora_agendamento: formData.selectedTime,
+        });
+
+        // Disparar notificacoes em background (nao bloqueia o fluxo)
+        Promise.allSettled([
+          supabase.functions.invoke('confirmar-agendamento-whatsapp', {
+            body: {
+              agendamento_data: {
+                nome_completo: formData.fullName,
+                telefone_whatsapp: formData.phone,
+                tipo_atendimento: formData.appointmentTypeName || formData.appointmentType,
+                local_atendimento: localAtendimento,
+                data_agendamento: formData.selectedDate ? format(formData.selectedDate, 'yyyy-MM-dd') : '',
+                hora_agendamento: formData.selectedTime,
+                convenio: formData.insuranceName || formData.insurance,
+              }
+            },
+          }),
+          supabase.functions.invoke('notificar-agendamento-email', {
+            body: {
+              nome_completo: formData.fullName,
+              telefone_whatsapp: formData.phone,
+              email_paciente: formData.email || null,
+              data_nascimento: formData.birthDate || null,
+              tipo_atendimento: formData.appointmentTypeName || formData.appointmentType,
+              local_atendimento: localAtendimento,
+              convenio: formData.insuranceName || formData.insurance,
+              convenio_outro: formData.insurance === 'outro' ? formData.otherInsurance : null,
+              data_agendamento: formData.selectedDate ? format(formData.selectedDate, 'yyyy-MM-dd') : '',
+              hora_agendamento: formData.selectedTime,
+            },
+          }),
+        ]).then(results => {
+          results.forEach((r, i) => {
+            if (r.status === 'rejected') {
+              console.error(`Notificacao ${i} falhou:`, r.reason);
+            }
+          });
         });
       } else {
         // Fallback: criar agendamento diretamente se não houver lead
