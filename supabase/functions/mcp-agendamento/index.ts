@@ -1,23 +1,13 @@
 // ================================================================
 // supabase/functions/mcp-agendamento/index.ts
-// MCP Server — chama Edge Functions reais em vez de RPC estático
+// Versão corrigida — sem @supabase/mcp-utils, compatível com Deno
 // ================================================================
-
-import { Server } from "npm:@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "npm:@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "npm:@modelcontextprotocol/sdk/types.js";
-
-// Importa o handler HTTP do Supabase para expor via SSE
-import { createServer } from "npm:@supabase/mcp-utils";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 // ----------------------------------------------------------------
-// Helper: chama uma Edge Function do mesmo projeto por HTTP
+// Helper: chama Edge Function do mesmo projeto
 // ----------------------------------------------------------------
 async function callEdgeFunction(
   name: string,
@@ -31,200 +21,201 @@ async function callEdgeFunction(
     },
     body: JSON.stringify(body),
   });
-
   const text = await res.text();
   try {
     return JSON.parse(text);
   } catch {
-    return text;
+    return { raw: text };
   }
 }
 
 // ----------------------------------------------------------------
-// Definição das tools MCP
+// Definição das tools
 // ----------------------------------------------------------------
-const tools = [
+const TOOLS = [
   {
     name: "listar_horarios_disponiveis",
     description:
-      "Lista horários realmente disponíveis para agendamento em uma data e local, " +
-      "respeitando disponibilidade semanal, bloqueios e agendamentos existentes.",
+      "Lista horários disponíveis para uma data e local, respeitando bloqueios e agendamentos existentes.",
     inputSchema: {
       type: "object",
       properties: {
-        data: {
-          type: "string",
-          description: "Data no formato YYYY-MM-DD",
-        },
-        local: {
-          type: "string",
-          description:
-            "Local de atendimento: 'Clinicor', 'HGP', 'IOB' ou 'Vitria'",
-        },
+        data:  { type: "string", description: "Data no formato YYYY-MM-DD" },
+        local: { type: "string", description: "Clinicor | HGP | IOB | Vitria" },
       },
       required: ["data", "local"],
-    },
-    handler: async (args: Record<string, unknown>) => {
-      const result = await callEdgeFunction("listar-horarios-disponiveis", {
-        data: args.data,
-        local_atendimento: args.local ?? null,
-      });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result) }],
-      };
     },
   },
   {
     name: "validar_horario",
-    description:
-      "Verifica se um horário específico está disponível antes de confirmar o agendamento.",
+    description: "Verifica se um horário específico está disponível.",
     inputSchema: {
       type: "object",
       properties: {
-        data_agendamento: {
-          type: "string",
-          description: "Data no formato YYYY-MM-DD",
-        },
-        hora_agendamento: {
-          type: "string",
-          description: "Hora no formato HH:MM",
-        },
-        local_atendimento: {
-          type: "string",
-          description:
-            "Local de atendimento: 'Clinicor', 'HGP', 'IOB' ou 'Vitria'",
-        },
+        data_agendamento:  { type: "string", description: "YYYY-MM-DD" },
+        hora_agendamento:  { type: "string", description: "HH:MM" },
+        local_atendimento: { type: "string", description: "Clinicor | HGP | IOB | Vitria" },
       },
       required: ["data_agendamento", "hora_agendamento", "local_atendimento"],
-    },
-    handler: async (args: Record<string, unknown>) => {
-      const result = await callEdgeFunction("validar-agendamento", {
-        data_agendamento: args.data_agendamento,
-        hora_agendamento: args.hora_agendamento,
-        local_atendimento: args.local_atendimento,
-      });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result) }],
-      };
     },
   },
   {
     name: "criar_agendamento",
-    description:
-      "Cria um agendamento confirmado após validação do horário. " +
-      "Use somente após o paciente confirmar todos os dados.",
+    description: "Cria agendamento confirmado após validação.",
     inputSchema: {
       type: "object",
       properties: {
-        nome_completo: {
-          type: "string",
-          description: "Nome completo do paciente",
-        },
-        telefone_whatsapp: {
-          type: "string",
-          description: "Telefone do paciente (somente números, com DDD)",
-        },
-        tipo_atendimento: {
-          type: "string",
-          description: "Tipo de atendimento (ex: 'Consulta')",
-        },
-        local_atendimento: {
-          type: "string",
-          description:
-            "Local de atendimento: 'Clinicor', 'HGP', 'IOB' ou 'Vitria'",
-        },
-        convenio: {
-          type: "string",
-          description:
-            "Convênio: 'Bradesco', 'Unimed', 'Cassi', 'SulAmérica' ou 'Particular'",
-        },
-        data_agendamento: {
-          type: "string",
-          description: "Data no formato YYYY-MM-DD",
-        },
-        hora_agendamento: {
-          type: "string",
-          description: "Hora no formato HH:MM",
-        },
+        nome_completo:     { type: "string" },
+        telefone_whatsapp: { type: "string" },
+        tipo_atendimento:  { type: "string" },
+        local_atendimento: { type: "string" },
+        convenio:          { type: "string" },
+        data_agendamento:  { type: "string" },
+        hora_agendamento:  { type: "string" },
       },
       required: [
-        "nome_completo",
-        "telefone_whatsapp",
-        "local_atendimento",
-        "convenio",
-        "data_agendamento",
-        "hora_agendamento",
+        "nome_completo","telefone_whatsapp","local_atendimento",
+        "convenio","data_agendamento","hora_agendamento",
       ],
-    },
-    handler: async (args: Record<string, unknown>) => {
-      const result = await callEdgeFunction("criar-agendamento", {
-        nome_completo: args.nome_completo,
-        telefone_whatsapp: args.telefone_whatsapp,
-        tipo_atendimento: args.tipo_atendimento ?? "Consulta",
-        local_atendimento: args.local_atendimento,
-        convenio: args.convenio,
-        data_agendamento: args.data_agendamento,
-        hora_agendamento: args.hora_agendamento,
-        origem: "mcp",
-      });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result) }],
-      };
     },
   },
 ];
 
 // ----------------------------------------------------------------
-// Servidor MCP
+// Executa a tool chamada
 // ----------------------------------------------------------------
-const server = new Server(
-  { name: "mcp-agendamento", version: "2.0.0" },
-  { capabilities: { tools: {} } }
-);
-
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: tools.map(({ name, description, inputSchema }) => ({
-    name,
-    description,
-    inputSchema,
-  })),
-}));
-
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const tool = tools.find((t) => t.name === request.params.name);
-  if (!tool) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Tool desconhecida: ${request.params.name}`,
-        },
-      ],
-      isError: true,
-    };
+async function executeTool(
+  name: string,
+  args: Record<string, unknown>
+): Promise<unknown> {
+  if (name === "listar_horarios_disponiveis") {
+    return await callEdgeFunction("listar-horarios-disponiveis", {
+      data: args.data,
+      local_atendimento: args.local ?? null,
+    });
   }
 
+  if (name === "validar_horario") {
+    return await callEdgeFunction("validar-agendamento", {
+      data_agendamento:  args.data_agendamento,
+      hora_agendamento:  args.hora_agendamento,
+      local_atendimento: args.local_atendimento,
+    });
+  }
+
+  if (name === "criar_agendamento") {
+    return await callEdgeFunction("criar-agendamento", {
+      nome_completo:     args.nome_completo,
+      telefone_whatsapp: args.telefone_whatsapp,
+      tipo_atendimento:  args.tipo_atendimento ?? "Consulta",
+      local_atendimento: args.local_atendimento,
+      convenio:          args.convenio,
+      data_agendamento:  args.data_agendamento,
+      hora_agendamento:  args.hora_agendamento,
+      origem:            "mcp",
+    });
+  }
+
+  throw new Error(`Tool desconhecida: ${name}`);
+}
+
+// ----------------------------------------------------------------
+// Handler MCP sobre HTTP (protocolo JSON-RPC 2.0)
+// ----------------------------------------------------------------
+Deno.serve(async (req: Request) => {
+  // CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      },
+    });
+  }
+
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", { status: 405 });
+  }
+
+  let body: Record<string, unknown>;
   try {
-    return await tool.handler(
-      (request.params.arguments ?? {}) as Record<string, unknown>
-    );
-  } catch (err) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Erro ao executar ${request.params.name}: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        },
-      ],
-      isError: true,
-    };
+    body = await req.json();
+  } catch {
+    return jsonRpcError(null, -32700, "Parse error");
   }
+
+  const { id, method, params } = body as {
+    id: unknown;
+    method: string;
+    params: Record<string, unknown>;
+  };
+
+  // ── initialize ──────────────────────────────────────────────
+  if (method === "initialize") {
+    return jsonRpcOk(id, {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      serverInfo: { name: "mcp-agendamento", version: "2.0.0" },
+    });
+  }
+
+  // ── tools/list ───────────────────────────────────────────────
+  if (method === "tools/list") {
+    return jsonRpcOk(id, { tools: TOOLS });
+  }
+
+  // ── tools/call ───────────────────────────────────────────────
+  if (method === "tools/call") {
+    const toolName = (params?.name ?? "") as string;
+    const toolArgs = (params?.arguments ?? {}) as Record<string, unknown>;
+
+    try {
+      const result = await executeTool(toolName, toolArgs);
+      return jsonRpcOk(id, {
+        content: [{ type: "text", text: JSON.stringify(result) }],
+      });
+    } catch (err) {
+      return jsonRpcOk(id, {
+        content: [
+          {
+            type: "text",
+            text: `Erro: ${err instanceof Error ? err.message : String(err)}`,
+          },
+        ],
+        isError: true,
+      });
+    }
+  }
+
+  // ── método desconhecido ──────────────────────────────────────
+  return jsonRpcError(id, -32601, `Method not found: ${method}`);
 });
 
 // ----------------------------------------------------------------
-// Expor via HTTP (SSE) para o n8n MCP Client
+// Helpers JSON-RPC
 // ----------------------------------------------------------------
-const httpServer = createServer(server);
-Deno.serve(httpServer);
+function jsonRpcOk(id: unknown, result: unknown): Response {
+  return new Response(
+    JSON.stringify({ jsonrpc: "2.0", id, result }),
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+    }
+  );
+}
+
+function jsonRpcError(id: unknown, code: number, message: string): Response {
+  return new Response(
+    JSON.stringify({ jsonrpc: "2.0", id, error: { code, message } }),
+    {
+      status: 400,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+    }
+  );
+}
