@@ -1,4 +1,4 @@
-import { validarDisponibilidade, ValidacaoResult } from "../_shared/validarDisponibilidade.ts";
+import { validarDisponibilidade, ResultadoValidacao, criarClienteSupabase } from "../_shared/validarDisponibilidade.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -59,10 +59,12 @@ Deno.serve(async (req) => {
     }
 
     // Perform validation
-    const resultado: ValidacaoResult = await validarDisponibilidade(
-      local_atendimento,
+    const supabase = criarClienteSupabase();
+    const resultado: ResultadoValidacao = await validarDisponibilidade(
+      supabase,
       data_agendamento,
-      hora_agendamento
+      hora_agendamento,
+      local_atendimento
     );
 
     console.log(`[validar-agendamento] Resultado:`, resultado);
