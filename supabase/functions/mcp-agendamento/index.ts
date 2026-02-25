@@ -6,25 +6,21 @@
 import { Hono } from "hono";
 import { McpServer, StreamableHttpTransport } from "mcp-lite";
 
-// ─── Supabase client ──────────────────────────────────────────────────────────
+// ─── Edge Function client ─────────────────────────────────────────────────────
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-async function supabaseRPC(fn: string, params: Record<string, unknown>) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+async function callEdgeFunction(name: string, body: Record<string, unknown>) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      apikey: SUPABASE_SERVICE_KEY,
       Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
     },
-    body: JSON.stringify(params),
+    body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Supabase RPC ${fn} failed [${res.status}]: ${err}`);
-  }
-  return res.json();
+  const data = await res.text();
+  try { return JSON.parse(data); } catch { return data; }
 }
 
 // ─── MCP Server ───────────────────────────────────────────────────────────────
@@ -49,9 +45,9 @@ mcp.tool("listar_horarios_disponiveis", {
   },
   handler: async (args: { data: string; local?: string }) => {
     try {
-      const result = await supabaseRPC("listar_horarios_disponiveis", {
-        p_data: args.data,
-        p_local: args.local ?? null,
+      const result = await callEdgeFunction("listar-horarios-disponiveis", {
+        data: args.data,
+        local_atendimento: args.local ?? null,
       });
       return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
     } catch (e) {
@@ -76,10 +72,10 @@ mcp.tool("validar_horario", {
   },
   handler: async (args: { data_agendamento: string; hora_agendamento: string; local_atendimento: string }) => {
     try {
-      const result = await supabaseRPC("validar_horario", {
-        p_data: args.data_agendamento,
-        p_hora: args.hora_agendamento,
-        p_local: args.local_atendimento,
+      const result = await callEdgeFunction("validar-agendamento", {
+        data_agendamento: args.data_agendamento,
+        hora_agendamento: args.hora_agendamento,
+        local_atendimento: args.local_atendimento,
       });
       return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
     } catch (e) {
@@ -109,15 +105,15 @@ mcp.tool("criar_agendamento", {
   },
   handler: async (args: any) => {
     try {
-      const result = await supabaseRPC("criar_agendamento", {
-        p_nome_completo: args.nome_completo,
-        p_telefone_whatsapp: args.telefone_whatsapp,
-        p_tipo_atendimento: args.tipo_atendimento,
-        p_local_atendimento: args.local_atendimento,
-        p_convenio: args.convenio,
-        p_data_agendamento: args.data_agendamento,
-        p_hora_agendamento: args.hora_agendamento,
-        p_origem: "mcp",
+      const result = await callEdgeFunction("criar-agendamento", {
+        nome_completo: args.nome_completo,
+        telefone_whatsapp: args.telefone_whatsapp,
+        tipo_atendimento: args.tipo_atendimento,
+        local_atendimento: args.local_atendimento,
+        convenio: args.convenio,
+        data_agendamento: args.data_agendamento,
+        hora_agendamento: args.hora_agendamento,
+        origem: "mcp",
       });
       return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
     } catch (e) {
