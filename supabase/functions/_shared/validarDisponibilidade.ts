@@ -7,7 +7,7 @@ export interface ValidacaoResult {
 }
 
 // Map location to clinic slugs
-function getClinicaSlugsFromLocal(localAtendimento: string): string[] {
+export function getClinicaSlugsFromLocal(localAtendimento: string): string[] {
   const localLower = localAtendimento.toLowerCase();
   
   if (localLower.includes("clinicor")) {
@@ -23,7 +23,7 @@ function getClinicaSlugsFromLocal(localAtendimento: string): string[] {
 }
 
 // Generate time slots from start to end
-function gerarSlots(horaInicio: string, horaFim: string, intervaloMinutos: number): string[] {
+export function gerarSlots(horaInicio: string, horaFim: string, intervaloMinutos: number): string[] {
   const slots: string[] = [];
   const [startHour, startMin] = horaInicio.split(':').map(Number);
   const [endHour, endMin] = horaFim.split(':').map(Number);
@@ -42,7 +42,7 @@ function gerarSlots(horaInicio: string, horaFim: string, intervaloMinutos: numbe
 }
 
 // Check if time is within a block
-function horarioDentroBloqueio(horario: string, horaInicio: string | null, horaFim: string | null): boolean {
+export function horarioDentroBloqueio(horario: string, horaInicio: string | null, horaFim: string | null): boolean {
   if (!horaInicio || !horaFim) return false;
   
   const [h, m] = horario.split(':').map(Number);
