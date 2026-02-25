@@ -178,9 +178,10 @@ Deno.serve(async (req) => {
     // *** VALIDATE AVAILABILITY BEFORE INSERTING ***
     console.log(`[criar-agendamento] Validando disponibilidade...`);
     const validacaoDisponibilidade = await validarDisponibilidade(
-      body.local_atendimento,
+      supabase,
       body.data_agendamento,
-      body.hora_agendamento
+      body.hora_agendamento,
+      body.local_atendimento
     );
 
     if (!validacaoDisponibilidade.disponivel) {
