@@ -421,6 +421,33 @@ export type Database = {
         }
         Relationships: []
       }
+      horarios_disponiveis: {
+        Row: {
+          created_at: string | null
+          data: string
+          disponivel: boolean | null
+          hora: string
+          id: string
+          local: string
+        }
+        Insert: {
+          created_at?: string | null
+          data: string
+          disponivel?: boolean | null
+          hora: string
+          id?: string
+          local: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: string
+          disponivel?: boolean | null
+          hora?: string
+          id?: string
+          local?: string
+        }
+        Relationships: []
+      }
       lembretes_anuais: {
         Row: {
           created_at: string | null
@@ -818,7 +845,29 @@ export type Database = {
       }
     }
     Functions: {
-      buscar_paciente: { Args: { p_phone_number: string }; Returns: Json }
+      buscar_paciente: {
+        Args: { p_phone_number: string }
+        Returns: {
+          id: string
+          nome: string
+          phone_number: string
+        }[]
+      }
+      criar_agendamento: {
+        Args: {
+          p_convenio?: string
+          p_data: string
+          p_hora: string
+          p_local: string
+          p_nome_paciente: string
+          p_phone_number: string
+        }
+        Returns: {
+          agendamento_id: string
+          mensagem: string
+          sucesso: boolean
+        }[]
+      }
       decrypt_sensitive_data: {
         Args: { encrypted_data: string }
         Returns: string
@@ -840,10 +889,20 @@ export type Database = {
         }
         Returns: boolean
       }
+      listar_horarios_disponiveis: {
+        Args: { p_data: string; p_local: string }
+        Returns: {
+          data: string
+          disponivel: boolean
+          hora: string
+          id: string
+          local: string
+        }[]
+      }
       registrar_mensagem: {
         Args: {
           p_conteudo: string
-          p_direcao?: string
+          p_direcao: string
           p_message_id?: string
           p_metadata?: Json
           p_nome: string
@@ -851,11 +910,18 @@ export type Database = {
           p_remote_jid: string
           p_tipo_mensagem?: string
         }
-        Returns: Json
+        Returns: undefined
       }
       setup_totp: {
         Args: { p_backup_codes: string; p_secret: string; p_user_id: string }
         Returns: undefined
+      }
+      validar_horario: {
+        Args: { p_data: string; p_hora: string; p_local: string }
+        Returns: {
+          disponivel: boolean
+          mensagem: string
+        }[]
       }
     }
     Enums: {
