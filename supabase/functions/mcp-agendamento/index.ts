@@ -1,6 +1,11 @@
 // supabase/functions/mcp-agendamento/index.ts
-// MCP Server — Schema LOVABLE — Sem dependências externas
-// Protocolo JSON-RPC implementado manualmente
+// MCP Server — SDK oficial @modelcontextprotocol/sdk + Hono
+// Protocolo Streamable HTTP para compatibilidade com n8n MCP Client
+
+import { Hono } from "hono";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { z } from "zod";
 
 import {
   criarClienteSupabase,
@@ -10,242 +15,138 @@ import {
   resolverClinica,
 } from "../_shared/validarDisponibilidade.ts";
 
-// ─── Definição das tools ────────────────────
-const TOOLS = [
-  {
-    name: "listar_horarios_disponiveis",
-    description:
-      "Lista horários disponíveis para agendamento em uma data. Retorna slots livres com horário e local. Use ANTES de criar agendamento.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        data: {
-          type: "string",
-          description: "Data no formato YYYY-MM-DD (ex: 2026-03-02)",
-        },
-        local: {
-          type: "string",
-          description:
-            "Local: 'HGP', 'Clinicor', 'IOB' ou 'Vitria'. Vazio = todos.",
-        },
-      },
-      required: ["data"],
+// ─── Criar servidor MCP ─────────────────────
+function createMcpServer(): McpServer {
+  const server = new McpServer({
+    name: "dr-juliano-agendamento",
+    version: "1.0.0",
+  });
+
+  // Tool 1: listar_horarios_disponiveis
+  server.tool(
+    "listar_horarios_disponiveis",
+    "Lista horários disponíveis para agendamento em uma data. Retorna slots livres com horário e local. Use ANTES de criar agendamento.",
+    {
+      data: z.string().describe("Data no formato YYYY-MM-DD (ex: 2026-03-02)"),
+      local: z.string().optional().describe("Local: 'HGP', 'Clinicor', 'IOB' ou 'Vitria'. Vazio = todos."),
     },
-  },
-  {
-    name: "criar_agendamento",
-    description:
-      "Cria agendamento de consulta com Dr. Juliano. Valida disponibilidade antes. Sempre consulte listar_horarios_disponiveis antes.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        nome_completo: { type: "string", description: "Nome completo do paciente" },
-        telefone_whatsapp: { type: "string", description: "Telefone com DDD (ex: 5591991000303)" },
-        tipo_atendimento: { type: "string", description: "consulta, retorno, exame ou procedimento" },
-        local_atendimento: { type: "string", description: "HGP, Clinicor, IOB ou Vitria" },
-        convenio: { type: "string", description: "Bradesco, Unimed, Cassi, SulAmérica ou particular" },
-        data_agendamento: { type: "string", description: "Data YYYY-MM-DD" },
-        hora_agendamento: { type: "string", description: "Horário HH:MM" },
-      },
-      required: [
-        "nome_completo", "telefone_whatsapp", "tipo_atendimento",
-        "local_atendimento", "convenio", "data_agendamento", "hora_agendamento",
-      ],
-    },
-  },
-  {
-    name: "validar_horario",
-    description:
-      "Verifica se um horário específico está disponível. Retorna alternativas se indisponível.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        data_agendamento: { type: "string", description: "Data YYYY-MM-DD" },
-        hora_agendamento: { type: "string", description: "Horário HH:MM" },
-        local_atendimento: { type: "string", description: "HGP, Clinicor, IOB ou Vitria" },
-      },
-      required: ["data_agendamento", "hora_agendamento", "local_atendimento"],
-    },
-  },
-];
+    async ({ data, local }) => {
+      const supabase = criarClienteSupabase();
+      const slots = await listarHorariosDisponiveis(supabase, data, local);
 
-// ─── Handlers das tools ─────────────────────
-async function handleToolCall(
-  name: string,
-  args: Record<string, string>
-): Promise<{ content: { type: string; text: string }[] }> {
-  const supabase = criarClienteSupabase();
-
-  try {
-    switch (name) {
-      case "listar_horarios_disponiveis": {
-        const slots = await listarHorariosDisponiveis(supabase, args.data, args.local);
-
-        if (slots.length === 0) {
-          return {
-            content: [{
-              type: "text",
-              text: JSON.stringify({
-                disponivel: false,
-                mensagem: `Sem horários para ${args.data}${args.local ? ` no ${args.local}` : ""}. Tente outra data.`,
-                slots: [],
-              }),
-            }],
-          };
-        }
-
-        const porLocal: Record<string, string[]> = {};
-        for (const s of slots) {
-          if (!porLocal[s.local]) porLocal[s.local] = [];
-          porLocal[s.local].push(s.horario);
-        }
-
+      if (slots.length === 0) {
         return {
           content: [{
-            type: "text",
+            type: "text" as const,
             text: JSON.stringify({
-              disponivel: true,
-              data: args.data,
-              dia_semana: slots[0].dia_semana,
-              total_slots: slots.length,
-              por_local: porLocal,
-              slots,
+              disponivel: false,
+              mensagem: `Sem horários para ${data}${local ? ` no ${local}` : ""}. Tente outra data.`,
+              slots: [],
             }),
           }],
         };
       }
 
-      case "criar_agendamento": {
-        const resultado = await criarAgendamento(supabase, {
-          nome_completo: args.nome_completo,
-          telefone_whatsapp: args.telefone_whatsapp,
-          tipo_atendimento: args.tipo_atendimento,
-          local_atendimento: args.local_atendimento,
-          convenio: args.convenio,
-          data_agendamento: args.data_agendamento,
-          hora_agendamento: args.hora_agendamento,
-        });
-        return { content: [{ type: "text", text: JSON.stringify(resultado) }] };
+      const porLocal: Record<string, string[]> = {};
+      for (const s of slots) {
+        if (!porLocal[s.local]) porLocal[s.local] = [];
+        porLocal[s.local].push(s.horario);
       }
 
-      case "validar_horario": {
-        const resultado = await validarDisponibilidade(
-          supabase,
-          args.data_agendamento,
-          args.hora_agendamento,
-          args.local_atendimento
-        );
-        const clinica = resolverClinica(args.local_atendimento);
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify({
-              ...resultado,
-              data: args.data_agendamento,
-              horario: args.hora_agendamento,
-              local: clinica?.nome || args.local_atendimento,
-            }),
-          }],
-        };
-      }
-
-      default:
-        return {
-          content: [{ type: "text", text: JSON.stringify({ erro: `Tool "${name}" não encontrada` }) }],
-        };
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            disponivel: true,
+            data,
+            dia_semana: slots[0].dia_semana,
+            total_slots: slots.length,
+            por_local: porLocal,
+            slots,
+          }),
+        }],
+      };
     }
-  } catch (error) {
-    return {
-      content: [{ type: "text", text: JSON.stringify({ erro: (error as Error).message }) }],
-    };
-  }
+  );
+
+  // Tool 2: criar_agendamento
+  server.tool(
+    "criar_agendamento",
+    "Cria agendamento de consulta com Dr. Juliano. Valida disponibilidade antes. Sempre consulte listar_horarios_disponiveis antes.",
+    {
+      nome_completo: z.string().describe("Nome completo do paciente"),
+      telefone_whatsapp: z.string().describe("Telefone com DDD (ex: 5591991000303)"),
+      tipo_atendimento: z.string().describe("consulta, retorno, exame ou procedimento"),
+      local_atendimento: z.string().describe("HGP, Clinicor, IOB ou Vitria"),
+      convenio: z.string().describe("Bradesco, Unimed, Cassi, SulAmérica ou particular"),
+      data_agendamento: z.string().describe("Data YYYY-MM-DD"),
+      hora_agendamento: z.string().describe("Horário HH:MM"),
+    },
+    async (params) => {
+      const supabase = criarClienteSupabase();
+      const resultado = await criarAgendamento(supabase, params);
+      return { content: [{ type: "text" as const, text: JSON.stringify(resultado) }] };
+    }
+  );
+
+  // Tool 3: validar_horario
+  server.tool(
+    "validar_horario",
+    "Verifica se um horário específico está disponível. Retorna alternativas se indisponível.",
+    {
+      data_agendamento: z.string().describe("Data YYYY-MM-DD"),
+      hora_agendamento: z.string().describe("Horário HH:MM"),
+      local_atendimento: z.string().describe("HGP, Clinicor, IOB ou Vitria"),
+    },
+    async ({ data_agendamento, hora_agendamento, local_atendimento }) => {
+      const supabase = criarClienteSupabase();
+      const resultado = await validarDisponibilidade(supabase, data_agendamento, hora_agendamento, local_atendimento);
+      const clinica = resolverClinica(local_atendimento);
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            ...resultado,
+            data: data_agendamento,
+            horario: hora_agendamento,
+            local: clinica?.nome || local_atendimento,
+          }),
+        }],
+      };
+    }
+  );
+
+  return server;
 }
 
-// ─── CORS headers ───────────────────────────
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey",
-};
+// ─── Hono app ───────────────────────────────
+const app = new Hono();
 
-// ─── HTTP Server ────────────────────────────
-Deno.serve(async (req: Request) => {
-  // CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-
-  // GET = health check
-  if (req.method === "GET") {
-    return new Response(
-      JSON.stringify({
-        name: "dr-juliano-agendamento",
-        version: "1.0.0",
-        status: "online",
-        protocol: "mcp",
-        tools: TOOLS.map((t) => t.name),
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
-  // POST = JSON-RPC
-  if (req.method === "POST") {
-    try {
-      const body = await req.json();
-      const { method, params, id } = body;
-
-      let result: unknown;
-
-      switch (method) {
-        // MCP: initialize
-        case "initialize":
-          result = {
-            protocolVersion: "2024-11-05",
-            capabilities: { tools: {} },
-            serverInfo: { name: "dr-juliano-agendamento", version: "1.0.0" },
-          };
-          break;
-
-        // MCP: list tools
-        case "tools/list":
-          result = { tools: TOOLS };
-          break;
-
-        // MCP: call tool
-        case "tools/call": {
-          const toolName = params?.name;
-          const toolArgs = params?.arguments || {};
-          result = await handleToolCall(toolName, toolArgs);
-          break;
-        }
-
-        default:
-          return new Response(
-            JSON.stringify({
-              jsonrpc: "2.0",
-              id,
-              error: { code: -32601, message: `Method "${method}" not found` },
-            }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-      }
-
-      return new Response(
-        JSON.stringify({ jsonrpc: "2.0", id: id || 1, result }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    } catch (error) {
-      return new Response(
-        JSON.stringify({
-          jsonrpc: "2.0",
-          id: null,
-          error: { code: -32603, message: (error as Error).message },
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-  }
-
-  return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+// Health check
+app.get("/*", (c) => {
+  return c.json({
+    name: "dr-juliano-agendamento",
+    version: "1.0.0",
+    status: "online",
+    protocol: "mcp-streamable-http",
+    tools: ["listar_horarios_disponiveis", "criar_agendamento", "validar_horario"],
+  });
 });
+
+// MCP Streamable HTTP endpoint
+app.post("/*", async (c) => {
+  const server = createMcpServer();
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+
+  await server.connect(transport);
+
+  const response = await transport.handleRequest(c.req.raw);
+  return response;
+});
+
+// DELETE for session cleanup (MCP protocol)
+app.delete("/*", async (c) => {
+  return c.json({ message: "Session terminated" }, 200);
+});
+
+Deno.serve(app.fetch);
