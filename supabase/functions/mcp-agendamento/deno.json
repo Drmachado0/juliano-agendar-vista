@@ -2,9 +2,6 @@
   "imports": {
     "hono": "npm:hono@4.6.3",
     "hono/": "npm:hono@4.6.3/",
-    "@modelcontextprotocol/sdk/server/mcp.js": "npm:@modelcontextprotocol/sdk@1.11.0/server/mcp.js",
-    "@modelcontextprotocol/sdk/server/streamableHttp.js": "npm:@modelcontextprotocol/sdk@1.11.0/server/streamableHttp.js",
-    "@modelcontextprotocol/sdk/types.js": "npm:@modelcontextprotocol/sdk@1.11.0/types.js",
-    "zod": "npm:zod@3.23.8"
+    "mcp-lite": "npm:mcp-lite@0.8.2"
   }
 }
