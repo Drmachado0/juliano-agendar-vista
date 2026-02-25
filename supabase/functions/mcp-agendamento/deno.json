@@ -1,6 +1,7 @@
 {
   "imports": {
-    "hono": "npm:hono@^4.7.0",
-    "mcp-lite": "npm:mcp-lite@^0.10.0"
+    "mcp-lite": "npm:mcp-lite@^0.10.0",
+    "hono": "https://deno.land/x/hono@v4.3.11/mod.ts",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.49.1"
   }
 }
