@@ -2,7 +2,7 @@
 // Lógica adaptada ao schema do LOVABLE
 // Tabelas: disponibilidade_semanal, bloqueios_agenda, agendamentos, clinicas
 
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 // ─────────────────────────────────────────────
 // IDs das clínicas no banco do Lovable
