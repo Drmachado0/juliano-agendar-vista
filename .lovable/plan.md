@@ -1,52 +1,84 @@
 
 
-## Revisao Completa do Fluxo de Agendamento
+## Fix: MCP retornando horarios bloqueados como disponiveis
 
-### Status Atual
+### Causa raiz
 
-O fluxo de agendamento esta funcionando quase 100%. Todas as edge functions criticas estao operando corretamente:
+O MCP server chama funcoes RPC do banco (`listar_horarios_disponiveis`, `validar_horario`, `criar_agendamento`) que consultam a tabela estatica `horarios_disponiveis`. Essa tabela nao e usada pelo sistema real de disponibilidade, que usa `disponibilidade_semanal` + `bloqueios_agenda` + `agendamentos`.
 
-- **criar-lead**: OK - Cria lead no banco
-- **validar-agendamento**: OK - Valida disponibilidade (corrigido nesta sessao)
-- **confirmar-agendamento-whatsapp**: OK - Envia WhatsApp (corrigido nesta sessao)
-- **notificar-agendamento-email**: OK - Envia email com sucesso
-- **enviar-boas-vindas-lead**: OK - Executa a cada 2 min, nenhum lead pendente
+Resultado: o MCP ignora completamente bloqueios, agendamentos existentes e regras de disponibilidade semanal.
 
-### Unico Bug Encontrado
+### Solucao
 
-**`notificar-n8n`** - Erro "Body already consumed"
+Alterar o MCP para chamar as **Edge Functions** existentes (`listar-horarios-disponiveis`, `validar-agendamento`, `criar-agendamento`) via HTTP, em vez das funcoes RPC quebradas. Essas edge functions ja implementam toda a logica correta de disponibilidade.
 
-Na funcao `notificar-n8n`, quando a resposta do n8n e bem-sucedida, o codigo tenta ler o body com `.json()` e, se falhar, tenta `.text()`. O problema e que `.json()` ja consome o body internamente, entao o fallback `.text()` falha com "Body already consumed".
+### Mudancas
 
-### Correcao
+**Arquivo: `supabase/functions/mcp-agendamento/index.ts`**
 
-**Arquivo: `supabase/functions/notificar-n8n/index.ts`**
+1. Substituir `supabaseRPC()` por uma funcao `callEdgeFunction(name, body)` que faz POST para as edge functions existentes no mesmo projeto Supabase.
 
-Substituir as linhas 176-181 para ler o body uma unica vez como texto e depois tentar parsear como JSON:
+2. Atualizar os 3 handlers de tools:
+
+- **listar_horarios_disponiveis**: Chamar edge function `listar-horarios-disponiveis` com body `{ data, local_atendimento }` em vez de RPC
+- **validar_horario**: Chamar edge function `validar-agendamento` com body `{ data_agendamento, hora_agendamento, local_atendimento }` em vez de RPC
+- **criar_agendamento**: Chamar edge function `criar-agendamento` com body completo em vez de RPC
+
+### Detalhe tecnico
 
 ```text
-ANTES:
-  let n8nData;
-  try {
-    n8nData = await n8nResponse.json();
-  } catch {
-    n8nData = await n8nResponse.text();
-  }
+// Nova funcao helper
+async function callEdgeFunction(name: string, body: Record<string, unknown>) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.text();
+  try { return JSON.parse(data); } catch { return data; }
+}
 
-DEPOIS:
-  let n8nData;
-  const responseText = await n8nResponse.text();
-  try {
-    n8nData = JSON.parse(responseText);
-  } catch {
-    n8nData = responseText;
-  }
+// Tool 1 handler: chama listar-horarios-disponiveis
+handler: async (args) => {
+  const result = await callEdgeFunction("listar-horarios-disponiveis", {
+    data: args.data,
+    local_atendimento: args.local ?? null,
+  });
+  return { content: [{ type: "text", text: JSON.stringify(result) }] };
+}
+
+// Tool 2 handler: chama validar-agendamento
+handler: async (args) => {
+  const result = await callEdgeFunction("validar-agendamento", {
+    data_agendamento: args.data_agendamento,
+    hora_agendamento: args.hora_agendamento,
+    local_atendimento: args.local_atendimento,
+  });
+  return { content: [{ type: "text", text: JSON.stringify(result) }] };
+}
+
+// Tool 3 handler: chama criar-agendamento
+handler: async (args) => {
+  const result = await callEdgeFunction("criar-agendamento", {
+    nome_completo: args.nome_completo,
+    telefone_whatsapp: args.telefone_whatsapp,
+    tipo_atendimento: args.tipo_atendimento,
+    local_atendimento: args.local_atendimento,
+    convenio: args.convenio,
+    data_agendamento: args.data_agendamento,
+    hora_agendamento: args.hora_agendamento,
+    origem: "mcp",
+  });
+  return { content: [{ type: "text", text: JSON.stringify(result) }] };
+}
 ```
-
-Esta correcao le o body uma unica vez como texto e depois tenta converter para JSON via `JSON.parse`, evitando o erro de consumo duplo do body.
 
 ### Impacto
 
-- Baixo risco: a funcao `notificar-n8n` ja retorna `success: true` mesmo em caso de erro (para nao bloquear o fluxo principal)
-- A correcao garante que os logs do n8n sejam registrados corretamente sem erro
+- Corrige o problema: MCP passara a respeitar bloqueios, disponibilidade semanal e agendamentos existentes
+- Reutiliza toda a logica ja validada das edge functions existentes
+- Apenas 1 arquivo modificado: `supabase/functions/mcp-agendamento/index.ts`
 
