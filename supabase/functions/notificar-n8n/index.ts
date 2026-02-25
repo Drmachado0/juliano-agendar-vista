@@ -174,10 +174,11 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     let n8nData;
+    const responseText = await n8nResponse.text();
     try {
-      n8nData = await n8nResponse.json();
+      n8nData = JSON.parse(responseText);
     } catch {
-      n8nData = await n8nResponse.text();
+      n8nData = responseText;
     }
     
     console.log("Resposta n8n:", JSON.stringify(n8nData));
