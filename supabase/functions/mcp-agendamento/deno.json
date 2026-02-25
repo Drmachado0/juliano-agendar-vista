@@ -1,6 +1,1 @@
-{
-  "imports": {
-    "@modelcontextprotocol/sdk/": "npm:@modelcontextprotocol/sdk@1.12.1/",
-    "@supabase/mcp-utils": "npm:@supabase/mcp-utils@0.1.2"
-  }
-}
+{}
