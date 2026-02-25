@@ -1,5 +1,38 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getClinicaSlugsFromLocal, gerarSlots, horarioDentroBloqueio } from "../_shared/validarDisponibilidade.ts";
+
+// Local helpers (not imported from shared to avoid missing export errors)
+function getClinicaSlugsFromLocal(local: string): string[] {
+  const l = local.toLowerCase().trim();
+  if (l.includes("clinicor")) return ["clinicor"];
+  if (l.includes("hgp") || l.includes("hospital geral")) return ["hgp"];
+  if (l.includes("iob")) return ["iob"];
+  if (l.includes("vitria")) return ["vitria"];
+  if (l.includes("belém") || l.includes("belem")) return ["iob", "vitria"];
+  return [];
+}
+
+function gerarSlots(horaInicio: string, horaFim: string, intervaloMin: number): string[] {
+  const slots: string[] = [];
+  const [hI, mI] = horaInicio.split(":").map(Number);
+  const [hF, mF] = horaFim.split(":").map(Number);
+  let min = hI * 60 + mI;
+  const fim = hF * 60 + mF;
+  while (min + intervaloMin <= fim) {
+    const h = String(Math.floor(min / 60)).padStart(2, "0");
+    const m = String(min % 60).padStart(2, "0");
+    slots.push(`${h}:${m}`);
+    min += intervaloMin;
+  }
+  return slots;
+}
+
+function horarioDentroBloqueio(slot: string, inicio: string | null, fim: string | null): boolean {
+  if (!inicio || !fim) return false;
+  const s = slot.substring(0, 5);
+  const i = inicio.substring(0, 5);
+  const f = fim.substring(0, 5);
+  return s >= i && s < f;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
