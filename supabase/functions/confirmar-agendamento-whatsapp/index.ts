@@ -156,7 +156,8 @@ serve(async (req) => {
     console.log('[ConfirmarWhatsApp] Enviando para:', telefoneFormatado);
 
     // Enviar mensagem via Evolution API
-    const evolutionUrl = `${evolutionBaseUrl}/message/sendText/${evolutionInstance}`;
+    const baseUrlClean = evolutionBaseUrl.replace(/\/+$/, '');
+    const evolutionUrl = `${baseUrlClean}/message/sendText/${evolutionInstance}`;
     console.log('[ConfirmarWhatsApp] Evolution URL:', evolutionUrl);
     
     const evolutionResponse = await fetch(evolutionUrl, {
