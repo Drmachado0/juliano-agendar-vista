@@ -1,0 +1,517 @@
+openapi: 3.1.0
+info:
+  title: API de Agendamento - Dr. Juliano Machado
+  description: |
+    API pública para agendamento de consultas oftalmológicas.
+
+    ## Autenticação
+    Todas as rotas são **públicas** (sem JWT). Basta enviar o header `apikey` com a chave anônima do projeto.
+
+    ## Rate Limiting
+    - `criar-agendamento`: máximo **5 requisições por minuto** por IP.
+    - Headers de resposta incluem `X-RateLimit-Remaining` e `Retry-After` (quando limitado).
+
+    ## Locais de Atendimento
+    Valores aceitos para `local_atendimento`:
+    - `Clinicor – Paragominas`
+    - `Hospital Geral de Paragominas`
+    - `Belém (IOB / Vitria)`
+
+    ## Tipos de Atendimento
+    Valores aceitos: `Consulta`, `Retorno`, `Exame`, `Cirurgia`
+
+    ## Convênios
+    Valores comuns: `Particular`, `Bradesco`, `Unimed`, `Cassi`, `Sul América`, `Outro`
+  version: 1.0.0
+  contact:
+    name: Equipe Dr. Juliano Machado
+
+servers:
+  - url: https://cnpifhaszbonwlqruwnn.supabase.co/functions/v1
+    description: Produção
+
+paths:
+  /listar-horarios-disponiveis:
+    post:
+      operationId: listarHorariosDisponiveis
+      summary: Listar horários disponíveis
+      description: |
+        Retorna todos os horários disponíveis para uma data específica,
+        considerando disponibilidade semanal, overrides específicos,
+        bloqueios de agenda e agendamentos existentes.
+
+        - Horários do dia atual são filtrados com margem de 30 minutos.
+        - Se `local_atendimento` for omitido, retorna disponibilidade global.
+      tags:
+        - Disponibilidade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListarHorariosRequest'
+            examples:
+              comLocal:
+                summary: Com local específico
+                value:
+                  data: "2026-03-10"
+                  local_atendimento: "Clinicor – Paragominas"
+              semLocal:
+                summary: Sem filtro de local
+                value:
+                  data: "2026-03-10"
+      responses:
+        '200':
+          description: Lista de horários disponíveis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListarHorariosResponse'
+              examples:
+                comHorarios:
+                  summary: Horários disponíveis
+                  value:
+                    data: "2026-03-10"
+                    local_atendimento: "Clinicor – Paragominas"
+                    horarios_disponiveis: ["08:00", "08:30", "09:00", "09:30", "10:00", "14:00", "14:30"]
+                    total: 7
+                semHorarios:
+                  summary: Sem disponibilidade
+                  value:
+                    data: "2026-03-08"
+                    local_atendimento: "Clinicor – Paragominas"
+                    horarios_disponiveis: []
+                    total: 0
+                    motivo: "Não há expediente neste dia da semana"
+                bloqueado:
+                  summary: Data bloqueada
+                  value:
+                    data: "2026-03-15"
+                    local_atendimento: "Clinicor – Paragominas"
+                    horarios_disponiveis: []
+                    total: 0
+                    motivo: "Esta data está bloqueada"
+        '400':
+          description: Campos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: 'Campo "data" obrigatório no formato YYYY-MM-DD'
+        '405':
+          description: Método não permitido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erro interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /validar-agendamento:
+    post:
+      operationId: validarAgendamento
+      summary: Validar disponibilidade de horário
+      description: |
+        Verifica se um horário específico está disponível para agendamento.
+        Útil para validação em tempo real antes de criar o agendamento.
+
+        Validações realizadas:
+        - Data não pode ser no passado
+        - Verifica bloqueios de dia inteiro (feriados)
+        - Verifica bloqueios de intervalo
+        - Verifica disponibilidade específica (overrides)
+        - Verifica disponibilidade semanal
+        - Verifica se já existe agendamento no horário
+      tags:
+        - Disponibilidade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidarAgendamentoRequest'
+            example:
+              local_atendimento: "Clinicor – Paragominas"
+              data_agendamento: "2026-03-10"
+              hora_agendamento: "09:00"
+      responses:
+        '200':
+          description: Resultado da validação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidacaoResult'
+              examples:
+                disponivel:
+                  summary: Horário disponível
+                  value:
+                    disponivel: true
+                ocupado:
+                  summary: Horário ocupado
+                  value:
+                    disponivel: false
+                    motivo: "Este horário já está ocupado"
+                    codigo: "HORARIO_OCUPADO"
+                bloqueado:
+                  summary: Data bloqueada
+                  value:
+                    disponivel: false
+                    motivo: "Esta data está bloqueada para agendamentos"
+                    codigo: "BLOQUEIO_DIA_INTEIRO"
+                foraExpediente:
+                  summary: Fora do expediente
+                  value:
+                    disponivel: false
+                    motivo: "Este horário está fora do expediente"
+                    codigo: "FORA_EXPEDIENTE"
+        '400':
+          description: Campos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '405':
+          description: Método não permitido
+        '500':
+          description: Erro interno
+
+  /criar-agendamento:
+    post:
+      operationId: criarAgendamento
+      summary: Criar agendamento
+      description: |
+        Cria um novo agendamento de consulta. Realiza as seguintes etapas:
+
+        1. **Validação** de todos os campos obrigatórios
+        2. **Verificação de disponibilidade** (rejeita com 409 se indisponível)
+        3. **Inserção** no banco de dados
+        4. **Notificações** em background (WhatsApp + email)
+
+        O `status_crm` é atribuído automaticamente com base no `local_atendimento`:
+        - Clinicor → `CLINICOR`
+        - HGP → `HGP`
+        - Belém → `BELÉM`
+        - Outros → `NOVO LEAD`
+
+        O `status_funil` inicia como `agendado`.
+      tags:
+        - Agendamento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarAgendamentoRequest'
+            example:
+              nome_completo: "Maria da Silva"
+              telefone_whatsapp: "(91) 99999-8888"
+              data_nascimento: "1985-06-15"
+              email: "maria@email.com"
+              tipo_atendimento: "Consulta"
+              local_atendimento: "Clinicor – Paragominas"
+              convenio: "Particular"
+              data_agendamento: "2026-03-10"
+              hora_agendamento: "09:00"
+              aceita_primeiro_horario: false
+              aceita_contato_whatsapp_email: true
+              origem: "site"
+      responses:
+        '201':
+          description: Agendamento criado com sucesso
+          headers:
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+              description: Requisições restantes na janela atual
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CriarAgendamentoResponse'
+              example:
+                success: true
+                message: "Agendamento criado com sucesso"
+                data:
+                  id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        '400':
+          description: Dados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Dados inválidos: Nome completo é obrigatório (mínimo 3 caracteres), Tipo de atendimento inválido"
+        '409':
+          description: Horário indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictResponse'
+              example:
+                error: "Este horário já está ocupado"
+                code: "HORARIO_OCUPADO"
+        '429':
+          description: Rate limit excedido
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Segundos até poder tentar novamente
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+                enum: [0]
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+              description: Timestamp (ms) do reset da janela
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  retryAfter:
+                    type: integer
+              example:
+                error: "Muitas solicitações. Por favor, aguarde alguns minutos antes de tentar novamente."
+                retryAfter: 45
+        '500':
+          description: Erro interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ListarHorariosRequest:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: string
+          format: date
+          description: Data no formato YYYY-MM-DD
+          example: "2026-03-10"
+        local_atendimento:
+          type: string
+          description: Local de atendimento (opcional). Se omitido, retorna disponibilidade global.
+          example: "Clinicor – Paragominas"
+          enum:
+            - "Clinicor – Paragominas"
+            - "Hospital Geral de Paragominas"
+            - "Belém (IOB / Vitria)"
+
+    ListarHorariosResponse:
+      type: object
+      properties:
+        data:
+          type: string
+          format: date
+          description: Data consultada
+        local_atendimento:
+          type: string
+          nullable: true
+          description: Local filtrado (null se não especificado)
+        horarios_disponiveis:
+          type: array
+          items:
+            type: string
+            pattern: '^\d{2}:\d{2}$'
+          description: Lista de horários no formato HH:MM, ordenados
+          example: ["08:00", "08:30", "09:00"]
+        total:
+          type: integer
+          description: Quantidade de horários disponíveis
+        motivo:
+          type: string
+          description: Motivo quando não há horários (presente apenas quando total = 0)
+
+    ValidarAgendamentoRequest:
+      type: object
+      required:
+        - local_atendimento
+        - data_agendamento
+        - hora_agendamento
+      properties:
+        local_atendimento:
+          type: string
+          description: Local de atendimento
+          example: "Clinicor – Paragominas"
+        data_agendamento:
+          type: string
+          format: date
+          description: Data no formato YYYY-MM-DD
+          example: "2026-03-10"
+        hora_agendamento:
+          type: string
+          pattern: '^\d{2}:\d{2}(:\d{2})?$'
+          description: Horário no formato HH:MM
+          example: "09:00"
+
+    ValidacaoResult:
+      type: object
+      properties:
+        disponivel:
+          type: boolean
+          description: Se o horário está disponível
+        motivo:
+          type: string
+          description: Motivo da indisponibilidade (apenas quando disponivel = false)
+        codigo:
+          type: string
+          description: Código da indisponibilidade
+          enum:
+            - BLOQUEIO_DIA_INTEIRO
+            - BLOQUEIO_INTERVALO
+            - SEM_DISPONIBILIDADE
+            - HORARIO_OCUPADO
+            - DATA_PASSADA
+            - FORA_EXPEDIENTE
+
+    CriarAgendamentoRequest:
+      type: object
+      required:
+        - nome_completo
+        - telefone_whatsapp
+        - tipo_atendimento
+        - local_atendimento
+        - convenio
+        - data_agendamento
+        - hora_agendamento
+      properties:
+        nome_completo:
+          type: string
+          minLength: 3
+          maxLength: 200
+          description: Nome completo do paciente (apenas letras, espaços e acentos)
+          example: "Maria da Silva"
+        telefone_whatsapp:
+          type: string
+          minLength: 10
+          description: Telefone WhatsApp com DDD
+          example: "(91) 99999-8888"
+        data_nascimento:
+          type: string
+          format: date
+          nullable: true
+          description: Data de nascimento (opcional)
+          example: "1985-06-15"
+        email:
+          type: string
+          format: email
+          nullable: true
+          description: E-mail do paciente (opcional)
+          example: "maria@email.com"
+        tipo_atendimento:
+          type: string
+          enum:
+            - Consulta
+            - Retorno
+            - Exame
+            - Cirurgia
+          description: Tipo do atendimento
+        detalhe_exame_ou_cirurgia:
+          type: string
+          nullable: true
+          description: Detalhes adicionais para Exame ou Cirurgia
+        local_atendimento:
+          type: string
+          description: Local de atendimento
+          example: "Clinicor – Paragominas"
+        convenio:
+          type: string
+          description: Convênio do paciente
+          example: "Particular"
+        convenio_outro:
+          type: string
+          nullable: true
+          description: Nome do convênio quando selecionado "Outro"
+        data_agendamento:
+          type: string
+          format: date
+          description: Data desejada para a consulta
+          example: "2026-03-10"
+        hora_agendamento:
+          type: string
+          pattern: '^\d{2}:\d{2}(:\d{2})?$'
+          description: Horário desejado
+          example: "09:00"
+        aceita_primeiro_horario:
+          type: boolean
+          default: false
+          description: Aceita o primeiro horário disponível se não houver vaga
+        aceita_contato_whatsapp_email:
+          type: boolean
+          default: false
+          description: Aceita receber confirmação e lembretes
+        origem:
+          type: string
+          default: "site"
+          description: Origem do agendamento (site, whatsapp, telefone, etc.)
+
+    CriarAgendamentoResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Agendamento criado com sucesso"
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              description: ID do agendamento criado
+
+    ConflictResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum:
+            - BLOQUEIO_DIA_INTEIRO
+            - BLOQUEIO_INTERVALO
+            - SEM_DISPONIBILIDADE
+            - HORARIO_OCUPADO
+            - DATA_PASSADA
+            - FORA_EXPEDIENTE
+            - HORARIO_INDISPONIVEL
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Mensagem de erro
+        disponivel:
+          type: boolean
+          description: Sempre false em erros de validação (presente apenas em validar-agendamento)
+
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: apikey
+      description: Chave anônima do projeto (publishable key)
+
+security:
+  - apiKey: []
+
+tags:
+  - name: Disponibilidade
+    description: Consulta de horários e validação de disponibilidade
+  - name: Agendamento
+    description: Criação de agendamentos
