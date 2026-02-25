@@ -151,6 +151,11 @@ Deno.serve(async (req: Request) => {
     params: Record<string, unknown>;
   };
 
+  // ── notifications/* (SSE ack) ─────────────────────────────
+  if (method.startsWith("notifications/")) {
+    return sseResponse({ jsonrpc: "2.0", id, result: {} });
+  }
+
   // ── initialize ──────────────────────────────────────────────
   if (method === "initialize") {
     return jsonRpcOk(id, {
@@ -218,4 +223,16 @@ function jsonRpcError(id: unknown, code: number, message: string): Response {
       },
     }
   );
+}
+
+function sseResponse(data: unknown): Response {
+  const payload = `data: ${JSON.stringify(data)}\n\n`;
+  return new Response(payload, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
 }
