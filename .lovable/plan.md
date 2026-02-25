@@ -1,62 +1,76 @@
 
 
-## Fix: "Erro ao verificar disponibilidade do horário"
+## Fix: Email e WhatsApp de confirmacao nao sao enviados no fluxo /agendar
 
-### Root Cause
+### Causa raiz
 
-The `validar-agendamento` edge function has a signature mismatch with the shared `validarDisponibilidade` function:
+O fluxo da pagina `/agendar` usa dois passos:
+1. `criar-lead` -- cria o registro no banco SEM data/hora, SEM notificacoes
+2. `converterLeadEmAgendamento` -- faz UPDATE no registro com data/hora, mas NAO dispara notificacoes
 
-**Current (broken) call on line 62:**
+A edge function `criar-agendamento` (que envia email + WhatsApp) nao e usada neste fluxo. Entao, apos o agendamento ser confirmado, nenhuma notificacao e enviada.
+
+### Solucao
+
+Adicionar chamadas para as edge functions `confirmar-agendamento-whatsapp` e `notificar-agendamento-email` no `handleSubmit` da pagina `Agendar.tsx`, logo apos a conversao bem-sucedida do lead.
+
+### Mudancas
+
+**Arquivo: `src/pages/Agendar.tsx`**
+
+Apos a linha que chama `notificarN8n` (dentro do bloco `if (leadId)` apos a conversao com sucesso), adicionar duas chamadas em paralelo:
+
+1. Chamar `confirmar-agendamento-whatsapp` passando os dados do agendamento
+2. Chamar `notificar-agendamento-email` passando os dados do agendamento
+
+Ambas chamadas serao feitas com `Promise.allSettled` para nao bloquear o fluxo caso uma falhe -- o usuario ja vera a tela de sucesso independentemente.
+
+### Detalhe tecnico
+
+No `handleSubmit`, apos `notificarN8n`, adicionar:
+
 ```typescript
-const resultado: ValidacaoResult = await validarDisponibilidade(
-  local_atendimento,   // <-- passing string where SupabaseClient expected
-  data_agendamento,    // <-- this becomes "data" (OK)
-  hora_agendamento     // <-- this becomes "hora" but "local" is missing
-);
+// Disparar notificacoes em background (nao bloqueia o fluxo)
+Promise.allSettled([
+  supabase.functions.invoke('confirmar-agendamento-whatsapp', {
+    body: {
+      agendamento_data: {
+        nome_completo: formData.fullName,
+        telefone_whatsapp: formData.phone,
+        tipo_atendimento: formData.appointmentTypeName || formData.appointmentType,
+        local_atendimento: localAtendimento,
+        data_agendamento: formData.selectedDate ? format(formData.selectedDate, 'yyyy-MM-dd') : '',
+        hora_agendamento: formData.selectedTime,
+        convenio: formData.insuranceName || formData.insurance,
+      }
+    },
+  }),
+  supabase.functions.invoke('notificar-agendamento-email', {
+    body: {
+      nome_completo: formData.fullName,
+      telefone_whatsapp: formData.phone,
+      email_paciente: formData.email || null,
+      data_nascimento: formData.birthDate || null,
+      tipo_atendimento: formData.appointmentTypeName || formData.appointmentType,
+      local_atendimento: localAtendimento,
+      convenio: formData.insuranceName || formData.insurance,
+      convenio_outro: formData.insurance === 'outro' ? formData.otherInsurance : null,
+      data_agendamento: formData.selectedDate ? format(formData.selectedDate, 'yyyy-MM-dd') : '',
+      hora_agendamento: formData.selectedTime,
+    },
+  }),
+]).then(results => {
+  results.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      console.error(`Notificacao ${i} falhou:`, r.reason);
+    }
+  });
+});
 ```
 
-**Expected signature:**
+Tambem sera necessario adicionar o import do `supabase` client no topo do arquivo:
 ```typescript
-validarDisponibilidade(supabase: SupabaseClient, data: string, hora: string, local: string)
+import { supabase } from "@/integrations/supabase/client";
 ```
 
-Two bugs:
-1. `ValidacaoResult` type doesn't exist -- the export is `ResultadoValidacao`
-2. The supabase client is not being created or passed; arguments are shifted
-
-### Changes
-
-**File: `supabase/functions/validar-agendamento/index.ts`**
-
-1. Fix the import to use `ResultadoValidacao` and also import `criarClienteSupabase`
-2. Create a supabase client before calling `validarDisponibilidade`
-3. Fix the function call to pass all 4 arguments in the correct order: `(supabase, data_agendamento, hora_agendamento, local_atendimento)`
-
-### Technical Detail
-
-```text
-BEFORE (line 1):
-  import { validarDisponibilidade, ValidacaoResult } from "...";
-
-AFTER:
-  import { validarDisponibilidade, ResultadoValidacao, criarClienteSupabase } from "...";
-
-BEFORE (lines 62-66):
-  const resultado: ValidacaoResult = await validarDisponibilidade(
-    local_atendimento,
-    data_agendamento,
-    hora_agendamento
-  );
-
-AFTER:
-  const supabase = criarClienteSupabase();
-  const resultado: ResultadoValidacao = await validarDisponibilidade(
-    supabase,
-    data_agendamento,
-    hora_agendamento,
-    local_atendimento
-  );
-```
-
-This is a 2-line import change + 2-line body change. No other files need modification.
-
+Nenhuma outra mudanca necessaria. Apenas 1 arquivo modificado.
