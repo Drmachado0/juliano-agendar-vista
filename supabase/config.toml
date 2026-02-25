@@ -66,3 +66,6 @@ verify_jwt = false
 [functions.buscar-pacientes-saudevianet]
 verify_jwt = false
 
+[functions.listar-horarios-disponiveis]
+verify_jwt = false
+
