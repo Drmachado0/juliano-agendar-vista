@@ -1,76 +1,60 @@
 
+# Corrigir Notificações de Email/WhatsApp via MCP/n8n
 
-# Adicionar tool `listar_datas_disponiveis` ao MCP
+## Problema
+A edge function `criar-agendamento` usa `(globalThis as any).EdgeRuntime?.waitUntil?.(...)` para disparar notificações em background. Esse objeto nao existe em Supabase Edge Functions (Deno), entao as notificações de email e WhatsApp **nunca sao executadas** quando o agendamento vem via MCP ou n8n.
 
-## Objetivo
-Permitir que o agente do n8n consulte todas as datas com vagas disponíveis em um mês inteiro, para oferecer opções ao paciente sem precisar testar data por data.
+Pelo site funciona porque o frontend (`/agendar`) dispara as notificações diretamente apos a criaçao.
 
-## O que será feito
+## Soluçao
+Substituir o padrao `EdgeRuntime.waitUntil` por execuçao direta das notificações (fire-and-forget com `.catch()` para nao bloquear a resposta ao cliente).
 
-### 1. Criar a Edge Function `listar-datas-disponiveis`
-Nova função que recebe `mes`, `ano` e `local_atendimento` (opcional) e retorna um array com as datas que possuem vagas e a quantidade de slots livres em cada uma.
+## Alteraçao
 
-A lógica já existe no frontend (`src/services/disponibilidadePublica.ts` -> `listarDatasComSlotsDisponiveis`), será portada para uma Edge Function Deno com acesso direto ao banco.
+### Arquivo: `supabase/functions/criar-agendamento/index.ts`
 
-**Entrada (POST JSON):**
-```json
-{
-  "mes": 3,
-  "ano": 2026,
-  "local_atendimento": "Clinicor"
-}
+Substituir o bloco de notificações (linhas ~168-210) que usa `EdgeRuntime.waitUntil` por:
+
+```typescript
+// Fire-and-forget: dispara notificações sem bloquear a resposta
+const notifyWhatsApp = supabase.functions.invoke('confirmar-agendamento-whatsapp', {
+  body: {
+    agendamento_data: {
+      nome_completo: sanitizedData.nome_completo,
+      telefone_whatsapp: sanitizedData.telefone_whatsapp,
+      tipo_atendimento: sanitizedData.tipo_atendimento,
+      local_atendimento: sanitizedData.local_atendimento,
+      data_agendamento: sanitizedData.data_agendamento,
+      hora_agendamento: sanitizedData.hora_agendamento,
+      convenio: sanitizedData.convenio,
+    }
+  },
+}).then(() => console.log('[criar-agendamento] WhatsApp notification sent'))
+  .catch((err) => console.error('[criar-agendamento] WhatsApp notification failed:', err));
+
+const notifyEmail = supabase.functions.invoke('notificar-agendamento-email', {
+  body: {
+    nome_completo: sanitizedData.nome_completo,
+    telefone_whatsapp: sanitizedData.telefone_whatsapp,
+    email_paciente: sanitizedData.email,
+    data_nascimento: sanitizedData.data_nascimento,
+    tipo_atendimento: sanitizedData.tipo_atendimento,
+    detalhe_exame_ou_cirurgia: sanitizedData.detalhe_exame_ou_cirurgia,
+    local_atendimento: sanitizedData.local_atendimento,
+    convenio: sanitizedData.convenio,
+    convenio_outro: sanitizedData.convenio_outro,
+    data_agendamento: sanitizedData.data_agendamento,
+    hora_agendamento: sanitizedData.hora_agendamento,
+  },
+}).then(() => console.log('[criar-agendamento] Email notification sent'))
+  .catch((err) => console.error('[criar-agendamento] Email notification failed:', err));
+
+// Aguarda ambas sem bloquear o retorno (best-effort)
+Promise.allSettled([notifyWhatsApp, notifyEmail]);
 ```
 
-**Saída:**
-```json
-{
-  "mes": 3,
-  "ano": 2026,
-  "local_atendimento": "Clinicor",
-  "datas_disponiveis": [
-    { "data": "2026-03-19", "slots_disponiveis": 7 },
-    { "data": "2026-03-20", "slots_disponiveis": 5 },
-    { "data": "2026-03-21", "slots_disponiveis": 8 }
-  ],
-  "total_datas": 3
-}
-```
-
-### 2. Registrar a tool no MCP server
-Adicionar `listar_datas_disponiveis` ao array `TOOLS` e ao `executeTool` em `supabase/functions/mcp-agendamento/index.ts`.
-
-**Definição da tool:**
-- name: `listar_datas_disponiveis`
-- description: "Lista todas as datas de um mês que possuem horários disponíveis, com a quantidade de vagas em cada data."
-- Parâmetros: `mes` (number, 1-12), `ano` (number), `local` (string, opcional)
-
-## Detalhes Técnicos
-
-### Edge Function `listar-datas-disponiveis/index.ts`
-- Reutiliza os mesmos helpers já usados em `listar-horarios-disponiveis` (mapeamento de clínica, geração de slots, verificação de bloqueios)
-- Itera todos os dias do mês solicitado (ignorando datas passadas)
-- Para cada dia: verifica disponibilidade semanal, disponibilidade específica, bloqueios de dia inteiro, bloqueios de intervalo e agendamentos existentes
-- Retorna apenas datas com pelo menos 1 slot livre
-- JWT desabilitado (público, igual às outras funções de agendamento)
-
-### Alterações no MCP server (`mcp-agendamento/index.ts`)
-- Adicionar entrada no array `TOOLS` com o schema da nova tool
-- Adicionar handler no `executeTool` que chama `callEdgeFunction("listar-datas-disponiveis", ...)`
-
-### Arquivos modificados/criados
-1. **Novo:** `supabase/functions/listar-datas-disponiveis/index.ts`
-2. **Editado:** `supabase/functions/mcp-agendamento/index.ts` (adicionar tool)
-
-### Uso no n8n (JSON-RPC)
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/call",
-  "params": {
-    "name": "listar_datas_disponiveis",
-    "arguments": { "mes": 3, "ano": 2026, "local": "Clinicor" }
-  }
-}
-```
-
+## Impacto
+- Agendamentos criados via MCP (n8n) passarao a enviar email e WhatsApp corretamente
+- Agendamentos via site continuam funcionando (frontend ja dispara independentemente)
+- Nenhuma alteraçao de schema ou migraçao necessaria
+- Apenas 1 arquivo editado
