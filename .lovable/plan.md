@@ -1,84 +1,76 @@
 
 
-## Fix: MCP retornando horarios bloqueados como disponiveis
+# Adicionar tool `listar_datas_disponiveis` ao MCP
 
-### Causa raiz
+## Objetivo
+Permitir que o agente do n8n consulte todas as datas com vagas disponíveis em um mês inteiro, para oferecer opções ao paciente sem precisar testar data por data.
 
-O MCP server chama funcoes RPC do banco (`listar_horarios_disponiveis`, `validar_horario`, `criar_agendamento`) que consultam a tabela estatica `horarios_disponiveis`. Essa tabela nao e usada pelo sistema real de disponibilidade, que usa `disponibilidade_semanal` + `bloqueios_agenda` + `agendamentos`.
+## O que será feito
 
-Resultado: o MCP ignora completamente bloqueios, agendamentos existentes e regras de disponibilidade semanal.
+### 1. Criar a Edge Function `listar-datas-disponiveis`
+Nova função que recebe `mes`, `ano` e `local_atendimento` (opcional) e retorna um array com as datas que possuem vagas e a quantidade de slots livres em cada uma.
 
-### Solucao
+A lógica já existe no frontend (`src/services/disponibilidadePublica.ts` -> `listarDatasComSlotsDisponiveis`), será portada para uma Edge Function Deno com acesso direto ao banco.
 
-Alterar o MCP para chamar as **Edge Functions** existentes (`listar-horarios-disponiveis`, `validar-agendamento`, `criar-agendamento`) via HTTP, em vez das funcoes RPC quebradas. Essas edge functions ja implementam toda a logica correta de disponibilidade.
-
-### Mudancas
-
-**Arquivo: `supabase/functions/mcp-agendamento/index.ts`**
-
-1. Substituir `supabaseRPC()` por uma funcao `callEdgeFunction(name, body)` que faz POST para as edge functions existentes no mesmo projeto Supabase.
-
-2. Atualizar os 3 handlers de tools:
-
-- **listar_horarios_disponiveis**: Chamar edge function `listar-horarios-disponiveis` com body `{ data, local_atendimento }` em vez de RPC
-- **validar_horario**: Chamar edge function `validar-agendamento` com body `{ data_agendamento, hora_agendamento, local_atendimento }` em vez de RPC
-- **criar_agendamento**: Chamar edge function `criar-agendamento` com body completo em vez de RPC
-
-### Detalhe tecnico
-
-```text
-// Nova funcao helper
-async function callEdgeFunction(name: string, body: Record<string, unknown>) {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
-    },
-    body: JSON.stringify(body),
-  });
-  const data = await res.text();
-  try { return JSON.parse(data); } catch { return data; }
-}
-
-// Tool 1 handler: chama listar-horarios-disponiveis
-handler: async (args) => {
-  const result = await callEdgeFunction("listar-horarios-disponiveis", {
-    data: args.data,
-    local_atendimento: args.local ?? null,
-  });
-  return { content: [{ type: "text", text: JSON.stringify(result) }] };
-}
-
-// Tool 2 handler: chama validar-agendamento
-handler: async (args) => {
-  const result = await callEdgeFunction("validar-agendamento", {
-    data_agendamento: args.data_agendamento,
-    hora_agendamento: args.hora_agendamento,
-    local_atendimento: args.local_atendimento,
-  });
-  return { content: [{ type: "text", text: JSON.stringify(result) }] };
-}
-
-// Tool 3 handler: chama criar-agendamento
-handler: async (args) => {
-  const result = await callEdgeFunction("criar-agendamento", {
-    nome_completo: args.nome_completo,
-    telefone_whatsapp: args.telefone_whatsapp,
-    tipo_atendimento: args.tipo_atendimento,
-    local_atendimento: args.local_atendimento,
-    convenio: args.convenio,
-    data_agendamento: args.data_agendamento,
-    hora_agendamento: args.hora_agendamento,
-    origem: "mcp",
-  });
-  return { content: [{ type: "text", text: JSON.stringify(result) }] };
+**Entrada (POST JSON):**
+```json
+{
+  "mes": 3,
+  "ano": 2026,
+  "local_atendimento": "Clinicor"
 }
 ```
 
-### Impacto
+**Saída:**
+```json
+{
+  "mes": 3,
+  "ano": 2026,
+  "local_atendimento": "Clinicor",
+  "datas_disponiveis": [
+    { "data": "2026-03-19", "slots_disponiveis": 7 },
+    { "data": "2026-03-20", "slots_disponiveis": 5 },
+    { "data": "2026-03-21", "slots_disponiveis": 8 }
+  ],
+  "total_datas": 3
+}
+```
 
-- Corrige o problema: MCP passara a respeitar bloqueios, disponibilidade semanal e agendamentos existentes
-- Reutiliza toda a logica ja validada das edge functions existentes
-- Apenas 1 arquivo modificado: `supabase/functions/mcp-agendamento/index.ts`
+### 2. Registrar a tool no MCP server
+Adicionar `listar_datas_disponiveis` ao array `TOOLS` e ao `executeTool` em `supabase/functions/mcp-agendamento/index.ts`.
+
+**Definição da tool:**
+- name: `listar_datas_disponiveis`
+- description: "Lista todas as datas de um mês que possuem horários disponíveis, com a quantidade de vagas em cada data."
+- Parâmetros: `mes` (number, 1-12), `ano` (number), `local` (string, opcional)
+
+## Detalhes Técnicos
+
+### Edge Function `listar-datas-disponiveis/index.ts`
+- Reutiliza os mesmos helpers já usados em `listar-horarios-disponiveis` (mapeamento de clínica, geração de slots, verificação de bloqueios)
+- Itera todos os dias do mês solicitado (ignorando datas passadas)
+- Para cada dia: verifica disponibilidade semanal, disponibilidade específica, bloqueios de dia inteiro, bloqueios de intervalo e agendamentos existentes
+- Retorna apenas datas com pelo menos 1 slot livre
+- JWT desabilitado (público, igual às outras funções de agendamento)
+
+### Alterações no MCP server (`mcp-agendamento/index.ts`)
+- Adicionar entrada no array `TOOLS` com o schema da nova tool
+- Adicionar handler no `executeTool` que chama `callEdgeFunction("listar-datas-disponiveis", ...)`
+
+### Arquivos modificados/criados
+1. **Novo:** `supabase/functions/listar-datas-disponiveis/index.ts`
+2. **Editado:** `supabase/functions/mcp-agendamento/index.ts` (adicionar tool)
+
+### Uso no n8n (JSON-RPC)
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "listar_datas_disponiveis",
+    "arguments": { "mes": 3, "ano": 2026, "local": "Clinicor" }
+  }
+}
+```
 
