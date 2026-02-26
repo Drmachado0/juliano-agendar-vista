@@ -79,6 +79,20 @@ const TOOLS = [
       ],
     },
   },
+  {
+    name: "listar_datas_disponiveis",
+    description:
+      "Lista todas as datas de um mês que possuem horários disponíveis, com a quantidade de vagas em cada data.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        mes:   { type: "number", description: "Mês (1-12)" },
+        ano:   { type: "number", description: "Ano (ex: 2026)" },
+        local: { type: "string", description: "Clinicor | HGP | IOB | Vitria (opcional)" },
+      },
+      required: ["mes", "ano"],
+    },
+  },
 ];
 
 // ----------------------------------------------------------------
@@ -113,6 +127,14 @@ async function executeTool(
       data_agendamento:  args.data_agendamento,
       hora_agendamento:  args.hora_agendamento,
       origem:            "mcp",
+    });
+  }
+
+  if (name === "listar_datas_disponiveis") {
+    return await callEdgeFunction("listar-datas-disponiveis", {
+      mes: args.mes,
+      ano: args.ano,
+      local_atendimento: args.local ?? null,
     });
   }
 
