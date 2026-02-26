@@ -234,50 +234,41 @@ Deno.serve(async (req) => {
 
     console.log(`[criar-agendamento] Created appointment: ${data.id}`);
 
-    // Trigger notifications in background (non-blocking)
-    (globalThis as any).EdgeRuntime?.waitUntil?.((async () => {
-      try {
-        // WhatsApp confirmation
-        await supabase.functions.invoke('confirmar-agendamento-whatsapp', {
-          body: {
-            agendamento_data: {
-              nome_completo: sanitizedData.nome_completo,
-              telefone_whatsapp: sanitizedData.telefone_whatsapp,
-              tipo_atendimento: sanitizedData.tipo_atendimento,
-              local_atendimento: sanitizedData.local_atendimento,
-              data_agendamento: sanitizedData.data_agendamento,
-              hora_agendamento: sanitizedData.hora_agendamento,
-              convenio: sanitizedData.convenio,
-            }
-          },
-        });
-        console.log(`[criar-agendamento] WhatsApp notification sent`);
-      } catch (err) {
-        console.error(`[criar-agendamento] WhatsApp notification failed:`, err);
-      }
+    // Fire-and-forget: dispara notificações sem bloquear a resposta
+    const notifyWhatsApp = supabase.functions.invoke('confirmar-agendamento-whatsapp', {
+      body: {
+        agendamento_data: {
+          nome_completo: sanitizedData.nome_completo,
+          telefone_whatsapp: sanitizedData.telefone_whatsapp,
+          tipo_atendimento: sanitizedData.tipo_atendimento,
+          local_atendimento: sanitizedData.local_atendimento,
+          data_agendamento: sanitizedData.data_agendamento,
+          hora_agendamento: sanitizedData.hora_agendamento,
+          convenio: sanitizedData.convenio,
+        }
+      },
+    }).then(() => console.log('[criar-agendamento] WhatsApp notification sent'))
+      .catch((err: unknown) => console.error('[criar-agendamento] WhatsApp notification failed:', err));
 
-      try {
-        // Email notification
-        await supabase.functions.invoke('notificar-agendamento-email', {
-          body: {
-            nome_completo: sanitizedData.nome_completo,
-            telefone_whatsapp: sanitizedData.telefone_whatsapp,
-            email_paciente: sanitizedData.email,
-            data_nascimento: sanitizedData.data_nascimento,
-            tipo_atendimento: sanitizedData.tipo_atendimento,
-            detalhe_exame_ou_cirurgia: sanitizedData.detalhe_exame_ou_cirurgia,
-            local_atendimento: sanitizedData.local_atendimento,
-            convenio: sanitizedData.convenio,
-            convenio_outro: sanitizedData.convenio_outro,
-            data_agendamento: sanitizedData.data_agendamento,
-            hora_agendamento: sanitizedData.hora_agendamento,
-          },
-        });
-        console.log(`[criar-agendamento] Email notification sent`);
-      } catch (err) {
-        console.error(`[criar-agendamento] Email notification failed:`, err);
-      }
-    })()) ?? Promise.resolve();
+    const notifyEmail = supabase.functions.invoke('notificar-agendamento-email', {
+      body: {
+        nome_completo: sanitizedData.nome_completo,
+        telefone_whatsapp: sanitizedData.telefone_whatsapp,
+        email_paciente: sanitizedData.email,
+        data_nascimento: sanitizedData.data_nascimento,
+        tipo_atendimento: sanitizedData.tipo_atendimento,
+        detalhe_exame_ou_cirurgia: sanitizedData.detalhe_exame_ou_cirurgia,
+        local_atendimento: sanitizedData.local_atendimento,
+        convenio: sanitizedData.convenio,
+        convenio_outro: sanitizedData.convenio_outro,
+        data_agendamento: sanitizedData.data_agendamento,
+        hora_agendamento: sanitizedData.hora_agendamento,
+      },
+    }).then(() => console.log('[criar-agendamento] Email notification sent'))
+      .catch((err: unknown) => console.error('[criar-agendamento] Email notification failed:', err));
+
+    // Aguarda ambas sem bloquear o retorno (best-effort)
+    Promise.allSettled([notifyWhatsApp, notifyEmail]);
 
     return new Response(
       JSON.stringify({ 
