@@ -93,6 +93,19 @@ const TOOLS = [
       required: ["mes", "ano"],
     },
   },
+  {
+    name: "cancelar_agendamento",
+    description:
+      "Cancela o próximo agendamento futuro de um paciente pelo telefone ou pelo ID do agendamento.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        agendamento_id: { type: "string", description: "UUID do agendamento (opcional se telefone informado)" },
+        telefone:       { type: "string", description: "Telefone do paciente (opcional se agendamento_id informado)" },
+        motivo:         { type: "string", description: "Motivo do cancelamento (opcional)" },
+      },
+    },
+  },
 ];
 
 // ----------------------------------------------------------------
@@ -135,6 +148,14 @@ async function executeTool(
       mes: args.mes,
       ano: args.ano,
       local_atendimento: args.local ?? null,
+    });
+  }
+
+  if (name === "cancelar_agendamento") {
+    return await callEdgeFunction("cancelar-agendamento", {
+      agendamento_id: args.agendamento_id ?? null,
+      telefone: args.telefone ?? null,
+      motivo: args.motivo ?? null,
     });
   }
 
