@@ -72,6 +72,9 @@ verify_jwt = false
 [functions.listar-datas-disponiveis]
 verify_jwt = false
 
+[functions.cancelar-agendamento]
+verify_jwt = false
+
 [functions.mcp-agendamento]
 verify_jwt = false
 
