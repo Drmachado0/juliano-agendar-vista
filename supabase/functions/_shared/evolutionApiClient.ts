@@ -20,7 +20,7 @@ export interface SendMessageResult {
  */
 export function getEvolutionConfig(): EvolutionConfig {
   const baseUrl = Deno.env.get('EVOLUTION_API_BASE_URL');
-  const instance = Deno.env.get('EVOLUTION_API_INSTANCE') || 'Site';
+  const instance = Deno.env.get('EVOLUTION_API_INSTANCE') || 'Agente ia';
   const token = Deno.env.get('EVOLUTION_API_TOKEN');
 
   if (!baseUrl) {
