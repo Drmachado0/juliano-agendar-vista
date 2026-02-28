@@ -62,7 +62,7 @@ serve(async (req: Request): Promise<Response> => {
     // 2. Get Evolution API config
     let evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
     const evolutionToken = Deno.env.get("EVOLUTION_API_TOKEN");
-    const instanceName = Deno.env.get("EVOLUTION_API_INSTANCE") || "SITEIA";
+    const instanceName = Deno.env.get("EVOLUTION_API_INSTANCE") || "Agente ia";
 
     if (!evolutionBaseUrl || !evolutionToken) {
       console.error("[enviar-whatsapp-queue] Configuração Evolution ausente");
