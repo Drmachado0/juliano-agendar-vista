@@ -1,40 +1,68 @@
 
 
-# Diagnóstico: Erro na confirmação de agendamento
+# Revisao do Sistema de Bloqueios - Bug Critico Encontrado
 
-## Problema identificado
+## Problema Principal
 
-O bug esta no fluxo de confirmacao (Step 4). Quando o paciente clica em "Confirmar agendamento", o sistema tenta fazer um **UPDATE direto na tabela `agendamentos`** usando o cliente Supabase do navegador (chave anonima). Porem, a tabela `agendamentos` tem politicas RLS que **so permitem UPDATE para admins autenticados**.
+O sistema de bloqueios tem um **bug critico de seguranca/funcionalidade**: a tabela `bloqueios_agenda` tem RLS que permite apenas admins (`has_role(auth.uid(), 'admin')`) fazerem SELECT. Porem, o servico publico `src/services/disponibilidadePublica.ts` consulta essa tabela diretamente do navegador usando o cliente anonimo (sem autenticacao).
 
-Fluxo atual:
-1. Step 2 → edge function `criar-lead` cria o registro (usa service role key, funciona)
-2. Step 4 → `converterLeadEmAgendamento()` tenta `supabase.from('agendamentos').update(...)` **direto do navegador** → **FALHA silenciosa por RLS**
+**Resultado**: bloqueios criados pelo admin sao **completamente ignorados** no formulario publico de agendamento. Pacientes conseguem agendar em horarios bloqueados.
 
-O update retorna sem erro explicito do Supabase (retorna `{ data: null, error: null }` quando nenhuma row e afetada por RLS), entao o fluxo pode parecer bem-sucedido mas o agendamento fica sem data/hora — ou em alguns casos retorna erro dependendo da versao do client.
+O mesmo problema afeta a tabela `agendamentos` — a query que busca agendamentos existentes para evitar conflitos tambem retorna vazio por RLS, porem os agendamentos tem `status_crm` filtrado e poderiam nao funcionar corretamente.
+
+### Tabelas afetadas e suas RLS (leitura publica):
+| Tabela | Leitura Publica? | Impacto |
+|--------|-----------------|---------|
+| `bloqueios_agenda` | NAO (so admin) | Bloqueios ignorados no booking |
+| `agendamentos` | NAO (so admin) | Conflitos de horario nao detectados |
+| `disponibilidade_semanal` | SIM (`ativo = true`) | OK |
+| `disponibilidade_especifica` | SIM (`true`) | OK |
+| `clinicas` | SIM (`ativo = true`) | OK |
 
 ## Solucao
 
-Criar uma nova edge function `converter-lead-agendamento` que recebe o `lead_id` e os dados de agendamento, valida disponibilidade e faz o UPDATE usando a service role key (bypassa RLS). O servico frontend passa a chamar essa edge function em vez de fazer o update direto.
+Adicionar politicas RLS de leitura publica (somente SELECT) nas duas tabelas problemáticas, expondo apenas os campos minimos necessarios. Alternativamente, criar uma view ou function security definer.
+
+**Abordagem recomendada**: Adicionar RLS SELECT publico com campos restritos via view nao e possivel com RLS simples — entao a melhor opcao e adicionar politica SELECT publica nas duas tabelas, ja que os dados nao sao sensiveis (datas, horarios, tipo de bloqueio).
 
 ### Alteracoes
 
-1. **Criar `supabase/functions/converter-lead-agendamento/index.ts`**
-   - Recebe: `lead_id`, `data_agendamento`, `hora_agendamento`, `local_atendimento`, `aceita_primeiro_horario`, `aceita_contato_whatsapp_email`
-   - Valida disponibilidade chamando `validarDisponibilidade`
-   - Faz o UPDATE com service role key
-   - Retorna sucesso/erro
+1. **Migração SQL**: Adicionar 2 politicas RLS permissivas:
+   - `bloqueios_agenda`: SELECT publico para usuarios anonimos (dados nao sensiveis)
+   - `agendamentos`: SELECT publico limitado aos campos `data_agendamento`, `hora_agendamento`, `local_atendimento`, `clinica_id` — porem RLS nao permite restringir colunas, entao a politica seria um SELECT geral. Como alternativa mais segura, criar uma **function SECURITY DEFINER** que retorna apenas horarios ocupados.
 
-2. **Atualizar `src/services/leads.ts`**
-   - `converterLeadEmAgendamento` passa a chamar `supabase.functions.invoke('converter-lead-agendamento', ...)` em vez de fazer update direto + validacao separada
+2. **Criar function `public.horarios_ocupados`** (SECURITY DEFINER):
+   - Recebe `p_data_inicio date`, `p_data_fim date`, `p_clinica_ids uuid[]`
+   - Retorna apenas `data_agendamento, hora_agendamento, clinica_id`
+   - Evita expor dados pessoais dos pacientes
 
-3. **Atualizar `supabase/config.toml`** (automatico)
-   - Desabilitar JWT para a nova function
+3. **Atualizar `src/services/disponibilidadePublica.ts`**:
+   - Substituir query direta a `agendamentos` por chamada a `supabase.rpc('horarios_ocupados', ...)`
+   - Manter query direta a `bloqueios_agenda` (apos adicionar RLS publica)
 
-### Detalhes tecnicos
+### Detalhes da migracao
 
-A nova edge function consolida a logica que hoje esta dividida entre o frontend (validacao + update):
-- Chama `validarDisponibilidade` internamente
-- Determina `status_crm` pelo local
-- Executa o UPDATE com service role key
-- Retorna `{ success: true }` ou `{ error: "motivo", disponivel: false }`
+```sql
+-- 1. Bloqueios: leitura publica (dados nao sensiveis)
+CREATE POLICY "Public can view bloqueios"
+ON public.bloqueios_agenda FOR SELECT
+TO anon, authenticated
+USING (true);
+
+-- 2. Function para horarios ocupados (sem expor dados pessoais)
+CREATE OR REPLACE FUNCTION public.horarios_ocupados(
+  p_data_inicio date, p_data_fim date, p_clinica_ids uuid[] DEFAULT NULL
+)
+RETURNS TABLE(data_agendamento date, hora_agendamento time, clinica_id uuid)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT a.data_agendamento, a.hora_agendamento, a.clinica_id
+  FROM public.agendamentos a
+  WHERE a.data_agendamento >= p_data_inicio
+    AND a.data_agendamento <= p_data_fim
+    AND (p_clinica_ids IS NULL OR a.clinica_id = ANY(p_clinica_ids))
+$$;
+```
+
+4. **Atualizar `src/services/disponibilidadePublica.ts`**: usar `supabase.rpc('horarios_ocupados', ...)` em vez de query direta na tabela `agendamentos`.
 
