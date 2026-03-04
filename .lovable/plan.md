@@ -1,60 +1,15 @@
 
-# Corrigir Notificações de Email/WhatsApp via MCP/n8n
 
-## Problema
-A edge function `criar-agendamento` usa `(globalThis as any).EdgeRuntime?.waitUntil?.(...)` para disparar notificações em background. Esse objeto nao existe em Supabase Edge Functions (Deno), entao as notificações de email e WhatsApp **nunca sao executadas** quando o agendamento vem via MCP ou n8n.
+# Atualizar numero WhatsApp da landing page
 
-Pelo site funciona porque o frontend (`/agendar`) dispara as notificações diretamente apos a criaçao.
+Trocar todas as ocorrencias do numero antigo pelo novo **5591920021125** em 4 arquivos:
 
-## Soluçao
-Substituir o padrao `EdgeRuntime.waitUntil` por execuçao direta das notificações (fire-and-forget com `.catch()` para nao bloquear a resposta ao cliente).
+| Arquivo | Numero Atual | Ocorrencias |
+|---------|-------------|-------------|
+| `src/components/WhatsAppButton.tsx` | `5519982273901` | 1 |
+| `src/components/Footer.tsx` | `5519982273901` | 2 |
+| `src/components/InsuranceSection.tsx` | `5519982273901` | 1 |
+| `src/components/Header.tsx` | `5591981653200` | 1 |
 
-## Alteraçao
+Todas as URLs `https://api.whatsapp.com/send?phone=XXXXX` serao atualizadas para usar `phone=5591920021125`. O texto da mensagem padrao nos links permanece o mesmo. O numero exibido no rodape tambem sera atualizado para o formato `(91) 92002-1125`.
 
-### Arquivo: `supabase/functions/criar-agendamento/index.ts`
-
-Substituir o bloco de notificações (linhas ~168-210) que usa `EdgeRuntime.waitUntil` por:
-
-```typescript
-// Fire-and-forget: dispara notificações sem bloquear a resposta
-const notifyWhatsApp = supabase.functions.invoke('confirmar-agendamento-whatsapp', {
-  body: {
-    agendamento_data: {
-      nome_completo: sanitizedData.nome_completo,
-      telefone_whatsapp: sanitizedData.telefone_whatsapp,
-      tipo_atendimento: sanitizedData.tipo_atendimento,
-      local_atendimento: sanitizedData.local_atendimento,
-      data_agendamento: sanitizedData.data_agendamento,
-      hora_agendamento: sanitizedData.hora_agendamento,
-      convenio: sanitizedData.convenio,
-    }
-  },
-}).then(() => console.log('[criar-agendamento] WhatsApp notification sent'))
-  .catch((err) => console.error('[criar-agendamento] WhatsApp notification failed:', err));
-
-const notifyEmail = supabase.functions.invoke('notificar-agendamento-email', {
-  body: {
-    nome_completo: sanitizedData.nome_completo,
-    telefone_whatsapp: sanitizedData.telefone_whatsapp,
-    email_paciente: sanitizedData.email,
-    data_nascimento: sanitizedData.data_nascimento,
-    tipo_atendimento: sanitizedData.tipo_atendimento,
-    detalhe_exame_ou_cirurgia: sanitizedData.detalhe_exame_ou_cirurgia,
-    local_atendimento: sanitizedData.local_atendimento,
-    convenio: sanitizedData.convenio,
-    convenio_outro: sanitizedData.convenio_outro,
-    data_agendamento: sanitizedData.data_agendamento,
-    hora_agendamento: sanitizedData.hora_agendamento,
-  },
-}).then(() => console.log('[criar-agendamento] Email notification sent'))
-  .catch((err) => console.error('[criar-agendamento] Email notification failed:', err));
-
-// Aguarda ambas sem bloquear o retorno (best-effort)
-Promise.allSettled([notifyWhatsApp, notifyEmail]);
-```
-
-## Impacto
-- Agendamentos criados via MCP (n8n) passarao a enviar email e WhatsApp corretamente
-- Agendamentos via site continuam funcionando (frontend ja dispara independentemente)
-- Nenhuma alteraçao de schema ou migraçao necessaria
-- Apenas 1 arquivo editado
