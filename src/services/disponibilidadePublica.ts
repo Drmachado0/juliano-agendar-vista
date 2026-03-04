@@ -121,52 +121,27 @@ async function buscarDisponibilidadeSemanalMulti(clinicaIds: string[]): Promise<
   return data as DisponibilidadeSemanal[];
 }
 
-// Busca agendamentos para um período - OTIMIZADO
+// Busca horários ocupados para um período via SECURITY DEFINER function
 async function buscarAgendamentosPeriodo(
   dataInicio: string, 
   dataFim: string, 
   clinicaIds: string[]
 ): Promise<Map<string, Set<string>>> {
-  const query = supabase
-    .from('agendamentos')
-    .select('data_agendamento, hora_agendamento, local_atendimento, clinica_id')
-    .gte('data_agendamento', dataInicio)
-    .lte('data_agendamento', dataFim);
-  
-  const { data, error } = await query;
+  const { data, error } = await supabase.rpc('horarios_ocupados', {
+    p_data_inicio: dataInicio,
+    p_data_fim: dataFim,
+    p_clinica_ids: clinicaIds.length > 0 ? clinicaIds : null
+  });
   
   if (error || !data) {
-    console.error('Erro ao buscar agendamentos:', error);
+    console.error('Erro ao buscar horários ocupados:', error);
     return new Map();
   }
   
   // Mapa: data -> Set de horários ocupados
   const agendamentosMap = new Map<string, Set<string>>();
   
-  for (const ag of data) {
-    // Verificar se o agendamento pertence a uma das clínicas selecionadas
-    let pertenceClinica = true;
-    
-    if (clinicaIds.length > 0) {
-      // Se tem clinica_id direto, usar ele
-      if (ag.clinica_id) {
-        pertenceClinica = clinicaIds.includes(ag.clinica_id);
-      } else if (ag.local_atendimento) {
-        // Fallback para local_atendimento
-        const agSlugs = getClinicaSlugsFromLocal(ag.local_atendimento);
-        // Verificar se algum slug mapeia para as clínicas selecionadas
-        pertenceClinica = agSlugs.some(slug => {
-          if (slug === 'clinicor') return clinicaIds.some(id => id.includes('clinicor') || id === '657e4784-e292-45c6-a033-40f3d115f984');
-          if (slug === 'hgp') return clinicaIds.some(id => id.includes('hgp') || id === '5f2f3bcb-5945-4220-912a-4d7c79b9b056');
-          if (slug === 'iob') return clinicaIds.some(id => id.includes('iob') || id === 'f72d4685-7e91-4b27-b4e6-8c47db742bef');
-          if (slug === 'vitria') return clinicaIds.some(id => id.includes('vitria') || id === 'dee8244b-a4f0-492a-aa59-89cfb8848463');
-          return false;
-        });
-      }
-    }
-    
-    if (!pertenceClinica) continue;
-    
+  for (const ag of data as { data_agendamento: string; hora_agendamento: string; clinica_id: string | null }[]) {
     const dataKey = ag.data_agendamento;
     if (!agendamentosMap.has(dataKey)) {
       agendamentosMap.set(dataKey, new Set());
