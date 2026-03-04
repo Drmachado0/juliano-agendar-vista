@@ -1,68 +1,35 @@
 
 
-# Revisao do Sistema de Bloqueios - Bug Critico Encontrado
+# Bug: Paciente agendado na Clinicor vai para AGUARDANDO
 
-## Problema Principal
+## Causa raiz
 
-O sistema de bloqueios tem um **bug critico de seguranca/funcionalidade**: a tabela `bloqueios_agenda` tem RLS que permite apenas admins (`has_role(auth.uid(), 'admin')`) fazerem SELECT. Porem, o servico publico `src/services/disponibilidadePublica.ts` consulta essa tabela diretamente do navegador usando o cliente anonimo (sem autenticacao).
+Race condition entre duas edge functions:
 
-**Resultado**: bloqueios criados pelo admin sao **completamente ignorados** no formulario publico de agendamento. Pacientes conseguem agendar em horarios bloqueados.
+1. **`criar-lead`** (Step 2) → cria registro com `status_funil='lead'`, `status_crm='NOVO LEAD'`
+2. **`enviar-boas-vindas-lead`** (CRON, a cada 5 min) → busca leads com `status_funil='lead'` criados há >5 min, envia WhatsApp e faz UPDATE `status_crm='AGUARDANDO'`
+3. **`converter-lead-agendamento`** (Step 4) → converte lead, seta `status_crm='CLINICOR'` e `status_funil='agendado'`
 
-O mesmo problema afeta a tabela `agendamentos` — a query que busca agendamentos existentes para evitar conflitos tambem retorna vazio por RLS, porem os agendamentos tem `status_crm` filtrado e poderiam nao funcionar corretamente.
+**O problema**: se o paciente demora >5 min entre step 2 e step 4, a automação de boas-vindas dispara primeiro. Mas o UPDATE na linha 103 do `enviar-boas-vindas-lead` usa apenas `.eq('id', lead.id)` **sem verificar se o `status_funil` ainda é 'lead'**. Se a conversão acontecer entre o SELECT e o UPDATE do cron, o cron sobrescreve `status_crm` de volta para `AGUARDANDO`.
 
-### Tabelas afetadas e suas RLS (leitura publica):
-| Tabela | Leitura Publica? | Impacto |
-|--------|-----------------|---------|
-| `bloqueios_agenda` | NAO (so admin) | Bloqueios ignorados no booking |
-| `agendamentos` | NAO (so admin) | Conflitos de horario nao detectados |
-| `disponibilidade_semanal` | SIM (`ativo = true`) | OK |
-| `disponibilidade_especifica` | SIM (`true`) | OK |
-| `clinicas` | SIM (`ativo = true`) | OK |
+Além disso, mesmo que o converter rode primeiro, o cron pode rodar logo depois e sobrescrever porque o SELECT já tinha carregado o lead antes da conversão.
 
-## Solucao
+## Correção
 
-Adicionar politicas RLS de leitura publica (somente SELECT) nas duas tabelas problemáticas, expondo apenas os campos minimos necessarios. Alternativamente, criar uma view ou function security definer.
+### 1. `supabase/functions/enviar-boas-vindas-lead/index.ts` (linha 103)
 
-**Abordagem recomendada**: Adicionar RLS SELECT publico com campos restritos via view nao e possivel com RLS simples — entao a melhor opcao e adicionar politica SELECT publica nas duas tabelas, ja que os dados nao sao sensiveis (datas, horarios, tipo de bloqueio).
+Adicionar `.eq('status_funil', 'lead')` ao UPDATE para que só mova para AGUARDANDO se o lead ainda não foi convertido:
 
-### Alteracoes
-
-1. **Migração SQL**: Adicionar 2 politicas RLS permissivas:
-   - `bloqueios_agenda`: SELECT publico para usuarios anonimos (dados nao sensiveis)
-   - `agendamentos`: SELECT publico limitado aos campos `data_agendamento`, `hora_agendamento`, `local_atendimento`, `clinica_id` — porem RLS nao permite restringir colunas, entao a politica seria um SELECT geral. Como alternativa mais segura, criar uma **function SECURITY DEFINER** que retorna apenas horarios ocupados.
-
-2. **Criar function `public.horarios_ocupados`** (SECURITY DEFINER):
-   - Recebe `p_data_inicio date`, `p_data_fim date`, `p_clinica_ids uuid[]`
-   - Retorna apenas `data_agendamento, hora_agendamento, clinica_id`
-   - Evita expor dados pessoais dos pacientes
-
-3. **Atualizar `src/services/disponibilidadePublica.ts`**:
-   - Substituir query direta a `agendamentos` por chamada a `supabase.rpc('horarios_ocupados', ...)`
-   - Manter query direta a `bloqueios_agenda` (apos adicionar RLS publica)
-
-### Detalhes da migracao
-
-```sql
--- 1. Bloqueios: leitura publica (dados nao sensiveis)
-CREATE POLICY "Public can view bloqueios"
-ON public.bloqueios_agenda FOR SELECT
-TO anon, authenticated
-USING (true);
-
--- 2. Function para horarios ocupados (sem expor dados pessoais)
-CREATE OR REPLACE FUNCTION public.horarios_ocupados(
-  p_data_inicio date, p_data_fim date, p_clinica_ids uuid[] DEFAULT NULL
-)
-RETURNS TABLE(data_agendamento date, hora_agendamento time, clinica_id uuid)
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-  SELECT a.data_agendamento, a.hora_agendamento, a.clinica_id
-  FROM public.agendamentos a
-  WHERE a.data_agendamento >= p_data_inicio
-    AND a.data_agendamento <= p_data_fim
-    AND (p_clinica_ids IS NULL OR a.clinica_id = ANY(p_clinica_ids))
-$$;
+```typescript
+await supabase.from('agendamentos').update({ 
+  status_crm: 'AGUARDANDO',
+  updated_at: new Date().toISOString()
+}).eq('id', lead.id).eq('status_funil', 'lead');  // ← guard clause
 ```
 
-4. **Atualizar `src/services/disponibilidadePublica.ts`**: usar `supabase.rpc('horarios_ocupados', ...)` em vez de query direta na tabela `agendamentos`.
+### 2. `supabase/functions/converter-lead-agendamento/index.ts`
+
+Nenhuma alteração necessária — já seta corretamente `status_funil='agendado'` e `status_crm='CLINICOR'`.
+
+Correção mínima de 1 linha que elimina a race condition.
 
