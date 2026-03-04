@@ -46,62 +46,35 @@ export async function converterLeadEmAgendamento(
   localAtendimento: string
 ): Promise<{ error: Error | null }> {
   try {
-    // *** VALIDATE AVAILABILITY BEFORE CONVERTING ***
-    console.log('[converterLeadEmAgendamento] Validando disponibilidade...');
+    console.log('[converterLeadEmAgendamento] Chamando edge function converter-lead-agendamento...');
     
-    const { data: validacao, error: validacaoError } = await supabase.functions.invoke('validar-agendamento', {
+    const { data: responseData, error } = await supabase.functions.invoke('converter-lead-agendamento', {
       body: {
-        local_atendimento: localAtendimento,
+        lead_id: leadId,
         data_agendamento: data.data_agendamento,
         hora_agendamento: data.hora_agendamento,
+        local_atendimento: localAtendimento,
+        aceita_primeiro_horario: data.aceita_primeiro_horario ?? false,
+        aceita_contato_whatsapp_email: data.aceita_contato_whatsapp_email ?? false,
       },
     });
 
-    if (validacaoError) {
-      console.error('[converterLeadEmAgendamento] Erro ao validar:', validacaoError);
-      return { error: new Error('Erro ao verificar disponibilidade do horário') };
-    }
-
-    if (!validacao?.disponivel) {
-      console.log('[converterLeadEmAgendamento] Horário indisponível:', validacao?.motivo);
-      return { 
-        error: new Error(validacao?.motivo || 'Este horário não está mais disponível. Por favor, escolha outro horário.')
-      };
-    }
-
-    console.log('[converterLeadEmAgendamento] Disponibilidade confirmada, convertendo lead...');
-
-    // Determina o status_crm com base no local
-    let statusCrm = 'NOVO LEAD';
-    const locationLower = localAtendimento.toLowerCase();
-    
-    if (locationLower.includes("clinicor")) {
-      statusCrm = "CLINICOR";
-    } else if (locationLower.includes("hgp") || locationLower.includes("hospital geral")) {
-      statusCrm = "HGP";
-    } else if (locationLower.includes("belém") || locationLower.includes("belem") || locationLower.includes("iob") || locationLower.includes("vitria")) {
-      statusCrm = "BELÉM";
-    }
-
-    const { error } = await supabase
-      .from('agendamentos')
-      .update({
-        data_agendamento: data.data_agendamento,
-        hora_agendamento: data.hora_agendamento,
-        aceita_primeiro_horario: data.aceita_primeiro_horario ?? false,
-        aceita_contato_whatsapp_email: data.aceita_contato_whatsapp_email ?? false,
-        status_funil: 'agendado',
-        status_crm: statusCrm,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', leadId);
-
     if (error) {
-      console.error('Erro ao converter lead em agendamento:', error);
-      return { error: new Error(error.message) };
+      console.error('[converterLeadEmAgendamento] Erro na invocação:', error);
+      return { error: new Error(error.message || 'Erro ao confirmar agendamento') };
     }
 
-    return { error: null };
+    if (responseData?.error) {
+      console.error('[converterLeadEmAgendamento] Erro retornado:', responseData.error);
+      return { error: new Error(responseData.error) };
+    }
+
+    if (responseData?.success) {
+      console.log('[converterLeadEmAgendamento] Conversão realizada com sucesso');
+      return { error: null };
+    }
+
+    return { error: new Error('Resposta inesperada do servidor') };
   } catch (err) {
     console.error('Erro inesperado ao converter lead:', err);
     return { error: err as Error };
