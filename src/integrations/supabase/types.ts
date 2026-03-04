@@ -889,6 +889,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      horarios_ocupados: {
+        Args: {
+          p_clinica_ids?: string[]
+          p_data_fim: string
+          p_data_inicio: string
+        }
+        Returns: {
+          clinica_id: string
+          data_agendamento: string
+          hora_agendamento: string
+        }[]
+      }
       listar_horarios_disponiveis: {
         Args: { p_data: string; p_local: string }
         Returns: {
