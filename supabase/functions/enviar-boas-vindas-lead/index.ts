@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
           await supabase.from('agendamentos').update({ 
             status_crm: 'AGUARDANDO',
             updated_at: new Date().toISOString()
-          }).eq('id', lead.id);
+          }).eq('id', lead.id).eq('status_funil', 'lead');
 
           console.log(`[boas-vindas] ✓ Enviado para ${normalizedPhone} (lead ${lead.id}) → AGUARDANDO`);
           enviados++;
