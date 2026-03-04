@@ -117,7 +117,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
           {/* Mobile Actions */}
           <div className="flex md:hidden items-center gap-1.5">
             <a
-              href="https://api.whatsapp.com/send?phone=5591981653200"
+              href="https://api.whatsapp.com/send?phone=5591920021125"
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
