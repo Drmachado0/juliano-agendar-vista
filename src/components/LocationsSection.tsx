@@ -6,6 +6,7 @@ const LocationsSection = () => {
   const [activeLocation, setActiveLocation] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const { trackPhoneClickConversion } = useGoogleTag();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
