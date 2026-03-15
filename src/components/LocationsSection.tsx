@@ -1,5 +1,6 @@
 import { MapPin, Phone, Clock, ExternalLink, Hospital, Heart, Eye, Glasses, Navigation } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { useGoogleTag } from "@/hooks/useGoogleTag";
 
 const LocationsSection = () => {
   const [activeLocation, setActiveLocation] = useState(0);
