@@ -1,8 +1,11 @@
 declare global {
   interface Window {
     dataLayer: any[];
+    gtag: (...args: any[]) => void;
   }
 }
+
+const GOOGLE_ADS_ID = 'AW-979714971';
 
 export const useGoogleTag = () => {
   const pushToDataLayer = (data: Record<string, any>) => {
@@ -17,6 +20,26 @@ export const useGoogleTag = () => {
       event: eventName,
       ...parameters,
     });
+  };
+
+  const trackGoogleAdsConversion = (conversionLabel: string) => {
+    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+      window.gtag('event', 'conversion', {
+        send_to: `${GOOGLE_ADS_ID}/${conversionLabel}`,
+      });
+    }
+  };
+
+  const trackFormSubmitConversion = () => {
+    trackGoogleAdsConversion('7428858657');
+  };
+
+  const trackPhoneClickConversion = () => {
+    trackGoogleAdsConversion('7504209532');
+  };
+
+  const trackWhatsAppClickConversion = () => {
+    trackGoogleAdsConversion('6834364244');
   };
 
   const trackScheduleStart = () => {
@@ -70,5 +93,8 @@ export const useGoogleTag = () => {
     trackContact,
     trackLead,
     trackCTAClick,
+    trackFormSubmitConversion,
+    trackPhoneClickConversion,
+    trackWhatsAppClickConversion,
   };
 };
