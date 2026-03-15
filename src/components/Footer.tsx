@@ -1,5 +1,6 @@
 import { Heart, MapPin, Instagram, MessageCircle } from "lucide-react";
 import logoImage from "@/assets/dr-juliano-logo.webp";
+import { useGoogleTag } from "@/hooks/useGoogleTag";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
