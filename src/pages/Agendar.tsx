@@ -14,6 +14,7 @@ import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
+import { useGoogleTag } from "@/hooks/useGoogleTag";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
 const initialFormData: FormData = {
