@@ -1,40 +1,35 @@
 
 
-# Rastreamento de Conversões Google Ads — AW-979714971
+# Bug: Paciente agendado na Clinicor vai para AGUARDANDO
 
-## Situação Atual
+## Causa raiz
 
-O site já possui GA4 (`G-T9ERC72SJE`) carregado via gtag.js no `index.html`, e um hook `useGoogleTag.ts` que faz `dataLayer.push()`. Há também Meta Pixel e referências a um antigo Google Ads ID (`AW-436492720`) na documentação, mas **nenhum script do Google Ads está efetivamente instalado no código**.
+Race condition entre duas edge functions:
 
-## Alterações
+1. **`criar-lead`** (Step 2) → cria registro com `status_funil='lead'`, `status_crm='NOVO LEAD'`
+2. **`enviar-boas-vindas-lead`** (CRON, a cada 5 min) → busca leads com `status_funil='lead'` criados há >5 min, envia WhatsApp e faz UPDATE `status_crm='AGUARDANDO'`
+3. **`converter-lead-agendamento`** (Step 4) → converte lead, seta `status_crm='CLINICOR'` e `status_funil='agendado'`
 
-### 1. `index.html` — Adicionar config do Google Ads ao gtag existente
+**O problema**: se o paciente demora >5 min entre step 2 e step 4, a automação de boas-vindas dispara primeiro. Mas o UPDATE na linha 103 do `enviar-boas-vindas-lead` usa apenas `.eq('id', lead.id)` **sem verificar se o `status_funil` ainda é 'lead'**. Se a conversão acontecer entre o SELECT e o UPDATE do cron, o cron sobrescreve `status_crm` de volta para `AGUARDANDO`.
 
-Aproveitar o gtag.js já carregado (linha 24-30) e adicionar `gtag('config', 'AW-979714971')` logo após o config do GA4. Sem script adicional — reutiliza o mesmo `gtag.js`.
+Além disso, mesmo que o converter rode primeiro, o cron pode rodar logo depois e sobrescrever porque o SELECT já tinha carregado o lead antes da conversão.
 
-### 2. `src/hooks/useGoogleTag.ts` — Adicionar funções de conversão Google Ads
+## Correção
 
-Adicionar uma função `trackGoogleAdsConversion(conversionId, conversionLabel)` que chama `gtag('event', 'conversion', ...)` diretamente (não dataLayer.push). Criar 3 helpers específicos:
+### 1. `supabase/functions/enviar-boas-vindas-lead/index.ts` (linha 103)
 
-- `trackFormSubmitConversion()` — `AW-979714971/` + label do ID `7428858657`
-- `trackPhoneClickConversion()` — label do ID `7504209532`
-- `trackWhatsAppClickConversion()` — label do ID `6834364244`
+Adicionar `.eq('status_funil', 'lead')` ao UPDATE para que só mova para AGUARDANDO se o lead ainda não foi convertido:
 
-O formato do label Google Ads é `AW-979714971/LABEL`. Os IDs fornecidos (7428858657, etc.) são os **Conversion Action IDs**, não os labels. O label real é gerado pelo Google Ads ao criar a ação de conversão. Vou usar os IDs como labels provisórios no formato esperado.
+```typescript
+await supabase.from('agendamentos').update({ 
+  status_crm: 'AGUARDANDO',
+  updated_at: new Date().toISOString()
+}).eq('id', lead.id).eq('status_funil', 'lead');  // ← guard clause
+```
 
-### 3. Componentes — Adicionar chamadas de conversão
+### 2. `supabase/functions/converter-lead-agendamento/index.ts`
 
-- **`SchedulingModal.tsx`** e **`Agendar.tsx`** (`handleSubmit`): chamar `trackFormSubmitConversion()` ao confirmar agendamento
-- **`WhatsAppButton.tsx`**: chamar `trackWhatsAppClickConversion()` no onClick
-- **`Footer.tsx`**: adicionar tracking nos links WhatsApp
-- **`LocationsSection.tsx`**: adicionar tracking nos links de telefone
-- **`Header.tsx`**: adicionar tracking no link WhatsApp mobile
+Nenhuma alteração necessária — já seta corretamente `status_funil='agendado'` e `status_crm='CLINICOR'`.
 
-### 4. Documentação
-
-Atualizar `docs/GTM-EVENTOS-DATALAYER.md` com os novos IDs e conversões.
-
-## Nota sobre Conversion Labels
-
-Os IDs informados (7428858657, 7504209532, 6834364244) são **Conversion Action IDs** do Google Ads. Para o snippet `gtag('event', 'conversion')`, o Google Ads usa um formato `AW-CONVERSION_ID/CONVERSION_LABEL` onde o label é uma string alfanumérica (ex: `AW-979714971/AbCdEf`). Vou implementar usando os IDs numéricos como placeholder — após publicar, basta substituir pelos labels reais obtidos no painel do Google Ads.
+Correção mínima de 1 linha que elimina a race condition.
 

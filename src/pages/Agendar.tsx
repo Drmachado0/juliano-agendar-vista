@@ -14,6 +14,7 @@ import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
+import { useGoogleTag } from "@/hooks/useGoogleTag";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
 const initialFormData: FormData = {
@@ -41,6 +42,7 @@ const Agendar = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { trackViewContent, trackLead, trackSchedule, trackCompleteRegistration } = useMetaPixel();
+  const { trackFormSubmitConversion } = useGoogleTag();
 
   const totalSteps = 4;
 
@@ -206,6 +208,7 @@ const Agendar = () => {
       // Track Schedule and CompleteRegistration conversion events
       trackSchedule(formData.appointmentType, formData.location);
       trackCompleteRegistration(formData.appointmentType, formData.location);
+      trackFormSubmitConversion();
 
       setIsSubmitted(true);
     } catch (err) {

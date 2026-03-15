@@ -1,8 +1,10 @@
 import { Heart, MapPin, Instagram, MessageCircle } from "lucide-react";
 import logoImage from "@/assets/dr-juliano-logo.webp";
+import { useGoogleTag } from "@/hooks/useGoogleTag";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const { trackWhatsAppClickConversion } = useGoogleTag();
 
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -84,6 +86,7 @@ const Footer = () => {
               href="https://api.whatsapp.com/send?phone=5591920021125"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackWhatsAppClickConversion()}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <MessageCircle className="w-4 h-4 text-primary" />
@@ -114,7 +117,7 @@ const Footer = () => {
             <a href="https://www.instagram.com/drjulianomachado.oftalmo/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Instagram">
               <Instagram className="w-4 h-4" />
             </a>
-            <a href="https://api.whatsapp.com/send?phone=5591920021125" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="WhatsApp">
+            <a href="https://api.whatsapp.com/send?phone=5591920021125" target="_blank" rel="noopener noreferrer" onClick={() => trackWhatsAppClickConversion()} className="text-muted-foreground hover:text-primary transition-colors" aria-label="WhatsApp">
               <MessageCircle className="w-4 h-4" />
             </a>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground/50">

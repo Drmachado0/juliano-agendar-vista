@@ -1,4 +1,5 @@
 import { Menu, X, Settings, LogIn, CalendarCheck, Phone } from "lucide-react";
+import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
@@ -14,6 +15,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
   const [activeSection, setActiveSection] = useState<string>("");
   const [scrolled, setScrolled] = useState(false);
   const { user, isAdmin } = useAuth();
+  const { trackWhatsAppClickConversion } = useGoogleTag();
 
   const navItems = [
     { label: "Sobre", id: "sobre" },
@@ -120,6 +122,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
               href="https://api.whatsapp.com/send?phone=5591920021125"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackWhatsAppClickConversion()}
               className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
               aria-label="WhatsApp"
             >

@@ -1,10 +1,12 @@
 import { MapPin, Phone, Clock, ExternalLink, Hospital, Heart, Eye, Glasses, Navigation } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { useGoogleTag } from "@/hooks/useGoogleTag";
 
 const LocationsSection = () => {
   const [activeLocation, setActiveLocation] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const { trackPhoneClickConversion } = useGoogleTag();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -151,10 +153,14 @@ const LocationsSection = () => {
                   <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                   <span className="text-sm">{activeLocationData.address}</span>
                 </div>
-                <div className="flex items-center gap-3 text-muted-foreground">
+                <a
+                  href={`tel:${activeLocationData.phone.replace(/\D/g, '')}`}
+                  onClick={() => trackPhoneClickConversion()}
+                  className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors"
+                >
                   <Phone className="w-4 h-4 text-primary shrink-0" />
                   <span className="text-sm">{activeLocationData.phone}</span>
-                </div>
+                </a>
                 <div className="flex items-center gap-3 text-muted-foreground">
                   <Clock className="w-4 h-4 text-primary shrink-0" />
                   <span className="text-sm">{activeLocationData.hours}</span>
