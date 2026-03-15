@@ -19,7 +19,7 @@ const WhatsAppButton = () => {
       href={whatsappUrl}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={() => trackContact('whatsapp')}
+      onClick={() => { trackContact('whatsapp'); trackWhatsAppClickConversion(); }}
       className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-[#25D366] text-white pl-4 pr-5 py-3.5 rounded-2xl shadow-xl shadow-[#25D366]/25 hover:shadow-2xl hover:shadow-[#25D366]/35 hover:scale-105 active:scale-100 transition-all duration-300 animate-whatsapp-pulse ${
         show ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
       }`}

@@ -58,7 +58,7 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { trackScheduleStart, trackScheduleComplete, trackLead } = useGoogleTag();
+  const { trackScheduleStart, trackScheduleComplete, trackLead, trackFormSubmitConversion } = useGoogleTag();
 
   const totalSteps = 4;
 

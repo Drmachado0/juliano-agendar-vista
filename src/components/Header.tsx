@@ -122,6 +122,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
               href="https://api.whatsapp.com/send?phone=5591920021125"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackWhatsAppClickConversion()}
               className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
               aria-label="WhatsApp"
             >

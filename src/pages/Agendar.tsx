@@ -208,6 +208,7 @@ const Agendar = () => {
       // Track Schedule and CompleteRegistration conversion events
       trackSchedule(formData.appointmentType, formData.location);
       trackCompleteRegistration(formData.appointmentType, formData.location);
+      trackFormSubmitConversion();
 
       setIsSubmitted(true);
     } catch (err) {
