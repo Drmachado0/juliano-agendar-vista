@@ -42,6 +42,7 @@ const Agendar = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { trackViewContent, trackLead, trackSchedule, trackCompleteRegistration } = useMetaPixel();
+  const { trackFormSubmitConversion } = useGoogleTag();
 
   const totalSteps = 4;
 
