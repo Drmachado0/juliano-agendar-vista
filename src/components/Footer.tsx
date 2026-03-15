@@ -86,6 +86,7 @@ const Footer = () => {
               href="https://api.whatsapp.com/send?phone=5591920021125"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackWhatsAppClickConversion()}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <MessageCircle className="w-4 h-4 text-primary" />
