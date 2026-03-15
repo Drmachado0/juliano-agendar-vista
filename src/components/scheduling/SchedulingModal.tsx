@@ -135,6 +135,7 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
       // Track Google Tag conversion
       trackScheduleComplete(formData.appointmentTypeName, formData.locationName);
       trackLead('agendamento');
+      trackFormSubmitConversion();
 
       setIsSubmitted(true);
     } catch (err) {
