@@ -15,6 +15,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
   const [activeSection, setActiveSection] = useState<string>("");
   const [scrolled, setScrolled] = useState(false);
   const { user, isAdmin } = useAuth();
+  const { trackWhatsAppClickConversion } = useGoogleTag();
 
   const navItems = [
     { label: "Sobre", id: "sobre" },
