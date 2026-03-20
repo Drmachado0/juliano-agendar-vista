@@ -118,7 +118,7 @@ const TestimonialsSection = () => {
     Array.from({ length: 5 }).map((_, index) => (
       <Star
         key={index}
-        className={`w-4 h-4 ${index < rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/20"}`}
+        className={`w-4 h-4 ${index < rating ? "fill-primary text-primary" : "text-muted-foreground/20"}`}
       />
     ));
 
