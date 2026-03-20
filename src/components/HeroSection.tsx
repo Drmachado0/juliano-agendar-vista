@@ -35,7 +35,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]" />
         {/* Subtle grid */}
         <div className="absolute inset-0 opacity-[0.015]" style={{
-          backgroundImage: `linear-gradient(hsl(42 87% 55% / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(42 87% 55% / 0.3) 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(hsl(var(--primary) / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary) / 0.3) 1px, transparent 1px)`,
           backgroundSize: '80px 80px'
         }} />
         {/* Decorative line */}
