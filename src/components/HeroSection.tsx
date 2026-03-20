@@ -35,7 +35,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]" />
         {/* Subtle grid */}
         <div className="absolute inset-0 opacity-[0.015]" style={{
-          backgroundImage: `linear-gradient(hsl(42 87% 55% / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(42 87% 55% / 0.3) 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(hsl(var(--primary) / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary) / 0.3) 1px, transparent 1px)`,
           backgroundSize: '80px 80px'
         }} />
         {/* Decorative line */}
@@ -48,7 +48,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
           <div className="flex justify-center lg:justify-end order-1 lg:order-1 opacity-0 animate-scale-in animation-delay-100">
             <div className="relative">
               {/* Glow ring */}
-              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-primary/20 via-primary/5 to-transparent blur-2xl animate-glow" />
+              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent blur-2xl" />
 
               {/* Photo container */}
               <div className="relative w-56 h-64 sm:w-64 sm:h-72 md:w-72 md:h-80 lg:w-80 lg:h-[22rem] rounded-2xl overflow-hidden border-2 border-primary/25 shadow-2xl shadow-primary/10">
@@ -58,7 +58,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                   className="w-full h-full object-cover object-top"
                 />
                 {/* Subtle overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-background/30 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-background/10 to-transparent" />
               </div>
 
               {/* Name tag below photo on mobile */}
@@ -116,7 +116,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                   trackCTAClick('saiba_mais', 'hero', 'Conhecer procedimentos');
                   document.getElementById("procedimentos")?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="w-full sm:w-auto text-base py-6 sm:py-3 border-border/60"
+                className="w-full sm:w-auto text-base py-6 sm:py-3 border-primary/35 text-primary/90 hover:border-primary/60 hover:text-primary"
               >
                 Conhecer procedimentos
               </Button>
