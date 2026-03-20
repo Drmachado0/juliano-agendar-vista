@@ -88,8 +88,8 @@
 
   /* Improved text selection */
   ::selection {
-    background: hsl(42 85% 54% / 0.25);
-    color: hsl(40 15% 95%);
+    background: hsl(var(--primary) / 0.25);
+    color: hsl(var(--foreground));
   }
 }
 
@@ -124,11 +124,11 @@
   }
 
   .border-gold {
-    border-color: hsl(42 85% 54% / 0.3);
+    border-color: hsl(var(--primary) / 0.3);
   }
 
   .text-gold {
-    color: hsl(42 85% 54%);
+    color: hsl(var(--primary));
   }
 }
 
@@ -220,8 +220,8 @@
 }
 
 @keyframes glow {
-  from { box-shadow: 0 0 20px hsl(42 85% 54% / 0.15); }
-  to { box-shadow: 0 0 40px hsl(42 85% 54% / 0.3); }
+  from { box-shadow: 0 0 20px hsl(var(--primary) / 0.15); }
+  to { box-shadow: 0 0 40px hsl(var(--primary) / 0.3); }
 }
 
 @keyframes shimmer {
@@ -254,5 +254,5 @@
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(42 85% 54% / 0.4);
+  background: hsl(var(--primary) / 0.4);
 }
