@@ -220,8 +220,8 @@
 }
 
 @keyframes glow {
-  from { box-shadow: 0 0 20px hsl(42 85% 54% / 0.15); }
-  to { box-shadow: 0 0 40px hsl(42 85% 54% / 0.3); }
+  from { box-shadow: 0 0 20px hsl(var(--primary) / 0.15); }
+  to { box-shadow: 0 0 40px hsl(var(--primary) / 0.3); }
 }
 
 @keyframes shimmer {
