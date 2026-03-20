@@ -88,8 +88,8 @@
 
   /* Improved text selection */
   ::selection {
-    background: hsl(42 85% 54% / 0.25);
-    color: hsl(40 15% 95%);
+    background: hsl(var(--primary) / 0.25);
+    color: hsl(var(--foreground));
   }
 }
 
