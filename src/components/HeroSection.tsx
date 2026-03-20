@@ -116,7 +116,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                   trackCTAClick('saiba_mais', 'hero', 'Conhecer procedimentos');
                   document.getElementById("procedimentos")?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="w-full sm:w-auto text-base py-6 sm:py-3 border-border/60"
+                className="w-full sm:w-auto text-base py-6 sm:py-3 border-primary/35 text-primary/90 hover:border-primary/60 hover:text-primary"
               >
                 Conhecer procedimentos
               </Button>
