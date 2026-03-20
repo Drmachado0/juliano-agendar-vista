@@ -1,35 +1,22 @@
 
 
-# Bug: Paciente agendado na Clinicor vai para AGUARDANDO
+# Adicionar GA4 Property G-79BDCX4R2L
 
-## Causa raiz
+## Contexto
 
-Race condition entre duas edge functions:
+O site já possui GA4 (`G-T9ERC72SJE`) e Google Ads (`AW-979714971`) configurados no `index.html`. O arquivo enviado contém uma segunda property GA4: `G-79BDCX4R2L`.
 
-1. **`criar-lead`** (Step 2) → cria registro com `status_funil='lead'`, `status_crm='NOVO LEAD'`
-2. **`enviar-boas-vindas-lead`** (CRON, a cada 5 min) → busca leads com `status_funil='lead'` criados há >5 min, envia WhatsApp e faz UPDATE `status_crm='AGUARDANDO'`
-3. **`converter-lead-agendamento`** (Step 4) → converte lead, seta `status_crm='CLINICOR'` e `status_funil='agendado'`
+## Alteração
 
-**O problema**: se o paciente demora >5 min entre step 2 e step 4, a automação de boas-vindas dispara primeiro. Mas o UPDATE na linha 103 do `enviar-boas-vindas-lead` usa apenas `.eq('id', lead.id)` **sem verificar se o `status_funil` ainda é 'lead'**. Se a conversão acontecer entre o SELECT e o UPDATE do cron, o cron sobrescreve `status_crm` de volta para `AGUARDANDO`.
+### `index.html` (1 linha)
 
-Além disso, mesmo que o converter rode primeiro, o cron pode rodar logo depois e sobrescrever porque o SELECT já tinha carregado o lead antes da conversão.
+Adicionar `gtag('config', 'G-79BDCX4R2L');` ao bloco de configuração existente (após linha 30). Não é necessário adicionar outro script tag — o gtag.js já carregado suporta múltiplas properties.
 
-## Correção
-
-### 1. `supabase/functions/enviar-boas-vindas-lead/index.ts` (linha 103)
-
-Adicionar `.eq('status_funil', 'lead')` ao UPDATE para que só mova para AGUARDANDO se o lead ainda não foi convertido:
-
-```typescript
-await supabase.from('agendamentos').update({ 
-  status_crm: 'AGUARDANDO',
-  updated_at: new Date().toISOString()
-}).eq('id', lead.id).eq('status_funil', 'lead');  // ← guard clause
+```html
+gtag('config', 'G-T9ERC72SJE');
+gtag('config', 'AW-979714971');
+gtag('config', 'G-79BDCX4R2L');  <!-- Nova property GA4 -->
 ```
 
-### 2. `supabase/functions/converter-lead-agendamento/index.ts`
-
-Nenhuma alteração necessária — já seta corretamente `status_funil='agendado'` e `status_crm='CLINICOR'`.
-
-Correção mínima de 1 linha que elimina a race condition.
+Todos os eventos existentes (dataLayer.push e gtag conversion calls) serão automaticamente enviados para ambas as properties GA4.
 
