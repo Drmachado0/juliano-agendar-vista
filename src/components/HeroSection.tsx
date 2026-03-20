@@ -58,7 +58,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                   className="w-full h-full object-cover object-top"
                 />
                 {/* Subtle overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-background/30 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-background/10 to-transparent" />
               </div>
 
               {/* Name tag below photo on mobile */}
