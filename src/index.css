@@ -128,7 +128,7 @@
   }
 
   .text-gold {
-    color: hsl(42 85% 54%);
+    color: hsl(var(--primary));
   }
 }
 
