@@ -119,7 +119,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
           {/* Mobile Actions */}
           <div className="flex md:hidden items-center gap-1.5">
             <a
-              href="https://api.whatsapp.com/send?phone=5591936180476"
+              href="https://api.whatsapp.com/send?phone=5591936180428"
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackWhatsAppClickConversion()}

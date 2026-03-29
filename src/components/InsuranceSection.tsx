@@ -115,7 +115,7 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
                   <span className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
                 </Button>
                 <a
-                  href="https://api.whatsapp.com/send?phone=5591936180476&text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consulta%20com%20o%20Dr.%20Juliano%20Machado."
+                  href="https://api.whatsapp.com/send?phone=5591936180428&text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consulta%20com%20o%20Dr.%20Juliano%20Machado."
                   target="_blank"
                   rel="noopener noreferrer"
                 >
