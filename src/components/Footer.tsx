@@ -83,14 +83,14 @@ const Footer = () => {
             <h4 className="text-foreground font-semibold text-sm mb-4 font-sans border-b border-primary/20 pb-2 inline-block">Contato</h4>
             <div className="space-y-3">
               <a
-              href="https://api.whatsapp.com/send?phone=5591920021125"
+              href="https://api.whatsapp.com/send?phone=5591936180476"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackWhatsAppClickConversion()}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <MessageCircle className="w-4 h-4 text-primary" />
-                (91) 92002-1125
+                (91) 93618-0476
               </a>
               <a
                 href="https://www.instagram.com/drjulianomachado.oftalmo/"
@@ -117,7 +117,7 @@ const Footer = () => {
             <a href="https://www.instagram.com/drjulianomachado.oftalmo/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Instagram">
               <Instagram className="w-4 h-4" />
             </a>
-            <a href="https://api.whatsapp.com/send?phone=5591920021125" target="_blank" rel="noopener noreferrer" onClick={() => trackWhatsAppClickConversion()} className="text-muted-foreground hover:text-primary transition-colors" aria-label="WhatsApp">
+            <a href="https://api.whatsapp.com/send?phone=5591936180476" target="_blank" rel="noopener noreferrer" onClick={() => trackWhatsAppClickConversion()} className="text-muted-foreground hover:text-primary transition-colors" aria-label="WhatsApp">
               <MessageCircle className="w-4 h-4" />
             </a>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground/50">
