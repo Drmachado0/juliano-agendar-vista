@@ -58,19 +58,19 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
         ? "bg-background/95 backdrop-blur-xl border-b border-border/40 shadow-sm shadow-black/10"
         : "bg-background/70 backdrop-blur-md border-b border-transparent"
     }`}>
-      <div className="container mx-auto px-3 sm:px-4 py-2.5 sm:py-3">
+      <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="flex items-center gap-2 sm:gap-2.5 group shrink-0"
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/25 flex items-center justify-center overflow-hidden group-hover:border-primary/40 transition-colors">
-              <img src={logoImage} alt="Logo" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/25 flex items-center justify-center overflow-hidden group-hover:border-primary/40 transition-colors">
+              <img src={logoImage} alt="Logo" className="w-9 h-9 sm:w-10 sm:h-10 object-contain" />
             </div>
             <div className="flex flex-col">
-              <span className="font-semibold text-foreground text-[13px] sm:text-sm leading-tight">Dr. Juliano Machado</span>
-              <span className="text-[10px] sm:text-[11px] text-primary/80 font-medium">Oftalmologista</span>
+              <span className="font-semibold text-foreground text-sm sm:text-base leading-tight">Dr. Juliano Machado</span>
+              <span className="text-[11px] sm:text-xs text-primary/80 font-medium">Oftalmologista</span>
             </div>
           </button>
 
@@ -80,7 +80,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
               <button
                 key={item.id}
                 onClick={() => scrollToSection(item.id)}
-                className={`px-3 py-1.5 text-[13px] font-medium rounded-lg transition-all duration-300 ${
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-300 ${
                   activeSection === item.id
                     ? "text-primary bg-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -96,21 +96,21 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
             {user ? (
               <Link to="/admin/dashboard">
                 <Button variant="outline" size="sm" className="gap-2">
-                  <Settings className="h-4 w-4" />
+                  <Settings className="h-5 w-5" />
                   {isAdmin ? "Admin" : "Painel"}
                 </Button>
               </Link>
             ) : (
               <Link to="/auth">
                 <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
-                  <LogIn className="h-4 w-4" />
+                  <LogIn className="h-5 w-5" />
                   Entrar
                 </Button>
               </Link>
             )}
             <Link to="/agendar">
               <Button variant="hero" size="sm" className="gap-1.5">
-                <CalendarCheck className="h-4 w-4" />
+                <CalendarCheck className="h-5 w-5" />
                 Agendar Online
               </Button>
             </Link>
