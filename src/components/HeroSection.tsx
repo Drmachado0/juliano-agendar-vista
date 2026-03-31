@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Award, Users, Star, Shield, CalendarCheck, ChevronDown } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import drJulianoHero from "@/assets/dr-juliano-hero.png";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
+import { useParallax } from "@/hooks/useParallax";
 
 interface HeroSectionProps {
   onScheduleClick: () => void;
