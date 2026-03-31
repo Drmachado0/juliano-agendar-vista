@@ -110,7 +110,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
             )}
             <Link to="/agendar">
               <Button variant="hero" size="sm" className="gap-1.5">
-                <CalendarCheck className="h-4 w-4" />
+                <CalendarCheck className="h-5 w-5" />
                 Agendar Online
               </Button>
             </Link>
