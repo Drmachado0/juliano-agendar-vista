@@ -65,12 +65,12 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="flex items-center gap-2 sm:gap-2.5 group shrink-0"
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/25 flex items-center justify-center overflow-hidden group-hover:border-primary/40 transition-colors">
-              <img src={logoImage} alt="Logo" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/25 flex items-center justify-center overflow-hidden group-hover:border-primary/40 transition-colors">
+              <img src={logoImage} alt="Logo" className="w-9 h-9 sm:w-10 sm:h-10 object-contain" />
             </div>
             <div className="flex flex-col">
-              <span className="font-semibold text-foreground text-[13px] sm:text-sm leading-tight">Dr. Juliano Machado</span>
-              <span className="text-[10px] sm:text-[11px] text-primary/80 font-medium">Oftalmologista</span>
+              <span className="font-semibold text-foreground text-sm sm:text-base leading-tight">Dr. Juliano Machado</span>
+              <span className="text-[11px] sm:text-xs text-primary/80 font-medium">Oftalmologista</span>
             </div>
           </button>
 
