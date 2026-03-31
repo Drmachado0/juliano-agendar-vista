@@ -1,12 +1,10 @@
 import { Heart, Cpu, CheckCircle, Stethoscope, GraduationCap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import drJulianoPhoto from "@/assets/dr-juliano-consultorio.jpg";
-import { useParallax } from "@/hooks/useParallax";
 
 const AboutSection = () => {
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
-  const aboutParallax = useParallax(0.08);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -38,7 +36,7 @@ const AboutSection = () => {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           {/* Photo Side */}
           <div className={`relative order-2 lg:order-1 transition-all duration-700 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-12'}`}>
-            <div className="relative max-w-md mx-auto" style={{ transform: `translateY(${aboutParallax}px)` }}>
+            <div className="relative max-w-md mx-auto">
               {/* Background decoration */}
               <div className="absolute -inset-4 bg-gradient-to-br from-primary/10 to-accent/10 rounded-[2rem] blur-2xl" />
 
