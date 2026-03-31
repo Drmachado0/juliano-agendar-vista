@@ -58,7 +58,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
         ? "bg-background/95 backdrop-blur-xl border-b border-border/40 shadow-sm shadow-black/10"
         : "bg-background/70 backdrop-blur-md border-b border-transparent"
     }`}>
-      <div className="container mx-auto px-3 sm:px-4 py-2.5 sm:py-3">
+      <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <button
