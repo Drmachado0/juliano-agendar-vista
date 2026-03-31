@@ -103,7 +103,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
             ) : (
               <Link to="/auth">
                 <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
-                  <LogIn className="h-4 w-4" />
+                  <LogIn className="h-5 w-5" />
                   Entrar
                 </Button>
               </Link>
