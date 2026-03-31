@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Award, Users, Star, Shield, CalendarCheck, ChevronDown } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import drJulianoHero from "@/assets/dr-juliano-hero.png";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
+import { useParallax } from "@/hooks/useParallax";
 
 interface HeroSectionProps {
   onScheduleClick: () => void;
@@ -11,6 +12,30 @@ interface HeroSectionProps {
 const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
   const { trackCTAClick } = useGoogleTag();
   const [count, setCount] = useState(0);
+  const photoParallax = useParallax(0.15);
+  const glowParallax = useParallax(-0.1);
+
+  // Typing effect
+  const fullText = "cuidado especializado";
+  const [typedText, setTypedText] = useState("");
+  const [showCursor, setShowCursor] = useState(false);
+
+  useEffect(() => {
+    const startDelay = setTimeout(() => {
+      setShowCursor(true);
+      let i = 0;
+      const interval = setInterval(() => {
+        i++;
+        setTypedText(fullText.slice(0, i));
+        if (i >= fullText.length) {
+          clearInterval(interval);
+          setTimeout(() => setShowCursor(false), 600);
+        }
+      }, 60);
+      return () => clearInterval(interval);
+    }, 400);
+    return () => clearTimeout(startDelay);
+  }, []);
 
   // Animated counter for patients
   useEffect(() => {
@@ -32,7 +57,10 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
       {/* Background decorations */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* Radial glow behind photo area */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]" />
+        <div
+          className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]"
+          style={{ transform: `translate(-50%, calc(-50% + ${glowParallax}px))` }}
+        />
         {/* Subtle grid */}
         <div className="absolute inset-0 opacity-[0.015]" style={{
           backgroundImage: `linear-gradient(hsl(var(--primary) / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary) / 0.3) 1px, transparent 1px)`,
@@ -46,7 +74,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-14 items-center">
           {/* Photo Column */}
           <div className="flex justify-center lg:justify-end order-1 lg:order-1 opacity-0 animate-scale-in animation-delay-100">
-            <div className="relative">
+            <div className="relative" style={{ transform: `translateY(${photoParallax}px)` }}>
               {/* Glow ring */}
               <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent blur-2xl" />
 
@@ -83,7 +111,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold leading-[1.08] mb-4 opacity-0 animate-slide-up animation-delay-200">
               <span className="text-foreground">Sua visão merece</span>
               <br />
-              <span className="gradient-text">cuidado especializado</span>
+              <span className="gradient-text">{typedText}{showCursor && <span className="animate-pulse">|</span>}</span>
             </h1>
 
             {/* Subtitle */}
