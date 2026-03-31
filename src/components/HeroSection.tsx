@@ -74,7 +74,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-14 items-center">
           {/* Photo Column */}
           <div className="flex justify-center lg:justify-end order-1 lg:order-1 opacity-0 animate-scale-in animation-delay-100">
-            <div className="relative">
+            <div className="relative" style={{ transform: `translateY(${photoParallax}px)` }}>
               {/* Glow ring */}
               <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent blur-2xl" />
 
