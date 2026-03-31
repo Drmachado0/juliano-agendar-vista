@@ -12,6 +12,30 @@ interface HeroSectionProps {
 const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
   const { trackCTAClick } = useGoogleTag();
   const [count, setCount] = useState(0);
+  const photoParallax = useParallax(0.15);
+  const glowParallax = useParallax(-0.1);
+
+  // Typing effect
+  const fullText = "cuidado especializado";
+  const [typedText, setTypedText] = useState("");
+  const [showCursor, setShowCursor] = useState(false);
+
+  useEffect(() => {
+    const startDelay = setTimeout(() => {
+      setShowCursor(true);
+      let i = 0;
+      const interval = setInterval(() => {
+        i++;
+        setTypedText(fullText.slice(0, i));
+        if (i >= fullText.length) {
+          clearInterval(interval);
+          setTimeout(() => setShowCursor(false), 600);
+        }
+      }, 60);
+      return () => clearInterval(interval);
+    }, 400);
+    return () => clearTimeout(startDelay);
+  }, []);
 
   // Animated counter for patients
   useEffect(() => {
