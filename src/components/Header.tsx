@@ -96,7 +96,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
             {user ? (
               <Link to="/admin/dashboard">
                 <Button variant="outline" size="sm" className="gap-2">
-                  <Settings className="h-4 w-4" />
+                  <Settings className="h-5 w-5" />
                   {isAdmin ? "Admin" : "Painel"}
                 </Button>
               </Link>
