@@ -111,7 +111,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold leading-[1.08] mb-4 opacity-0 animate-slide-up animation-delay-200">
               <span className="text-foreground">Sua visão merece</span>
               <br />
-              <span className="gradient-text">cuidado especializado</span>
+              <span className="gradient-text">{typedText}{showCursor && <span className="animate-pulse">|</span>}</span>
             </h1>
 
             {/* Subtitle */}
