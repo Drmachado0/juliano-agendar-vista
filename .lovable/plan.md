@@ -1,25 +1,34 @@
 
 
-# Ajuste da Pagina Inicial — Header maior + Hero centralizado
+# Efeitos Visuais — Typing Effect + Parallax Scroll
 
-## Problema
-A imagem mostra que o header tem textos/icones pequenos e ha um espacamento vertical excessivo no hero, empurrando o conteudo para baixo.
+## 1. Typing Effect no Hero (`src/components/HeroSection.tsx`)
 
-## Alteracoes
+Adicionar efeito de digitacao no texto "cuidado especializado" do h1:
+- Criar hook `useTypingEffect` inline ou estado local que revela caracteres um a um
+- Texto comeca vazio, digita ~60ms por caractere, com cursor piscante `|`
+- Inicia apos o slide-up do h1 terminar (~400ms delay)
+- Cursor desaparece apos completar a digitacao
+- Apenas no span `gradient-text`, o "Sua visao merece" aparece normalmente
 
-### 1. Header (`src/components/Header.tsx`)
-- Aumentar tamanho do logo: `w-9 h-9 sm:w-10 sm:h-10` → `w-11 h-11 sm:w-12 sm:h-12` e imagem interna proporcionalmente
-- Aumentar nome: `text-[13px] sm:text-sm` → `text-sm sm:text-base`
-- Aumentar subtitulo: `text-[10px] sm:text-[11px]` → `text-[11px] sm:text-xs`
-- Aumentar nav links: `text-[13px]` → `text-sm`
-- Aumentar icones dos botoes CTA: `h-4 w-4` → `h-5 w-5`
-- Aumentar padding vertical do header: `py-2.5 sm:py-3` → `py-3 sm:py-4`
+## 2. Parallax no Scroll (`src/hooks/useParallax.ts` — novo)
 
-### 2. Hero Section (`src/components/HeroSection.tsx`)
-- Reduzir altura minima: `min-h-[85dvh]` → `min-h-[75dvh]`
-- Trocar alinhamento vertical: `items-end` → `items-center`
-- Reduzir padding top: `pt-20 sm:pt-28` → `pt-24 sm:pt-24`
-- Reduzir padding bottom: `pb-16` → `pb-10`
+Criar hook `useParallax` que retorna um valor de offset baseado no scroll:
+- Usa `scroll` event com `requestAnimationFrame` para performance
+- Retorna `transform: translateY(offset)` proporcional ao scroll
 
-Isso sobe o conteudo do hero, reduz o espaco morto e deixa o header mais proeminente.
+Aplicar em 3 pontos:
+- **Hero**: foto do Dr. Juliano move mais lento que o texto (parallax sutil, fator 0.15)
+- **Hero background glow**: move em direcao oposta (fator -0.1)
+- **AboutSection**: foto e card de credenciais com parallax leve (fator 0.08)
+
+## Arquivos alterados
+
+| Arquivo | Mudanca |
+|---|---|
+| `src/components/HeroSection.tsx` | Typing effect no titulo + parallax na foto e glow |
+| `src/hooks/useParallax.ts` | Novo hook reutilizavel |
+| `src/components/AboutSection.tsx` | Parallax na foto |
+
+Nenhuma secao adicionada/removida. Nenhum layout alterado. Todos os trackers mantidos.
 
