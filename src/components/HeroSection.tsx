@@ -57,7 +57,10 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
       {/* Background decorations */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* Radial glow behind photo area */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]" />
+        <div
+          className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]"
+          style={{ transform: `translate(-50%, calc(-50% + ${glowParallax}px))` }}
+        />
         {/* Subtle grid */}
         <div className="absolute inset-0 opacity-[0.015]" style={{
           backgroundImage: `linear-gradient(hsl(var(--primary) / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary) / 0.3) 1px, transparent 1px)`,
