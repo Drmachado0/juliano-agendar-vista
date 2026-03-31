@@ -6,6 +6,7 @@ import { useParallax } from "@/hooks/useParallax";
 const AboutSection = () => {
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const aboutParallax = useParallax(0.08);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
