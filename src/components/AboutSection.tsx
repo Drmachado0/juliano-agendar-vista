@@ -1,6 +1,7 @@
 import { Heart, Cpu, CheckCircle, Stethoscope, GraduationCap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import drJulianoPhoto from "@/assets/dr-juliano-consultorio.jpg";
+import { useParallax } from "@/hooks/useParallax";
 
 const AboutSection = () => {
   const [isVisible, setIsVisible] = useState(false);
