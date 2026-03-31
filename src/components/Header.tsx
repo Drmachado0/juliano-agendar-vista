@@ -80,7 +80,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
               <button
                 key={item.id}
                 onClick={() => scrollToSection(item.id)}
-                className={`px-3 py-1.5 text-[13px] font-medium rounded-lg transition-all duration-300 ${
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-300 ${
                   activeSection === item.id
                     ? "text-primary bg-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
