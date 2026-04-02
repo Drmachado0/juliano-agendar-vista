@@ -153,7 +153,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
               <StatCard
                 icon={<Award className="w-4 h-4 text-primary" />}
                 value="+13 anos"
-                label="de experiência"
+                label="de oftalmologia"
               />
             </div>
           </div>
