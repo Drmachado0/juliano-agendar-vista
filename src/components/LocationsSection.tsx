@@ -68,8 +68,16 @@ const LocationsSection = () => {
   const activeLocationData = locations[activeLocation];
 
   return (
-    <section id="locais" className="py-20 md:py-28 bg-card relative" ref={sectionRef}>
+    <section id="locais" className="py-20 md:py-28 bg-card relative noise-overlay" ref={sectionRef}>
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+
+      {/* Topographic rings decoration */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.02] pointer-events-none hidden lg:block">
+        <div className="w-[600px] h-[600px] rounded-full border border-foreground" />
+        <div className="absolute inset-[15%] rounded-full border border-foreground" />
+        <div className="absolute inset-[30%] rounded-full border border-foreground" />
+        <div className="absolute inset-[45%] rounded-full border border-foreground" />
+      </div>
 
       <div className="container mx-auto px-4">
         <div className={`text-center mb-14 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
@@ -85,41 +93,49 @@ const LocationsSection = () => {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-0 items-stretch">
           {/* Location Cards */}
-          <div className="space-y-3">
+          <div className="space-y-3 lg:pr-6 relative z-10">
             {locations.map((location, index) => {
               const IconComponent = location.icon;
               const isActive = activeLocation === index;
+              const isBelem = location.city === "Belém";
+              const borderColor = isActive
+                ? isBelem ? "border-accent/40" : "border-primary/40"
+                : "border-border/50";
               return (
                 <button
                   key={index}
                   onClick={() => setActiveLocation(index)}
-                  className={`w-full text-left card-glass rounded-2xl p-5 transition-all duration-400 ${
+                  className={`card-shimmer w-full text-left card-glass rounded-2xl p-5 transition-all duration-400 ${borderColor} ${
                     isActive
-                      ? "border-primary/40 bg-primary/5 shadow-lg shadow-primary/8 scale-[1.01]"
+                      ? `bg-primary/5 shadow-lg shadow-primary/10 scale-[1.01] ${isBelem ? 'border-r-2 border-r-accent' : 'border-r-2 border-r-primary'}`
                       : "hover:border-primary/25 hover:bg-primary/3"
                   } ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}`}
                   style={{ transitionDelay: isVisible ? `${index * 80}ms` : '0ms' }}
                 >
                   <div className="flex items-start gap-4">
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 ${
-                      isActive ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "bg-primary/10 text-primary"
+                      isActive
+                        ? isBelem ? "bg-accent text-accent-foreground shadow-md shadow-accent/20" : "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                        : "bg-primary/10 text-primary"
                     }`}>
                       <IconComponent className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className={`font-semibold text-sm truncate transition-colors font-sans ${isActive ? "text-primary" : "text-foreground"}`}>
+                        <h3 className={`font-semibold text-sm truncate transition-colors font-sans ${isActive ? (isBelem ? "text-accent" : "text-primary") : "text-foreground"}`}>
                           {location.name}
                         </h3>
-                        <span className="px-2 py-0.5 rounded-md bg-secondary text-[10px] font-semibold text-muted-foreground shrink-0 uppercase tracking-wider">
+                        <span className={`px-2 py-0.5 rounded-md text-xs font-semibold shrink-0 uppercase tracking-wider ${
+                          isBelem ? 'bg-accent/10 text-accent' : 'bg-secondary text-muted-foreground'
+                        }`}>
                           {location.city}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground line-clamp-1">{location.address}</p>
                       <div className="flex items-center gap-3 mt-2">
-                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Phone className="w-3 h-3 text-primary" />
                           {location.phone}
                         </span>
@@ -131,24 +147,27 @@ const LocationsSection = () => {
             })}
           </div>
 
-          {/* Map and Details */}
-          <div className={`card-glass rounded-2xl overflow-hidden transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}>
-            <div className="aspect-video bg-secondary relative">
-              <iframe
-                src={activeLocationData.mapUrl}
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                className="absolute inset-0"
-                title={`Mapa - ${activeLocationData.name}`}
-              />
-            </div>
-            <div className="p-6">
-              <h3 className="text-lg font-bold text-foreground mb-4 font-sans">{activeLocationData.name}</h3>
-              <div className="space-y-3 mb-6">
+          {/* Map — behind cards with overlay */}
+          <div className={`relative rounded-3xl overflow-hidden min-h-[500px] transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}>
+            {/* Map iframe */}
+            <iframe
+              src={activeLocationData.mapUrl}
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              className="absolute inset-0 w-full h-full"
+              title={`Mapa - ${activeLocationData.name}`}
+            />
+            {/* Gradient overlay for transition to cards */}
+            <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-background/80 pointer-events-none hidden lg:block" />
+
+            {/* Details overlay at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card/95 via-card/80 to-transparent p-6 pt-12">
+              <h3 className="text-lg font-bold text-foreground mb-3 font-sans">{activeLocationData.name}</h3>
+              <div className="space-y-2 mb-4">
                 <div className="flex items-start gap-3 text-muted-foreground">
                   <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                   <span className="text-sm">{activeLocationData.address}</span>
