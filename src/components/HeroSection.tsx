@@ -123,7 +123,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </div>
 
             {/* Stats cards */}
-            <div className="grid grid-cols-3 gap-3 opacity-0 animate-slide-up animation-delay-600">
+            <div className="grid grid-cols-3 gap-3 opacity-0 animate-blur-in animation-delay-700">
               <StatCard
                 icon={<Users className="w-4 h-4 text-primary" />}
                 value={`+${count.toLocaleString('pt-BR')}`}
