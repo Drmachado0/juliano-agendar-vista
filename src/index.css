@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -24,10 +24,10 @@
     --secondary-foreground: 40 15% 95%;
 
     --muted: 222 35% 13%;
-    --muted-foreground: 222 12% 59%;
+    --muted-foreground: 222 12% 62%;
 
-    /* Teal accent */
-    --accent: 195 65% 38%;
+    /* Teal accent — more vibrant */
+    --accent: 175 60% 42%;
     --accent-foreground: 40 15% 95%;
 
     --destructive: 0 80% 58%;
@@ -41,12 +41,14 @@
 
     /* Refined tokens */
     --gradient-primary: linear-gradient(135deg, hsl(42 85% 54%), hsl(38 78% 44%));
-    --gradient-hero: linear-gradient(180deg, hsl(222 42% 5%) 0%, hsl(222 42% 9%) 100%);
+    --gradient-hero: linear-gradient(160deg, hsl(222 42% 4%) 0%, hsl(222 42% 8%) 50%, hsl(222 50% 10%) 100%);
     --gradient-card: linear-gradient(145deg, hsl(222 42% 10%), hsl(222 42% 7%));
     --gradient-gold: linear-gradient(135deg, hsl(42 85% 54%), hsl(45 88% 64%));
+    --gradient-accent: linear-gradient(135deg, hsl(175 60% 42%), hsl(195 65% 38%));
     --shadow-glow: 0 0 50px hsl(42 85% 54% / 0.12);
     --shadow-card: 0 4px 30px hsl(222 42% 3% / 0.5);
     --shadow-gold: 0 4px 20px hsl(42 85% 54% / 0.18);
+    --shadow-accent: 0 4px 20px hsl(175 60% 42% / 0.15);
 
     --sidebar-background: 222 42% 8%;
     --sidebar-foreground: 40 15% 95%;
@@ -66,7 +68,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -77,8 +79,12 @@
   }
 
   h1, h2, h3 {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    letter-spacing: -0.01em;
+    font-family: 'Fraunces', Georgia, serif;
+    letter-spacing: -0.02em;
+  }
+
+  h1 {
+    font-variation-settings: 'opsz' 72;
   }
 
   /* Better focus styles for accessibility */
@@ -99,6 +105,11 @@
     background-image: var(--gradient-gold);
   }
 
+  .gradient-text-accent {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-accent);
+  }
+
   .card-glass {
     background: var(--gradient-card);
     box-shadow: var(--shadow-card);
@@ -109,6 +120,28 @@
     background: linear-gradient(145deg, hsl(222 42% 10%), hsl(222 42% 7%));
     box-shadow: var(--shadow-card), inset 0 1px 0 hsl(222 42% 18% / 0.5);
     @apply border border-primary/10;
+  }
+
+  .card-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .card-shimmer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, transparent 40%, hsl(var(--primary) / 0.3) 50%, transparent 60%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .card-shimmer:hover::before {
+    opacity: 1;
   }
 
   .glow-effect {
@@ -136,6 +169,20 @@
     pointer-events: none;
     z-index: 1;
     opacity: 0.35;
+  }
+
+  .noise-overlay {
+    position: relative;
+  }
+  .noise-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+    pointer-events: none;
+    z-index: 1;
+    border-radius: inherit;
   }
 
   .border-gold {
@@ -174,6 +221,10 @@
     animation: slideRight 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
+  .animate-slide-left {
+    animation: slideLeft 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
   .animate-scale-in {
     animation: scaleIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
@@ -190,6 +241,14 @@
     animation: blurIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
+  .animate-reveal-up {
+    animation: revealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-whatsapp-enter {
+    animation: whatsappSlideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
   .animation-delay-100 { animation-delay: 0.1s; }
   .animation-delay-200 { animation-delay: 0.2s; }
   .animation-delay-300 { animation-delay: 0.3s; }
@@ -197,6 +256,9 @@
   .animation-delay-500 { animation-delay: 0.5s; }
   .animation-delay-600 { animation-delay: 0.6s; }
   .animation-delay-700 { animation-delay: 0.7s; }
+  .animation-delay-800 { animation-delay: 0.8s; }
+  .animation-delay-900 { animation-delay: 0.9s; }
+  .animation-delay-1000 { animation-delay: 1.0s; }
 }
 
 @keyframes float {
@@ -231,6 +293,17 @@
   }
 }
 
+@keyframes slideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(24px) translateZ(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateZ(0);
+  }
+}
+
 @keyframes scaleIn {
   from {
     opacity: 0;
@@ -242,6 +315,48 @@
   }
 }
 
+@keyframes revealUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+    clip-path: inset(100% 0 0 0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes blurIn {
+  from {
+    opacity: 0;
+    filter: blur(12px);
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+}
+
+@keyframes whatsappSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(60px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes borderShimmer {
+  0% { background-position: 200% 50%; }
+  100% { background-position: -200% 50%; }
+}
+
 @keyframes glow {
   from { box-shadow: 0 0 20px hsl(var(--primary) / 0.15); }
   to { box-shadow: 0 0 40px hsl(var(--primary) / 0.3); }
@@ -250,19 +365,6 @@
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
-}
-
-@keyframes blurIn {
-  from {
-    opacity: 0;
-    filter: blur(4px);
-    transform: translateY(4px) translateZ(0);
-  }
-  to {
-    opacity: 1;
-    filter: blur(0);
-    transform: translateY(0) translateZ(0);
-  }
 }
 
 @keyframes whatsapp-pulse {
