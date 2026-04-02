@@ -121,9 +121,9 @@ const AboutSection = () => {
                 <div className="w-11 h-11 rounded-xl bg-accent/10 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
                   <Cpu className="w-5 h-5 text-accent" />
                 </div>
-                <h4 className="text-foreground font-semibold text-sm mb-1.5 font-sans">Tecnologia de Ponta</h4>
+                <h4 className="text-foreground font-semibold text-sm mb-1.5 font-sans">Equipamentos atualizados</h4>
                 <p className="text-muted-foreground text-xs leading-relaxed">
-                  Equipamentos modernos para diagnósticos precisos e procedimentos seguros.
+                  Retinógrafo digital, biometria ultrassônica e laser — tudo o que você precisa em um só lugar.
                 </p>
               </div>
             </div>

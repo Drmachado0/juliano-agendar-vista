@@ -167,7 +167,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
         style={{ animationTimingFunction: 'ease-in-out' }}
         aria-label="Rolar para baixo"
       >
-        <span className="text-xs uppercase tracking-[0.2em] font-medium font-sans">Saiba mais</span>
+        <span className="text-xs uppercase tracking-[0.2em] font-medium font-sans">Conheça o Dr. Juliano</span>
         <ChevronDown className="w-5 h-5" />
       </button>
     </section>
