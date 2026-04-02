@@ -50,7 +50,7 @@ const LocationsSection = () => {
       phone: "(91) 3239-4600",
       hours: "Conforme agenda",
       icon: Eye,
-      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.456!2d-48.4897!3d-1.4558!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x92a4546013c5d1b7%3A0x1!2sAv.%20General%C3%ADssimo%20Deodoro%2C%20904%20-%20Nazar%C3%A9%2C%20Bel%C3%A9m!5e0!3m2!1spt-BR!2sbr!4v1699999999999!5m2!1spt-BR!2sbr",
+      mapUrl: "https://maps.google.com/maps?q=Instituto+de+Olhos+de+Belem+Av+Generalissimo+Deodoro+904+Nazare+Belem+PA&t=&z=15&ie=UTF8&iwloc=&output=embed",
       mapsLink: "https://www.google.com/maps/search/Av+Generalissimo+Deodoro+904+Nazare+Belem+PA",
     },
     {
