@@ -72,7 +72,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
           {/* Content Column */}
           <div className="text-center lg:text-left order-2 lg:order-2">
             {/* Trust badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/8 border border-primary/15 mb-6 opacity-0 animate-fade-in animation-delay-200">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/8 border border-primary/15 mb-6 opacity-0 animate-blur-in animation-delay-300">
               <Shield className="w-3.5 h-3.5 text-primary" />
               <span className="text-xs text-muted-foreground font-medium">
                 Membro da Sociedade Brasileira de Oftalmologia
