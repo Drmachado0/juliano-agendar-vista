@@ -28,30 +28,38 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
   }, []);
 
   return (
-    <section className="relative min-h-[75dvh] flex items-center pt-24 sm:pt-24 pb-10 hero-gradient noise-texture overflow-hidden">
+    <section className="relative min-h-[75dvh] flex items-center pt-24 sm:pt-24 pb-10 hero-gradient noise-overlay overflow-hidden">
       {/* Background decorations */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* Radial glow behind photo area */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]" />
-        {/* Subtle grid */}
+        <div className="absolute top-1/3 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]" />
+        {/* Accent teal glow — bottom right */}
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px]" />
+        {/* Diagonal grid */}
         <div className="absolute inset-0 opacity-[0.015]" style={{
           backgroundImage: `linear-gradient(hsl(var(--primary) / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary) / 0.3) 1px, transparent 1px)`,
-          backgroundSize: '80px 80px'
+          backgroundSize: '80px 80px',
+          transform: 'rotate(45deg) scale(1.5)',
+          transformOrigin: 'center center',
         }} />
         {/* Decorative line */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-24 bg-gradient-to-b from-transparent via-primary/20 to-transparent hidden lg:block" />
+        <div className="absolute top-0 left-1/3 w-px h-24 bg-gradient-to-b from-transparent via-primary/20 to-transparent hidden lg:block" />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-14 items-center">
-          {/* Photo Column */}
-          <div className="flex justify-center lg:justify-end order-1 lg:order-1 opacity-0 animate-scale-in animation-delay-100 ease-out-expo">
-            <div className="relative">
+        <div className="grid lg:grid-cols-[2fr_3fr] gap-8 lg:gap-14 items-center">
+          {/* Photo Column — left on desktop */}
+          <div className="flex justify-center lg:justify-end order-1 lg:order-1 lg:mt-8 opacity-0 animate-scale-in animation-delay-100 ease-out-expo">
+            <div className="relative noise-overlay">
               {/* Glow ring */}
-              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent blur-2xl" />
+              <div className="absolute -inset-3 rounded-[2rem] bg-gradient-to-br from-primary/15 via-primary/5 to-transparent blur-2xl" />
+
+              {/* Decorative iris circles */}
+              <div className="absolute -bottom-8 -left-8 w-[200px] h-[200px] rounded-full border border-primary/15 hidden lg:block" />
+              <div className="absolute -bottom-4 -left-4 w-[140px] h-[140px] rounded-full border border-primary/8 hidden lg:block" />
 
               {/* Photo container */}
-              <div className="relative w-56 h-64 sm:w-64 sm:h-72 md:w-72 md:h-80 lg:w-80 lg:h-[22rem] rounded-2xl overflow-hidden border-2 border-primary/25 shadow-2xl shadow-primary/10">
+              <div className="relative w-56 h-72 sm:w-64 sm:h-80 md:w-72 md:h-[22rem] lg:w-[22rem] lg:h-[28rem] rounded-[2rem] rounded-bl-[4rem] overflow-hidden border-2 border-primary/25 shadow-2xl shadow-primary/10">
                 <img
                   src={drJulianoHero}
                   alt="Dr. Juliano Machado - Médico Oftalmologista"
@@ -74,16 +82,16 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             {/* Trust badge */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/8 border border-primary/15 mb-6 opacity-0 animate-blur-in animation-delay-300">
               <Shield className="w-3.5 h-3.5 text-primary" />
-              <span className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-[0.08em]">
+              <span className="text-xs text-muted-foreground font-medium uppercase tracking-[0.08em]">
                 Membro da Sociedade Brasileira de Oftalmologia
               </span>
             </div>
 
             {/* Heading */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-extrabold leading-[1.08] mb-4 opacity-0 animate-slide-up animation-delay-400 tracking-[-0.02em]">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[4rem] font-extrabold leading-[1.08] mb-4 opacity-0 animate-slide-up animation-delay-400 tracking-[-0.02em]">
               <span className="text-foreground">Sua visão merece</span>
               <br />
-              <span className="gradient-text">cuidado especializado</span>
+              <span className="gradient-text opacity-0 animate-reveal-up animation-delay-600">cuidado especializado</span>
             </h1>
 
             {/* Subtitle */}
@@ -123,7 +131,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </div>
 
             {/* Stats cards */}
-            <div className="grid grid-cols-3 gap-3 opacity-0 animate-blur-in animation-delay-700">
+            <div className="grid grid-cols-3 gap-4 opacity-0 animate-blur-in animation-delay-700">
               <StatCard
                 icon={<Users className="w-4 h-4 text-primary" />}
                 value={`+${count.toLocaleString('pt-BR')}`}
@@ -133,6 +141,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                 icon={<Star className="w-4 h-4 text-primary fill-primary" />}
                 value="5.0"
                 label="avaliação Google"
+                highlight
                 extra={
                   <svg className="w-3.5 h-3.5 ml-1" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -155,10 +164,11 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
       {/* Scroll indicator */}
       <button
         onClick={() => document.getElementById("sobre")?.scrollIntoView({ behavior: "smooth" })}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 animate-float hidden lg:flex flex-col items-center gap-2 text-muted-foreground/40 hover:text-primary/60 transition-colors cursor-pointer"
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 hidden lg:flex flex-col items-center gap-2 text-muted-foreground/40 hover:text-primary/60 transition-colors cursor-pointer animate-[float_3s_ease-in-out_infinite]"
+        style={{ animationTimingFunction: 'ease-in-out' }}
         aria-label="Rolar para baixo"
       >
-        <span className="text-[10px] uppercase tracking-[0.2em] font-medium font-sans">Saiba mais</span>
+        <span className="text-xs uppercase tracking-[0.2em] font-medium font-sans">Saiba mais</span>
         <ChevronDown className="w-5 h-5" />
       </button>
     </section>
@@ -172,16 +182,21 @@ interface StatCardProps {
   value: string;
   label: string;
   extra?: React.ReactNode;
+  highlight?: boolean;
 }
 
-const StatCard = ({ icon, value, label, extra }: StatCardProps) => (
-  <div className="flex flex-col items-center lg:items-start gap-1 px-3 py-3 rounded-xl bg-card/50 border border-border/40 backdrop-blur-sm">
+const StatCard = ({ icon, value, label, extra, highlight }: StatCardProps) => (
+  <div className={`card-shimmer flex flex-col items-center lg:items-start gap-1 px-3 py-3 rounded-xl backdrop-blur-sm ${
+    highlight
+      ? 'bg-primary/5 border border-primary/30'
+      : 'bg-card/50 border border-border/40'
+  }`}>
     <div className="flex items-center gap-1.5">
       {icon}
       <span className="text-lg lg:text-xl font-bold text-foreground tabular-nums">{value}</span>
       {extra}
     </div>
-    <span className="text-[11px] text-muted-foreground leading-tight">{label}</span>
+    <span className="text-xs text-muted-foreground leading-tight">{label}</span>
   </div>
 );
 
