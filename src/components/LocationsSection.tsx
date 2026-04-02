@@ -89,7 +89,7 @@ const LocationsSection = () => {
             4 locais em <span className="gradient-text">Paragominas e Belém</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Atendimento em clínicas e hospitais de referência em Paragominas e Belém.
+            Escolha o local mais perto de você. Todos com estrutura completa para consultas e procedimentos.
           </p>
         </div>
 
