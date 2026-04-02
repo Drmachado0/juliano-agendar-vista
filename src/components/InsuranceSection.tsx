@@ -59,14 +59,14 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
             </p>
           </div>
 
-          {/* Insurance logos */}
-          <div className="flex flex-wrap justify-center gap-3 md:gap-4 mb-14">
+          {/* Insurance logos — asymmetric grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-14">
             {insurances.map((insurance, index) => (
               <div
                 key={index}
-                className={`flex items-center gap-3 px-5 py-3.5 rounded-xl border transition-all duration-500 hover:scale-105 hover:-translate-y-0.5 ${
+                className={`card-shimmer flex items-center gap-3 px-5 py-3.5 rounded-xl border transition-all duration-500 hover:scale-105 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10 ${
                   insurance.highlight
-                    ? "bg-primary/8 border-primary/25 shadow-sm shadow-primary/10"
+                    ? "bg-primary/8 border-primary/25 shadow-sm shadow-primary/10 md:col-span-1 md:row-span-1"
                     : "bg-card border-border/60 hover:border-primary/30"
                 } ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
                 style={{ transitionDelay: isVisible ? `${200 + index * 80}ms` : '0ms' }}
@@ -81,18 +81,27 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
             ))}
           </div>
 
-          {/* CTA Card - Conversion focused */}
-          <div className={`relative overflow-hidden rounded-3xl noise-texture transition-all duration-700 delay-300 ease-out-expo ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
+          {/* CTA Card */}
+          <div className={`relative overflow-hidden rounded-3xl transition-all duration-700 delay-300 ease-out-expo ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
             {/* Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-card to-accent/10" />
             <div className="absolute inset-0 border border-primary/20 rounded-3xl" />
 
-            {/* Glow effect */}
+            {/* Noise overlay inside card */}
+            <div className="absolute inset-0 noise-overlay rounded-3xl" />
+
+            {/* Glow effects */}
             <div className="absolute -top-20 -right-20 w-60 h-60 bg-primary/10 rounded-full blur-[80px]" />
             <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-accent/8 rounded-full blur-[80px]" />
 
-            <div className="relative p-8 md:p-12 text-center">
-              <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
+            {/* Floating decorative dots */}
+            <div className="absolute top-8 right-12 w-3 h-3 rounded-full bg-primary/10 animate-float" />
+            <div className="absolute top-16 right-24 w-2 h-2 rounded-full bg-primary/8 animate-float animation-delay-300" />
+            <div className="absolute bottom-12 left-10 w-4 h-4 rounded-full bg-accent/10 animate-float animation-delay-500" />
+            <div className="absolute bottom-20 left-28 w-2 h-2 rounded-full bg-primary/6 animate-float animation-delay-700" />
+
+            <div className="relative p-10 md:p-16 text-center">
+              <h3 className="text-2xl md:text-3xl font-extrabold text-foreground mb-3">
                 Cuide da sua visão <span className="gradient-text">hoje mesmo</span>
               </h3>
               <p className="text-muted-foreground mb-8 max-w-md mx-auto">
@@ -127,6 +136,7 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
               </div>
 
               {/* Trust micro-copy */}
+              <div className="h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent mb-4" />
               <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-primary" />

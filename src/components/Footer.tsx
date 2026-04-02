@@ -11,7 +11,7 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-gradient-to-b from-card to-background border-t border-border/50 relative">
+    <footer className="bg-gradient-to-b from-card to-background border-t border-border/50 relative noise-overlay">
       {/* Top decorative line */}
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
 
@@ -19,8 +19,8 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8 mb-12">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/25 flex items-center justify-center overflow-hidden">
+            <div className="flex items-center gap-2.5 mb-4 group">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/25 flex items-center justify-center overflow-hidden transition-shadow duration-300 group-hover:shadow-lg group-hover:shadow-primary/15">
                 <img src={logoImage} alt="Logo" className="w-12 h-12 object-contain" />
               </div>
               <div className="flex flex-col">
@@ -47,9 +47,10 @@ const Footer = () => {
                 <button
                   key={link.id}
                   onClick={() => scrollToSection(link.id)}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors text-left"
+                  className="group relative text-sm text-muted-foreground hover:text-primary transition-colors text-left w-fit"
                 >
                   {link.label}
+                  <span className="absolute -bottom-0.5 left-0 h-px bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left w-full" />
                 </button>
               ))}
             </nav>
@@ -83,7 +84,7 @@ const Footer = () => {
             <h4 className="text-foreground font-semibold text-sm mb-4 font-sans border-b border-primary/20 pb-2 inline-block">Contato</h4>
             <div className="space-y-3">
               <a
-              href="https://api.whatsapp.com/send?phone=5591936180428"
+                href="https://api.whatsapp.com/send?phone=5591936180428"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackWhatsAppClickConversion()}
@@ -105,19 +106,49 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Decorative separator */}
-        <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+        {/* Wave separator */}
+        <div className="relative h-5 mb-4 overflow-hidden">
+          <svg viewBox="0 0 1200 20" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+            <path
+              d="M0 10 Q150 0 300 10 T600 10 T900 10 T1200 10"
+              fill="none"
+              stroke="hsl(var(--primary) / 0.1)"
+              strokeWidth="1"
+            />
+          </svg>
+        </div>
 
         {/* Bottom bar */}
-        <div className="pt-8 border-t border-border/40 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-muted-foreground">
-            © {currentYear} Dr. Juliano Machado — Todos os direitos reservados.
-          </p>
+        <div className="pt-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col items-center md:items-start gap-3">
+            {/* Decorative iris rings */}
+            <svg width="60" height="60" viewBox="0 0 60 60" className="opacity-[0.08]">
+              <circle cx="30" cy="30" r="28" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.5" />
+              <circle cx="30" cy="30" r="20" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.5" />
+              <circle cx="30" cy="30" r="12" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.5" />
+            </svg>
+            <p className="text-xs text-muted-foreground">
+              © {currentYear} Dr. Juliano Machado — Todos os direitos reservados.
+            </p>
+          </div>
           <div className="flex items-center gap-4">
-            <a href="https://www.instagram.com/drjulianomachado.oftalmo/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Instagram">
+            <a
+              href="https://www.instagram.com/drjulianomachado.oftalmo/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-300"
+              aria-label="Instagram"
+            >
               <Instagram className="w-4 h-4" />
             </a>
-            <a href="https://api.whatsapp.com/send?phone=5591936180428" target="_blank" rel="noopener noreferrer" onClick={() => trackWhatsAppClickConversion()} className="text-muted-foreground hover:text-primary transition-colors" aria-label="WhatsApp">
+            <a
+              href="https://api.whatsapp.com/send?phone=5591936180428"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackWhatsAppClickConversion()}
+              className="text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-300"
+              aria-label="WhatsApp"
+            >
               <MessageCircle className="w-4 h-4" />
             </a>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground/50">
