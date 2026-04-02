@@ -47,14 +47,14 @@ const ProceduresSection = () => {
 
       <div className="container mx-auto px-4">
         {/* Header */}
-        <div className={`text-center mb-12 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+        <div className={`text-center lg:text-left mb-12 transition-all duration-700 ease-out-expo ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 border border-primary/15 text-primary font-semibold text-sm mb-6">
             Nossos procedimentos
           </span>
           <h2 className="text-3xl md:text-4xl lg:text-[2.75rem] font-bold text-foreground mb-4">
             Excelência em cada <span className="gradient-text">procedimento</span>
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+          <p className="text-muted-foreground max-w-2xl lg:max-w-none text-lg">
             Oferecemos exames de alta precisão, cirurgias modernas e tratamentos a laser com tecnologia avançada.
           </p>
         </div>
@@ -81,8 +81,8 @@ const ProceduresSection = () => {
           {filteredProcedures.map((procedure, index) => (
             <div
               key={procedure.title}
-              className={`group card-glass rounded-2xl p-6 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1.5 transition-all duration-500 border-l-[3px] border-l-primary/60 ${
-                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              className={`group card-glass rounded-2xl p-6 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1.5 transition-all duration-500 ease-out-expo border-l-[3px] border-l-primary/60 hover:border-l-primary ${
+                isVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-95'
               }`}
               style={{ transitionDelay: isVisible ? `${index * 80}ms` : '0ms' }}
             >

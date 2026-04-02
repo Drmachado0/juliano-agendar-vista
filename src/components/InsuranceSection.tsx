@@ -82,7 +82,7 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
           </div>
 
           {/* CTA Card - Conversion focused */}
-          <div className={`relative overflow-hidden rounded-3xl transition-all duration-700 delay-300 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
+          <div className={`relative overflow-hidden rounded-3xl noise-texture transition-all duration-700 delay-300 ease-out-expo ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
             {/* Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-card to-accent/10" />
             <div className="absolute inset-0 border border-primary/20 rounded-3xl" />

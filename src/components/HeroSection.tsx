@@ -28,7 +28,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
   }, []);
 
   return (
-    <section className="relative min-h-[75dvh] flex items-center pt-24 sm:pt-24 pb-10 hero-gradient overflow-hidden">
+    <section className="relative min-h-[75dvh] flex items-center pt-24 sm:pt-24 pb-10 hero-gradient noise-texture overflow-hidden">
       {/* Background decorations */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* Radial glow behind photo area */}
@@ -45,7 +45,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-14 items-center">
           {/* Photo Column */}
-          <div className="flex justify-center lg:justify-end order-1 lg:order-1 opacity-0 animate-scale-in animation-delay-100">
+          <div className="flex justify-center lg:justify-end order-1 lg:order-1 opacity-0 animate-scale-in animation-delay-100 ease-out-expo">
             <div className="relative">
               {/* Glow ring */}
               <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent blur-2xl" />
@@ -72,22 +72,22 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
           {/* Content Column */}
           <div className="text-center lg:text-left order-2 lg:order-2">
             {/* Trust badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/8 border border-primary/15 mb-6 opacity-0 animate-fade-in animation-delay-200">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/8 border border-primary/15 mb-6 opacity-0 animate-blur-in animation-delay-300">
               <Shield className="w-3.5 h-3.5 text-primary" />
-              <span className="text-xs text-muted-foreground font-medium">
+              <span className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-[0.08em]">
                 Membro da Sociedade Brasileira de Oftalmologia
               </span>
             </div>
 
             {/* Heading */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold leading-[1.08] mb-4 opacity-0 animate-slide-up animation-delay-200">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-extrabold leading-[1.08] mb-4 opacity-0 animate-slide-up animation-delay-400 tracking-[-0.02em]">
               <span className="text-foreground">Sua visão merece</span>
               <br />
               <span className="gradient-text">cuidado especializado</span>
             </h1>
 
             {/* Subtitle */}
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-7 max-w-md mx-auto lg:mx-0 opacity-0 animate-slide-up animation-delay-300">
+            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-7 max-w-md mx-auto lg:mx-0 opacity-0 animate-slide-up animation-delay-500">
               <span className="text-foreground font-semibold">Dr. Juliano Machado</span> — mais de 13 anos
               transformando vidas com oftalmologia de excelência em{" "}
               <span className="text-primary font-medium">Paragominas</span> e{" "}
@@ -95,7 +95,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </p>
 
             {/* CTA */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8 opacity-0 animate-slide-up animation-delay-400">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8 opacity-0 animate-slide-up animation-delay-600">
               <Button
                 variant="hero"
                 size="lg"
@@ -123,7 +123,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </div>
 
             {/* Stats cards */}
-            <div className="grid grid-cols-3 gap-3 opacity-0 animate-slide-up animation-delay-600">
+            <div className="grid grid-cols-3 gap-3 opacity-0 animate-blur-in animation-delay-700">
               <StatCard
                 icon={<Users className="w-4 h-4 text-primary" />}
                 value={`+${count.toLocaleString('pt-BR')}`}
