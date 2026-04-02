@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Eye, Gauge, Search, Ruler, Zap, Scissors, Wind, Target } from "lucide-react";
+import { RetinografiaIcon, MapeamentoRetinaIcon, TonometriaIcon, GonioscopiaIcon, BiometriaIcon, CatarataIcon, PterigioIcon, YagLaserIcon, IridotomiaIcon } from "./ProcedureIcons";
 
 const ProceduresSection = () => {
   const [isVisible, setIsVisible] = useState(false);
