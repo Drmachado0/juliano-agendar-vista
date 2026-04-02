@@ -30,8 +30,8 @@ const LocationsSection = () => {
       phone: "(91) 93618-0476",
       hours: "Agende para ver disponibilidade",
       icon: Heart,
-      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3985.5!2d-47.3528!3d-2.9958!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMsKwNTknNDQuNiJTIDQ3wrAyMScxMC4xIlc!5e0!3m2!1spt-BR!2sbr!4v1700000000000!5m2!1spt-BR!2sbr&q=Clinicor+Rua+Celio+Miranda+729+Paragominas+PA",
-      mapsLink: "https://www.google.com/maps/search/Clinicor+Rua+Celio+Miranda+729+Paragominas+PA",
+      mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=-47.355%2C-2.998%2C-47.350%2C-2.993&layer=mapnik&marker=-2.9958%2C-47.3528",
+      mapsLink: "https://maps.google.com/?q=Clinicor+Rua+Celio+Miranda+729+Paragominas+PA",
     },
     {
       name: "Hospital Geral de Paragominas",
@@ -40,8 +40,8 @@ const LocationsSection = () => {
       phone: "(91) 9100-0303",
       hours: "Agende para ver disponibilidade",
       icon: Hospital,
-      mapUrl: "https://maps.google.com/maps?q=Hospital+Geral+Paragominas+Santa+Terezinha+304+PA&t=&z=15&ie=UTF8&iwloc=&output=embed",
-      mapsLink: "https://www.google.com/maps/search/Hospital+Geral+Paragominas+Santa+Terezinha+304",
+      mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=-47.358%2C-2.995%2C-47.353%2C-2.990&layer=mapnik&marker=-2.9925%2C-47.3558",
+      mapsLink: "https://maps.google.com/?q=Hospital+Geral+Paragominas+Santa+Terezinha+304",
     },
     {
       name: "Instituto de Olhos de Belém",
@@ -50,8 +50,8 @@ const LocationsSection = () => {
       phone: "(91) 3239-4600",
       hours: "Agende para ver disponibilidade",
       icon: Eye,
-      mapUrl: "https://maps.google.com/maps?q=Instituto+de+Olhos+de+Belem+Av+Generalissimo+Deodoro+904+Nazare+Belem+PA&t=&z=15&ie=UTF8&iwloc=&output=embed",
-      mapsLink: "https://www.google.com/maps/search/Av+Generalissimo+Deodoro+904+Nazare+Belem+PA",
+      mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=-48.492%2C-1.458%2C-48.487%2C-1.453&layer=mapnik&marker=-1.4558%2C-48.4897",
+      mapsLink: "https://maps.google.com/?q=Instituto+de+Olhos+de+Belem+Av+Generalissimo+Deodoro+904+Nazare+Belem+PA",
     },
     {
       name: "Vitria - Ed. Síntese 21",
@@ -60,8 +60,8 @@ const LocationsSection = () => {
       phone: "(91) 3342-1463",
       hours: "Agende para ver disponibilidade",
       icon: Glasses,
-      mapUrl: "https://maps.google.com/maps?q=Vitria+Oftalmologia+Ed+Sintese+21+Av+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA&t=&z=15&ie=UTF8&iwloc=&output=embed",
-      mapsLink: "https://www.google.com/maps/search/Av+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA",
+      mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=-48.472%2C-1.438%2C-48.467%2C-1.433&layer=mapnik&marker=-1.4358%2C-48.4697",
+      mapsLink: "https://maps.google.com/?q=Vitria+Ed+Sintese+21+Av+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA",
     },
   ];
 
@@ -192,7 +192,7 @@ const LocationsSection = () => {
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
               >
                 <ExternalLink className="w-4 h-4" />
-                Abrir no Google Maps
+                Ver no mapa
               </a>
             </div>
           </div>
