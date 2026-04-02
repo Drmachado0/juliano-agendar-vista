@@ -40,8 +40,8 @@ const LocationsSection = () => {
       phone: "(91) 9100-0303",
       hours: "Agende para ver disponibilidade",
       icon: Hospital,
-      mapUrl: "https://maps.google.com/maps?q=Hospital+Geral+Paragominas+Santa+Terezinha+304+PA&t=&z=15&ie=UTF8&iwloc=&output=embed",
-      mapsLink: "https://www.google.com/maps/search/Hospital+Geral+Paragominas+Santa+Terezinha+304",
+      mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=-47.358%2C-2.995%2C-47.353%2C-2.990&layer=mapnik&marker=-2.9925%2C-47.3558",
+      mapsLink: "https://maps.google.com/?q=Hospital+Geral+Paragominas+Santa+Terezinha+304",
     },
     {
       name: "Instituto de Olhos de Belém",
