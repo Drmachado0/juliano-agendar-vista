@@ -82,7 +82,7 @@ const AboutSection = () => {
           {/* Content Side */}
           <div className={`order-1 lg:order-2 lg:pl-24 transition-all duration-700 delay-200 ease-out-expo ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12'}`}>
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/8 border border-accent/15 text-accent font-semibold text-sm mb-6">
-              Sobre o médico
+              Quem é o Dr. Juliano
             </span>
 
             <h2 className="text-3xl md:text-4xl lg:text-[2.75rem] font-bold text-foreground leading-[1.15] mb-6">
