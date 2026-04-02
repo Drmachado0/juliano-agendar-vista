@@ -150,7 +150,7 @@ const TestimonialsSection = () => {
             O que dizem os pacientes
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            O que nossos pacientes <span className="gradient-text">dizem</span>
+            Nota máxima <span className="gradient-text">no Google</span>
           </h2>
           <div className="flex items-center justify-center gap-3 mt-4">
             <div className="inline-flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-xl">
