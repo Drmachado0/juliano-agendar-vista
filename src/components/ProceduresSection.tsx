@@ -18,15 +18,15 @@ const ProceduresSection = () => {
   }, []);
 
   const procedures = [
-     { icon: Camera, title: "Retinografia", description: "Fotografia detalhada do fundo do olho. Essencial para acompanhar diabetes, glaucoma e doenças da retina.", category: "exames" },
-    { icon: Eye, title: "Mapeamento de Retina", description: "Avaliação completa da retina para detectar problemas antes que afetem sua visão.", category: "exames" },
-    { icon: Gauge, title: "Tonometria", description: "Mede a pressão do olho — o principal exame para prevenir e controlar o glaucoma.", category: "exames" },
-    { icon: Search, title: "Gonioscopia", description: "Examina a drenagem interna do olho para avaliar o risco de glaucoma.", category: "exames" },
-    { icon: Ruler, title: "Biometria Ultrassônica", description: "Calcula o grau exato da lente que será implantada na cirurgia de catarata.", category: "exames" },
-    { icon: Scissors, title: "Cirurgia de Catarata", description: "Troca do cristalino opaco por uma lente artificial. Procedimento rápido, seguro e que pode até reduzir a dependência de óculos.", category: "cirurgias" },
-    { icon: Wind, title: "Cirurgia de Pterígio", description: "Remove a membrana que cresce sobre o olho, causando irritação e vermelhidão. Técnica com baixo índice de retorno.", category: "cirurgias" },
-    { icon: Zap, title: "YAG Laser", description: "Procedimento rápido (poucos minutos) para limpar a lente quando ela fica embaçada após cirurgia de catarata.", category: "laser" },
-    { icon: Target, title: "Iridotomia a Laser", description: "Laser preventivo para pacientes com risco de glaucoma agudo. Indolor e feito no consultório.", category: "laser" },
+    { icon: RetinografiaIcon, title: "Retinografia", description: "Fotografia detalhada do fundo do olho. Essencial para acompanhar diabetes, glaucoma e doenças da retina.", category: "exames" },
+    { icon: MapeamentoRetinaIcon, title: "Mapeamento de Retina", description: "Avaliação completa da retina para detectar problemas antes que afetem sua visão.", category: "exames" },
+    { icon: TonometriaIcon, title: "Tonometria", description: "Mede a pressão do olho — o principal exame para prevenir e controlar o glaucoma.", category: "exames" },
+    { icon: GonioscopiaIcon, title: "Gonioscopia", description: "Examina a drenagem interna do olho para avaliar o risco de glaucoma.", category: "exames" },
+    { icon: BiometriaIcon, title: "Biometria Ultrassônica", description: "Calcula o grau exato da lente que será implantada na cirurgia de catarata.", category: "exames" },
+    { icon: CatarataIcon, title: "Cirurgia de Catarata", description: "Troca do cristalino opaco por uma lente artificial. Procedimento rápido, seguro e que pode até reduzir a dependência de óculos.", category: "cirurgias" },
+    { icon: PterigioIcon, title: "Cirurgia de Pterígio", description: "Remove a membrana que cresce sobre o olho, causando irritação e vermelhidão. Técnica com baixo índice de retorno.", category: "cirurgias" },
+    { icon: YagLaserIcon, title: "YAG Laser", description: "Procedimento rápido (poucos minutos) para limpar a lente quando ela fica embaçada após cirurgia de catarata.", category: "laser" },
+    { icon: IridotomiaIcon, title: "Iridotomia a Laser", description: "Laser preventivo para pacientes com risco de glaucoma agudo. Indolor e feito no consultório.", category: "laser" },
   ];
 
   const categories = [
