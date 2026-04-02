@@ -55,7 +55,7 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
               Seu convênio <span className="gradient-text">pode estar aqui</span>
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Para sua comodidade, trabalhamos com os principais planos de saúde. Também atendemos particular.
+              Trabalhamos com os convênios mais usados na região. Não encontrou o seu? Atendemos particular com valores acessíveis.
             </p>
           </div>
 
