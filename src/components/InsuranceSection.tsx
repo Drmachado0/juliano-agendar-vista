@@ -102,7 +102,7 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
 
             <div className="relative p-10 md:p-16 text-center">
               <h3 className="text-2xl md:text-3xl font-extrabold text-foreground mb-3">
-                Cuide da sua visão <span className="gradient-text">hoje mesmo</span>
+                Pronto para <span className="gradient-text">agendar?</span>
               </h3>
               <p className="text-muted-foreground mb-8 max-w-md mx-auto">
                 Agende online em menos de 2 minutos. Nossa equipe entrará em contato para confirmar o melhor horário.
