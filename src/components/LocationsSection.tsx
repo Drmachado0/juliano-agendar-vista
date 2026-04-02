@@ -38,7 +38,7 @@ const LocationsSection = () => {
       city: "Paragominas",
       address: "R. Santa Terezinha, 304 - Centro, Paragominas - PA",
       phone: "(91) 9100-0303",
-      hours: "Conforme agenda",
+      hours: "Agende para ver disponibilidade",
       icon: Hospital,
       mapUrl: "https://maps.google.com/maps?q=Hospital+Geral+Paragominas+Santa+Terezinha+304+PA&t=&z=15&ie=UTF8&iwloc=&output=embed",
       mapsLink: "https://www.google.com/maps/search/Hospital+Geral+Paragominas+Santa+Terezinha+304",
