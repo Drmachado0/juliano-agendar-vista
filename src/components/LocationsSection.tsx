@@ -48,7 +48,7 @@ const LocationsSection = () => {
       city: "Belém",
       address: "Av. Generalíssimo Deodoro, 904 - Nazaré, Belém - PA",
       phone: "(91) 3239-4600",
-      hours: "Conforme agenda",
+      hours: "Agende para ver disponibilidade",
       icon: Eye,
       mapUrl: "https://maps.google.com/maps?q=Instituto+de+Olhos+de+Belem+Av+Generalissimo+Deodoro+904+Nazare+Belem+PA&t=&z=15&ie=UTF8&iwloc=&output=embed",
       mapsLink: "https://www.google.com/maps/search/Av+Generalissimo+Deodoro+904+Nazare+Belem+PA",
