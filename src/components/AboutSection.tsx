@@ -97,8 +97,7 @@ const AboutSection = () => {
             </p>
 
             <p className="text-muted-foreground leading-relaxed mb-10">
-              Do exame de rotina às cirurgias mais complexas, cada paciente recebe um atendimento
-              acolhedor e individualizado, com a atenção que merece.
+              Desde exames de rotina até cirurgias de catarata e pterígio, o foco é sempre o mesmo: resolver o problema com segurança e devolver a qualidade de visão que você merece.
             </p>
 
             {/* Features */}
