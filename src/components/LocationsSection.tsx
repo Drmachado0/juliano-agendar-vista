@@ -86,7 +86,7 @@ const LocationsSection = () => {
             Onde atendemos
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Onde encontrar o <span className="gradient-text">Dr. Juliano</span>
+            4 locais em <span className="gradient-text">Paragominas e Belém</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Atendimento em clínicas e hospitais de referência em Paragominas e Belém.
