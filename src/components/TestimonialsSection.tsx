@@ -147,7 +147,7 @@ const TestimonialsSection = () => {
         <div className={`text-center mb-14 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 border border-primary/15 text-primary font-semibold text-sm mb-6">
             <MessageSquare className="w-3.5 h-3.5" />
-            Depoimentos reais
+            O que dizem os pacientes
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             O que nossos pacientes <span className="gradient-text">dizem</span>
