@@ -175,7 +175,7 @@ const TestimonialsSection = () => {
         {/* Empty */}
         {!isLoading && allTestimonials.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
-            <p>Nenhuma avaliação disponível no momento.</p>
+            <p>As avaliações estão sendo carregadas.</p>
           </div>
         )}
 
