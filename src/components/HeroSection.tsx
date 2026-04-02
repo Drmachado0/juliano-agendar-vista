@@ -87,7 +87,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </h1>
 
             {/* Subtitle */}
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-7 max-w-md mx-auto lg:mx-0 opacity-0 animate-slide-up animation-delay-300">
+            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-7 max-w-md mx-auto lg:mx-0 opacity-0 animate-slide-up animation-delay-500">
               <span className="text-foreground font-semibold">Dr. Juliano Machado</span> — mais de 13 anos
               transformando vidas com oftalmologia de excelência em{" "}
               <span className="text-primary font-medium">Paragominas</span> e{" "}
