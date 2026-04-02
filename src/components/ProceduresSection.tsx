@@ -77,7 +77,7 @@ const ProceduresSection = () => {
             Exames, cirurgias <span className="gradient-text">e laser</span>
           </h2>
           <p className={`text-muted-foreground max-w-2xl lg:max-w-none text-lg ${isVisible ? 'animate-blur-in animation-delay-200' : ''}`}>
-            Oferecemos exames de alta precisão, cirurgias modernas e tratamentos a laser com tecnologia avançada.
+            Diagnóstico completo e tratamento no mesmo lugar. Conheça os principais procedimentos realizados pelo Dr. Juliano.
           </p>
         </div>
 
