@@ -54,7 +54,7 @@ const ProceduresSection = () => {
           <h2 className="text-3xl md:text-4xl lg:text-[2.75rem] font-bold text-foreground mb-4">
             Excelência em cada <span className="gradient-text">procedimento</span>
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+          <p className="text-muted-foreground max-w-2xl lg:max-w-none text-lg">
             Oferecemos exames de alta precisão, cirurgias modernas e tratamentos a laser com tecnologia avançada.
           </p>
         </div>
