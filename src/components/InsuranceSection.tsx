@@ -49,7 +49,7 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
           {/* Header */}
           <div className={`text-center mb-12 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 border border-primary/15 text-primary font-semibold text-sm mb-6">
-              Convênios aceitos
+              Convênios e particular
             </span>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
               Aceitamos os <span className="gradient-text">principais convênios</span>
