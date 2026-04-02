@@ -89,9 +89,9 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
 
             {/* Heading */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[4rem] font-extrabold leading-[1.08] mb-4 opacity-0 animate-slide-up animation-delay-400 tracking-[-0.02em]">
-              <span className="text-foreground">Sua visão merece</span>
+               <span className="text-foreground">Enxergar bem</span>
               <br />
-              <span className="gradient-text opacity-0 animate-reveal-up animation-delay-600">cuidado especializado</span>
+              <span className="gradient-text opacity-0 animate-reveal-up animation-delay-600">muda tudo</span>
             </h1>
 
             {/* Subtitle */}
