@@ -119,7 +119,7 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
                   className="text-base group relative overflow-hidden"
                 >
                   <CalendarCheck className="w-5 h-5 mr-1" />
-                  Agendar minha consulta
+                  Agendar consulta
                   <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                   <span className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
                 </Button>
