@@ -147,10 +147,10 @@ const TestimonialsSection = () => {
         <div className={`text-center mb-14 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 border border-primary/15 text-primary font-semibold text-sm mb-6">
             <MessageSquare className="w-3.5 h-3.5" />
-            Depoimentos reais
+            O que dizem os pacientes
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            O que nossos pacientes <span className="gradient-text">dizem</span>
+            Nota máxima <span className="gradient-text">no Google</span>
           </h2>
           <div className="flex items-center justify-center gap-3 mt-4">
             <div className="inline-flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-xl">
@@ -160,7 +160,7 @@ const TestimonialsSection = () => {
               <span className="font-bold text-foreground text-lg">{averageRating}</span>
             </div>
             <span className="text-muted-foreground text-sm flex items-center gap-1.5">
-              <GoogleIcon /> {allTestimonials.length > 0 ? `baseado em ${allTestimonials.length} avaliações` : 'Avaliações do Google'}
+              <GoogleIcon /> {allTestimonials.length > 0 ? `baseado em ${allTestimonials.length} avaliações` : 'no Google'}
             </span>
           </div>
         </div>
@@ -175,7 +175,7 @@ const TestimonialsSection = () => {
         {/* Empty */}
         {!isLoading && allTestimonials.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
-            <p>Nenhuma avaliação disponível no momento.</p>
+            <p>As avaliações estão sendo carregadas.</p>
           </div>
         )}
 
@@ -252,7 +252,7 @@ const TestimonialsSection = () => {
             className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-card border border-primary/30 hover:border-primary/50 transition-all text-foreground font-medium text-sm hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/10"
           >
             <GoogleIcon />
-            Ver todas as avaliações no Google
+            Ler todas as avaliações no Google
             <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 text-primary" />
           </a>
         </div>

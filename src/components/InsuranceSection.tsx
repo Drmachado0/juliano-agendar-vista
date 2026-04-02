@@ -49,13 +49,13 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
           {/* Header */}
           <div className={`text-center mb-12 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 border border-primary/15 text-primary font-semibold text-sm mb-6">
-              Convênios aceitos
+              Convênios e particular
             </span>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Aceitamos os <span className="gradient-text">principais convênios</span>
+              Seu convênio <span className="gradient-text">pode estar aqui</span>
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Para sua comodidade, trabalhamos com os principais planos de saúde. Também atendemos particular.
+              Trabalhamos com os convênios mais usados na região. Não encontrou o seu? Atendemos particular com valores acessíveis.
             </p>
           </div>
 
@@ -102,10 +102,10 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
 
             <div className="relative p-10 md:p-16 text-center">
               <h3 className="text-2xl md:text-3xl font-extrabold text-foreground mb-3">
-                Cuide da sua visão <span className="gradient-text">hoje mesmo</span>
+                Pronto para <span className="gradient-text">agendar?</span>
               </h3>
               <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-                Agende online em menos de 2 minutos. Nossa equipe entrará em contato para confirmar o melhor horário.
+                É rápido: escolha o dia, e nossa equipe liga para confirmar. Sem burocracia, sem fila de espera.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
@@ -119,7 +119,7 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
                   className="text-base group relative overflow-hidden"
                 >
                   <CalendarCheck className="w-5 h-5 mr-1" />
-                  Agendar minha consulta
+                  Agendar consulta
                   <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                   <span className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
                 </Button>
@@ -140,11 +140,11 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
               <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-primary" />
-                  Resposta em até 2 horas
+                  Resposta em até 2h úteis
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CalendarCheck className="w-3.5 h-3.5 text-primary" />
-                  Agendamento sem compromisso
+                  Cancele quando quiser, sem custo
                 </span>
               </div>
             </div>

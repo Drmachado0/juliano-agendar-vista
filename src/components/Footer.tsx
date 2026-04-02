@@ -29,7 +29,7 @@ const Footer = () => {
               </div>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Cuidando da sua visão com excelência há mais de 13 anos em Paragominas e Belém.
+              Oftalmologista em Paragominas e Belém. Consultas, exames e cirurgias com agendamento online.
             </p>
           </div>
 

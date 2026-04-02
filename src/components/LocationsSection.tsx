@@ -28,7 +28,7 @@ const LocationsSection = () => {
       city: "Paragominas",
       address: "Rua Eixo W1, R. Célio Miranda, N° 729, Paragominas - PA",
       phone: "(91) 93618-0476",
-      hours: "Conforme agenda",
+      hours: "Agende para ver disponibilidade",
       icon: Heart,
       mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3985.5!2d-47.3528!3d-2.9958!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMsKwNTknNDQuNiJTIDQ3wrAyMScxMC4xIlc!5e0!3m2!1spt-BR!2sbr!4v1700000000000!5m2!1spt-BR!2sbr&q=Clinicor+Rua+Celio+Miranda+729+Paragominas+PA",
       mapsLink: "https://www.google.com/maps/search/Clinicor+Rua+Celio+Miranda+729+Paragominas+PA",
@@ -38,7 +38,7 @@ const LocationsSection = () => {
       city: "Paragominas",
       address: "R. Santa Terezinha, 304 - Centro, Paragominas - PA",
       phone: "(91) 9100-0303",
-      hours: "Conforme agenda",
+      hours: "Agende para ver disponibilidade",
       icon: Hospital,
       mapUrl: "https://maps.google.com/maps?q=Hospital+Geral+Paragominas+Santa+Terezinha+304+PA&t=&z=15&ie=UTF8&iwloc=&output=embed",
       mapsLink: "https://www.google.com/maps/search/Hospital+Geral+Paragominas+Santa+Terezinha+304",
@@ -48,7 +48,7 @@ const LocationsSection = () => {
       city: "Belém",
       address: "Av. Generalíssimo Deodoro, 904 - Nazaré, Belém - PA",
       phone: "(91) 3239-4600",
-      hours: "Conforme agenda",
+      hours: "Agende para ver disponibilidade",
       icon: Eye,
       mapUrl: "https://maps.google.com/maps?q=Instituto+de+Olhos+de+Belem+Av+Generalissimo+Deodoro+904+Nazare+Belem+PA&t=&z=15&ie=UTF8&iwloc=&output=embed",
       mapsLink: "https://www.google.com/maps/search/Av+Generalissimo+Deodoro+904+Nazare+Belem+PA",
@@ -58,7 +58,7 @@ const LocationsSection = () => {
       city: "Belém",
       address: "Av. Conselheiro Furtado, 2865 - Sobreloja, salas 08-10 - São Braz, Belém - PA",
       phone: "(91) 3342-1463",
-      hours: "Conforme agenda",
+      hours: "Agende para ver disponibilidade",
       icon: Glasses,
       mapUrl: "https://maps.google.com/maps?q=Vitria+Oftalmologia+Ed+Sintese+21+Av+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA&t=&z=15&ie=UTF8&iwloc=&output=embed",
       mapsLink: "https://www.google.com/maps/search/Av+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA",
@@ -83,13 +83,13 @@ const LocationsSection = () => {
         <div className={`text-center mb-14 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 border border-primary/15 text-primary font-semibold text-sm mb-6">
             <Navigation className="w-3.5 h-3.5" />
-            Locais de atendimento
+            Onde atendemos
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Onde encontrar o <span className="gradient-text">Dr. Juliano</span>
+            4 locais em <span className="gradient-text">Paragominas e Belém</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Atendimento em clínicas e hospitais de referência em Paragominas e Belém.
+            Escolha o local mais perto de você. Todos com estrutura completa para consultas e procedimentos.
           </p>
         </div>
 
