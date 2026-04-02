@@ -109,9 +109,9 @@ const AboutSection = () => {
                 <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
                   <Heart className="w-5 h-5 text-primary" />
                 </div>
-                <h4 className="text-foreground font-semibold text-sm mb-1.5 font-sans">Atendimento Humanizado</h4>
+                <h4 className="text-foreground font-semibold text-sm mb-1.5 font-sans">Consulta sem pressa</h4>
                 <p className="text-muted-foreground text-xs leading-relaxed">
-                  Cada paciente é único e recebe atenção personalizada do início ao fim.
+                  O Dr. Juliano dedica o tempo necessário para ouvir, examinar e explicar cada resultado com clareza.
                 </p>
               </div>
               <div
