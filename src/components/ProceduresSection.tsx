@@ -125,7 +125,7 @@ const ProceduresSection = () => {
 
                 <div className={`flex ${isFeatured || isTall ? 'flex-col gap-5' : 'items-start gap-4'}`}>
                   <div className={`${isFeatured ? 'w-14 h-14' : 'w-12 h-12'} rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-primary/20 transition-all duration-300`}>
-                    <procedure.icon className={`${isFeatured ? 'w-7 h-7' : 'w-5 h-5'} text-primary`} />
+                    <procedure.icon className={`${isFeatured ? 'w-8 h-8' : 'w-7 h-7'}`} />
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-2">
