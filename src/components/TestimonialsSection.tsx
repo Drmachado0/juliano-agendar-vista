@@ -160,7 +160,7 @@ const TestimonialsSection = () => {
               <span className="font-bold text-foreground text-lg">{averageRating}</span>
             </div>
             <span className="text-muted-foreground text-sm flex items-center gap-1.5">
-              <GoogleIcon /> {allTestimonials.length > 0 ? `baseado em ${allTestimonials.length} avaliações` : 'Avaliações do Google'}
+              <GoogleIcon /> {allTestimonials.length > 0 ? `baseado em ${allTestimonials.length} avaliações` : 'no Google'}
             </span>
           </div>
         </div>
