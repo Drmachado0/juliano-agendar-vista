@@ -105,7 +105,7 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
                 Pronto para <span className="gradient-text">agendar?</span>
               </h3>
               <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-                Agende online em menos de 2 minutos. Nossa equipe entrará em contato para confirmar o melhor horário.
+                É rápido: escolha o dia, e nossa equipe liga para confirmar. Sem burocracia, sem fila de espera.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
