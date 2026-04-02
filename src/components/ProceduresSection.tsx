@@ -18,15 +18,15 @@ const ProceduresSection = () => {
   }, []);
 
   const procedures = [
-    { icon: Camera, title: "Retinografia", description: "Fotografias em alta resolução do fundo do olho para diagnóstico preciso.", category: "exames" },
-    { icon: Eye, title: "Mapeamento de Retina", description: "Mapeamento completo de toda a estrutura da retina para detecção precoce.", category: "exames" },
-    { icon: Gauge, title: "Tonometria", description: "Medição da pressão intraocular para diagnóstico e acompanhamento do glaucoma.", category: "exames" },
-    { icon: Search, title: "Gonioscopia", description: "Análise detalhada do ângulo entre a córnea e a íris.", category: "exames" },
-    { icon: Ruler, title: "Biometria Ultrassônica", description: "Cálculo preciso das lentes intraoculares para cirurgia de Catarata.", category: "exames" },
-    { icon: Scissors, title: "Cirurgia de Catarata", description: "Substituição do cristalino opacificado por lente intraocular de última geração.", category: "cirurgias" },
-    { icon: Wind, title: "Cirurgia de Pterígio", description: "Remoção do tecido que se forma sobre a esclera, com técnicas modernas e seguras.", category: "cirurgias" },
-    { icon: Zap, title: "YAG Laser", description: "Tratamento rápido e seguro da opacificação da cápsula posterior do cristalino.", category: "laser" },
-    { icon: Target, title: "Iridotomia a Laser", description: "Prevenção e tratamento do glaucoma de ângulo fechado ou estreito.", category: "laser" },
+     { icon: Camera, title: "Retinografia", description: "Fotografia detalhada do fundo do olho. Essencial para acompanhar diabetes, glaucoma e doenças da retina.", category: "exames" },
+    { icon: Eye, title: "Mapeamento de Retina", description: "Avaliação completa da retina para detectar problemas antes que afetem sua visão.", category: "exames" },
+    { icon: Gauge, title: "Tonometria", description: "Mede a pressão do olho — o principal exame para prevenir e controlar o glaucoma.", category: "exames" },
+    { icon: Search, title: "Gonioscopia", description: "Examina a drenagem interna do olho para avaliar o risco de glaucoma.", category: "exames" },
+    { icon: Ruler, title: "Biometria Ultrassônica", description: "Calcula o grau exato da lente que será implantada na cirurgia de catarata.", category: "exames" },
+    { icon: Scissors, title: "Cirurgia de Catarata", description: "Troca do cristalino opaco por uma lente artificial. Procedimento rápido, seguro e que pode até reduzir a dependência de óculos.", category: "cirurgias" },
+    { icon: Wind, title: "Cirurgia de Pterígio", description: "Remove a membrana que cresce sobre o olho, causando irritação e vermelhidão. Técnica com baixo índice de retorno.", category: "cirurgias" },
+    { icon: Zap, title: "YAG Laser", description: "Procedimento rápido (poucos minutos) para limpar a lente quando ela fica embaçada após cirurgia de catarata.", category: "laser" },
+    { icon: Target, title: "Iridotomia a Laser", description: "Laser preventivo para pacientes com risco de glaucoma agudo. Indolor e feito no consultório.", category: "laser" },
   ];
 
   const categories = [
@@ -71,13 +71,13 @@ const ProceduresSection = () => {
         {/* Header */}
         <div className={`text-center lg:text-left mb-12 transition-all duration-700 ease-out-expo ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
           <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 border border-primary/15 text-primary font-semibold text-sm mb-6 ${isVisible ? 'animate-blur-in' : ''}`}>
-            Nossos procedimentos
+            O que tratamos
           </span>
           <h2 className={`text-3xl md:text-4xl lg:text-[2.75rem] font-bold text-foreground mb-4 ${isVisible ? 'animate-blur-in animation-delay-100' : ''}`}>
-            Excelência em cada <span className="gradient-text">procedimento</span>
+            Exames, cirurgias <span className="gradient-text">e laser</span>
           </h2>
           <p className={`text-muted-foreground max-w-2xl lg:max-w-none text-lg ${isVisible ? 'animate-blur-in animation-delay-200' : ''}`}>
-            Oferecemos exames de alta precisão, cirurgias modernas e tratamentos a laser com tecnologia avançada.
+            Diagnóstico completo e tratamento no mesmo lugar. Conheça os principais procedimentos realizados pelo Dr. Juliano.
           </p>
         </div>
 
