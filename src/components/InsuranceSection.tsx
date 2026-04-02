@@ -140,7 +140,7 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
               <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-primary" />
-                  Resposta em até 2 horas
+                  Resposta em até 2h úteis
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CalendarCheck className="w-3.5 h-3.5 text-primary" />
