@@ -58,7 +58,7 @@ const LocationsSection = () => {
       city: "Belém",
       address: "Av. Conselheiro Furtado, 2865 - Sobreloja, salas 08-10 - São Braz, Belém - PA",
       phone: "(91) 3342-1463",
-      hours: "Conforme agenda",
+      hours: "Agende para ver disponibilidade",
       icon: Glasses,
       mapUrl: "https://maps.google.com/maps?q=Vitria+Oftalmologia+Ed+Sintese+21+Av+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA&t=&z=15&ie=UTF8&iwloc=&output=embed",
       mapsLink: "https://www.google.com/maps/search/Av+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA",

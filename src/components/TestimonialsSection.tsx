@@ -252,7 +252,7 @@ const TestimonialsSection = () => {
             className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-card border border-primary/30 hover:border-primary/50 transition-all text-foreground font-medium text-sm hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/10"
           >
             <GoogleIcon />
-            Ver todas as avaliações no Google
+            Ler todas as avaliações no Google
             <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 text-primary" />
           </a>
         </div>

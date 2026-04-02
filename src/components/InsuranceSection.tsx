@@ -144,7 +144,7 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CalendarCheck className="w-3.5 h-3.5 text-primary" />
-                  Agendamento sem compromisso
+                  Cancele quando quiser, sem custo
                 </span>
               </div>
             </div>
