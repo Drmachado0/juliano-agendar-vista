@@ -28,7 +28,7 @@ const LocationsSection = () => {
       city: "Paragominas",
       address: "Rua Eixo W1, R. Célio Miranda, N° 729, Paragominas - PA",
       phone: "(91) 93618-0476",
-      hours: "Conforme agenda",
+      hours: "Agende para ver disponibilidade",
       icon: Heart,
       mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3985.5!2d-47.3528!3d-2.9958!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMsKwNTknNDQuNiJTIDQ3wrAyMScxMC4xIlc!5e0!3m2!1spt-BR!2sbr!4v1700000000000!5m2!1spt-BR!2sbr&q=Clinicor+Rua+Celio+Miranda+729+Paragominas+PA",
       mapsLink: "https://www.google.com/maps/search/Clinicor+Rua+Celio+Miranda+729+Paragominas+PA",
