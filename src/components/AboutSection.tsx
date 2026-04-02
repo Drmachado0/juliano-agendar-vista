@@ -91,10 +91,9 @@ const AboutSection = () => {
             </h2>
 
             <p className="text-muted-foreground text-lg leading-relaxed mb-5">
-              Com mais de 13 anos dedicados à oftalmologia, o Dr. Juliano Machado alia{" "}
-              <span className="text-foreground font-medium">experiência clínica</span> e{" "}
-              <span className="text-foreground font-medium">tecnologia de ponta</span> para oferecer diagnósticos
-              precisos e tratamentos que transformam a qualidade de vida dos seus pacientes.
+              O Dr. Juliano é oftalmologista há mais de 13 anos e atende em Paragominas e Belém. No consultório, ele é conhecido por{" "}
+              <span className="text-foreground font-medium">explicar cada detalhe</span> com calma — porque acredita que um{" "}
+              <span className="text-foreground font-medium">paciente bem informado</span> faz melhores escolhas sobre sua saúde.
             </p>
 
             <p className="text-muted-foreground leading-relaxed mb-10">
