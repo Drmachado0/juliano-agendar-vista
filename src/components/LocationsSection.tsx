@@ -50,8 +50,8 @@ const LocationsSection = () => {
       phone: "(91) 3239-4600",
       hours: "Agende para ver disponibilidade",
       icon: Eye,
-      mapUrl: "https://maps.google.com/maps?q=Instituto+de+Olhos+de+Belem+Av+Generalissimo+Deodoro+904+Nazare+Belem+PA&t=&z=15&ie=UTF8&iwloc=&output=embed",
-      mapsLink: "https://www.google.com/maps/search/Av+Generalissimo+Deodoro+904+Nazare+Belem+PA",
+      mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=-48.492%2C-1.458%2C-48.487%2C-1.453&layer=mapnik&marker=-1.4558%2C-48.4897",
+      mapsLink: "https://maps.google.com/?q=Instituto+de+Olhos+de+Belem+Av+Generalissimo+Deodoro+904+Nazare+Belem+PA",
     },
     {
       name: "Vitria - Ed. Síntese 21",
