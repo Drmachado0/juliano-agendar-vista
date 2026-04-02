@@ -113,7 +113,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                 className="w-full sm:w-auto text-base py-6 sm:py-3 group relative overflow-hidden"
               >
                 <CalendarCheck className="w-5 h-5 mr-1" />
-                Agendar minha consulta
+                Agendar consulta
                 <span className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
               </Button>
               <Button
