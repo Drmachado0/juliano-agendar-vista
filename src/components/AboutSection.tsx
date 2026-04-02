@@ -52,7 +52,7 @@ const AboutSection = () => {
               </div>
 
               {/* Floating credentials card */}
-              <div className={`absolute -right-4 md:-right-10 bottom-8 bg-card/95 backdrop-blur-lg rounded-2xl p-5 shadow-xl border border-border/60 max-w-[220px] transition-all duration-700 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+              <div className={`absolute -right-4 md:-right-10 bottom-8 bg-card/95 backdrop-blur-lg rounded-2xl p-5 shadow-xl border border-border/60 max-w-[220px] transition-all duration-700 delay-300 ease-out-expo transform -rotate-[1.5deg] hover:rotate-0 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
                 <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-3">Credenciais</p>
                 <div className="space-y-3">
                   {credentials.map((cred, index) => (
