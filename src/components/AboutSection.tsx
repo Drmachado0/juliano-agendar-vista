@@ -69,7 +69,7 @@ const AboutSection = () => {
           </div>
 
           {/* Content Side */}
-          <div className={`order-1 lg:order-2 transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12'}`}>
+          <div className={`order-1 lg:order-2 transition-all duration-700 delay-200 ease-out-expo ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12'}`}>
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 border border-primary/15 text-primary font-semibold text-sm mb-6">
               Sobre o médico
             </span>

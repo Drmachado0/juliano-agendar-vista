@@ -179,12 +179,12 @@ const TestimonialsSection = () => {
           {displayedTestimonials.map((testimonial, index) => (
             <div
               key={testimonial.id}
-              className={`card-glass rounded-2xl p-6 relative hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-400 ${
+              className={`card-glass rounded-2xl p-6 relative hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-500 ease-out-expo ${
                 isVisible
                   ? isTransitioning
-                    ? 'opacity-0 scale-95'
-                    : 'opacity-100 translate-y-0 scale-100'
-                  : 'opacity-0 translate-y-12'
+                    ? 'opacity-0 scale-95 blur-sm'
+                    : 'opacity-100 translate-y-0 scale-100 blur-0'
+                  : 'opacity-0 translate-y-12 blur-sm'
               }`}
               style={{ transitionDelay: isVisible && !isTransitioning ? `${index * 100}ms` : '0ms' }}
             >

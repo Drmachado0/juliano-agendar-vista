@@ -81,8 +81,8 @@ const ProceduresSection = () => {
           {filteredProcedures.map((procedure, index) => (
             <div
               key={procedure.title}
-              className={`group card-glass rounded-2xl p-6 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1.5 transition-all duration-500 border-l-[3px] border-l-primary/60 ${
-                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              className={`group card-glass rounded-2xl p-6 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1.5 transition-all duration-500 ease-out-expo border-l-[3px] border-l-primary/60 hover:border-l-primary ${
+                isVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-95'
               }`}
               style={{ transitionDelay: isVisible ? `${index * 80}ms` : '0ms' }}
             >
