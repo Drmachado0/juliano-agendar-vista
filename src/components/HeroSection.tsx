@@ -96,10 +96,9 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
 
             {/* Subtitle */}
             <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-7 max-w-md mx-auto lg:mx-0 opacity-0 animate-slide-up animation-delay-500">
-              <span className="text-foreground font-semibold">Dr. Juliano Machado</span> — mais de 13 anos
-              transformando vidas com oftalmologia de excelência em{" "}
+              <span className="text-foreground font-semibold">Dr. Juliano Machado</span> já devolveu a clareza de visão para mais de 6.000 pacientes em{" "}
               <span className="text-primary font-medium">Paragominas</span> e{" "}
-              <span className="text-primary font-medium">Belém</span>.
+              <span className="text-primary font-medium">Belém</span>. Do primeiro exame à cirurgia, ele cuida de você.
             </p>
 
             {/* CTA */}
