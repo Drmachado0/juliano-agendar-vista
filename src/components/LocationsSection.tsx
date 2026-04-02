@@ -60,8 +60,8 @@ const LocationsSection = () => {
       phone: "(91) 3342-1463",
       hours: "Agende para ver disponibilidade",
       icon: Glasses,
-      mapUrl: "https://maps.google.com/maps?q=Vitria+Oftalmologia+Ed+Sintese+21+Av+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA&t=&z=15&ie=UTF8&iwloc=&output=embed",
-      mapsLink: "https://www.google.com/maps/search/Av+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA",
+      mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=-48.472%2C-1.438%2C-48.467%2C-1.433&layer=mapnik&marker=-1.4358%2C-48.4697",
+      mapsLink: "https://maps.google.com/?q=Vitria+Ed+Sintese+21+Av+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA",
     },
   ];
 
