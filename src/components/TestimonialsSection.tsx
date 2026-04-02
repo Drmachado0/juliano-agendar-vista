@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Star, Quote, Loader2, MessageSquare } from "lucide-react";
+import { Star, Quote, Loader2, MessageSquare, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { buscarAvaliacoesGoogle, type AvaliacaoGoogle } from "@/services/avaliacoesGoogle";
 
@@ -72,7 +72,7 @@ const TestimonialsSection = () => {
       const shuffled = shuffleArray(allTestimonials);
       setDisplayedTestimonials(shuffled.slice(0, 3));
       setIsTransitioning(false);
-    }, 300);
+    }, 400);
   }, [shuffleArray, allTestimonials]);
 
   useEffect(() => {
@@ -132,8 +132,15 @@ const TestimonialsSection = () => {
   );
 
   return (
-    <section id="depoimentos" className="py-20 md:py-28 bg-secondary/20 relative" ref={sectionRef}>
+    <section id="depoimentos" className="py-20 md:py-28 bg-gradient-to-b from-secondary/20 via-background to-secondary/20 relative noise-overlay" ref={sectionRef}>
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+
+      {/* Giant decorative quote */}
+      <div className="absolute top-20 left-10 opacity-[0.02] pointer-events-none hidden lg:block">
+        <svg width="200" height="200" viewBox="0 0 24 24" fill="currentColor" className="text-foreground">
+          <path d="M4.583 17.321C3.553 16.227 3 15 3 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179zm10 0C13.553 16.227 13 15 13 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179z" />
+        </svg>
+      </div>
 
       <div className="container mx-auto px-4">
         {/* Header */}
@@ -146,12 +153,14 @@ const TestimonialsSection = () => {
             O que nossos pacientes <span className="gradient-text">dizem</span>
           </h2>
           <div className="flex items-center justify-center gap-3 mt-4">
-            <div className="flex items-center gap-0.5">
-              {renderStars(Math.round(parseFloat(averageRating)))}
+            <div className="inline-flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-xl">
+              <div className="flex items-center gap-0.5">
+                {renderStars(Math.round(parseFloat(averageRating)))}
+              </div>
+              <span className="font-bold text-foreground text-lg">{averageRating}</span>
             </div>
-            <span className="font-bold text-foreground text-lg">{averageRating}</span>
             <span className="text-muted-foreground text-sm flex items-center gap-1.5">
-              • <GoogleIcon /> Avaliações do Google
+              <GoogleIcon /> {allTestimonials.length > 0 ? `baseado em ${allTestimonials.length} avaliações` : 'Avaliações do Google'}
             </span>
           </div>
         </div>
@@ -179,17 +188,22 @@ const TestimonialsSection = () => {
           {displayedTestimonials.map((testimonial, index) => (
             <div
               key={testimonial.id}
-              className={`card-glass rounded-2xl p-6 relative hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-500 ease-out-expo ${
+              className={`card-shimmer card-glass rounded-2xl p-6 relative overflow-hidden hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-500 ease-out-expo ${
                 isVisible
                   ? isTransitioning
-                    ? 'opacity-0 scale-95 blur-sm'
-                    : 'opacity-100 translate-y-0 scale-100 blur-0'
-                  : 'opacity-0 translate-y-12 blur-sm'
+                    ? 'opacity-0 scale-95 translate-y-2'
+                    : 'opacity-100 translate-y-0 scale-100'
+                  : 'opacity-0 scale-90'
               }`}
               style={{ transitionDelay: isVisible && !isTransitioning ? `${index * 100}ms` : '0ms' }}
             >
+              {/* Top gradient accent line */}
+              <div className="absolute top-0 left-0 right-0 h-[3px]" style={{
+                background: 'linear-gradient(to right, hsl(var(--primary) / 0.3), hsl(var(--accent) / 0.3), transparent)'
+              }} />
+
               {/* Quote watermark */}
-              <Quote className="absolute top-5 right-5 w-10 h-10 text-primary/6" />
+              <Quote className="absolute top-5 right-5 w-10 h-10 text-primary/6 animate-pulse-slow" />
 
               {/* Header */}
               <div className="flex items-center gap-3 mb-4">
@@ -197,16 +211,16 @@ const TestimonialsSection = () => {
                   <img
                     src={testimonial.image}
                     alt={testimonial.name}
-                    className="w-11 h-11 rounded-full object-cover border-2 border-primary/20"
+                    className="w-11 h-11 rounded-full object-cover ring-2 ring-primary/20 ring-offset-2 ring-offset-card"
                   />
                 ) : (
-                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary/25 to-primary/10 flex items-center justify-center text-primary font-semibold text-sm border-2 border-primary/15">
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary/25 to-primary/10 flex items-center justify-center text-primary font-semibold text-sm ring-2 ring-primary/20 ring-offset-2 ring-offset-card">
                     {testimonial.avatar}
                   </div>
                 )}
                 <div>
                   <h4 className="font-semibold text-foreground text-sm font-sans">{testimonial.name}</h4>
-                  <p className="text-[11px] text-muted-foreground">{testimonial.date}</p>
+                  <p className="text-xs text-muted-foreground">{testimonial.date}</p>
                 </div>
               </div>
 
@@ -223,7 +237,7 @@ const TestimonialsSection = () => {
               {/* Google Badge */}
               <div className="flex items-center gap-2 mt-5 pt-4 border-t border-border/40">
                 <GoogleIcon />
-                <span className="text-[11px] text-muted-foreground font-medium">Avaliação verificada do Google</span>
+                <span className="text-xs text-muted-foreground font-medium">Avaliação verificada do Google</span>
               </div>
             </div>
           ))}
@@ -235,10 +249,11 @@ const TestimonialsSection = () => {
             href="https://g.page/r/CTkTpXB1m13mEBI/review"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-card border border-border/60 hover:border-primary/40 transition-all text-foreground font-medium text-sm hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/5"
+            className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-card border border-primary/30 hover:border-primary/50 transition-all text-foreground font-medium text-sm hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/10"
           >
             <GoogleIcon />
             Ver todas as avaliações no Google
+            <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 text-primary" />
           </a>
         </div>
       </div>
