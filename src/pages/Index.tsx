@@ -40,7 +40,7 @@ const Index = () => {
         "addressCountry": "BR"
       }
     ],
-    "telephone": "+559181653200",
+    "telephone": "+5591936180476",
     "url": "https://drjulianomachado.com",
     "aggregateRating": {
       "@type": "AggregateRating",
