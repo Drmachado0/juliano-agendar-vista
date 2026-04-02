@@ -83,7 +83,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/8 border border-primary/15 mb-6 opacity-0 animate-blur-in animation-delay-300">
               <Shield className="w-3.5 h-3.5 text-primary" />
               <span className="text-xs text-muted-foreground font-medium uppercase tracking-[0.08em]">
-                Membro da Sociedade Brasileira de Oftalmologia
+                Sociedade Brasileira de Oftalmologia
               </span>
             </div>
 
