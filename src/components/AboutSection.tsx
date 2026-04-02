@@ -86,8 +86,8 @@ const AboutSection = () => {
             </span>
 
             <h2 className="text-3xl md:text-4xl lg:text-[2.75rem] font-bold text-foreground leading-[1.15] mb-6">
-              Cuidando da sua visão em{" "}
-              <span className="gradient-text">todas as fases da vida</span>
+              Do consultório à sala de cirurgia,{" "}
+              <span className="gradient-text">sempre ao seu lado</span>
             </h2>
 
             <p className="text-muted-foreground text-lg leading-relaxed mb-5">
