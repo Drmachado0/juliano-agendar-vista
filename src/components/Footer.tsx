@@ -142,7 +142,7 @@ const Footer = () => {
               <Instagram className="w-4 h-4" />
             </a>
             <a
-              href="https://api.whatsapp.com/send?phone=5591936180476"
+              href="https://wa.me/5591936180476"
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackWhatsAppClickConversion()}
