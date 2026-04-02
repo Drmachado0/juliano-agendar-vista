@@ -171,6 +171,10 @@
     animation: glow 3s ease-in-out infinite alternate;
   }
 
+  .animate-blur-in {
+    animation: blurIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
   .animation-delay-100 { animation-delay: 0.1s; }
   .animation-delay-200 { animation-delay: 0.2s; }
   .animation-delay-300 { animation-delay: 0.3s; }
