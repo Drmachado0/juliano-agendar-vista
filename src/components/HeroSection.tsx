@@ -125,7 +125,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                 }}
                 className="w-full sm:w-auto text-base py-6 sm:py-3 border-primary/35 text-primary/90 hover:border-primary/60 hover:text-primary"
               >
-                Conhecer procedimentos
+                Ver procedimentos
               </Button>
             </div>
 
