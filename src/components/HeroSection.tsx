@@ -95,7 +95,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             </p>
 
             {/* CTA */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8 opacity-0 animate-slide-up animation-delay-400">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8 opacity-0 animate-slide-up animation-delay-600">
               <Button
                 variant="hero"
                 size="lg"
