@@ -74,7 +74,7 @@ const ProceduresSection = () => {
             O que tratamos
           </span>
           <h2 className={`text-3xl md:text-4xl lg:text-[2.75rem] font-bold text-foreground mb-4 ${isVisible ? 'animate-blur-in animation-delay-100' : ''}`}>
-            Excelência em cada <span className="gradient-text">procedimento</span>
+            Exames, cirurgias <span className="gradient-text">e laser</span>
           </h2>
           <p className={`text-muted-foreground max-w-2xl lg:max-w-none text-lg ${isVisible ? 'animate-blur-in animation-delay-200' : ''}`}>
             Oferecemos exames de alta precisão, cirurgias modernas e tratamentos a laser com tecnologia avançada.
