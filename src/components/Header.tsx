@@ -65,12 +65,16 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="flex items-center gap-2 sm:gap-2.5 group shrink-0"
           >
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/25 flex items-center justify-center overflow-hidden group-hover:border-primary/40 transition-colors">
-              <img src={logoImage} alt="Logo" className="w-9 h-9 sm:w-10 sm:h-10 object-contain" />
+            <div className={`rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/25 flex items-center justify-center overflow-hidden group-hover:border-primary/40 transition-all duration-300 ${
+              scrolled ? 'w-10 h-10' : 'w-11 h-11 sm:w-12 sm:h-12'
+            }`}>
+              <img src={logoImage} alt="Logo" className={`object-contain transition-all duration-300 ${
+                scrolled ? 'w-8 h-8' : 'w-9 h-9 sm:w-10 sm:h-10'
+              }`} />
             </div>
             <div className="flex flex-col">
               <span className="font-semibold text-foreground text-sm sm:text-base leading-tight">Dr. Juliano Machado</span>
-              <span className="text-[11px] sm:text-xs text-primary/80 font-medium">Oftalmologista</span>
+              <span className="text-xs text-primary/80 font-medium">Oftalmologista</span>
             </div>
           </button>
 
@@ -80,13 +84,17 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
               <button
                 key={item.id}
                 onClick={() => scrollToSection(item.id)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-300 ${
+                className={`relative px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-300 ${
                   activeSection === item.id
-                    ? "text-primary bg-primary/10"
+                    ? "text-primary font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                 }`}
               >
                 {item.label}
+                {/* Animated underline indicator */}
+                <span className={`absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] bg-primary rounded-full transition-all duration-300 ${
+                  activeSection === item.id ? 'w-full scale-x-100' : 'w-0 scale-x-0'
+                }`} />
               </button>
             ))}
           </nav>
@@ -109,7 +117,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
               </Link>
             )}
             <Link to="/agendar">
-              <Button variant="hero" size="sm" className="gap-1.5">
+              <Button variant="hero" size="sm" className="gap-1.5 card-shimmer">
                 <CalendarCheck className="h-5 w-5" />
                 Agendar Online
               </Button>
@@ -148,37 +156,47 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
         <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
           isMenuOpen ? 'max-h-[28rem] mt-3 pb-4 border-t border-border/30 pt-3' : 'max-h-0'
         }`}>
-          <nav className="flex flex-col gap-0.5">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => scrollToSection(item.id)}
-                className={`text-sm font-medium text-left px-4 py-2.5 rounded-lg transition-all duration-300 ${
-                  activeSection === item.id
-                    ? "text-primary bg-primary/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                }`}
+          <div className={`${isMenuOpen ? 'backdrop-blur-xl' : ''}`}>
+            <nav className="flex flex-col gap-0.5">
+              {navItems.map((item, index) => (
+                <button
+                  key={item.id}
+                  onClick={() => scrollToSection(item.id)}
+                  className={`text-sm font-medium text-left px-4 py-2.5 rounded-lg transition-all duration-300 ${
+                    activeSection === item.id
+                      ? "text-primary bg-primary/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                  } ${isMenuOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}
+                  style={{ transitionDelay: isMenuOpen ? `${index * 50}ms` : '0ms' }}
+                >
+                  {item.label}
+                </button>
+              ))}
+
+              {/* Gradient separator */}
+              <div className="h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent my-2" />
+
+              <div className={`transition-all duration-300 ${isMenuOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}
+                style={{ transitionDelay: isMenuOpen ? `${navItems.length * 50}ms` : '0ms' }}
               >
-                {item.label}
-              </button>
-            ))}
-            <div className="h-px bg-border/30 my-2" />
-            {user ? (
-              <Link to="/admin/dashboard" onClick={() => setIsMenuOpen(false)}>
-                <Button variant="outline" size="sm" className="w-full gap-2">
-                  <Settings className="h-4 w-4" />
-                  {isAdmin ? "Admin" : "Painel"}
-                </Button>
-              </Link>
-            ) : (
-              <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                <Button variant="ghost" size="sm" className="w-full gap-2 justify-start px-4">
-                  <LogIn className="h-4 w-4" />
-                  Entrar
-                </Button>
-              </Link>
-            )}
-          </nav>
+                {user ? (
+                  <Link to="/admin/dashboard" onClick={() => setIsMenuOpen(false)}>
+                    <Button variant="outline" size="sm" className="w-full gap-2">
+                      <Settings className="h-4 w-4" />
+                      {isAdmin ? "Admin" : "Painel"}
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                    <Button variant="ghost" size="sm" className="w-full gap-2 justify-start px-4">
+                      <LogIn className="h-4 w-4" />
+                      Entrar
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </nav>
+          </div>
         </div>
       </div>
     </header>
