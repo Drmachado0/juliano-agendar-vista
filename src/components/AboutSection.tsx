@@ -22,9 +22,9 @@ const AboutSection = () => {
 
   const credentials = [
     { icon: GraduationCap, text: "Membro da SBO" },
-    { icon: Stethoscope, text: "+13 anos de experiência" },
-    { icon: Heart, text: "Atendimento humanizado" },
-    { icon: Cpu, text: "Tecnologia avançada" },
+    { icon: Stethoscope, text: "13+ anos de oftalmologia" },
+    { icon: Heart, text: "Explica cada passo ao paciente" },
+    { icon: Cpu, text: "Equipamentos de última geração" },
   ];
 
   return (
@@ -82,24 +82,22 @@ const AboutSection = () => {
           {/* Content Side */}
           <div className={`order-1 lg:order-2 lg:pl-24 transition-all duration-700 delay-200 ease-out-expo ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12'}`}>
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/8 border border-accent/15 text-accent font-semibold text-sm mb-6">
-              Sobre o médico
+              Quem é o Dr. Juliano
             </span>
 
             <h2 className="text-3xl md:text-4xl lg:text-[2.75rem] font-bold text-foreground leading-[1.15] mb-6">
-              Cuidando da sua visão em{" "}
-              <span className="gradient-text">todas as fases da vida</span>
+              Do consultório à sala de cirurgia,{" "}
+              <span className="gradient-text">sempre ao seu lado</span>
             </h2>
 
             <p className="text-muted-foreground text-lg leading-relaxed mb-5">
-              Com mais de 13 anos dedicados à oftalmologia, o Dr. Juliano Machado alia{" "}
-              <span className="text-foreground font-medium">experiência clínica</span> e{" "}
-              <span className="text-foreground font-medium">tecnologia de ponta</span> para oferecer diagnósticos
-              precisos e tratamentos que transformam a qualidade de vida dos seus pacientes.
+              O Dr. Juliano é oftalmologista há mais de 13 anos e atende em Paragominas e Belém. No consultório, ele é conhecido por{" "}
+              <span className="text-foreground font-medium">explicar cada detalhe</span> com calma — porque acredita que um{" "}
+              <span className="text-foreground font-medium">paciente bem informado</span> faz melhores escolhas sobre sua saúde.
             </p>
 
             <p className="text-muted-foreground leading-relaxed mb-10">
-              Do exame de rotina às cirurgias mais complexas, cada paciente recebe um atendimento
-              acolhedor e individualizado, com a atenção que merece.
+              Desde exames de rotina até cirurgias de catarata e pterígio, o foco é sempre o mesmo: resolver o problema com segurança e devolver a qualidade de visão que você merece.
             </p>
 
             {/* Features */}
@@ -111,9 +109,9 @@ const AboutSection = () => {
                 <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
                   <Heart className="w-5 h-5 text-primary" />
                 </div>
-                <h4 className="text-foreground font-semibold text-sm mb-1.5 font-sans">Atendimento Humanizado</h4>
+                <h4 className="text-foreground font-semibold text-sm mb-1.5 font-sans">Consulta sem pressa</h4>
                 <p className="text-muted-foreground text-xs leading-relaxed">
-                  Cada paciente é único e recebe atenção personalizada do início ao fim.
+                  O Dr. Juliano dedica o tempo necessário para ouvir, examinar e explicar cada resultado com clareza.
                 </p>
               </div>
               <div
@@ -123,9 +121,9 @@ const AboutSection = () => {
                 <div className="w-11 h-11 rounded-xl bg-accent/10 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
                   <Cpu className="w-5 h-5 text-accent" />
                 </div>
-                <h4 className="text-foreground font-semibold text-sm mb-1.5 font-sans">Tecnologia de Ponta</h4>
+                <h4 className="text-foreground font-semibold text-sm mb-1.5 font-sans">Equipamentos atualizados</h4>
                 <p className="text-muted-foreground text-xs leading-relaxed">
-                  Equipamentos modernos para diagnósticos precisos e procedimentos seguros.
+                  Retinógrafo digital, biometria ultrassônica e laser — tudo o que você precisa em um só lugar.
                 </p>
               </div>
             </div>

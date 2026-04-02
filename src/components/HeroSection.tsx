@@ -83,23 +83,22 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/8 border border-primary/15 mb-6 opacity-0 animate-blur-in animation-delay-300">
               <Shield className="w-3.5 h-3.5 text-primary" />
               <span className="text-xs text-muted-foreground font-medium uppercase tracking-[0.08em]">
-                Membro da Sociedade Brasileira de Oftalmologia
+                Sociedade Brasileira de Oftalmologia
               </span>
             </div>
 
             {/* Heading */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[4rem] font-extrabold leading-[1.08] mb-4 opacity-0 animate-slide-up animation-delay-400 tracking-[-0.02em]">
-              <span className="text-foreground">Sua visão merece</span>
+               <span className="text-foreground">Enxergar bem</span>
               <br />
-              <span className="gradient-text opacity-0 animate-reveal-up animation-delay-600">cuidado especializado</span>
+              <span className="gradient-text opacity-0 animate-reveal-up animation-delay-600">muda tudo</span>
             </h1>
 
             {/* Subtitle */}
             <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-7 max-w-md mx-auto lg:mx-0 opacity-0 animate-slide-up animation-delay-500">
-              <span className="text-foreground font-semibold">Dr. Juliano Machado</span> — mais de 13 anos
-              transformando vidas com oftalmologia de excelência em{" "}
+              <span className="text-foreground font-semibold">Dr. Juliano Machado</span> já devolveu a clareza de visão para mais de 6.000 pacientes em{" "}
               <span className="text-primary font-medium">Paragominas</span> e{" "}
-              <span className="text-primary font-medium">Belém</span>.
+              <span className="text-primary font-medium">Belém</span>. Do primeiro exame à cirurgia, ele cuida de você.
             </p>
 
             {/* CTA */}
@@ -114,7 +113,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                 className="w-full sm:w-auto text-base py-6 sm:py-3 group relative overflow-hidden"
               >
                 <CalendarCheck className="w-5 h-5 mr-1" />
-                Agendar minha consulta
+                Agendar consulta
                 <span className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
               </Button>
               <Button
@@ -126,7 +125,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                 }}
                 className="w-full sm:w-auto text-base py-6 sm:py-3 border-primary/35 text-primary/90 hover:border-primary/60 hover:text-primary"
               >
-                Conhecer procedimentos
+                Ver procedimentos
               </Button>
             </div>
 
@@ -140,7 +139,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
               <StatCard
                 icon={<Star className="w-4 h-4 text-primary fill-primary" />}
                 value="5.0"
-                label="avaliação Google"
+                label="nota máxima no Google"
                 highlight
                 extra={
                   <svg className="w-3.5 h-3.5 ml-1" viewBox="0 0 24 24">
@@ -154,7 +153,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
               <StatCard
                 icon={<Award className="w-4 h-4 text-primary" />}
                 value="+13 anos"
-                label="de experiência"
+                label="de oftalmologia"
               />
             </div>
           </div>
@@ -168,7 +167,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
         style={{ animationTimingFunction: 'ease-in-out' }}
         aria-label="Rolar para baixo"
       >
-        <span className="text-xs uppercase tracking-[0.2em] font-medium font-sans">Saiba mais</span>
+        <span className="text-xs uppercase tracking-[0.2em] font-medium font-sans">Conheça o Dr. Juliano</span>
         <ChevronDown className="w-5 h-5" />
       </button>
     </section>
