@@ -139,7 +139,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
               <StatCard
                 icon={<Star className="w-4 h-4 text-primary fill-primary" />}
                 value="5.0"
-                label="avaliação Google"
+                label="nota máxima no Google"
                 highlight
                 extra={
                   <svg className="w-3.5 h-3.5 ml-1" viewBox="0 0 24 24">
