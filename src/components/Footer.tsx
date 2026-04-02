@@ -91,7 +91,7 @@ const Footer = () => {
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <MessageCircle className="w-4 h-4 text-primary" />
-                (91) 93618-0428
+                (91) 93618-0476
               </a>
               <a
                 href="https://www.instagram.com/drjulianomachado.oftalmo/"
