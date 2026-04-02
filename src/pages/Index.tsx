@@ -52,7 +52,7 @@ const Index = () => {
   return (
     <>
       <Helmet>
-        <title>Dr. Juliano Machado – Oftalmologista em Paragominas e Belém | Agende Online</title>
+        <title>Dr. Juliano Machado · Oftalmologista — Paragominas e Belém | Agendar Consulta</title>
         <meta
           name="description"
           content="Agende sua consulta oftalmológica com Dr. Juliano Machado. +13 anos de experiência, +6.000 pacientes atendidos. Cirurgia de catarata, pterígio, OCT e mais. Paragominas e Belém."
