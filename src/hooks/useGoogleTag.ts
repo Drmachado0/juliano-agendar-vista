@@ -108,5 +108,6 @@ export const useGoogleTag = () => {
     trackFormSubmitConversion,
     trackPhoneClickConversion,
     trackWhatsAppClickConversion,
+    trackGoogleAds2Conversion,
   };
 };
