@@ -87,7 +87,7 @@ const Footer = () => {
                 href="https://wa.me/5591936180476"
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => trackWhatsAppClickConversion()}
+                onClick={() => { trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); }}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <MessageCircle className="w-4 h-4 text-primary" />
