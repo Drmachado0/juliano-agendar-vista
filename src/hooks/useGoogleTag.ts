@@ -6,6 +6,8 @@ declare global {
 }
 
 const GOOGLE_ADS_ID = 'AW-979714971';
+const GOOGLE_ADS_ID_2 = 'AW-436492720';
+const CONVERSION_LABEL_2 = '3Y-4COmQ1dUbELCzkdAB';
 
 export const useGoogleTag = () => {
   const pushToDataLayer = (data: Record<string, any>) => {
