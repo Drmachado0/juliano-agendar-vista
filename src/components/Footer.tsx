@@ -6,6 +6,7 @@ import { useMetaPixel } from "@/hooks/useMetaPixel";
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const { trackWhatsAppClickConversion, trackGoogleAds2Conversion } = useGoogleTag();
+  const { trackContact: trackMetaContact } = useMetaPixel();
 
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
