@@ -65,11 +65,18 @@ export const useMetaPixel = () => {
     });
   };
 
+  const trackContact = (method?: string) => {
+    trackMetaEvent("Contact", {
+      content_name: method || "WhatsApp",
+    });
+  };
+
   return {
     trackViewContent,
     trackLead,
     trackSchedule,
     trackCompleteRegistration,
+    trackContact,
     trackEvent: trackMetaEvent,
   };
 };
