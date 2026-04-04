@@ -220,6 +220,7 @@ const Agendar = () => {
       trackSchedule(formData.appointmentType, formData.location);
       trackCompleteRegistration(formData.appointmentType, formData.location);
       trackFormSubmitConversion();
+      trackGoogleAds2Conversion();
 
       setIsSubmitted(true);
     } catch (err) {

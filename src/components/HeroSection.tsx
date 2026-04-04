@@ -108,6 +108,7 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                 size="lg"
                 onClick={() => {
                   trackCTAClick('agendar_consulta', 'hero', 'Agendar minha consulta');
+                  trackGoogleAds2Conversion();
                   onScheduleClick();
                 }}
                 className="w-full sm:w-auto text-base py-6 sm:py-3 group relative overflow-hidden"

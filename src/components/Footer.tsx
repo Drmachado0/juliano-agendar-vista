@@ -145,7 +145,7 @@ const Footer = () => {
               href="https://wa.me/5591936180476"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackWhatsAppClickConversion()}
+              onClick={() => { trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); }}
               className="text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-300"
               aria-label="WhatsApp"
             >

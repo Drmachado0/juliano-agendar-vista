@@ -130,7 +130,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
               href="https://wa.me/5591936180476"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackWhatsAppClickConversion()}
+              onClick={() => { trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); }}
               className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
               aria-label="WhatsApp"
             >

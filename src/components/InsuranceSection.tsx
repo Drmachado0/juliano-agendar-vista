@@ -114,6 +114,7 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
                   size="lg"
                   onClick={() => {
                     trackCTAClick('agendar_consulta', 'convenios', 'Agendar minha consulta');
+                    trackGoogleAds2Conversion();
                     onScheduleClick();
                   }}
                   className="text-base group relative overflow-hidden"
