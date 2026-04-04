@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CalendarCheck, Phone, Clock, ArrowRight } from "lucide-react";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 
 import logoBradesco from "@/assets/convenios/bradesco-saude.png";
 import logoSulamerica from "@/assets/convenios/sulamerica.png";
