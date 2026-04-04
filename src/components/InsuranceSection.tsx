@@ -17,6 +17,7 @@ interface InsuranceSectionProps {
 
 const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
   const { trackCTAClick, trackGoogleAds2Conversion } = useGoogleTag();
+  const { trackContact: trackMetaContact } = useMetaPixel();
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
 
