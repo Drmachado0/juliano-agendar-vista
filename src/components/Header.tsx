@@ -136,7 +136,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
             >
               <Phone className="w-4 h-4" />
             </a>
-            <Link to="/agendar">
+            <Link to="/agendar" onClick={() => trackGoogleAds2Conversion()}>
               <Button variant="hero" size="sm" className="gap-1 text-xs px-2.5 py-1.5 h-auto">
                 <CalendarCheck className="h-3.5 w-3.5" />
                 Agendar
