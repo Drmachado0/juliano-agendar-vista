@@ -4,7 +4,7 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
-  const { trackWhatsAppClickConversion } = useGoogleTag();
+  const { trackWhatsAppClickConversion, trackGoogleAds2Conversion } = useGoogleTag();
 
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
