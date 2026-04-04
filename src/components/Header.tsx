@@ -116,7 +116,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
                 </Button>
               </Link>
             )}
-            <Link to="/agendar">
+            <Link to="/agendar" onClick={() => trackGoogleAds2Conversion()}>
               <Button variant="hero" size="sm" className="gap-1.5 card-shimmer">
                 <CalendarCheck className="h-5 w-5" />
                 Agendar Online
