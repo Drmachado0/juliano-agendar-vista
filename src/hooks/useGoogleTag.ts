@@ -32,6 +32,16 @@ export const useGoogleTag = () => {
     }
   };
 
+  const trackGoogleAds2Conversion = () => {
+    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+      window.gtag('event', 'conversion', {
+        send_to: `${GOOGLE_ADS_ID_2}/${CONVERSION_LABEL_2}`,
+        value: 1.0,
+        currency: 'BRL',
+      });
+    }
+  };
+
   const trackFormSubmitConversion = () => {
     trackGoogleAdsConversion('7428858657');
   };
