@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CalendarCheck, Phone, Clock, ArrowRight } from "lucide-react";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 
 import logoBradesco from "@/assets/convenios/bradesco-saude.png";
 import logoSulamerica from "@/assets/convenios/sulamerica.png";
@@ -16,6 +17,7 @@ interface InsuranceSectionProps {
 
 const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
   const { trackCTAClick, trackGoogleAds2Conversion } = useGoogleTag();
+  const { trackContact: trackMetaContact } = useMetaPixel();
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
 
@@ -128,7 +130,7 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
                   href="https://wa.me/5591936180476?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consulta%20com%20o%20Dr.%20Juliano%20Machado."
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => trackGoogleAds2Conversion()}
+                  onClick={() => { trackGoogleAds2Conversion(); trackMetaContact('WhatsApp'); }}
                 >
                   <Button variant="outline" size="lg" className="w-full text-base border-border/60">
                     <Phone className="w-5 h-5 mr-1" />

@@ -1,10 +1,12 @@
 import { Heart, MapPin, Instagram, MessageCircle } from "lucide-react";
 import logoImage from "@/assets/dr-juliano-logo.webp";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const { trackWhatsAppClickConversion, trackGoogleAds2Conversion } = useGoogleTag();
+  const { trackContact: trackMetaContact } = useMetaPixel();
 
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -87,7 +89,7 @@ const Footer = () => {
                 href="https://wa.me/5591936180476"
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => { trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); }}
+                onClick={() => { trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); trackMetaContact('WhatsApp'); }}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <MessageCircle className="w-4 h-4 text-primary" />
@@ -145,7 +147,7 @@ const Footer = () => {
               href="https://wa.me/5591936180476"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => { trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); }}
+              onClick={() => { trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); trackMetaContact('WhatsApp'); }}
               className="text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-300"
               aria-label="WhatsApp"
             >

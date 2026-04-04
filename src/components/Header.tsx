@@ -1,5 +1,6 @@
 import { Menu, X, Settings, LogIn, CalendarCheck, Phone } from "lucide-react";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
@@ -16,6 +17,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
   const [scrolled, setScrolled] = useState(false);
   const { user, isAdmin } = useAuth();
   const { trackWhatsAppClickConversion, trackGoogleAds2Conversion } = useGoogleTag();
+  const { trackContact: trackMetaContact } = useMetaPixel();
 
   const navItems = [
     { label: "Sobre", id: "sobre" },
@@ -130,7 +132,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
               href="https://wa.me/5591936180476"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => { trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); }}
+              onClick={() => { trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); trackMetaContact('WhatsApp'); }}
               className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
               aria-label="WhatsApp"
             >
