@@ -42,7 +42,18 @@ const Agendar = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { trackViewContent, trackLead, trackSchedule, trackCompleteRegistration } = useMetaPixel();
-  const { trackFormSubmitConversion } = useGoogleTag();
+  const { trackFormSubmitConversion, trackGoogleAds2Conversion } = useGoogleTag();
+
+  // Track Google Ads conversion on page load
+  useEffect(() => {
+    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+      window.gtag('event', 'conversion', {
+        send_to: 'AW-436492720/3Y-4COmQ1dUbELCzkdAB',
+        value: 1.0,
+        currency: 'BRL',
+      });
+    }
+  }, []);
 
   const totalSteps = 4;
 
@@ -209,6 +220,7 @@ const Agendar = () => {
       trackSchedule(formData.appointmentType, formData.location);
       trackCompleteRegistration(formData.appointmentType, formData.location);
       trackFormSubmitConversion();
+      trackGoogleAds2Conversion();
 
       setIsSubmitted(true);
     } catch (err) {

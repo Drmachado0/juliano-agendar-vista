@@ -15,7 +15,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
   const [activeSection, setActiveSection] = useState<string>("");
   const [scrolled, setScrolled] = useState(false);
   const { user, isAdmin } = useAuth();
-  const { trackWhatsAppClickConversion } = useGoogleTag();
+  const { trackWhatsAppClickConversion, trackGoogleAds2Conversion } = useGoogleTag();
 
   const navItems = [
     { label: "Sobre", id: "sobre" },
@@ -116,7 +116,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
                 </Button>
               </Link>
             )}
-            <Link to="/agendar">
+            <Link to="/agendar" onClick={() => trackGoogleAds2Conversion()}>
               <Button variant="hero" size="sm" className="gap-1.5 card-shimmer">
                 <CalendarCheck className="h-5 w-5" />
                 Agendar Online
@@ -130,13 +130,13 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
               href="https://wa.me/5591936180476"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackWhatsAppClickConversion()}
+              onClick={() => { trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); }}
               className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
               aria-label="WhatsApp"
             >
               <Phone className="w-4 h-4" />
             </a>
-            <Link to="/agendar">
+            <Link to="/agendar" onClick={() => trackGoogleAds2Conversion()}>
               <Button variant="hero" size="sm" className="gap-1 text-xs px-2.5 py-1.5 h-auto">
                 <CalendarCheck className="h-3.5 w-3.5" />
                 Agendar

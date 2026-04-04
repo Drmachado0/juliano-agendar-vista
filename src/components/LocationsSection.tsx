@@ -6,7 +6,7 @@ const LocationsSection = () => {
   const [activeLocation, setActiveLocation] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
-  const { trackPhoneClickConversion } = useGoogleTag();
+  const { trackPhoneClickConversion, trackGoogleAds2Conversion } = useGoogleTag();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -174,7 +174,7 @@ const LocationsSection = () => {
                 </div>
                 <a
                   href={`tel:${activeLocationData.phone.replace(/\D/g, '')}`}
-                  onClick={() => trackPhoneClickConversion()}
+                  onClick={() => { trackPhoneClickConversion(); trackGoogleAds2Conversion(); }}
                   className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors"
                 >
                   <Phone className="w-4 h-4 text-primary shrink-0" />

@@ -6,6 +6,8 @@ declare global {
 }
 
 const GOOGLE_ADS_ID = 'AW-979714971';
+const GOOGLE_ADS_ID_2 = 'AW-436492720';
+const CONVERSION_LABEL_2 = '3Y-4COmQ1dUbELCzkdAB';
 
 export const useGoogleTag = () => {
   const pushToDataLayer = (data: Record<string, any>) => {
@@ -26,6 +28,16 @@ export const useGoogleTag = () => {
     if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
       window.gtag('event', 'conversion', {
         send_to: `${GOOGLE_ADS_ID}/${conversionLabel}`,
+      });
+    }
+  };
+
+  const trackGoogleAds2Conversion = () => {
+    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+      window.gtag('event', 'conversion', {
+        send_to: `${GOOGLE_ADS_ID_2}/${CONVERSION_LABEL_2}`,
+        value: 1.0,
+        currency: 'BRL',
       });
     }
   };
@@ -96,5 +108,6 @@ export const useGoogleTag = () => {
     trackFormSubmitConversion,
     trackPhoneClickConversion,
     trackWhatsAppClickConversion,
+    trackGoogleAds2Conversion,
   };
 };

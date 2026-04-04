@@ -3,7 +3,7 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useState, useEffect } from "react";
 
 const WhatsAppButton = () => {
-  const { trackContact, trackWhatsAppClickConversion } = useGoogleTag();
+  const { trackContact, trackWhatsAppClickConversion, trackGoogleAds2Conversion } = useGoogleTag();
   const [show, setShow] = useState(false);
   const [pulseReady, setPulseReady] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -39,7 +39,7 @@ const WhatsAppButton = () => {
         href={whatsappUrl}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={() => { trackContact('whatsapp'); trackWhatsAppClickConversion(); }}
+        onClick={() => { trackContact('whatsapp'); trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); }}
         className={`flex items-center gap-2.5 bg-[#25D366] text-white pl-4 pr-5 py-3.5 rounded-2xl shadow-xl shadow-[#25D366]/25 hover:shadow-2xl hover:shadow-[#25D366]/35 hover:scale-105 active:scale-100 transition-all duration-300 backdrop-blur-sm ring-2 ring-[#25D366]/20 ring-offset-2 ring-offset-background ${
           pulseReady ? 'animate-whatsapp-pulse' : ''
         }`}

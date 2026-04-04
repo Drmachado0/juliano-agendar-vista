@@ -4,7 +4,7 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
-  const { trackWhatsAppClickConversion } = useGoogleTag();
+  const { trackWhatsAppClickConversion, trackGoogleAds2Conversion } = useGoogleTag();
 
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -87,7 +87,7 @@ const Footer = () => {
                 href="https://wa.me/5591936180476"
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => trackWhatsAppClickConversion()}
+                onClick={() => { trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); }}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <MessageCircle className="w-4 h-4 text-primary" />
@@ -145,7 +145,7 @@ const Footer = () => {
               href="https://wa.me/5591936180476"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackWhatsAppClickConversion()}
+              onClick={() => { trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); }}
               className="text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-300"
               aria-label="WhatsApp"
             >
