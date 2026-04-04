@@ -1,9 +1,11 @@
 import { MessageCircle } from "lucide-react";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useState, useEffect } from "react";
 
 const WhatsAppButton = () => {
   const { trackContact, trackWhatsAppClickConversion, trackGoogleAds2Conversion } = useGoogleTag();
+  const { trackContact: trackMetaContact } = useMetaPixel();
   const [show, setShow] = useState(false);
   const [pulseReady, setPulseReady] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
