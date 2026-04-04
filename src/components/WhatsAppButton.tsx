@@ -3,7 +3,7 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useState, useEffect } from "react";
 
 const WhatsAppButton = () => {
-  const { trackContact, trackWhatsAppClickConversion } = useGoogleTag();
+  const { trackContact, trackWhatsAppClickConversion, trackGoogleAds2Conversion } = useGoogleTag();
   const [show, setShow] = useState(false);
   const [pulseReady, setPulseReady] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
