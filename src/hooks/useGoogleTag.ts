@@ -1,22 +1,19 @@
 declare global {
   interface Window {
-    dataLayer: any[];
-    gtag: (...args: any[]) => void;
+    dataLayer: Record<string, any>[];
   }
 }
 
-const GOOGLE_ADS_ID = 'AW-979714971';
-const GOOGLE_ADS_ID_2 = 'AW-436492720';
-const CONVERSION_LABEL_2 = '3Y-4COmQ1dUbELCzkdAB';
+window.dataLayer = window.dataLayer || [];
+
+const pushToDataLayer = (data: Record<string, any>) => {
+  if (typeof window !== 'undefined') {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push(data);
+  }
+};
 
 export const useGoogleTag = () => {
-  const pushToDataLayer = (data: Record<string, any>) => {
-    if (typeof window !== 'undefined') {
-      window.dataLayer = window.dataLayer || [];
-      window.dataLayer.push(data);
-    }
-  };
-
   const trackEvent = (eventName: string, parameters?: Record<string, any>) => {
     pushToDataLayer({
       event: eventName,
@@ -24,34 +21,28 @@ export const useGoogleTag = () => {
     });
   };
 
-  const trackGoogleAdsConversion = (conversionLabel: string) => {
-    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
-      window.gtag('event', 'conversion', {
-        send_to: `${GOOGLE_ADS_ID}/${conversionLabel}`,
-      });
-    }
+  const trackWhatsAppClick = (linkUrl: string = 'https://wa.me/5591936180476', linkText: string = 'WhatsApp') => {
+    pushToDataLayer({
+      event: 'whatsapp_click',
+      link_url: linkUrl,
+      link_text: linkText,
+    });
   };
 
-  const trackGoogleAds2Conversion = () => {
-    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
-      window.gtag('event', 'conversion', {
-        send_to: `${GOOGLE_ADS_ID_2}/${CONVERSION_LABEL_2}`,
-        value: 1.0,
-        currency: 'BRL',
-      });
-    }
+  const trackPhoneClick = (linkUrl: string = 'tel:+5591936180476') => {
+    pushToDataLayer({
+      event: 'phone_click',
+      link_url: linkUrl,
+    });
   };
 
   const trackFormSubmitConversion = () => {
-    trackGoogleAdsConversion('7428858657');
-  };
-
-  const trackPhoneClickConversion = () => {
-    trackGoogleAdsConversion('7504209532');
-  };
-
-  const trackWhatsAppClickConversion = () => {
-    trackGoogleAdsConversion('6834364244');
+    pushToDataLayer({
+      event: 'form_submitted',
+      form_name: 'agendamento',
+      value: 80,
+      currency: 'BRL',
+    });
   };
 
   const trackScheduleStart = () => {
@@ -100,14 +91,13 @@ export const useGoogleTag = () => {
 
   return {
     trackEvent,
+    trackWhatsAppClick,
+    trackPhoneClick,
     trackScheduleStart,
     trackScheduleComplete,
     trackContact,
     trackLead,
     trackCTAClick,
     trackFormSubmitConversion,
-    trackPhoneClickConversion,
-    trackWhatsAppClickConversion,
-    trackGoogleAds2Conversion,
   };
 };
