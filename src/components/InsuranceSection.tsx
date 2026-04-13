@@ -16,7 +16,7 @@ interface InsuranceSectionProps {
 }
 
 const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
-  const { trackCTAClick, trackGoogleAds2Conversion } = useGoogleTag();
+  const { trackCTAClick, trackWhatsAppClick } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -61,7 +61,7 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
             </p>
           </div>
 
-          {/* Insurance logos — asymmetric grid */}
+          {/* Insurance logos */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-14">
             {insurances.map((insurance, index) => (
               <div
@@ -85,18 +85,11 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
 
           {/* CTA Card */}
           <div className={`relative overflow-hidden rounded-3xl transition-all duration-700 delay-300 ease-out-expo ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
-            {/* Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-card to-accent/10" />
             <div className="absolute inset-0 border border-primary/20 rounded-3xl" />
-
-            {/* Noise overlay inside card */}
             <div className="absolute inset-0 noise-overlay rounded-3xl" />
-
-            {/* Glow effects */}
             <div className="absolute -top-20 -right-20 w-60 h-60 bg-primary/10 rounded-full blur-[80px]" />
             <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-accent/8 rounded-full blur-[80px]" />
-
-            {/* Floating decorative dots */}
             <div className="absolute top-8 right-12 w-3 h-3 rounded-full bg-primary/10 animate-float" />
             <div className="absolute top-16 right-24 w-2 h-2 rounded-full bg-primary/8 animate-float animation-delay-300" />
             <div className="absolute bottom-12 left-10 w-4 h-4 rounded-full bg-accent/10 animate-float animation-delay-500" />
@@ -116,7 +109,6 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
                   size="lg"
                   onClick={() => {
                     trackCTAClick('agendar_consulta', 'convenios', 'Agendar minha consulta');
-                    trackGoogleAds2Conversion();
                     onScheduleClick();
                   }}
                   className="text-base group relative overflow-hidden"
@@ -130,7 +122,7 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
                   href="https://wa.me/5591936180476?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consulta%20com%20o%20Dr.%20Juliano%20Machado."
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => { trackGoogleAds2Conversion(); trackMetaContact('WhatsApp'); }}
+                  onClick={() => { trackWhatsAppClick(); trackMetaContact('WhatsApp'); }}
                 >
                   <Button variant="outline" size="lg" className="w-full text-base border-border/60">
                     <Phone className="w-5 h-5 mr-1" />
@@ -139,7 +131,6 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
                 </a>
               </div>
 
-              {/* Trust micro-copy */}
               <div className="h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent mb-4" />
               <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">

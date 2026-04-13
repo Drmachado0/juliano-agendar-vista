@@ -20,6 +20,7 @@ import AdminConfiguracoes from "./pages/admin/Configuracoes";
 import AdminAvaliacoes from "./pages/admin/Avaliacoes";
 import AdminLembretes from "./pages/admin/Lembretes";
 import AdminConfiguracoesEvolution from "./pages/admin/ConfiguracoesEvolution";
+import RouteChangeTracker from "./components/RouteChangeTracker";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+          <RouteChangeTracker />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/agendar" element={<Agendar />} />

@@ -9,7 +9,7 @@ interface HeroSectionProps {
 }
 
 const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
-  const { trackCTAClick, trackGoogleAds2Conversion } = useGoogleTag();
+  const { trackCTAClick } = useGoogleTag();
   const [count, setCount] = useState(0);
 
   // Animated counter for patients
@@ -108,7 +108,6 @@ const HeroSection = ({ onScheduleClick }: HeroSectionProps) => {
                 size="lg"
                 onClick={() => {
                   trackCTAClick('agendar_consulta', 'hero', 'Agendar minha consulta');
-                  trackGoogleAds2Conversion();
                   onScheduleClick();
                 }}
                 className="w-full sm:w-auto text-base py-6 sm:py-3 group relative overflow-hidden"
