@@ -5,7 +5,7 @@ import { useMetaPixel } from "@/hooks/useMetaPixel";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
-  const { trackWhatsAppClickConversion, trackGoogleAds2Conversion } = useGoogleTag();
+  const { trackWhatsAppClick } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
 
   const scrollToSection = (id: string) => {
@@ -14,7 +14,6 @@ const Footer = () => {
 
   return (
     <footer className="bg-gradient-to-b from-card to-background border-t border-border/50 relative noise-overlay">
-      {/* Top decorative line */}
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
 
       <div className="container mx-auto px-4 py-12 md:py-16">
@@ -89,7 +88,7 @@ const Footer = () => {
                 href="https://wa.me/5591936180476"
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => { trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); trackMetaContact('WhatsApp'); }}
+                onClick={() => { trackWhatsAppClick(); trackMetaContact('WhatsApp'); }}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <MessageCircle className="w-4 h-4 text-primary" />
@@ -123,7 +122,6 @@ const Footer = () => {
         {/* Bottom bar */}
         <div className="pt-4 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex flex-col items-center md:items-start gap-3">
-            {/* Decorative iris rings */}
             <svg width="60" height="60" viewBox="0 0 60 60" className="opacity-[0.08]">
               <circle cx="30" cy="30" r="28" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.5" />
               <circle cx="30" cy="30" r="20" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.5" />
@@ -147,7 +145,7 @@ const Footer = () => {
               href="https://wa.me/5591936180476"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => { trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); trackMetaContact('WhatsApp'); }}
+              onClick={() => { trackWhatsAppClick(); trackMetaContact('WhatsApp'); }}
               className="text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-300"
               aria-label="WhatsApp"
             >

@@ -16,7 +16,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
   const [activeSection, setActiveSection] = useState<string>("");
   const [scrolled, setScrolled] = useState(false);
   const { user, isAdmin } = useAuth();
-  const { trackWhatsAppClickConversion, trackGoogleAds2Conversion } = useGoogleTag();
+  const { trackWhatsAppClick } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
 
   const navItems = [
@@ -93,7 +93,6 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
                 }`}
               >
                 {item.label}
-                {/* Animated underline indicator */}
                 <span className={`absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] bg-primary rounded-full transition-all duration-300 ${
                   activeSection === item.id ? 'w-full scale-x-100' : 'w-0 scale-x-0'
                 }`} />
@@ -118,7 +117,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
                 </Button>
               </Link>
             )}
-            <Link to="/agendar" onClick={() => trackGoogleAds2Conversion()}>
+            <Link to="/agendar">
               <Button variant="hero" size="sm" className="gap-1.5 card-shimmer">
                 <CalendarCheck className="h-5 w-5" />
                 Agendar Online
@@ -132,13 +131,13 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
               href="https://wa.me/5591936180476"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => { trackWhatsAppClickConversion(); trackGoogleAds2Conversion(); trackMetaContact('WhatsApp'); }}
+              onClick={() => { trackWhatsAppClick(); trackMetaContact('WhatsApp'); }}
               className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
               aria-label="WhatsApp"
             >
               <Phone className="w-4 h-4" />
             </a>
-            <Link to="/agendar" onClick={() => trackGoogleAds2Conversion()}>
+            <Link to="/agendar">
               <Button variant="hero" size="sm" className="gap-1 text-xs px-2.5 py-1.5 h-auto">
                 <CalendarCheck className="h-3.5 w-3.5" />
                 Agendar
@@ -175,7 +174,6 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
                 </button>
               ))}
 
-              {/* Gradient separator */}
               <div className="h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent my-2" />
 
               <div className={`transition-all duration-300 ${isMenuOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}

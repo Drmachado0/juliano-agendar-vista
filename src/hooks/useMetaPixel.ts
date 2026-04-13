@@ -1,73 +1,51 @@
-declare global {
-  interface Window {
-    fbq: (
-      type: string,
-      eventName: string,
-      parameters?: Record<string, unknown>
-    ) => void;
-  }
-}
+// Meta Pixel is now managed via GTM. These functions push dataLayer events
+// that GTM can pick up to fire the corresponding Meta Pixel events.
 
-type MetaPixelEvent =
-  | "PageView"
-  | "ViewContent"
-  | "Lead"
-  | "Schedule"
-  | "CompleteRegistration"
-  | "Contact"
-  | "InitiateCheckout";
-
-interface EventParameters {
-  content_name?: string;
-  content_category?: string;
-  content_type?: string;
-  value?: number;
-  currency?: string;
-  [key: string]: unknown;
-}
-
-export const trackMetaEvent = (
-  eventName: MetaPixelEvent | string,
-  parameters?: EventParameters
-) => {
-  if (typeof window !== "undefined" && window.fbq) {
-    window.fbq("track", eventName, parameters);
+const pushToDataLayer = (data: Record<string, any>) => {
+  if (typeof window !== 'undefined') {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push(data);
   }
 };
 
 export const useMetaPixel = () => {
   const trackViewContent = (contentName: string, contentCategory?: string) => {
-    trackMetaEvent("ViewContent", {
+    pushToDataLayer({
+      event: 'meta_view_content',
       content_name: contentName,
       content_category: contentCategory,
     });
   };
 
   const trackLead = (contentName?: string) => {
-    trackMetaEvent("Lead", {
-      content_name: contentName || "Formulário Agendamento Iniciado",
+    pushToDataLayer({
+      event: 'meta_lead',
+      content_name: contentName || 'Formulário Agendamento Iniciado',
     });
   };
 
   const trackSchedule = (appointmentType?: string, location?: string) => {
-    trackMetaEvent("Schedule", {
-      content_name: "Agendamento Confirmado",
+    pushToDataLayer({
+      event: 'meta_schedule',
+      content_name: 'Agendamento Confirmado',
       content_category: appointmentType,
       content_type: location,
     });
   };
 
   const trackCompleteRegistration = (appointmentType?: string, location?: string) => {
-    trackMetaEvent("CompleteRegistration", {
-      content_name: "Agendamento Finalizado",
+    pushToDataLayer({
+      event: 'meta_complete_registration',
+      content_name: 'Agendamento Finalizado',
       content_category: appointmentType,
       content_type: location,
     });
   };
 
   const trackContact = (method?: string) => {
-    trackMetaEvent("Contact", {
-      content_name: method || "WhatsApp",
+    pushToDataLayer({
+      event: 'meta_contact',
+      content_name: method || 'WhatsApp',
     });
   };
 
@@ -77,6 +55,8 @@ export const useMetaPixel = () => {
     trackSchedule,
     trackCompleteRegistration,
     trackContact,
-    trackEvent: trackMetaEvent,
+    trackEvent: (eventName: string, parameters?: Record<string, any>) => {
+      pushToDataLayer({ event: `meta_${eventName.toLowerCase()}`, ...parameters });
+    },
   };
 };
