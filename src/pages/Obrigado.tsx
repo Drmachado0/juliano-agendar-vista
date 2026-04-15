@@ -16,7 +16,7 @@ const Obrigado = () => {
     window.dataLayer.push({
       event: "google_ads_conversion",
       send_to: "AW-123456789/xxxxxxx",
-      value: 0,
+      value: 300,
       currency: "BRL",
     });
   }, []);

@@ -40,7 +40,7 @@ export const useGoogleTag = () => {
     pushToDataLayer({
       event: 'form_submitted',
       form_name: 'agendamento',
-      value: 80,
+      value: 300,
       currency: 'BRL',
     });
   };
