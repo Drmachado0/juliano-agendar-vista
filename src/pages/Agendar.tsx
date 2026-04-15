@@ -210,7 +210,27 @@ const Agendar = () => {
       trackCompleteRegistration(formData.appointmentType, formData.location);
       trackFormSubmitConversion();
 
-      setIsSubmitted(true);
+      // Meta/Facebook Pixel - Lead event
+      if (typeof window.fbq !== 'undefined') {
+        window.fbq('track', 'Lead', {
+          content_name: 'Agendamento Confirmado',
+          content_category: 'Consulta Oftalmológica',
+          value: 0,
+          currency: 'BRL',
+        });
+      }
+
+      // Google Ads Conversion
+      if (typeof window.gtag !== 'undefined') {
+        window.gtag('event', 'conversion', {
+          send_to: 'AW-436492720/3Y-4COmQ1dUbELCzkdAB',
+          value: 0,
+          currency: 'BRL',
+        });
+      }
+
+      // Redirect to thank-you page
+      window.location.href = '/obrigado';
     } catch (err) {
       toast({
         title: "Erro",
