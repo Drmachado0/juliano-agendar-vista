@@ -211,8 +211,8 @@ const Agendar = () => {
       trackFormSubmitConversion();
 
       // Meta/Facebook Pixel - Lead event
-      if (typeof window.fbq !== 'undefined') {
-        window.fbq('track', 'Lead', {
+      if (typeof (window as any).fbq !== 'undefined') {
+        (window as any).fbq('track', 'Lead', {
           content_name: 'Agendamento Confirmado',
           content_category: 'Consulta Oftalmológica',
           value: 0,
@@ -221,8 +221,8 @@ const Agendar = () => {
       }
 
       // Google Ads Conversion
-      if (typeof window.gtag !== 'undefined') {
-        window.gtag('event', 'conversion', {
+      if (typeof (window as any).gtag !== 'undefined') {
+        (window as any).gtag('event', 'conversion', {
           send_to: 'AW-436492720/3Y-4COmQ1dUbELCzkdAB',
           value: 0,
           currency: 'BRL',
