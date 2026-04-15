@@ -215,16 +215,16 @@ const Agendar = () => {
         (window as any).fbq('track', 'Lead', {
           content_name: 'Agendamento Confirmado',
           content_category: 'Consulta Oftalmológica',
-          value: 0,
-          currency: 'BRL',
-        });
-      }
+        value: 300,
+        currency: 'BRL',
+      });
+    }
 
-      // Google Ads Conversion
-      if (typeof (window as any).gtag !== 'undefined') {
-        (window as any).gtag('event', 'conversion', {
-          send_to: 'AW-436492720/3Y-4COmQ1dUbELCzkdAB',
-          value: 0,
+    // Google Ads Conversion
+    if (typeof (window as any).gtag !== 'undefined') {
+      (window as any).gtag('event', 'conversion', {
+        send_to: 'AW-436492720/3Y-4COmQ1dUbELCzkdAB',
+        value: 300,
           currency: 'BRL',
         });
       }
