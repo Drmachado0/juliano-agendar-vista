@@ -11,6 +11,7 @@ import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 
 export interface FormData {
   fullName: string;
@@ -58,7 +59,8 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { trackScheduleStart, trackScheduleComplete, trackLead, trackFormSubmitConversion } = useGoogleTag();
+  const { trackScheduleStart, trackScheduleComplete, trackLead: trackLeadGA, trackFormSubmitConversion } = useGoogleTag();
+  const { trackViewContent, trackLead: trackLeadMeta, trackSchedule, trackCompleteRegistration } = useMetaPixel();
 
   const totalSteps = 4;
 
@@ -66,6 +68,7 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
   useEffect(() => {
     if (isOpen && currentStep === 1) {
       trackScheduleStart();
+      trackViewContent("Agendamento Modal", "Consulta Oftalmológica");
     }
   }, [isOpen]);
 
@@ -73,16 +76,17 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
     setFormData((prev) => ({ ...prev, ...data }));
   };
 
-  // Send data to webhook when step 3 is completed
   const sendToWebhook = async (data: FormData) => {
-    // TODO: Reconfigurar quando novo servidor n8n estiver ativo
-    // O agendamento já é salvo no Supabase, esta notificação é extra
     console.log("Webhook de confirmação desabilitado (servidor n8n em migração)");
   };
 
   const nextStep = async () => {
     if (currentStep < totalSteps) {
-      // When completing step 3, send data to webhook
+      // Track Lead when personal data is filled (step 1)
+      if (currentStep === 1) {
+        trackLeadMeta("Dados Pessoais Preenchidos - Modal");
+      }
+
       if (currentStep === 3) {
         await sendToWebhook(formData);
       }
@@ -127,15 +131,28 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
         return;
       }
 
-      // Notify n8n about new appointment
       if (data) {
         await notificarN8n('agendamento_criado', data);
       }
 
-      // Track Google Tag conversion
+      // Google Tag tracking
       trackScheduleComplete(formData.appointmentTypeName, formData.locationName);
-      trackLead('agendamento');
+      trackLeadGA('agendamento');
       trackFormSubmitConversion();
+
+      // Meta Pixel tracking
+      trackSchedule(formData.appointmentTypeName, formData.locationName);
+      trackCompleteRegistration(formData.appointmentTypeName, formData.locationName);
+      trackLeadMeta('Agendamento Confirmado - Modal');
+
+      // Google Ads Conversion
+      if (typeof (window as any).gtag !== 'undefined') {
+        (window as any).gtag('event', 'conversion', {
+          send_to: 'AW-436492720/3Y-4COmQ1dUbELCzkdAB',
+          value: 300,
+          currency: 'BRL',
+        });
+      }
 
       setIsSubmitted(true);
     } catch (err) {

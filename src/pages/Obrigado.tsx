@@ -6,18 +6,41 @@ import { Link } from "react-router-dom";
 
 const Obrigado = () => {
   useEffect(() => {
-    // Push conversion events to dataLayer (GTM handles Meta Pixel + Google Ads)
+    // Meta Pixel - Lead conversion (direct fbq)
+    if (typeof (window as any).fbq === 'function') {
+      (window as any).fbq('track', 'Lead', {
+        content_name: 'Agendamento Confirmado',
+        content_category: 'Consulta Oftalmológica',
+        value: 300,
+        currency: 'BRL',
+      });
+      (window as any).fbq('track', 'CompleteRegistration', {
+        content_name: 'Página Obrigado',
+        value: 300,
+        currency: 'BRL',
+      });
+    }
+
+    // Google Ads Conversion (real label)
+    if (typeof (window as any).gtag === 'function') {
+      (window as any).gtag('event', 'conversion', {
+        send_to: 'AW-436492720/3Y-4COmQ1dUbELCzkdAB',
+        value: 300,
+        currency: 'BRL',
+      });
+    }
+
+    // DataLayer for GTM
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
-      event: "meta_lead",
-      pixel_id: "704492538264617",
-      content_name: "Agendamento Confirmado",
+      event: 'meta_lead',
+      content_name: 'Agendamento Confirmado',
     });
     window.dataLayer.push({
-      event: "google_ads_conversion",
-      send_to: "AW-123456789/xxxxxxx",
+      event: 'google_ads_conversion',
+      send_to: 'AW-436492720/3Y-4COmQ1dUbELCzkdAB',
       value: 300,
-      currency: "BRL",
+      currency: 'BRL',
     });
   }, []);
 
@@ -36,25 +59,21 @@ const Obrigado = () => {
           background: "linear-gradient(180deg, #0d1117 0%, #161b22 100%)",
         }}
       >
-        {/* Checkmark */}
         <div className="mb-6 animate-scale-in">
           <CheckCircle className="h-20 w-20 text-green-400" strokeWidth={1.5} />
         </div>
 
-        {/* Title */}
         <h1 className="text-3xl md:text-4xl font-serif font-bold mb-4 text-center"
           style={{ color: "#58a6ff" }}
         >
           Agendamento Confirmado!
         </h1>
 
-        {/* Subtitle */}
         <p className="text-gray-300 text-center max-w-md mb-8 leading-relaxed">
           Sua consulta com o Dr. Juliano Machado foi agendada com sucesso.
           Em breve você receberá uma confirmação pelo WhatsApp.
         </p>
 
-        {/* Info Box */}
         <div className="w-full max-w-md rounded-xl border border-gray-700 bg-[#1c2128] p-6 space-y-4 mb-8">
           <div className="flex items-start gap-3">
             <MessageCircle className="h-5 w-5 text-green-400 mt-0.5 shrink-0" />
@@ -76,7 +95,6 @@ const Obrigado = () => {
           </div>
         </div>
 
-        {/* WhatsApp Button */}
         <a
           href="https://wa.me/5591936180476?text=Ol%C3%A1!%20Acabei%20de%20agendar%20minha%20consulta%20com%20o%20Dr.%20Juliano%20Machado."
           target="_blank"
@@ -89,12 +107,10 @@ const Obrigado = () => {
           </Button>
         </a>
 
-        {/* Back to site */}
         <Link to="/" className="mt-4 text-sm text-gray-500 hover:text-gray-300 transition-colors">
           Voltar ao site
         </Link>
 
-        {/* Footer */}
         <footer className="mt-12 text-center text-gray-500 text-xs space-y-1">
           <p className="font-serif text-sm text-gray-400">Dr. Juliano Machado</p>
           <p>Oftalmologista &middot; CRM-PA 12345</p>
