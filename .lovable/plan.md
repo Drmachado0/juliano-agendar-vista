@@ -1,33 +1,33 @@
 
 
-# Padronizar numero WhatsApp 0476 + corrigir SEO
+## Plan: Replace photos with icons in the Procedures section
 
-## Diagnostico
+### What changes
 
-Os links `wa.me` ja estao todos usando `5591936180476` -- correto. O bloqueio mostrado na imagem (`api.whatsapp.com`) e do cache do navegador ou de uma versao anterior; o codigo atual nao tem mais `api.whatsapp.com`.
+**File: `src/components/ProceduresSection.tsx`**
 
-Porem, ha inconsistencias no numero **exibido** e no SEO:
+Replace the current image-based card layout with an icon-centered design:
 
-| Local | Problema |
-|-------|----------|
-| Footer.tsx linha 94 | Texto exibe `(91) 93618-0428` mas link aponta para 0476 |
-| LocationsSection.tsx linha 30 | Clinicor phone exibe `(91) 93618-0428` |
-| index.html linha 55 | Schema JSON-LD usa `+5591936180428` |
-| Index.tsx linha 43 | Schema structured data usa `+559181653200` (numero diferente) |
+1. Remove the image area (`<img>` tags, `imageErrors` state, `handleImageError` function, `image` property from procedures array)
+2. Each card will display the SVG icon prominently (large, ~64-80px) centered at the top of the card with a subtle colored background circle/container
+3. Keep the category badge, title, description, and all filtering/animation logic intact
+4. Simplify the bento layout — since icons are uniform, use a consistent grid without featured/tall variants
+5. Add a subtle hover effect on the icon (scale or color shift)
 
-## Correcoes
+**File: `src/components/ProcedureIcons.tsx`**
+- No changes needed — the 9 icons already exist and match all procedures
 
-### 1. Footer.tsx (linha 94)
-Trocar texto exibido de `(91) 93618-0428` para `(91) 93618-0476`.
+### Visual design
 
-### 2. LocationsSection.tsx (linha 30)
-Trocar phone da Clinicor de `(91) 93618-0428` para `(91) 93618-0476`.
+Each card will have:
+- A rounded container with glassmorphism (`card-glass`)
+- Icon centered at top inside a subtle `bg-primary/10` rounded circle
+- Category badge positioned top-right
+- Title and description below the icon
+- Hover: icon scales up slightly, card lifts
 
-### 3. index.html (linha 55)
-Trocar `"telephone": "+5591936180428"` para `"telephone": "+5591936180476"`.
-
-### 4. Index.tsx (linha 43)
-Trocar `"telephone": "+559181653200"` para `"telephone": "+5591936180476"`.
-
-Os telefones especificos das outras clinicas (Hospital Geral, IOB, Vitria) permanecem inalterados.
+### Grid layout
+- 3 columns on desktop, 2 on tablet, 1 on mobile
+- All cards same size (no bento irregularity)
+- Consistent spacing and padding
 
