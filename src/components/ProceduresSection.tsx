@@ -97,8 +97,13 @@ const ProceduresSection = () => {
             >
               {/* Icon + Badge */}
               <div className="relative pt-8 pb-4 flex justify-center">
-                <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/15 transition-all duration-500">
-                  <procedure.icon className="w-10 h-10 text-primary" />
+                <div className="relative">
+                  {/* Pulse glow ring on hover */}
+                  <div className="absolute inset-0 rounded-2xl bg-primary/20 opacity-0 group-hover:opacity-100 group-hover:animate-pulse-glow transition-opacity duration-500" />
+                  <div className="relative w-24 h-24 rounded-2xl border border-primary/10 group-hover:border-primary/25 flex items-center justify-center group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-primary/10 transition-all duration-500"
+                    style={{ background: 'radial-gradient(circle, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))' }}>
+                    <procedure.icon className="w-14 h-14 text-primary" />
+                  </div>
                 </div>
                 <span className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-secondary/80 backdrop-blur-sm text-[11px] font-bold uppercase tracking-wider text-primary">
                   {procedure.category === "exames" ? "Exame" : procedure.category === "cirurgias" ? "Cirurgia" : "Laser"}

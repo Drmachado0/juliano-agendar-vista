@@ -380,6 +380,21 @@
   animation: whatsapp-pulse 2.5s ease-in-out infinite;
 }
 
+@keyframes pulse-glow {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0;
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
 /* Smooth scrollbar for webkit browsers */
 ::-webkit-scrollbar {
   width: 8px;
