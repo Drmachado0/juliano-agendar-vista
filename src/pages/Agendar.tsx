@@ -159,8 +159,9 @@ const Agendar = () => {
           hora_agendamento: formData.selectedTime,
         });
 
-        // Disparar notificacoes em background (nao bloqueia o fluxo)
-        Promise.allSettled([
+        // Aguardar notificacoes (com timeout de 8s para nao travar UX)
+        const NOTIFICATION_TIMEOUT_MS = 8000;
+        const notificationsPromise = Promise.allSettled([
           supabase.functions.invoke('confirmar-agendamento-whatsapp', {
             body: {
               agendamento_data: {
@@ -188,13 +189,27 @@ const Agendar = () => {
               hora_agendamento: formData.selectedTime,
             },
           }),
-        ]).then(results => {
-          results.forEach((r, i) => {
+        ]);
+
+        const timeoutPromise = new Promise<'timeout'>((resolve) =>
+          setTimeout(() => resolve('timeout'), NOTIFICATION_TIMEOUT_MS)
+        );
+
+        console.log('[Agendar] Disparando notificacoes WhatsApp + E-mail...');
+        const result = await Promise.race([notificationsPromise, timeoutPromise]);
+
+        if (result === 'timeout') {
+          console.warn('[Agendar] Notificacoes excederam timeout de', NOTIFICATION_TIMEOUT_MS, 'ms - prosseguindo com redirect');
+        } else {
+          result.forEach((r, i) => {
+            const label = i === 0 ? 'WhatsApp' : 'Email';
             if (r.status === 'rejected') {
-              console.error(`Notificacao ${i} falhou:`, r.reason);
+              console.error(`[Agendar] Notificacao ${label} falhou:`, r.reason);
+            } else {
+              console.log(`[Agendar] Notificacao ${label} OK:`, r.value);
             }
           });
-        });
+        }
       } else {
         // Fallback: criar agendamento diretamente se não houver lead
         toast({
