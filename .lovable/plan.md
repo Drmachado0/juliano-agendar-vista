@@ -1,33 +1,32 @@
 
 
-## Plan: Replace photos with icons in the Procedures section
+## Plan: Enhance Procedure Icons — Larger Size, Pulse Animation, Visual Polish
 
-### What changes
+### Changes
 
-**File: `src/components/ProceduresSection.tsx`**
+**1. `src/components/ProceduresSection.tsx`** — Icon container and animation upgrades
 
-Replace the current image-based card layout with an icon-centered design:
+- Increase icon container from `w-20 h-20` to `w-24 h-24` (96px)
+- Increase icon SVG from `w-10 h-10` to `w-14 h-14` (56px)
+- Add a subtle pulse glow animation on hover: an outer ring that pulses with `animate-pulse` using `primary` color at low opacity
+- Add a gradient background to the icon container (radial gradient from `primary/15` to `primary/5`)
+- Add a soft `shadow-lg shadow-primary/10` on hover for depth
+- Add a subtle border (`border border-primary/10`) to the container, intensifying on hover (`group-hover:border-primary/25`)
 
-1. Remove the image area (`<img>` tags, `imageErrors` state, `handleImageError` function, `image` property from procedures array)
-2. Each card will display the SVG icon prominently (large, ~64-80px) centered at the top of the card with a subtle colored background circle/container
-3. Keep the category badge, title, description, and all filtering/animation logic intact
-4. Simplify the bento layout — since icons are uniform, use a consistent grid without featured/tall variants
-5. Add a subtle hover effect on the icon (scale or color shift)
+**2. `src/components/ProcedureIcons.tsx`** — Visual improvements to all 9 SVGs
 
-**File: `src/components/ProcedureIcons.tsx`**
-- No changes needed — the 9 icons already exist and match all procedures
+- Increase `strokeWidth` from `1.5` to `2` on primary strokes for better visibility at larger size
+- Increase accent stroke widths proportionally (from `0.8`/`1` to `1`/`1.2`)
+- Boost opacity values on accent elements (e.g., `0.4` → `0.5`, `0.6` → `0.7`) for better contrast
+- Add subtle gradient fills to key elements (pupils, glows) using `<defs>` with radial gradients
 
-### Visual design
+**3. `src/index.css`** — Add pulse-glow keyframe
 
-Each card will have:
-- A rounded container with glassmorphism (`card-glass`)
-- Icon centered at top inside a subtle `bg-primary/10` rounded circle
-- Category badge positioned top-right
-- Title and description below the icon
-- Hover: icon scales up slightly, card lifts
+- Add a `@keyframes pulse-glow` animation that scales and fades an outer ring element
+- CSS class `.animate-pulse-glow` for the hover state ring effect
 
-### Grid layout
-- 3 columns on desktop, 2 on tablet, 1 on mobile
-- All cards same size (no bento irregularity)
-- Consistent spacing and padding
+### Visual result
+- Icons appear ~20% larger and more detailed
+- On hover: icon scales up, a soft glowing ring pulses outward, container gets a subtle shadow and brighter border
+- All animations are smooth and subtle, matching the premium dark theme
 
