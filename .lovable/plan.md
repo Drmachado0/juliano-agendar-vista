@@ -1,76 +1,73 @@
 
+The user wants the `/agendamento` page (the dedicated landing we just created) to use the EXACT same multi-step form shown in the image — which is the 4-step form from `/agendar` (Dados → Consulta → Data → Confirmar with the StepIndicator).
 
-The user wants a NEW simplified landing page at `/agendamento` (different from existing `/agendar` and `/agendar-consulta`). Just 3 fields, redirect to WhatsApp after submit. This is a high-converting "quick lead" page for paid traffic.
+Currently `/agendamento` has only 3 fields + WhatsApp redirect. The user wants to replace that simplified form with the full 4-step booking form, keeping the dedicated landing structure (proof points, no main site nav, optimized for tracking).
 
-Key differences from existing pages:
-- Only 3 fields (nome, whatsapp, tipo) — no multi-step
-- Submits to existing `criar-lead` edge function (already supports these fields)
-- Redirects to WhatsApp instead of completing booking flow
-- Standalone landing — minimal navigation
+## Plano: Substituir formulário simplificado da `/agendamento` pelo multi-step completo
 
-GTM is already in `index.html` (GTM-K3C2NNF6 per memory) and Meta Pixel is already loaded globally. I should NOT duplicate pixel init in head — just fire events from the page. Memory rule: "GTM handles all tracking scripts. No direct GA4/Meta Pixel tags."
+### Mudança
+Trocar o formulário de 3 campos por exatamente o mesmo fluxo multi-step de 4 etapas usado em `/agendar` (Dados pessoais → Consulta → Data/Hora → Confirmação → Sucesso).
 
-I'll respect that: use existing GTM/Pixel infrastructure, fire events via dataLayer + fbq.
+### Arquivo único editado: `src/pages/Agendamento.tsx`
 
-## Plano: Landing rápida `/agendamento` (3 campos → WhatsApp)
+Reusar os componentes existentes:
+- `StepIndicator`
+- `PersonalDataStep`
+- `ConsultationDetailsStep`
+- `DateTimeStep`
+- `ConfirmationStep`
+- `SuccessStep`
 
-### Objetivo
-Landing ultra-otimizada para conversão de tráfego pago. Captura mínima (nome, WhatsApp, tipo de atendimento), salva o lead no banco e redireciona direto para o WhatsApp pré-preenchido.
+Lógica de submissão idêntica à de `/agendar`:
+- Step 2 → 3: cria lead via `criarLead`
+- Step 4 (Confirmar): converte lead em agendamento via `converterLeadEmAgendamento`
+- Dispara `confirmar-agendamento-whatsapp` + `notificar-agendamento-email` (Promise.allSettled, timeout 8s)
+- Notifica n8n
+- Redireciona para `/obrigado`
 
-### Arquivos
+### O que MANTÉM da landing dedicada atual
+- Header minimalista (logo Dr. Juliano + WhatsApp, sem nav do site principal)
+- Hero "Agende sua Consulta" com proof points (13+ anos, 6.000+ pacientes, ⭐ 4.9)
+- Cards de confiança (Atendimento Humanizado, Convênios, Localização)
+- Footer mínimo
+- Captura de UTMs em sessionStorage no mount
+- Tracking aprimorado:
+  - `ViewContent` no mount (Meta Pixel)
+  - `lp_step_view` ao entrar em cada etapa
+  - `lp_lead_generated` ao criar lead
+  - `lp_appointment_scheduled` ao confirmar
+  - Google Ads conversion no submit final
+  - `generate_lead` no dataLayer
 
-**1. `src/pages/Agendamento.tsx`** (novo)
-- Hero compacto: "Agende sua Consulta" + "Oftalmologia em Paragominas — Dr. Juliano Machado"
-- Formulário com 3 campos:
-  1. Nome completo (mín. 3 caracteres)
-  2. WhatsApp com máscara `(91) 99999-9999` (mín. 10 dígitos)
-  3. Select: Consulta / Retorno / Exame / Cirurgia
-- Botão verde grande "Agendar via WhatsApp"
-- Validação client-side com mensagens claras
-- Ao submeter:
-  - `supabase.functions.invoke('criar-lead', { body: { nome_completo, telefone_whatsapp, tipo_atendimento, origem: 'landing_agendamento', local_atendimento: 'A definir', convenio: 'A definir' } })`
-  - Dispara eventos via `window.dataLayer.push` (GTM) + `fbq` (Meta Pixel já carregado): `Lead`, `SubmitApplication`, `generate_lead`
-  - Redireciona: `https://wa.me/5591936180476?text=...` (com mensagem personalizada)
-- 3 cards abaixo: "Atendimento Humanizado", "Convênios Aceitos", "Localização Paragominas"
-- Depoimentos estáticos (3 placeholders)
-- Footer mínimo: telefone + endereço Clinicor
-- `ViewContent` disparado no mount via `useEffect`
+### O que REMOVE
+- Formulário inline de 3 campos
+- Redirecionamento direto para wa.me após submit
+- Select de tipo de atendimento isolado
 
-**2. `src/App.tsx`** (editar)
-- Adicionar rota `<Route path="/agendamento" element={<Agendamento />} />`
-
-### Decisões importantes
-
-- **Não duplicar pixels no `<head>`**: GTM (`GTM-K3C2NNF6`) e Meta Pixel já estão no `index.html`. Vou apenas disparar eventos via `fbq` e `dataLayer` da página — respeitando a regra do projeto de tracking centralizado.
-- **`criar-lead` exige `local_atendimento` e `convenio`**: como a landing não pede esses campos, vou enviar `'A definir'` para ambos. A equipe coleta no WhatsApp.
-- **Design**: usa as cores do projeto (Navy/Gold dark theme) com accent verde (`#38a169`) apenas no botão principal, conforme pedido do usuário, mantendo consistência visual.
-- **Mobile-first**: layout em coluna única, formulário centralizado, max-width estreito.
-- **Standalone**: sem `Header`/`Footer` do site principal — apenas logo simples no topo + WhatsApp.
-
-### Layout
+### Layout final
 
 ```text
-┌───────────────────────────────┐
-│ Dr. Juliano Machado           │
-├───────────────────────────────┤
-│  Agende sua Consulta          │
-│  Oftalmologia em Paragominas  │
-│                               │
-│  [Nome completo            ]  │
-│  [(91) 99999-9999          ]  │
-│  [Tipo: Consulta        ▼ ]  │
-│                               │
-│  [ AGENDAR VIA WHATSAPP ]     │
-├───────────────────────────────┤
-│ [Card1] [Card2] [Card3]       │
-│ Depoimentos                   │
-│ Footer                        │
-└───────────────────────────────┘
+┌──────────────────────────────────────┐
+│ Dr. Juliano Machado    [WhatsApp]    │
+├──────────────────────────────────────┤
+│  Agende sua Consulta                 │
+│  Oftalmologia · Paragominas e Belém  │
+│  ⭐ 4.9  ✓ 13+ anos  ✓ 6.000+ pac.   │
+├──────────────────────────────────────┤
+│  [1]──[2]──[3]──[4]                  │
+│  Dados Consulta Data Confirmar       │
+│                                      │
+│  [Etapa atual renderizada aqui]      │
+│                                      │
+│  [Voltar]            [Avançar]       │
+├──────────────────────────────────────┤
+│ [Humanizado][Convênios][Localização] │
+│ Footer                               │
+└──────────────────────────────────────┘
 ```
 
 ### Resultado
-- URL limpa: `/agendamento` para campanhas
-- Conversão maximizada (3 campos vs 4 etapas)
-- Lead salvo no CRM como "NOVO LEAD" com origem `landing_agendamento`
-- Equipe finaliza agendamento via WhatsApp
-
+- URL `/agendamento` mantém o mesmo formulário completo de 4 etapas que o paciente já conhece
+- Visual da landing dedicada preservado (proof points, sem distração de menu)
+- Tracking granular por etapa funcionando
+- Mesma experiência de booking de `/agendar`, em página otimizada para campanhas
