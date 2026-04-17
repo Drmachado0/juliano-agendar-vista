@@ -1,13 +1,21 @@
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { Heart, Shield, MapPin, Star, Phone, MessageCircle, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Heart, Shield, MapPin, Star, Phone, MessageCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import StepIndicator from "@/components/scheduling/StepIndicator";
+import PersonalDataStep from "@/components/scheduling/PersonalDataStep";
+import ConsultationDetailsStep from "@/components/scheduling/ConsultationDetailsStep";
+import DateTimeStep from "@/components/scheduling/DateTimeStep";
+import ConfirmationStep from "@/components/scheduling/ConfirmationStep";
+import SuccessStep from "@/components/scheduling/SuccessStep";
+import { criarLead, converterLeadEmAgendamento } from "@/services/leads";
+import { notificarN8n } from "@/services/integracoes";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
+import { useGoogleTag } from "@/hooks/useGoogleTag";
+import type { FormData } from "@/components/scheduling/SchedulingModal";
 
 declare global {
   interface Window {
@@ -16,109 +24,256 @@ declare global {
 }
 
 const WHATSAPP_NUMBER = "5591936180476";
-const TIPOS = ["Consulta", "Retorno", "Exame", "Cirurgia"] as const;
 
-const formatPhone = (value: string): string => {
-  const digits = value.replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 2) return digits.length ? `(${digits}` : "";
-  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+const initialFormData: FormData = {
+  fullName: "",
+  phone: "",
+  birthDate: "",
+  email: "",
+  appointmentType: "",
+  appointmentTypeName: "",
+  location: "",
+  locationName: "",
+  insurance: "",
+  insuranceName: "",
+  otherInsurance: "",
+  selectedDate: undefined,
+  selectedTime: "",
+  acceptFirstAvailable: false,
+  acceptNotifications: true,
+};
+
+const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "fbclid"];
+
+const pushDL = (data: Record<string, any>) => {
+  if (typeof window !== "undefined") {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push(data);
+  }
 };
 
 const Agendamento = () => {
-  const [nome, setNome] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [tipo, setTipo] = useState<string>("");
-  const [errors, setErrors] = useState<{ nome?: string; telefone?: string; tipo?: string }>({});
-  const [submitting, setSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [leadId, setLeadId] = useState<string | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { trackViewContent, trackLead, trackSchedule, trackCompleteRegistration } = useMetaPixel();
+  const { trackFormSubmitConversion } = useGoogleTag();
 
+  const totalSteps = 4;
+
+  // ViewContent + page_view + UTMs
   useEffect(() => {
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({
-      event: "page_view",
-      page_type: "landing_agendamento",
-      page_path: "/agendamento",
-    });
-    if (typeof window.fbq === "function") {
-      window.fbq("track", "ViewContent", {
-        content_name: "Landing Agendamento",
-        content_category: "Oftalmologia",
+    trackViewContent("Landing Agendamento", "Consulta Oftalmológica");
+    pushDL({ event: "page_view", page_type: "landing_agendamento", page_path: "/agendamento" });
+
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const utms: Record<string, string> = {};
+      UTM_KEYS.forEach((k) => {
+        const v = params.get(k);
+        if (v) utms[k] = v;
       });
+      if (Object.keys(utms).length > 0) {
+        sessionStorage.setItem("lp_agendamento_utms", JSON.stringify(utms));
+      }
+    } catch (e) {
+      console.warn("[Agendamento] UTM capture falhou:", e);
     }
   }, []);
 
-  const validate = () => {
-    const next: typeof errors = {};
-    if (nome.trim().length < 3) next.nome = "Informe seu nome completo (mín. 3 caracteres).";
-    const digits = telefone.replace(/\D/g, "");
-    if (digits.length < 10) next.telefone = "Informe um WhatsApp válido com DDD.";
-    if (!tipo) next.tipo = "Selecione o tipo de atendimento.";
-    setErrors(next);
-    return Object.keys(next).length === 0;
+  // Track step view
+  useEffect(() => {
+    if (!isSubmitted) {
+      pushDL({
+        event: "lp_step_view",
+        page_type: "landing_agendamento",
+        step: currentStep,
+      });
+    }
+  }, [currentStep, isSubmitted]);
+
+  const updateFormData = (data: Partial<FormData>) => {
+    setFormData((prev) => ({ ...prev, ...data }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate() || submitting) return;
-    setSubmitting(true);
-
-    const phoneDigits = telefone.replace(/\D/g, "");
-    const nomeTrim = nome.trim();
-
-    try {
-      const { error } = await supabase.functions.invoke("criar-lead", {
-        body: {
-          nome_completo: nomeTrim,
-          telefone_whatsapp: phoneDigits,
-          tipo_atendimento: tipo,
-          origem: "landing_agendamento",
-          local_atendimento: "A definir",
-          convenio: "A definir",
-        },
-      });
-
-      if (error) {
-        console.error("[Agendamento] Erro ao criar lead:", error);
-        toast({
-          title: "Não foi possível registrar agora",
-          description: "Vamos te redirecionar para o WhatsApp mesmo assim.",
-          variant: "destructive",
-        });
+  const nextStep = async () => {
+    if (currentStep < totalSteps) {
+      if (currentStep === 1) {
+        trackLead("Dados Pessoais Preenchidos - Landing");
       }
 
-      // Tracking events
-      window.dataLayer = window.dataLayer || [];
-      window.dataLayer.push({
-        event: "generate_lead",
-        event_category: "agendamento",
-        event_label: tipo,
+      // Cria o lead ao avançar da etapa 2 para 3
+      if (currentStep === 2 && !leadId) {
+        const leadData = {
+          nome_completo: formData.fullName,
+          telefone_whatsapp: formData.phone,
+          data_nascimento: formData.birthDate || null,
+          email: formData.email || null,
+          tipo_atendimento: formData.appointmentTypeName || formData.appointmentType,
+          local_atendimento: formData.locationName || formData.location,
+          convenio: formData.insuranceName || formData.insurance,
+          convenio_outro: formData.insurance === "outro" ? formData.otherInsurance : null,
+        };
+
+        const { lead_id, error } = await criarLead(leadData);
+
+        if (error) {
+          console.error("[Agendamento] Erro ao criar lead:", error);
+          toast({
+            title: "Erro ao registrar interesse",
+            description: "Não foi possível salvar seus dados. O agendamento continuará normalmente.",
+            variant: "destructive",
+          });
+        } else if (lead_id) {
+          setLeadId(lead_id);
+          pushDL({
+            event: "lp_lead_generated",
+            page_type: "landing_agendamento",
+            lead_id,
+            tipo_atendimento: leadData.tipo_atendimento,
+          });
+        }
+      }
+
+      setCurrentStep((prev) => prev + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) setCurrentStep((prev) => prev - 1);
+  };
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+
+    try {
+      const localAtendimento = formData.locationName || formData.location;
+
+      if (!leadId) {
+        toast({
+          title: "Erro",
+          description: "Lead não encontrado. Por favor, reinicie o agendamento.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await converterLeadEmAgendamento(
+        leadId,
+        {
+          data_agendamento: formData.selectedDate ? format(formData.selectedDate, "yyyy-MM-dd") : "",
+          hora_agendamento: formData.selectedTime,
+          aceita_primeiro_horario: formData.acceptFirstAvailable,
+          aceita_contato_whatsapp_email: formData.acceptNotifications,
+        },
+        localAtendimento
+      );
+
+      if (error) {
+        const isAvailabilityError =
+          error.message.includes("disponível") ||
+          error.message.includes("bloqueado") ||
+          error.message.includes("ocupado");
+
+        toast({
+          title: isAvailabilityError ? "Horário indisponível" : "Erro ao agendar",
+          description: error.message || "Não foi possível finalizar seu agendamento. Tente novamente.",
+          variant: "destructive",
+        });
+
+        if (isAvailabilityError) setCurrentStep(3);
+        return;
+      }
+
+      // n8n
+      await notificarN8n("agendamento_criado", {
+        id: leadId,
+        nome_completo: formData.fullName,
+        telefone_whatsapp: formData.phone,
+        local_atendimento: localAtendimento,
+        data_agendamento: formData.selectedDate ? format(formData.selectedDate, "yyyy-MM-dd") : "",
+        hora_agendamento: formData.selectedTime,
+      });
+
+      // Notificações com timeout de 8s
+      const NOTIFICATION_TIMEOUT_MS = 8000;
+      const notificationsPromise = Promise.allSettled([
+        supabase.functions.invoke("confirmar-agendamento-whatsapp", {
+          body: {
+            agendamento_data: {
+              nome_completo: formData.fullName,
+              telefone_whatsapp: formData.phone,
+              tipo_atendimento: formData.appointmentTypeName || formData.appointmentType,
+              local_atendimento: localAtendimento,
+              data_agendamento: formData.selectedDate ? format(formData.selectedDate, "yyyy-MM-dd") : "",
+              hora_agendamento: formData.selectedTime,
+              convenio: formData.insuranceName || formData.insurance,
+            },
+          },
+        }),
+        supabase.functions.invoke("notificar-agendamento-email", {
+          body: {
+            nome_completo: formData.fullName,
+            telefone_whatsapp: formData.phone,
+            email_paciente: formData.email || null,
+            data_nascimento: formData.birthDate || null,
+            tipo_atendimento: formData.appointmentTypeName || formData.appointmentType,
+            local_atendimento: localAtendimento,
+            convenio: formData.insuranceName || formData.insurance,
+            convenio_outro: formData.insurance === "outro" ? formData.otherInsurance : null,
+            data_agendamento: formData.selectedDate ? format(formData.selectedDate, "yyyy-MM-dd") : "",
+            hora_agendamento: formData.selectedTime,
+          },
+        }),
+      ]);
+      const timeoutPromise = new Promise<"timeout">((resolve) =>
+        setTimeout(() => resolve("timeout"), NOTIFICATION_TIMEOUT_MS)
+      );
+      await Promise.race([notificationsPromise, timeoutPromise]);
+
+      // Tracking
+      trackSchedule(formData.appointmentTypeName, formData.locationName);
+      trackCompleteRegistration(formData.appointmentTypeName, formData.locationName);
+      trackFormSubmitConversion();
+
+      pushDL({
+        event: "lp_appointment_scheduled",
         page_type: "landing_agendamento",
+        tipo_atendimento: formData.appointmentTypeName,
+        local: formData.locationName,
         value: 300,
         currency: "BRL",
       });
 
-      if (typeof window.fbq === "function") {
-        window.fbq("track", "Lead", {
-          content_name: "Agendamento Landing",
-          content_category: tipo,
+      // Google Ads conversion
+      if (typeof (window as any).gtag !== "undefined") {
+        (window as any).gtag("event", "conversion", {
+          send_to: "AW-436492720/3Y-4COmQ1dUbELCzkdAB",
           value: 300,
           currency: "BRL",
         });
-        window.fbq("track", "SubmitApplication");
       }
 
-      const message = `Olá! Sou ${nomeTrim}, gostaria de agendar uma ${tipo}.`;
-      const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
-      window.location.href = url;
+      window.location.href = "/obrigado";
     } catch (err) {
       console.error("[Agendamento] Erro inesperado:", err);
       toast({
-        title: "Erro ao enviar",
-        description: "Tente novamente em instantes.",
+        title: "Erro",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
         variant: "destructive",
       });
-      setSubmitting(false);
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleReset = () => {
+    setCurrentStep(1);
+    setFormData(initialFormData);
+    setLeadId(null);
+    setIsSubmitted(false);
   };
 
   return (
@@ -127,7 +282,7 @@ const Agendamento = () => {
         <title>Agende sua Consulta · Dr. Juliano Machado — Oftalmologista em Paragominas</title>
         <meta
           name="description"
-          content="Agende sua consulta oftalmológica em Paragominas com o Dr. Juliano Machado. Atendimento humanizado, convênios aceitos. Resposta rápida via WhatsApp."
+          content="Agende sua consulta oftalmológica em Paragominas com o Dr. Juliano Machado. Atendimento humanizado, convênios aceitos. Agendamento online em 4 etapas."
         />
         <link rel="canonical" href="https://drjulianomachado.com/agendamento" />
       </Helmet>
@@ -161,122 +316,83 @@ const Agendamento = () => {
         <div className="absolute inset-0 hero-gradient opacity-60" aria-hidden />
         <div className="absolute inset-0 noise-overlay" aria-hidden />
 
-        <div className="container mx-auto px-4 py-10 sm:py-16 relative">
+        <div className="container mx-auto px-4 py-10 sm:py-14 relative">
           <div className="max-w-xl mx-auto text-center mb-8 animate-fade-in">
             <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold tracking-wide uppercase mb-4">
               Agendamento Online
             </span>
             <h1 className="font-serif text-3xl sm:text-5xl font-bold mb-3 leading-tight">
-              Agende sua <span className="gradient-text">Consulta</span>
+              {isSubmitted ? (
+                <>Agendamento <span className="gradient-text">Enviado!</span></>
+              ) : (
+                <>Agende sua <span className="gradient-text">Consulta</span></>
+              )}
             </h1>
-            <p className="text-base sm:text-lg text-muted-foreground">
-              Oftalmologia em Paragominas — Dr. Juliano Machado
-            </p>
-            <div className="flex items-center justify-center gap-1 mt-3 text-sm text-muted-foreground">
-              <Star className="w-4 h-4 fill-primary text-primary" />
-              <Star className="w-4 h-4 fill-primary text-primary" />
-              <Star className="w-4 h-4 fill-primary text-primary" />
-              <Star className="w-4 h-4 fill-primary text-primary" />
-              <Star className="w-4 h-4 fill-primary text-primary" />
-              <span className="ml-2">+6.000 pacientes atendidos</span>
+            {!isSubmitted && (
+              <p className="text-base sm:text-lg text-muted-foreground">
+                Oftalmologia em Paragominas e Belém — Dr. Juliano Machado
+              </p>
+            )}
+            <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-1 mt-4 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Star className="w-4 h-4 fill-primary text-primary" /> 4.9
+              </span>
+              <span>✓ 13+ anos de experiência</span>
+              <span>✓ 6.000+ pacientes atendidos</span>
             </div>
           </div>
 
           <Card className="max-w-xl mx-auto card-premium border-primary/20 shadow-2xl animate-fade-in">
             <CardContent className="p-6 sm:p-8">
-              <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-                <div className="space-y-2">
-                  <Label htmlFor="nome" className="text-sm font-medium">
-                    Nome completo *
-                  </Label>
-                  <Input
-                    id="nome"
-                    type="text"
-                    placeholder="Seu nome completo"
-                    value={nome}
-                    onChange={(e) => setNome(e.target.value)}
-                    autoComplete="name"
-                    className="h-12 text-base focus-visible:ring-primary"
-                    aria-invalid={!!errors.nome}
-                    aria-describedby={errors.nome ? "nome-error" : undefined}
-                  />
-                  {errors.nome && (
-                    <p id="nome-error" className="text-xs text-destructive">
-                      {errors.nome}
-                    </p>
-                  )}
-                </div>
+              {!isSubmitted && <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />}
 
-                <div className="space-y-2">
-                  <Label htmlFor="telefone" className="text-sm font-medium">
-                    WhatsApp *
-                  </Label>
-                  <Input
-                    id="telefone"
-                    type="tel"
-                    inputMode="tel"
-                    placeholder="(91) 99999-9999"
-                    value={telefone}
-                    onChange={(e) => setTelefone(formatPhone(e.target.value))}
-                    autoComplete="tel-national"
-                    className="h-12 text-base focus-visible:ring-primary"
-                    aria-invalid={!!errors.telefone}
-                    aria-describedby={errors.telefone ? "tel-error" : undefined}
-                  />
-                  {errors.telefone && (
-                    <p id="tel-error" className="text-xs text-destructive">
-                      {errors.telefone}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="tipo" className="text-sm font-medium">
-                    Tipo de atendimento *
-                  </Label>
-                  <Select value={tipo} onValueChange={setTipo}>
-                    <SelectTrigger
-                      id="tipo"
-                      className="h-12 text-base focus:ring-primary"
-                      aria-invalid={!!errors.tipo}
-                    >
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIPOS.map((t) => (
-                        <SelectItem key={t} value={t}>
-                          {t}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.tipo && <p className="text-xs text-destructive">{errors.tipo}</p>}
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full h-14 text-base font-bold bg-[#25D366] hover:bg-[#20BD5A] text-white shadow-lg shadow-[#25D366]/30 hover:shadow-xl hover:shadow-[#25D366]/40 transition-all hover:scale-[1.02] active:scale-100"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Enviando...
-                    </>
-                  ) : (
-                    <>
-                      <MessageCircle className="w-5 h-5" />
-                      Agendar via WhatsApp
-                    </>
-                  )}
-                </Button>
-
-                <p className="text-xs text-center text-muted-foreground">
-                  Resposta rápida pelo WhatsApp em horário comercial
-                </p>
-              </form>
+              <div className="mt-6">
+                {isSubmitted ? (
+                  <SuccessStep onClose={handleReset} formData={formData} />
+                ) : (
+                  <>
+                    {currentStep === 1 && (
+                      <PersonalDataStep
+                        formData={formData}
+                        updateFormData={updateFormData}
+                        onNext={nextStep}
+                      />
+                    )}
+                    {currentStep === 2 && (
+                      <ConsultationDetailsStep
+                        formData={formData}
+                        updateFormData={updateFormData}
+                        onNext={nextStep}
+                        onPrev={prevStep}
+                      />
+                    )}
+                    {currentStep === 3 && (
+                      <DateTimeStep
+                        formData={formData}
+                        updateFormData={updateFormData}
+                        onNext={nextStep}
+                        onPrev={prevStep}
+                      />
+                    )}
+                    {currentStep === 4 && (
+                      <ConfirmationStep
+                        formData={formData}
+                        onSubmit={handleSubmit}
+                        onPrev={prevStep}
+                        isSubmitting={isSubmitting}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
             </CardContent>
           </Card>
+
+          {!isSubmitted && (
+            <p className="text-center text-xs text-muted-foreground mt-6 max-w-xl mx-auto">
+              Ao prosseguir, você concorda em receber contato da nossa equipe via WhatsApp.
+            </p>
+          )}
         </div>
       </section>
 
@@ -296,7 +412,7 @@ const Agendamento = () => {
             },
             {
               icon: MapPin,
-              title: "Localização Paragominas",
+              title: "Paragominas e Belém",
               desc: "Clinicor, Hospital Geral e atendimento também em Belém.",
             },
           ].map((item) => (
@@ -310,34 +426,6 @@ const Agendamento = () => {
               </CardContent>
             </Card>
           ))}
-        </div>
-      </section>
-
-      {/* Testimonials placeholder */}
-      <section className="bg-secondary/20 py-12 sm:py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-center mb-8">
-            O que dizem nossos pacientes
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
-            {[
-              { name: "Maria S.", text: "Atendimento excelente, médico atencioso e dedicado. Recomendo!" },
-              { name: "João P.", text: "Consulta tranquila, explicações claras e resultado rápido." },
-              { name: "Ana L.", text: "Profissional muito qualificado. Saí da consulta confiante." },
-            ].map((t) => (
-              <Card key={t.name} className="card-premium">
-                <CardContent className="p-6">
-                  <div className="flex gap-1 mb-3">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-primary text-primary" />
-                    ))}
-                  </div>
-                  <p className="text-sm text-foreground/90 italic mb-4 leading-relaxed">"{t.text}"</p>
-                  <p className="text-xs font-semibold text-muted-foreground">— {t.name}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
         </div>
       </section>
 
