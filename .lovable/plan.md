@@ -1,73 +1,39 @@
 
-The user wants the `/agendamento` page (the dedicated landing we just created) to use the EXACT same multi-step form shown in the image — which is the 4-step form from `/agendar` (Dados → Consulta → Data → Confirmar with the StepIndicator).
+The user wants the "Agendar Online" / "Agendar consulta" buttons across the site to navigate to `/agendamento` instead of opening the SchedulingModal.
 
-Currently `/agendamento` has only 3 fields + WhatsApp redirect. The user wants to replace that simplified form with the full 4-step booking form, keeping the dedicated landing structure (proof points, no main site nav, optimized for tracking).
+Let me check where these buttons are wired.
+<lov-tool-use id="toolu_vrtx_016r9uP4wKygwYcJqPfRKYak" name="code--search_files" integration-id="code" data="{\"query\": \"onScheduleClick\", \"include_patterns\": \"src/**/*.tsx\"}">
+</lov-tool-use>
 
-## Plano: Substituir formulário simplificado da `/agendamento` pelo multi-step completo
+<lov-tool-use id="toolu_vrtx_01HM6nuiz9Bf4Lk73HQk38hz" name="code--search_files" integration-id="code" data="{\"query\": \"onScheduleClick|Agendar Online|Agendar consulta\", \"include_patterns\": \"src/**/*.tsx\"}">
+</lov-tool-use>
+<lov-plan>
 
-### Mudança
-Trocar o formulário de 3 campos por exatamente o mesmo fluxo multi-step de 4 etapas usado em `/agendar` (Dados pessoais → Consulta → Data/Hora → Confirmação → Sucesso).
+Trocar todos os CTAs "Agendar Online" / "Agendar consulta" da landing principal para navegar diretamente para `/agendamento` (a página dedicada de conversão), em vez de abrir o modal `SchedulingModal`.
 
-### Arquivo único editado: `src/pages/Agendamento.tsx`
+## Mudanças
 
-Reusar os componentes existentes:
-- `StepIndicator`
-- `PersonalDataStep`
-- `ConsultationDetailsStep`
-- `DateTimeStep`
-- `ConfirmationStep`
-- `SuccessStep`
+**1. `src/pages/Index.tsx`**
+- Remover state `isSchedulingOpen`, `openScheduling`, `closeScheduling`
+- Remover `<SchedulingModal />`
+- Remover prop `onScheduleClick` dos componentes filhos
 
-Lógica de submissão idêntica à de `/agendar`:
-- Step 2 → 3: cria lead via `criarLead`
-- Step 4 (Confirmar): converte lead em agendamento via `converterLeadEmAgendamento`
-- Dispara `confirmar-agendamento-whatsapp` + `notificar-agendamento-email` (Promise.allSettled, timeout 8s)
-- Notifica n8n
-- Redireciona para `/obrigado`
+**2. `src/components/Header.tsx`**
+- Botão "Agendar Online" já usa `<Link>` — apenas confirmar que aponta para `/agendamento` (atualmente provavelmente `/agendar`)
+- Remover prop `onScheduleClick`
 
-### O que MANTÉM da landing dedicada atual
-- Header minimalista (logo Dr. Juliano + WhatsApp, sem nav do site principal)
-- Hero "Agende sua Consulta" com proof points (13+ anos, 6.000+ pacientes, ⭐ 4.9)
-- Cards de confiança (Atendimento Humanizado, Convênios, Localização)
-- Footer mínimo
-- Captura de UTMs em sessionStorage no mount
-- Tracking aprimorado:
-  - `ViewContent` no mount (Meta Pixel)
-  - `lp_step_view` ao entrar em cada etapa
-  - `lp_lead_generated` ao criar lead
-  - `lp_appointment_scheduled` ao confirmar
-  - Google Ads conversion no submit final
-  - `generate_lead` no dataLayer
+**3. `src/components/HeroSection.tsx`**
+- Trocar botão "Agendar consulta" de `onClick={onScheduleClick}` para `<Link to="/agendamento">` envolvendo o botão
+- Manter tracking `trackCTAClick`
+- Remover prop `onScheduleClick`
 
-### O que REMOVE
-- Formulário inline de 3 campos
-- Redirecionamento direto para wa.me após submit
-- Select de tipo de atendimento isolado
+**4. `src/components/InsuranceSection.tsx`**
+- Mesma troca: botão "Agendar consulta" vira `<Link to="/agendamento">`
+- Manter tracking
+- Remover prop `onScheduleClick`
 
-### Layout final
+## Resultado
+- Todo clique em "Agendar Online" (header) ou "Agendar consulta" (hero, convênios) leva para `https://drjulianomachado.com/agendamento`
+- Modal de agendamento na home é descontinuado (a página dedicada substitui com formulário idêntico + tracking otimizado)
+- Eventos de tracking GTM/Meta Pixel preservados antes da navegação
 
-```text
-┌──────────────────────────────────────┐
-│ Dr. Juliano Machado    [WhatsApp]    │
-├──────────────────────────────────────┤
-│  Agende sua Consulta                 │
-│  Oftalmologia · Paragominas e Belém  │
-│  ⭐ 4.9  ✓ 13+ anos  ✓ 6.000+ pac.   │
-├──────────────────────────────────────┤
-│  [1]──[2]──[3]──[4]                  │
-│  Dados Consulta Data Confirmar       │
-│                                      │
-│  [Etapa atual renderizada aqui]      │
-│                                      │
-│  [Voltar]            [Avançar]       │
-├──────────────────────────────────────┤
-│ [Humanizado][Convênios][Localização] │
-│ Footer                               │
-└──────────────────────────────────────┘
-```
-
-### Resultado
-- URL `/agendamento` mantém o mesmo formulário completo de 4 etapas que o paciente já conhece
-- Visual da landing dedicada preservado (proof points, sem distração de menu)
-- Tracking granular por etapa funcionando
-- Mesma experiência de booking de `/agendar`, em página otimizada para campanhas
