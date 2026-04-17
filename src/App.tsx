@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Agendar from "./pages/Agendar";
 import AgendarConsulta from "./pages/AgendarConsulta";
+import Agendamento from "./pages/Agendamento";
 import Obrigado from "./pages/Obrigado";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/agendar" element={<Agendar />} />
             <Route path="/agendar-consulta" element={<AgendarConsulta />} />
+            <Route path="/agendamento" element={<Agendamento />} />
             <Route path="/obrigado" element={<Obrigado />} />
             <Route path="/auth" element={<Auth />} />
               <Route path="/admin" element={<AdminDashboard />} />
