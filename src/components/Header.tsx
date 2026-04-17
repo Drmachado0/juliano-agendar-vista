@@ -7,11 +7,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import logoImage from "@/assets/dr-juliano-logo.webp";
 
-interface HeaderProps {
-  onScheduleClick: () => void;
-}
-
-const Header = ({ onScheduleClick }: HeaderProps) => {
+const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("");
   const [scrolled, setScrolled] = useState(false);
@@ -117,7 +113,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
                 </Button>
               </Link>
             )}
-            <Link to="/agendar">
+            <Link to="/agendamento">
               <Button variant="hero" size="sm" className="gap-1.5 card-shimmer">
                 <CalendarCheck className="h-5 w-5" />
                 Agendar Online
@@ -137,7 +133,7 @@ const Header = ({ onScheduleClick }: HeaderProps) => {
             >
               <Phone className="w-4 h-4" />
             </a>
-            <Link to="/agendar">
+            <Link to="/agendamento">
               <Button variant="hero" size="sm" className="gap-1 text-xs px-2.5 py-1.5 h-auto">
                 <CalendarCheck className="h-3.5 w-3.5" />
                 Agendar
