@@ -248,7 +248,7 @@ const gerarMensagemVariada = (nome: string, ultimaMensagem?: string): string => 
 ${abertura} ${explicativo}
 
 ${cta}
-👉 https://g.page/r/CTkTpXB1m13mEBM/review
+👉 ${GOOGLE_REVIEW_URL}
 
 Agradeço desde já pela confiança.${emojis ? ` ${emojis}` : ''}
 Dr. Juliano Machado
