@@ -12,7 +12,6 @@ import { supabase } from "@/integrations/supabase/client";
 declare global {
   interface Window {
     fbq?: (...args: any[]) => void;
-    dataLayer?: Record<string, any>[];
   }
 }
 
