@@ -111,7 +111,7 @@ const TEMPLATE_PADRAO = `Olá, {{nome}}! 👋
 Foi um prazer atendê-lo(a). Sua opinião é muito importante para continuarmos oferecendo um atendimento de qualidade e em constante melhoria.
 
 Se puder, deixe sua avaliação clicando no link abaixo:
-👉 https://g.page/r/CTkTpXB1m13mEBM/review
+👉 ${GOOGLE_REVIEW_URL}
 
 Agradeço desde já pela confiança. 💙
 Dr. Juliano Machado
