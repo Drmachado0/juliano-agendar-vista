@@ -279,11 +279,14 @@ const Agendamento = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Helmet>
-        <title>Agende sua Consulta · Dr. Juliano Machado — Oftalmologista em Paragominas</title>
+        <title>Agendar Consulta — Dr. Juliano Machado | Oftalmologista</title>
         <meta
           name="description"
-          content="Agende sua consulta oftalmológica em Paragominas com o Dr. Juliano Machado. Atendimento humanizado, convênios aceitos. Agendamento online em 4 etapas."
+          content="Agende sua consulta online com o Dr. Juliano Machado. Oftalmologista em Paragominas e Belém. Rápido, fácil e sem complicação."
         />
+        <meta property="og:url" content="https://drjulianomachado.com/agendamento" />
+        <meta property="og:title" content="Agendar Consulta — Dr. Juliano Machado | Oftalmologista" />
+        <meta property="og:description" content="Agende sua consulta online com o Dr. Juliano Machado. Oftalmologista em Paragominas e Belém. Rápido, fácil e sem complicação." />
         <link rel="canonical" href="https://drjulianomachado.com/agendamento" />
       </Helmet>
 
