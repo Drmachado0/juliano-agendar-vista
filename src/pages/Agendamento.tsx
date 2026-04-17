@@ -24,6 +24,14 @@ declare global {
 }
 
 const WHATSAPP_NUMBER = "5591936180476";
+const WHATSAPP_MESSAGE = "Olá! Gostaria de agendar uma consulta com o Dr. Juliano Machado.";
+
+const getWhatsAppUrl = () => {
+  const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  return isMobile
+    ? `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`
+    : `https://web.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+};
 
 const initialFormData: FormData = {
   fullName: "",
@@ -58,8 +66,8 @@ const Agendamento = () => {
   const [leadId, setLeadId] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { trackViewContent, trackLead, trackSchedule, trackCompleteRegistration } = useMetaPixel();
-  const { trackFormSubmitConversion } = useGoogleTag();
+  const { trackViewContent, trackLead, trackSchedule, trackCompleteRegistration, trackContact: trackMetaContact } = useMetaPixel();
+  const { trackFormSubmitConversion, trackWhatsAppClick } = useGoogleTag();
 
   const totalSteps = 4;
 
@@ -302,9 +310,10 @@ const Agendamento = () => {
             </span>
           </div>
           <a
-            href={`https://wa.me/${WHATSAPP_NUMBER}`}
+            href={getWhatsAppUrl()}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => { trackWhatsAppClick(getWhatsAppUrl(), "Header Agendamento"); trackMetaContact("WhatsApp"); }}
             className="inline-flex items-center gap-2 text-sm font-medium text-[#25D366] hover:text-[#20BD5A] transition-colors"
             aria-label="Falar no WhatsApp"
           >
