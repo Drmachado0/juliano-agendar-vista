@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Helmet } from "react-helmet-async";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
@@ -9,14 +8,8 @@ import LocationsSection from "@/components/LocationsSection";
 import InsuranceSection from "@/components/InsuranceSection";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import Footer from "@/components/Footer";
-import SchedulingModal from "@/components/scheduling/SchedulingModal";
 
 const Index = () => {
-  const [isSchedulingOpen, setIsSchedulingOpen] = useState(false);
-
-  const openScheduling = () => setIsSchedulingOpen(true);
-  const closeScheduling = () => setIsSchedulingOpen(false);
-
   // Structured data for SEO
   const structuredData = {
     "@context": "https://schema.org",
@@ -73,21 +66,19 @@ const Index = () => {
       </Helmet>
 
       <div className="min-h-screen bg-background">
-        <Header onScheduleClick={openScheduling} />
+        <Header />
         
         <main>
-          <HeroSection onScheduleClick={openScheduling} />
+          <HeroSection />
           <AboutSection />
           <ProceduresSection />
           <TestimonialsSection />
           <LocationsSection />
-          <InsuranceSection onScheduleClick={openScheduling} />
+          <InsuranceSection />
         </main>
 
         <Footer />
         <WhatsAppButton />
-        
-        <SchedulingModal isOpen={isSchedulingOpen} onClose={closeScheduling} />
       </div>
     </>
   );

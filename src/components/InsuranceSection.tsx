@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CalendarCheck, Phone, Clock, ArrowRight } from "lucide-react";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
@@ -11,11 +12,7 @@ import logoCassi from "@/assets/convenios/cassi.png";
 import logoSaudeCaixa from "@/assets/convenios/saude-caixa.png";
 import logoParticular from "@/assets/convenios/particular.png";
 
-interface InsuranceSectionProps {
-  onScheduleClick: () => void;
-}
-
-const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
+const InsuranceSection = () => {
   const { trackCTAClick, trackWhatsAppClick } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
   const [isVisible, setIsVisible] = useState(false);
@@ -104,20 +101,19 @@ const InsuranceSection = ({ onScheduleClick }: InsuranceSectionProps) => {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
-                <Button
-                  variant="hero"
-                  size="lg"
-                  onClick={() => {
-                    trackCTAClick('agendar_consulta', 'convenios', 'Agendar minha consulta');
-                    onScheduleClick();
-                  }}
-                  className="text-base group relative overflow-hidden"
-                >
-                  <CalendarCheck className="w-5 h-5 mr-1" />
-                  Agendar consulta
-                  <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                  <span className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
-                </Button>
+                <Link to="/agendamento">
+                  <Button
+                    variant="hero"
+                    size="lg"
+                    onClick={() => trackCTAClick('agendar_consulta', 'convenios', 'Agendar minha consulta')}
+                    className="text-base group relative overflow-hidden"
+                  >
+                    <CalendarCheck className="w-5 h-5 mr-1" />
+                    Agendar consulta
+                    <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                    <span className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
+                  </Button>
+                </Link>
                 <a
                   href="https://wa.me/5591936180476?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consulta%20com%20o%20Dr.%20Juliano%20Machado."
                   target="_blank"
