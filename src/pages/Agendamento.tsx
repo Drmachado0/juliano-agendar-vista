@@ -310,9 +310,10 @@ const Agendamento = () => {
             </span>
           </div>
           <a
-            href={`https://wa.me/${WHATSAPP_NUMBER}`}
+            href={getWhatsAppUrl()}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => { trackWhatsAppClick(getWhatsAppUrl(), "Header Agendamento"); trackMetaContact("WhatsApp"); }}
             className="inline-flex items-center gap-2 text-sm font-medium text-[#25D366] hover:text-[#20BD5A] transition-colors"
             aria-label="Falar no WhatsApp"
           >
