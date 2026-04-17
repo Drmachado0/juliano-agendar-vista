@@ -347,7 +347,12 @@ const Agendamento = () => {
             )}
             <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-1 mt-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
-                <Star className="w-4 h-4 fill-primary text-primary" /> 4.9
+                <span className="flex items-center gap-0.5">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <Star key={i} className="w-4 h-4 fill-primary text-primary" />
+                  ))}
+                </span>
+                <span className="font-bold text-foreground ml-1">5.0</span>
               </span>
               <span>✓ 13+ anos de experiência</span>
               <span>✓ 6.000+ pacientes atendidos</span>
