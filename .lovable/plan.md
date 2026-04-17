@@ -1,54 +1,75 @@
 
+The user wants a dedicated page for appointment scheduling to improve tracking and conversions. Looking at the codebase, I can see there's already a `/agendar` route with `Agendar.tsx` that uses the same form structure. Let me check if this is what they want or if they want a NEW separate page.
 
-## Plano: Corrigir envio de e-mail e WhatsApp de confirmação
+Looking again: `src/pages/Agendar.tsx` already exists at `/agendar` with the full multi-step form. The user might want either:
+1. A new landing page variant optimized for ads (e.g. `/agendar-consulta` with stronger conversion elements)
+2. Improvements to the existing page
 
-### Diagnóstico
+Given the request "criar uma pagina dedicada" (create a dedicated page), they likely want a new conversion-optimized variant separate from the existing one — typically used for paid traffic (Google Ads, Meta Ads) where you want a clean landing page without the main site header/distractions, plus enhanced tracking.
 
-Investiguei o banco de dados e os logs das edge functions. O agendamento de teste mais recente (16/04 23:06, "Teste") foi convertido com sucesso, mas:
+I'll propose creating a new `/agendar-consulta` landing page variant optimized for paid traffic conversion.
 
-1. **Não há nenhuma mensagem WhatsApp gravada** para esse `agendamento_id` na tabela `mensagens_whatsapp`.
-2. **Não há logs** das funções `confirmar-agendamento-whatsapp` nem `notificar-agendamento-email` nesse horário — só do `notificar-n8n` e do `converter-lead-agendamento`.
+## Plano: Landing page dedicada de agendamento para tracking e conversão
 
-Isso significa que essas duas edge functions **nem chegam a ser invocadas**.
+### Nova rota: `/agendar-consulta`
 
-### Causa raiz
+Página otimizada para tráfego pago (Google Ads / Meta Ads) e conversão, mantendo o mesmo formulário multi-step de 4 etapas do `/agendar` atual.
 
-No `src/pages/Agendar.tsx` (linhas 162–223), o fluxo é:
+### Diferenças vs `/agendar` atual
+
+| Aspecto | `/agendar` (atual) | `/agendar-consulta` (novo) |
+|---|---|---|
+| Header | Link "Voltar ao site" | Sem header de navegação (sem escape) |
+| Hero | Título simples | Hero com proof points (13+ anos, 6.000+ pacientes, ⭐ 4.9) |
+| Trust signals | Nenhum | Selos de convênios, foto do Dr., depoimento curto |
+| Tracking | Eventos básicos | Eventos granulares por etapa + UTM capture |
+| Footer | Texto curto | Garantias + WhatsApp direto |
+
+### Arquivos a criar/editar
+
+**1. `src/pages/AgendarConsulta.tsx`** (novo)
+- Reutiliza `PersonalDataStep`, `ConsultationDetailsStep`, `DateTimeStep`, `ConfirmationStep`, `SuccessStep`, `StepIndicator`
+- Mesma lógica de submissão do `Agendar.tsx` (criar lead → converter agendamento → notificar WhatsApp/email)
+- Layout em 2 colunas no desktop: formulário à esquerda, prova social à direita
+- Mobile: prova social vira banner superior compacto
+- Captura de UTM (`utm_source`, `utm_medium`, `utm_campaign`, `gclid`, `fbclid`) via URLSearchParams e armazena em sessionStorage para enviar com o lead
+
+**2. `src/App.tsx`** (editar)
+- Adicionar rota `<Route path="/agendar-consulta" element={<AgendarConsulta />} />`
+
+**3. Tracking aprimorado** (dentro do novo arquivo)
+- `page_view` customizado com `page_type: 'landing_conversao'`
+- `step_view` ao entrar em cada etapa (1, 2, 3, 4)
+- `step_complete` ao avançar
+- `form_abandon` via `beforeunload` se não chegou no step 4
+- `lead_generated` ao criar lead (step 2 → 3)
+- `appointment_scheduled` ao confirmar (step 4)
+- Todos os eventos enviados via dataLayer (GTM-K3C2NNF6) + Meta Pixel + Google Ads conversion
+
+### Layout visual
+
+```text
+┌──────────────────────────────────────────────────┐
+│ [Logo Dr. Juliano]            [📱 WhatsApp]      │
+├─────────────────────────┬────────────────────────┤
+│  AGENDE SUA CONSULTA    │  ⭐ 4.9 (200+ avaliações)│
+│  Oftalmologista         │  ✓ 13+ anos experiência │
+│  Paragominas e Belém    │  ✓ 6.000+ pacientes     │
+│                         │  ✓ Convênios aceitos    │
+│  [Form multi-step]      │                         │
+│  [Step indicator]       │  [Foto Dr. Juliano]     │
+│  [Etapa atual]          │                         │
+│                         │  "Atendimento excelente"│
+│                         │  — Maria S.             │
+└─────────────────────────┴────────────────────────┘
+│      Atendimento humanizado · Resposta em até 1h │
+└──────────────────────────────────────────────────┘
 ```
-Promise.allSettled([invoke(whatsapp), invoke(email)])  // sem await
-...
-window.location.href = '/obrigado'  // navega na hora
-```
 
-Como o `Promise.allSettled` não tem `await`, os dois `fetch` ficam pendentes. Quando `window.location.href` muda a página logo em seguida, o navegador **cancela todos os fetches em vôo** — por isso as edge functions nunca recebem a chamada.
-
-A função `criar-agendamento` (usada pelo modal antigo) também tem o mesmo padrão fire-and-forget, mas como roda **dentro da edge function** (server-to-server), funciona. No `/agendar` o disparo é do navegador, então é cancelado.
-
-### Correção
-
-**Arquivo: `src/pages/Agendar.tsx`** (linhas 152–223)
-
-1. Mover o disparo das notificações (WhatsApp + e-mail + n8n) para **dentro de uma edge function**, ou
-2. **Aguardar** as notificações terminarem antes de navegar para `/obrigado`.
-
-Vou usar a opção 2 (mais simples e segura), com timeout de segurança:
-
-- Usar `await Promise.allSettled([...])` antes do redirect.
-- Adicionar um `Promise.race` com timeout de 8s para não travar a UX caso a Evolution API esteja lenta.
-- Mostrar um toast "Agendamento confirmado!" antes do redirect.
-- Logar no console o resultado de cada notificação para debug futuro.
-
-**Arquivo: `supabase/functions/notificar-agendamento-email/index.ts`** — Verificar comportamento
-
-- O `from` está como `onboarding@resend.dev` (sandbox do Resend). Esse remetente só consegue entregar para o e-mail dono da conta Resend. Como o destino é `julianosmachado@gmail.com`, deve funcionar **se for o mesmo e-mail registrado na conta Resend**. Vou adicionar um log claro do `emailResponse.id` para confirmar entrega.
-- Sem mudanças funcionais aqui — só log adicional se necessário.
-
-### Resultado esperado
-
-Após o fix:
-- Ao confirmar agendamento em `/agendar`, o frontend aguarda o WhatsApp + e-mail serem disparados (até 8s).
-- A mensagem WhatsApp chega no telefone do paciente.
-- O e-mail chega em `julianosmachado@gmail.com`.
-- Só depois o usuário é redirecionado para `/obrigado`.
-- Se algo falhar, o erro aparece no console mas o agendamento (já salvo) não é perdido.
+### Resultado
+- URL limpa para campanhas: `drjulianomachado.com/agendar-consulta?utm_source=google`
+- Sem distrações de navegação → maior taxa de conversão
+- Tracking granular por etapa para otimizar funil
+- Prova social visível durante todo o preenchimento
+- UTMs preservadas até a submissão final
 
