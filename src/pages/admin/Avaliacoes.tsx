@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarMensagemWhatsApp, enviarImagemWhatsApp } from "@/services/integracoes";
+import { GOOGLE_REVIEW_URL } from "@/lib/constants";
 import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Shuffle, Pencil, Trash2, Check, Wifi, WifiOff } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
