@@ -24,6 +24,14 @@ declare global {
 }
 
 const WHATSAPP_NUMBER = "5591936180476";
+const WHATSAPP_MESSAGE = "Olá! Gostaria de agendar uma consulta com o Dr. Juliano Machado.";
+
+const getWhatsAppUrl = () => {
+  const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  return isMobile
+    ? `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`
+    : `https://web.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+};
 
 const initialFormData: FormData = {
   fullName: "",
