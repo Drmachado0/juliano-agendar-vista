@@ -6,35 +6,17 @@ import { Link } from "react-router-dom";
 
 const Obrigado = () => {
   useEffect(() => {
-    // Meta Pixel - Lead conversion (direct fbq)
-    if (typeof (window as any).fbq === 'function') {
-      (window as any).fbq('track', 'Lead', {
-        content_name: 'Agendamento Confirmado',
-        content_category: 'Consulta Oftalmológica',
-        value: 300,
-        currency: 'BRL',
-      });
-      (window as any).fbq('track', 'CompleteRegistration', {
-        content_name: 'Página Obrigado',
-        value: 300,
-        currency: 'BRL',
-      });
-    }
-
-    // Google Ads Conversion (real label)
-    if (typeof (window as any).gtag === 'function') {
-      (window as any).gtag('event', 'conversion', {
-        send_to: 'AW-436492720/3Y-4COmQ1dUbELCzkdAB',
-        value: 300,
-        currency: 'BRL',
-      });
-    }
-
-    // DataLayer for GTM
+    // DataLayer for GTM (Meta Pixel + Google Ads disparam via GTM)
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
       event: 'meta_lead',
       content_name: 'Agendamento Confirmado',
+    });
+    window.dataLayer.push({
+      event: 'meta_complete_registration',
+      content_name: 'Página Obrigado',
+      value: 300,
+      currency: 'BRL',
     });
     window.dataLayer.push({
       event: 'google_ads_conversion',
