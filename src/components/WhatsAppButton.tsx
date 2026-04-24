@@ -41,7 +41,7 @@ const WhatsAppButton = () => {
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => {
-          trackWhatsAppClick(whatsappUrl, 'Fale conosco');
+          trackWhatsAppClick(whatsappUrl, 'Fale conosco', 'whatsapp_floating', 'floating_bottom_right');
           trackMetaContact('WhatsApp');
           window.dataLayer = window.dataLayer || [];
           window.dataLayer.push({
