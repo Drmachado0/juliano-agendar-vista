@@ -21,9 +21,19 @@ export const useGoogleTag = () => {
     });
   };
 
-  const trackWhatsAppClick = (linkUrl: string = 'https://wa.me/5591936180476', linkText: string = 'WhatsApp') => {
+  const trackWhatsAppClick = (
+    linkUrl: string = 'https://wa.me/5591936180476',
+    linkText: string = 'WhatsApp',
+    buttonId: string = 'whatsapp_generic',
+    buttonLocation: string = 'unknown'
+  ) => {
     pushToDataLayer({
       event: 'whatsapp_click',
+      button_id: buttonId,
+      button_location: buttonLocation,
+      button_text: linkText,
+      destination_url: linkUrl,
+      // Campos legados mantidos por compatibilidade com tags GTM antigas
       link_url: linkUrl,
       link_text: linkText,
     });
