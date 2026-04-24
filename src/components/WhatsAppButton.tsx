@@ -9,12 +9,7 @@ const WhatsAppButton = () => {
   const [show, setShow] = useState(false);
   const [pulseReady, setPulseReady] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
-  const phone = "5591936180476";
-  const message = "Olá! Gostaria de agendar uma consulta com o Dr. Juliano Machado.";
-  const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-  const whatsappUrl = isMobile
-    ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-    : `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
+  const whatsappUrl = "https://wa.me/5591936180476?text=Ol%C3%A1%21%20Gostaria%20de%20agendar%20uma%20consulta%20oftalmol%C3%B3gica%20com%20o%20Dr.%20Juliano%20Machado.";
 
   useEffect(() => {
     const showTimer = setTimeout(() => setShow(true), 3000);
