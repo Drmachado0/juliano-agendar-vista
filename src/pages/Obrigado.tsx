@@ -3,8 +3,12 @@ import { Helmet } from "react-helmet-async";
 import { CheckCircle, MessageCircle, MapPin, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useGoogleTag } from "@/hooks/useGoogleTag";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 
 const Obrigado = () => {
+  const { trackWhatsAppClick } = useGoogleTag();
+  const { trackContact: trackMetaContact } = useMetaPixel();
   useEffect(() => {
     // DataLayer for GTM (Meta Pixel + Google Ads disparam via GTM)
     window.dataLayer = window.dataLayer || [];
