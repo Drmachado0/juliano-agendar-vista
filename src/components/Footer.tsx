@@ -88,7 +88,10 @@ const Footer = () => {
                 href="https://wa.me/5591936180476"
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => { trackWhatsAppClick(); trackMetaContact('WhatsApp'); }}
+                onClick={() => {
+                  trackWhatsAppClick('https://wa.me/5591936180476', '(91) 93618-0476', 'whatsapp_footer_contact', 'footer_contact');
+                  trackMetaContact('WhatsApp');
+                }}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <MessageCircle className="w-4 h-4 text-primary" />
