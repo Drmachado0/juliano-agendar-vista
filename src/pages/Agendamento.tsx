@@ -313,7 +313,10 @@ const Agendamento = () => {
             href={getWhatsAppUrl()}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => { trackWhatsAppClick(getWhatsAppUrl(), "Header Agendamento"); trackMetaContact("WhatsApp"); }}
+            onClick={() => {
+              trackWhatsAppClick(getWhatsAppUrl(), 'Header Agendamento', 'whatsapp_agendamento_header', 'agendamento_header');
+              trackMetaContact('WhatsApp');
+            }}
             className="inline-flex items-center gap-2 text-sm font-medium text-[#25D366] hover:text-[#20BD5A] transition-colors"
             aria-label="Falar no WhatsApp"
           >

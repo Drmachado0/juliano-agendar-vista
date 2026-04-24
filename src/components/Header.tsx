@@ -127,7 +127,10 @@ const Header = () => {
               href="https://wa.me/5591936180476"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => { trackWhatsAppClick(); trackMetaContact('WhatsApp'); }}
+              onClick={() => {
+                trackWhatsAppClick('https://wa.me/5591936180476', 'WhatsApp Header', 'whatsapp_header', 'header_top');
+                trackMetaContact('WhatsApp');
+              }}
               className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
               aria-label="WhatsApp"
             >

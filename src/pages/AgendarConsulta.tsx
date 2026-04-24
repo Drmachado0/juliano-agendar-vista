@@ -298,7 +298,16 @@ const AgendarConsulta = () => {
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-xs md:text-sm font-medium text-accent hover:text-accent/80 transition-colors"
-              onClick={() => pushDataLayer({ event: "lp_whatsapp_click", location: "header" })}
+              onClick={() => pushDataLayer({
+                event: 'whatsapp_click',
+                button_id: 'whatsapp_agendar_consulta_header',
+                button_location: 'agendar_consulta_header',
+                button_text: 'Falar no WhatsApp',
+                destination_url: 'https://wa.me/5591936180476?text=Ol%C3%A1%21+Gostaria+de+agendar+uma+consulta.',
+                // Compatibilidade com tag legada
+                lp_whatsapp_click: true,
+                location: 'header',
+              })}
             >
               <MessageCircle className="h-4 w-4" />
               <span className="hidden sm:inline">Falar no WhatsApp</span>
