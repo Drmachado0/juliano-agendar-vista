@@ -258,7 +258,7 @@ const Agendamento = () => {
       // Google Ads conversion
       if (typeof (window as any).gtag !== "undefined") {
         (window as any).gtag("event", "conversion", {
-          send_to: "AW-436492720/3Y-4COmQ1dUbELCzkdAB",
+          send_to: "AW-436492720/tUOICNX06JwcELCzkdAB",
           value: 300,
           currency: "BRL",
         });
