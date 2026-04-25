@@ -4,7 +4,7 @@ import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useState, useEffect } from "react";
 
 const WhatsAppButton = () => {
-  const { trackWhatsAppClick } = useGoogleTag();
+  const { trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
   const [show, setShow] = useState(false);
   const [pulseReady, setPulseReady] = useState(false);
@@ -42,6 +42,7 @@ const WhatsAppButton = () => {
         rel="noopener noreferrer"
         onClick={() => {
           trackWhatsAppClick(whatsappUrl, 'Fale conosco', 'whatsapp_floating', 'floating_bottom_right');
+          trackWhatsAppGoogleAdsConversion();
           trackMetaContact('WhatsApp');
         }}
         className={`flex items-center gap-2.5 bg-[#25D366] text-white pl-4 pr-5 py-3.5 rounded-2xl shadow-xl shadow-[#25D366]/25 hover:shadow-2xl hover:shadow-[#25D366]/35 hover:scale-105 active:scale-100 transition-all duration-300 backdrop-blur-sm ring-2 ring-[#25D366]/20 ring-offset-2 ring-offset-background ${

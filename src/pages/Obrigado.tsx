@@ -7,7 +7,7 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 
 const Obrigado = () => {
-  const { trackWhatsAppClick } = useGoogleTag();
+  const { trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
   useEffect(() => {
     // DataLayer for GTM (Meta Pixel + Google Ads disparam via GTM)
@@ -92,6 +92,7 @@ const Obrigado = () => {
               'whatsapp_obrigado',
               'obrigado_page'
             );
+            trackWhatsAppGoogleAdsConversion();
             trackMetaContact('WhatsApp');
           }}
           className="w-full max-w-md"

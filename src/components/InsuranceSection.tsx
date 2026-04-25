@@ -13,7 +13,7 @@ import logoSaudeCaixa from "@/assets/convenios/saude-caixa.png";
 import logoParticular from "@/assets/convenios/particular.png";
 
 const InsuranceSection = () => {
-  const { trackCTAClick, trackWhatsAppClick } = useGoogleTag();
+  const { trackCTAClick, trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -125,6 +125,7 @@ const InsuranceSection = () => {
                       'whatsapp_convenios_cta',
                       'convenios_section'
                     );
+                    trackWhatsAppGoogleAdsConversion();
                     trackMetaContact('WhatsApp');
                   }}
                 >

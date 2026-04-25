@@ -99,6 +99,15 @@ export const useGoogleTag = () => {
     });
   };
 
+  const trackWhatsAppGoogleAdsConversion = () => {
+    pushToDataLayer({
+      event: 'google_ads_conversion',
+      send_to: 'AW-436492720/-h8XCK3z6JwcELCzkdAB',
+      value: 300,
+      currency: 'BRL',
+    });
+  };
+
   return {
     trackEvent,
     trackWhatsAppClick,
@@ -109,5 +118,6 @@ export const useGoogleTag = () => {
     trackLead,
     trackCTAClick,
     trackFormSubmitConversion,
+    trackWhatsAppGoogleAdsConversion,
   };
 };

@@ -67,7 +67,7 @@ const Agendamento = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { trackViewContent, trackLead, trackSchedule, trackCompleteRegistration, trackContact: trackMetaContact } = useMetaPixel();
-  const { trackFormSubmitConversion, trackWhatsAppClick } = useGoogleTag();
+  const { trackFormSubmitConversion, trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
 
   const totalSteps = 4;
 
@@ -315,6 +315,7 @@ const Agendamento = () => {
             rel="noopener noreferrer"
             onClick={() => {
               trackWhatsAppClick(getWhatsAppUrl(), 'Header Agendamento', 'whatsapp_agendamento_header', 'agendamento_header');
+              trackWhatsAppGoogleAdsConversion();
               trackMetaContact('WhatsApp');
             }}
             className="inline-flex items-center gap-2 text-sm font-medium text-[#25D366] hover:text-[#20BD5A] transition-colors"
