@@ -67,7 +67,7 @@ const Agendamento = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { trackViewContent, trackLead, trackSchedule, trackCompleteRegistration, trackContact: trackMetaContact } = useMetaPixel();
-  const { trackFormSubmitConversion, trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
+  const { trackFormSubmitConversion, trackWhatsAppClick, trackWhatsAppGoogleAdsConversion, trackPhoneClick } = useGoogleTag();
 
   const totalSteps = 4;
 
@@ -456,7 +456,11 @@ const Agendamento = () => {
           <p className="font-serif font-semibold gradient-text">Dr. Juliano Machado</p>
           <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
             <Phone className="w-4 h-4" />
-            <a href={`tel:+${WHATSAPP_NUMBER}`} className="hover:text-primary transition-colors">
+            <a
+              href={`tel:+${WHATSAPP_NUMBER}`}
+              onClick={() => trackPhoneClick(`tel:+${WHATSAPP_NUMBER}`)}
+              className="hover:text-primary transition-colors"
+            >
               (91) 93618-0476
             </a>
           </p>
