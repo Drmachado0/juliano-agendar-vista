@@ -4,7 +4,7 @@ import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useState, useEffect } from "react";
 
 const WhatsAppButton = () => {
-  const { trackWhatsAppClick } = useGoogleTag();
+  const { trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
   const [show, setShow] = useState(false);
   const [pulseReady, setPulseReady] = useState(false);
