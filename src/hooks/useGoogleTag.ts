@@ -44,6 +44,12 @@ export const useGoogleTag = () => {
       event: 'phone_click',
       link_url: linkUrl,
     });
+    pushToDataLayer({
+      event: 'google_ads_conversion',
+      send_to: 'AW-436492720/R5yuCJjn7ZwcELCzkdAB',
+      value: 300,
+      currency: 'BRL',
+    });
   };
 
   const trackFormSubmitConversion = () => {
