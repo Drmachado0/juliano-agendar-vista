@@ -92,6 +92,7 @@ const Obrigado = () => {
               'whatsapp_obrigado',
               'obrigado_page'
             );
+            trackWhatsAppGoogleAdsConversion();
             trackMetaContact('WhatsApp');
           }}
           className="w-full max-w-md"
