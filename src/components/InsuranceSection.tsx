@@ -125,6 +125,7 @@ const InsuranceSection = () => {
                       'whatsapp_convenios_cta',
                       'convenios_section'
                     );
+                    trackWhatsAppGoogleAdsConversion();
                     trackMetaContact('WhatsApp');
                   }}
                 >
