@@ -67,7 +67,7 @@ const Agendamento = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { trackViewContent, trackLead, trackSchedule, trackCompleteRegistration, trackContact: trackMetaContact } = useMetaPixel();
-  const { trackFormSubmitConversion, trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
+  const { trackFormSubmitConversion, trackWhatsAppClick, trackWhatsAppGoogleAdsConversion, trackPhoneClick } = useGoogleTag();
 
   const totalSteps = 4;
 
