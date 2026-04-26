@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import KanbanColumn from "@/components/admin/KanbanColumn";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
 import WhatsAppModal from "@/components/admin/WhatsAppModal";
 import { Button } from "@/components/ui/button";
-import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm } from "@/services/agendamentos";
+import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm, reprocessarBoasVindas } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
-import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight } from "lucide-react";
+import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, Wifi } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
 
 const columns = [
   { status: "NOVO LEAD", title: "Novo Lead", color: "bg-emerald-500" },
