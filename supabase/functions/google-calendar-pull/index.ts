@@ -406,13 +406,16 @@ async function pullForUser(
     }
   }
 
-  // Salva nextSyncToken e last_pull_at
+  // Salva nextSyncToken (apenas em sync padrão) e last_pull_at.
+  // Em range customizado, NÃO sobrescreve o sync_token para preservar o estado
+  // do polling incremental geral.
+  const updatePayload: Record<string, unknown> = {
+    last_pull_at: new Date().toISOString(),
+  };
+  if (!forceFullSync) updatePayload.sync_token = nextSyncToken;
   await supabase
     .from("google_calendar_tokens")
-    .update({
-      sync_token: nextSyncToken,
-      last_pull_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq("user_id", userId);
 
   return result;
