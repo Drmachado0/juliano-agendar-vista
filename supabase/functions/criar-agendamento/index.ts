@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           error: validacaoDisponibilidade.motivo || 'Horário não disponível',
-          code: validacaoDisponibilidade.codigo || 'HORARIO_INDISPONIVEL'
+          code: (validacaoDisponibilidade as any).codigo || 'HORARIO_INDISPONIVEL'
         }),
         { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
