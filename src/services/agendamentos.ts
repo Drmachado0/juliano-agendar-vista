@@ -325,7 +325,8 @@ export async function listarAgendamentosPorStatus(): Promise<{
 // Update agendamento status (for Kanban drag-and-drop)
 export async function atualizarStatusCrm(
   id: string, 
-  novoStatus: string
+  novoStatus: string,
+  statusAnterior?: string
 ): Promise<{ error: Error | null }> {
   const { error } = await supabase
     .from('agendamentos')
@@ -336,6 +337,15 @@ export async function atualizarStatusCrm(
     console.error('Erro ao atualizar status CRM:', error);
     return { error: new Error(error.message) };
   }
+
+  // Registrar auditoria (fire-and-forget)
+  const { registrarAuditCrm } = await import('./crmAudit');
+  registrarAuditCrm({
+    agendamentoId: id,
+    acao: 'status_change',
+    statusAnterior: statusAnterior ?? null,
+    statusNovo: novoStatus,
+  });
 
   return { error: null };
 }
