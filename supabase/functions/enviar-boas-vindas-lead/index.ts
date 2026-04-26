@@ -2,14 +2,55 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendWhatsappTextMessage, normalizePhoneNumber } from "../_shared/evolutionApiClient.ts";
 import { buscarTemplate, renderizarTemplate } from "../_shared/templateRenderer.ts";
 
-Deno.serve(async (req) => {
-  // Autenticação via CRON_SECRET
-  const authHeader = req.headers.get('Authorization');
-  const cronSecret = Deno.env.get('CRON_SECRET');
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  // Aceita CRON_SECRET (cron job) OU JWT de admin (chamada manual do CRM)
+  const authHeader = req.headers.get('Authorization') || '';
+  const cronSecret = Deno.env.get('CRON_SECRET');
+  const isCron = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
+
+  let isAdmin = false;
+  if (!isCron && authHeader.startsWith('Bearer ')) {
+    try {
+      const token = authHeader.replace('Bearer ', '');
+      const supabaseAuth = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_ANON_KEY')!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const { data: { user } } = await supabaseAuth.auth.getUser(token);
+      if (user) {
+        const supabaseService = createClient(
+          Deno.env.get('SUPABASE_URL')!,
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        );
+        const { data: roleData } = await supabaseService
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+        isAdmin = !!roleData;
+      }
+    } catch (e) {
+      console.error('[boas-vindas] Auth check error:', e);
+    }
+  }
+
+  if (!isCron && !isAdmin) {
     console.error('[boas-vindas] Unauthorized');
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   try {
