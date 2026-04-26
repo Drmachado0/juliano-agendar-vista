@@ -227,9 +227,14 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
             type="email"
             value={formData.email}
             onChange={(e) => updateFormData({ email: e.target.value })}
-            placeholder="seu@email.com"
-            className="bg-secondary border-border focus:border-primary"
+            placeholder="seu@email.com (opcional)"
+            className={`bg-secondary border-border focus:border-primary ${
+              errors.email ? "border-destructive" : ""
+            }`}
           />
+          {errors.email && (
+            <p className="text-sm text-destructive">{errors.email}</p>
+          )}
         </div>
       </div>
 
