@@ -193,7 +193,7 @@ export default function Configuracoes() {
     const { success, error } = await updateCalendarSelection(user.id, calendarId);
     if (success) {
       toast.success('Calendário atualizado');
-      setGcalStatus({ ...gcalStatus, calendar_id: calendarId });
+      checkGCalConnection();
     } else {
       toast.error(error || 'Erro ao atualizar calendário');
     }
