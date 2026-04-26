@@ -40,9 +40,14 @@ const TimeSlotPicker = ({
   localAtendimento,
 }: TimeSlotPickerProps) => {
   const [slots, setSlots] = useState<SlotDisponivel[]>([]);
+  const [horariosLiberados, setHorariosLiberados] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [filtroPeriodo, setFiltroPeriodo] = useState<Periodo>("todos");
   const isMobile = useIsMobile();
+
+  // Mantém apenas 2 horários "disponíveis" para o paciente (escolhidos pseudo-aleatoriamente);
+  // os demais aparecem como "Ocupado" para criar escassez.
+  const MAX_VISIVEIS = 2;
 
   useEffect(() => {
     if (selectedDate) {
@@ -61,9 +66,30 @@ const TimeSlotPicker = ({
     try {
       const horariosDisponiveis = await gerarHorariosDisponiveis(selectedDate, localAtendimento);
       setSlots(horariosDisponiveis);
+
+      // Seleciona deterministicamente até MAX_VISIVEIS horários para exibir como disponíveis
+      const liberados = new Set<string>();
+      if (horariosDisponiveis.length <= MAX_VISIVEIS) {
+        horariosDisponiveis.forEach((s) => liberados.add(s.horario));
+      } else {
+        // Seed determinístico baseado na data + local para manter estabilidade entre re-renders
+        const seedStr = `${selectedDate.toDateString()}|${localAtendimento || ""}`;
+        let seed = 0;
+        for (let i = 0; i < seedStr.length; i++) seed = (seed * 31 + seedStr.charCodeAt(i)) >>> 0;
+        const indices = horariosDisponiveis.map((_, i) => i);
+        // Embaralhamento determinístico (Fisher-Yates com PRNG simples)
+        for (let i = indices.length - 1; i > 0; i--) {
+          seed = (seed * 9301 + 49297) % 233280;
+          const j = Math.floor((seed / 233280) * (i + 1));
+          [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        indices.slice(0, MAX_VISIVEIS).forEach((idx) => liberados.add(horariosDisponiveis[idx].horario));
+      }
+      setHorariosLiberados(liberados);
     } catch (error) {
       console.error("Erro ao carregar horários:", error);
       setSlots([]);
+      setHorariosLiberados(new Set());
     } finally {
       setIsLoading(false);
     }
@@ -92,7 +118,8 @@ const TimeSlotPicker = ({
   };
 
   const handleProximoLivre = () => {
-    if (slots.length > 0) handleSelect(slots[0].horario);
+    const primeiroLiberado = slots.find((s) => horariosLiberados.has(s.horario));
+    if (primeiroLiberado) handleSelect(primeiroLiberado.horario);
   };
 
   if (!selectedDate) {
@@ -145,7 +172,7 @@ const TimeSlotPicker = ({
           {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
         </h4>
         <p className="text-xs text-muted-foreground mt-1">
-          {slots.length} {slots.length === 1 ? "horário disponível" : "horários disponíveis"}
+          {horariosLiberados.size} {horariosLiberados.size === 1 ? "horário disponível" : "horários disponíveis"}
         </p>
       </div>
 
@@ -167,7 +194,9 @@ const TimeSlotPicker = ({
             noite: "Noite",
           };
           const count =
-            p === "todos" ? slots.length : slotsPorPeriodo[p as Exclude<Periodo, "todos">].length;
+            p === "todos"
+              ? horariosLiberados.size
+              : slotsPorPeriodo[p as Exclude<Periodo, "todos">].filter((s) => horariosLiberados.has(s.horario)).length;
           if (p !== "todos" && count === 0) return null;
           const ativo = filtroPeriodo === p;
           return (
@@ -193,14 +222,15 @@ const TimeSlotPicker = ({
         {periodosVisiveis.map((p) => {
           const grupo = slotsPorPeriodo[p.key];
           if (grupo.length === 0) return null;
-          const poucos = grupo.length <= 2;
+          const liberadosNoGrupo = grupo.filter((s) => horariosLiberados.has(s.horario)).length;
+          const poucos = liberadosNoGrupo > 0 && liberadosNoGrupo <= 2;
           const Icon = p.icon;
           return (
             <div key={p.key} className="space-y-2">
               <div className="flex items-center gap-2">
                 <Icon className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium text-foreground">{p.label}</span>
-                <span className="text-xs text-muted-foreground">({grupo.length})</span>
+                <span className="text-xs text-muted-foreground">({liberadosNoGrupo})</span>
                 {poucos && (
                   <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                     Últimos
@@ -210,6 +240,22 @@ const TimeSlotPicker = ({
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {grupo.map((slot) => {
                   const isSelected = selectedTime === slot.horario;
+                  const liberado = horariosLiberados.has(slot.horario);
+                  if (!liberado) {
+                    return (
+                      <button
+                        key={slot.horario}
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        aria-label={`Horário ${slot.horario} ocupado`}
+                        className="h-12 md:h-11 rounded-lg text-xs font-medium border-2 border-dashed border-border/60 bg-muted/40 text-muted-foreground/60 cursor-not-allowed line-through decoration-muted-foreground/40"
+                      >
+                        <span className="block leading-tight">{slot.horario}</span>
+                        <span className="block text-[9px] font-normal uppercase tracking-wide no-underline">Ocupado</span>
+                      </button>
+                    );
+                  }
                   return (
                     <button
                       key={slot.horario}
@@ -249,6 +295,10 @@ const TimeSlotPicker = ({
         <div className="flex items-center gap-1.5">
           <span className="inline-block h-3 w-3 rounded border-2 border-amber-500/60 bg-amber-500/20" />
           Poucos restantes
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="inline-block h-3 w-3 rounded border-2 border-dashed border-border/60 bg-muted/40" />
+          Ocupado
         </div>
       </div>
     </div>
