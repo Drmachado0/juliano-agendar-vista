@@ -296,6 +296,10 @@ const TimeSlotPicker = ({
           <span className="inline-block h-3 w-3 rounded border-2 border-amber-500/60 bg-amber-500/20" />
           Poucos restantes
         </div>
+        <div className="flex items-center gap-1.5">
+          <span className="inline-block h-3 w-3 rounded border-2 border-dashed border-border/60 bg-muted/40" />
+          Ocupado
+        </div>
       </div>
     </div>
   );
