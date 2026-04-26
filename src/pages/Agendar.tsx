@@ -28,6 +28,52 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 import drJulianoHero from "@/assets/dr-juliano-hero.png";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
+type Depoimento = {
+  nome: string;
+  cidade: string;
+  data: string;
+  texto: string;
+};
+
+const DEPOIMENTOS: Depoimento[] = [
+  {
+    nome: "Maria S.",
+    cidade: "Paragominas, PA",
+    data: "Mar 2025",
+    texto: "Atendimento excelente, médico atencioso e equipe muito profissional. Recomendo demais!",
+  },
+  {
+    nome: "João P.",
+    cidade: "Belém, PA",
+    data: "Fev 2025",
+    texto: "Dr. Juliano explicou tudo com calma. Saí da consulta com todas as dúvidas resolvidas.",
+  },
+  {
+    nome: "Ana L.",
+    cidade: "Paragominas, PA",
+    data: "Jan 2025",
+    texto: "Marquei pelo WhatsApp e fui atendida no horário. Estrutura impecável e muito cuidado.",
+  },
+  {
+    nome: "Carlos M.",
+    cidade: "Tomé-Açu, PA",
+    data: "Dez 2024",
+    texto: "Cirurgia de catarata tranquila e segura. Voltei a enxergar como antes. Gratidão!",
+  },
+  {
+    nome: "Fernanda R.",
+    cidade: "Belém, PA",
+    data: "Nov 2024",
+    texto: "Profissional de altíssimo nível. Atencioso, paciente e extremamente competente.",
+  },
+  {
+    nome: "Roberto A.",
+    cidade: "Paragominas, PA",
+    data: "Out 2024",
+    texto: "Recomendo de olhos fechados. Atendimento humano e diagnóstico preciso.",
+  },
+];
+
 const initialFormData: FormData = {
   fullName: "",
   phone: "",
