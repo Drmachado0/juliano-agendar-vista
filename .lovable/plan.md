@@ -1,105 +1,83 @@
-## Objetivo
-Criar uma página pública `/status/:id` onde o paciente acessa um link único (UUID do agendamento) e visualiza em tempo real o status do seu agendamento, com data/hora, local, tipo e convênio. O link será incluído automaticamente no template de confirmação enviado por WhatsApp.
+# Validação automática contra conflitos de agendamento
+
+## Diagnóstico
+
+Hoje a validação existe **parcialmente**, mas com brechas:
+
+| Fluxo | Valida hoje? | Problema |
+|---|---|---|
+| `criar-agendamento` (site público) | ✅ Sim, via `validarDisponibilidade` | Race condition: entre validar e inserir, outra requisição pode pegar o mesmo slot |
+| `converter-lead-agendamento` (Step 4) | ✅ Sim | Mesma race condition |
+| `NovoAgendamentoAdminModal` (admin) | ❌ **Não valida disponibilidade** — insere direto via `criarAgendamento` do service | Admin pode criar duplicado no mesmo horário |
+| `AgendamentoDetailsModal` (edição) | ❌ Não revalida ao mudar data/hora | Edição pode gerar conflito |
+| `TimeSlotPicker` (UI) | Mostra subset aleatório como "disponível" | Slot pode já ter sido pego entre a listagem e o submit |
+
+Não há **constraint no banco** garantindo unicidade de `(clinica_id, data_agendamento, hora_agendamento)` — é a única defesa real contra race condition.
 
 ---
 
-## 1. Backend — Edge Function pública
+## Plano
 
-**Nova edge function**: `supabase/functions/status-agendamento/index.ts`
-- **JWT desabilitado** (público) — adicionar bloco em `supabase/config.toml` com `verify_jwt = false`.
-- Recebe `id` (UUID) via query string ou body.
-- Usa `service_role_key` para fazer SELECT em `agendamentos` somente dos campos não sensíveis:
-  - `id`, `nome_completo` (apenas primeiro nome para privacidade), `data_agendamento`, `hora_agendamento`, `local_atendimento`, `tipo_atendimento`, `detalhe_exame_ou_cirurgia`, `convenio`, `status_crm`, `status_funil`, `confirmation_status`, `created_at`.
-- **NÃO retorna**: `telefone_whatsapp`, `email`, `data_nascimento`, `observacoes_internas`, IDs internos extras.
-- Validação: se `id` inválido ou não encontrado → 404 com mensagem genérica ("Agendamento não encontrado").
-- Rate limiting básico por IP (10 req/min) para evitar enumeração.
+### 1. Migração SQL — Constraint anti-duplicidade (defesa final)
 
-**Por que edge function e não RLS pública?** A tabela `agendamentos` contém dados sensíveis (telefone, email, observações criptografadas) e a política atual restringe SELECT a admins. Uma edge function com service_role e projeção controlada é a forma segura de expor apenas o necessário — alinhado ao padrão `mem://security/public-availability-data-protection`.
+Criar índice único parcial em `agendamentos` para impedir dois registros ativos no mesmo slot/clínica:
 
----
+```sql
+CREATE UNIQUE INDEX uniq_agendamento_slot_ativo
+ON public.agendamentos (clinica_id, data_agendamento, hora_agendamento)
+WHERE status_crm <> 'cancelado'
+  AND data_agendamento IS NOT NULL
+  AND hora_agendamento IS NOT NULL
+  AND clinica_id IS NOT NULL;
+```
 
-## 2. Frontend — Nova página `/status/:id`
+- Cancelados não bloqueiam (permite reagendar no mesmo slot depois).
+- Antes de aplicar, a migração faz `SELECT` para detectar duplicatas pré-existentes e loga (não falha) — se houver, listo no console e oriento o usuário a unificar via Drawer de Duplicados.
 
-**Novo arquivo**: `src/pages/StatusAgendamento.tsx`
-- Usa `useParams` para pegar o UUID e chama a edge function `status-agendamento`.
-- Estados: loading, erro (link inválido), sucesso.
-- Layout dark, alinhado à identidade visual (Navy/Gold + Plus Jakarta Sans / Fraunces).
-- Conteúdo:
-  - **Badge de status** grande com cor e ícone:
-    - `confirmation_status = 'confirmado'` ou `status_crm = 'ATENDIDO'` → verde "Confirmado" ✅
-    - `confirmation_status = 'cancelado'` → vermelho "Cancelado" ❌
-    - `status_funil = 'lead'` → amarelo "Aguardando contato da equipe" ⏳
-    - default → azul "Agendamento recebido" 📋
-  - **Card com detalhes**:
-    - Saudação: "Olá, {primeiro_nome}!"
-    - 📅 Data formatada (dd/MM/yyyy, dia da semana em pt-BR via `date-fns`)
-    - ⏰ Horário (HH:mm) — com aviso "Atendimento por ordem de chegada"
-    - 📍 Local (label amigável)
-    - 🩺 Tipo de atendimento (+ detalhe se exame/cirurgia)
-    - 💳 Convênio
-  - **CTA WhatsApp**: botão verde "Falar com a clínica" abrindo `https://wa.me/5591936180476`.
-  - Rodapé com logo/nome do Dr. Juliano Machado e link para o site.
-- SEO: `<Helmet>` com `noindex, nofollow` (página privada por link).
+### 2. Edge Functions — Tratar erro `23505` (violação de unique) com mensagem amigável
 
-**Registrar rota** em `src/App.tsx`: `<Route path="/status/:id" element={<StatusAgendamento />} />` (acima do catch-all).
+Em `criar-agendamento` e `converter-lead-agendamento`:
+- Após o `.insert()`, se `error.code === '23505'` (unique_violation no índice acima), retornar **HTTP 409** com `{ error: 'Este horário acabou de ser reservado por outra pessoa. Escolha outro horário.', code: 'SLOT_TAKEN' }`.
+- Garante que mesmo numa race condition o segundo INSERT falha com mensagem clara em vez de criar duplicata.
 
----
+### 3. Admin — Validar antes de salvar
 
-## 3. Integração com template de confirmação WhatsApp
+**`NovoAgendamentoAdminModal.tsx`**: antes de chamar `criarAgendamento`, invocar a edge function `validar-agendamento` (já existe) e bloquear o submit se `disponivel === false`, mostrando o motivo + alternativas no toast.
 
-**Atualizar** `supabase/functions/_shared/templateRenderer.ts`:
-- Adicionar variável `{{link_status}}` ao mapeamento de `renderizarTemplate` e à interface `DadosTemplate`.
-- Atualizar template padrão `confirmacao_agendamento` para incluir:
-  ```
-  🔗 Acompanhe seu agendamento: {{link_status}}
-  ```
-- Idem para `lembrete_24h` e `reagendamento`.
+**`AgendamentoDetailsModal.tsx`**: ao salvar mudança de `data_agendamento` ou `hora_agendamento`, idem — validar contra o novo slot, ignorando o próprio agendamento (passar `excluir_id` para a função).
 
-**Atualizar quem chama o renderer** (passar `link_status: \`https://drjulianomachado.com/status/${agendamentoId}\``):
-- `supabase/functions/enviar-confirmacao-whatsapp/index.ts`
-- `supabase/functions/confirmar-agendamento-whatsapp/index.ts`
-- `supabase/functions/lembrete-consulta-whatsapp/index.ts`
+Para suportar isso, atualizar `validar-agendamento` (edge function) e `validarDisponibilidade` (shared) para aceitar parâmetro opcional `excluir_agendamento_id` que é descontado dos `ocupados`.
 
-**Migration de dados** (insert tool, não migration de schema): atualizar registros em `templates_whatsapp` (tipos `confirmacao_agendamento`, `lembrete_24h`, `reagendamento`) para incluir `{{link_status}}` no conteúdo, e adicionar `link_status` ao array `variaveis_disponiveis`.
+### 4. Frontend público — Revalidar imediatamente antes do submit final
+
+No `DateTimeStep.handleNext` já existe validação. Adicionar mesma revalidação no `ConfirmationStep` (Step 4) **um instante antes** do submit final, porque entre Step 3 e Step 4 podem se passar minutos. Se voltar 409/indisponível, abrir um banner com botão "Escolher outro horário" que volta para Step 3 com `reloadKey` incrementado (força refetch dos slots).
+
+### 5. UI — Feedback claro de slot tomado
+
+Quando qualquer fluxo receber 409 SLOT_TAKEN:
+- Toast destrutivo com mensagem
+- Em fluxos com calendário aberto: chamar refresh dos slots imediatamente para o paciente ver o slot sumir
 
 ---
 
-## 4. Admin — Copiar link do status
+## Arquivos afetados
 
-**Atualizar** `src/components/admin/AgendamentoDetailsModal.tsx`:
-- Adicionar botão "Copiar link de status" que copia `https://drjulianomachado.com/status/{id}` para o clipboard, com toast de confirmação.
-- Útil para a equipe enviar manualmente quando necessário.
-
----
-
-## 5. Segurança e considerações
-
-- **UUID v4 como token**: 122 bits de entropia — inviável de adivinhar por força bruta.
-- **Rate limit** na edge function previne enumeração.
-- **Projeção mínima** de campos: nada de telefone, email ou observações expostos.
-- **Primeiro nome apenas**: reduz exposição do nome completo caso o link vaze.
-- **noindex** evita indexação por buscadores.
-- **HTTPS obrigatório** (já garantido por Lovable hosting).
-
----
-
-## Arquivos criados/editados
-
-**Criar:**
-- `supabase/functions/status-agendamento/index.ts`
-- `src/pages/StatusAgendamento.tsx`
-
-**Editar:**
-- `supabase/config.toml` (bloco `verify_jwt = false` para a nova função)
-- `supabase/functions/_shared/templateRenderer.ts`
-- `supabase/functions/enviar-confirmacao-whatsapp/index.ts`
-- `supabase/functions/confirmar-agendamento-whatsapp/index.ts`
-- `supabase/functions/lembrete-consulta-whatsapp/index.ts`
-- `src/App.tsx` (nova rota)
-- `src/components/admin/AgendamentoDetailsModal.tsx` (botão copiar link)
-- Dados em `templates_whatsapp` (via insert tool)
+- **Nova migration**: `supabase/migrations/<timestamp>_uniq_agendamento_slot.sql`
+- `supabase/functions/_shared/validarDisponibilidade.ts` — aceitar `excluir_agendamento_id`
+- `supabase/functions/validar-agendamento/index.ts` — repassar parâmetro
+- `supabase/functions/criar-agendamento/index.ts` — tratar 23505
+- `supabase/functions/converter-lead-agendamento/index.ts` — tratar 23505
+- `src/services/agendamentos.ts` — tratar erro SLOT_TAKEN no `atualizarAgendamento`
+- `src/components/admin/NovoAgendamentoAdminModal.tsx` — validar antes de salvar
+- `src/components/admin/AgendamentoDetailsModal.tsx` — revalidar ao mudar data/hora
+- `src/components/scheduling/ConfirmationStep.tsx` — revalidar antes do submit final
+- `src/components/scheduling/SchedulingModal.tsx` e `src/pages/Agendar.tsx` — handler do erro SLOT_TAKEN
 
 ---
 
 ## Resultado esperado
-O paciente recebe a mensagem de confirmação no WhatsApp com um link `https://drjulianomachado.com/status/{uuid}`. Ao clicar, vê uma página limpa, branded, com o status atual do agendamento (confirmado, aguardando, atendido, cancelado), todos os detalhes da consulta e um botão direto para falar com a clínica via WhatsApp. Equipe interna pode copiar o link diretamente do modal de detalhes no admin.
+
+- ❌ Impossível existirem dois agendamentos ativos no mesmo `(clinica, data, hora)` — garantido pelo banco.
+- ✅ Admin não consegue mais salvar conflito sem aviso.
+- ✅ Paciente em race condition recebe mensagem clara e é redirecionado a escolher outro horário.
+- ✅ Edição de agendamento existente também é validada.
