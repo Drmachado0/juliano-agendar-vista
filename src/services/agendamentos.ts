@@ -364,12 +364,19 @@ export async function reprocessarBoasVindas(): Promise<{
     if (error) {
       return { processed: 0, failed: 0, total_pending: 0, error: new Error(error.message) };
     }
-    return {
+    const result = {
       processed: data?.processed ?? 0,
       failed: data?.failed ?? 0,
       total_pending: data?.total_pending ?? 0,
       error: null,
     };
+    // Registrar auditoria (fire-and-forget)
+    const { registrarAuditCrm } = await import('./crmAudit');
+    registrarAuditCrm({
+      acao: 'reprocess_welcome',
+      detalhes: { processed: result.processed, failed: result.failed, total_pending: result.total_pending },
+    });
+    return result;
   } catch (err) {
     return { processed: 0, failed: 0, total_pending: 0, error: err as Error };
   }
