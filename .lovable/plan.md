@@ -1,34 +1,63 @@
+## Objetivo
 
+Garantir que o trigger GTM **"Evento - Meta Lead"** (event name: `meta_lead`) receba o payload completo esperado em **todas as páginas de agendamento** (`/agendamento`, `/agendar`, `/agendar-consulta` e o modal `SchedulingModal`), preservando o `content_name` descritivo por contexto.
 
-User wants to update the rating display from "4.9" to "5.0" with five star icons (★★★★★) for visual emphasis on the `/agendamento` page hero.
+## Estado atual
 
-Need to find where "4.9" appears on Agendamento.tsx.
-<lov-tool-use id="toolu_vrtx_01KwbhNoD1MNWAVJJFduWwRv" name="code--search_files" integration-id="code" data="{\"query\": \"4.9\", \"include_patterns\": \"src/pages/Agendamento.tsx,src/components/HeroSection.tsx\"}">
-</lov-tool-use>
+`src/hooks/useMetaPixel.ts` → `trackLead()` já dispara:
 
-<lov-tool-use id="toolu_vrtx_01SHtQn6tPvAuJZCQe1R4DdR" name="code--search_files" integration-id="code" data="{\"query\": \"4.9\", \"include_patterns\": \"src/pages/Agendamento.tsx,src/components/HeroSection.tsx\"}">
-</lov-tool-use>
-<lov-plan>
+```js
+window.dataLayer.push({
+  event: 'meta_lead',
+  content_name: <dinâmico>,
+  content_category: 'Consulta Oftalmológica',
+  value: 300,
+  currency: 'BRL',
+});
+```
+
+Esse helper é chamado ao avançar da Step 1 (nome + telefone + e-mail) em:
+- `src/pages/Agendamento.tsx` (linha 112)
+- `src/pages/Agendar.tsx`
+- `src/pages/AgendarConsulta.tsx`
+- `src/components/scheduling/SchedulingModal.tsx`
+
+**Faltam no payload:** `form_name`.
 
 ## Mudança
-Em `src/pages/Agendamento.tsx`, linha 348-352 (bloco de social proof do hero):
 
-**Antes:**
+Editar **apenas `src/hooks/useMetaPixel.ts`**, função `trackLead`, para incluir `form_name: 'agendamento'`. Como todas as páginas usam esse helper, a correção se propaga automaticamente.
+
+Payload final que será enviado ao dataLayer:
+
+```js
+{
+  event: 'meta_lead',
+  form_name: 'agendamento',
+  content_name: <descritivo do contexto, ex.: 'Dados Pessoais Preenchidos - Landing'>,
+  content_category: 'Consulta Oftalmológica',
+  value: 300,
+  currency: 'BRL',
+}
 ```
-⭐ 4.9   ✓ 13+ anos de experiência   ✓ 6.000+ pacientes atendidos
-```
 
-**Depois:**
-```
-⭐⭐⭐⭐⭐ 5.0   ✓ 13+ anos de experiência   ✓ 6.000+ pacientes atendidos
-```
+Isso atende:
+- ✅ Trigger GTM `meta_lead` continua disparando exatamente nos mesmos pontos (Step 1 do form).
+- ✅ Adiciona `form_name='agendamento'` (novo) para a tag GTM filtrar/ler.
+- ✅ Mantém `content_category`, `value` conforme solicitado.
+- ✅ Preserva `content_name` dinâmico (útil para distinguir landing vs modal vs página) e mantém `currency: 'BRL'` (extra inofensivo).
 
-### Detalhes
-- Substituir o único `<Star />` por **5 ícones `<Star />`** preenchidos em dourado (`fill-primary text-primary`)
-- Trocar o número de `4.9` para `5.0` (em negrito para destaque)
-- Manter os dois badges seguintes (`13+ anos` e `6.000+ pacientes`) intactos
-- Sem outras mudanças na página
+## Arquivos afetados
 
-### Observação
-Esta alteração afeta apenas a página `/agendamento`. O `HeroSection.tsx` da home (`/`) puxa nota dinâmica do Google Places (avaliações reais) — não vou mexer lá para não quebrar a sincronização real. Se quiser que a home também mostre 5 estrelas fixas, me avise.
+- `src/hooks/useMetaPixel.ts` — adicionar `form_name: 'agendamento'` no objeto pushado por `trackLead()`.
 
+Nenhum outro arquivo precisa ser tocado.
+
+## Validação pós-deploy
+
+1. Abrir `/agendamento` em modo Preview do GTM.
+2. Preencher Step 1 e clicar em avançar.
+3. Confirmar no Tag Assistant que:
+   - Evento `meta_lead` aparece no dataLayer com `form_name: 'agendamento'`.
+   - Trigger "Evento - Meta Lead" dispara a tag Meta Pixel `Lead`.
+4. Repetir em `/agendar`, `/agendar-consulta` e no modal de agendamento (homepage).
