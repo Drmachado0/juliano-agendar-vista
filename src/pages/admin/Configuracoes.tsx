@@ -85,7 +85,7 @@ export default function Configuracoes() {
     include_convenio: true,
     auto_sync_enabled: true,
   });
-  
+  const [syncStats, setSyncStats] = useState<SyncStats>({ synced: 0, pending: 0 });
   // Google Reviews state
   const [reviewsSyncing, setReviewsSyncing] = useState(false);
   const [reviewsSyncResult, setReviewsSyncResult] = useState<{
