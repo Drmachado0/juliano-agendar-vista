@@ -277,8 +277,6 @@ async function pullForUser(
   };
 
   let syncToken: string | null = forceFullSync ? null : (tokenRow.sync_token ?? null);
-
-  let syncToken: string | null = tokenRow.sync_token ?? null;
   let pageToken: string | undefined;
   let nextSyncToken: string | null = null;
   const allEvents: GoogleEvent[] = [];
