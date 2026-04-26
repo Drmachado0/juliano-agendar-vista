@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import AuditLogDrawer from "@/components/admin/AuditLogDrawer";
 import DuplicadosDrawer from "@/components/admin/DuplicadosDrawer";
+import { useBoasVindasStatus } from "@/hooks/useBoasVindasStatus";
 
 const columns = [
   { status: "NOVO LEAD", title: "Novo Lead", color: "bg-emerald-500" },
