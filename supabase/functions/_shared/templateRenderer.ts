@@ -119,6 +119,7 @@ export function renderizarTemplate(template: string, dados: DadosTemplate): stri
     '{{profissional}}': dados.profissional,
     '{{tipo_atendimento}}': dados.tipo_atendimento,
     '{{convenio}}': dados.convenio,
+    '{{link_status}}': dados.link_status,
   };
 
   for (const [variavel, valor] of Object.entries(variaveis)) {
