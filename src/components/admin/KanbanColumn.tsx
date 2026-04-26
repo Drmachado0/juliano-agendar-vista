@@ -1,6 +1,7 @@
 import { Agendamento } from "@/services/agendamentos";
 import KanbanCard from "./KanbanCard";
 import { cn } from "@/lib/utils";
+import type { BoasVindasInfo } from "@/hooks/useBoasVindasStatus";
 
 interface KanbanColumnProps {
   title: string;
@@ -14,6 +15,7 @@ interface KanbanColumnProps {
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent, status: string) => void;
   isDragOver?: boolean;
+  boasVindasMap?: Record<string, BoasVindasInfo>;
 }
 
 const KanbanColumn = ({
