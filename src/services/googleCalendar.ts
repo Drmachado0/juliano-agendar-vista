@@ -22,7 +22,12 @@ export interface PullResult {
     errors: number;
   };
   error?: string;
+}
 
+export interface GoogleCalendarPullSettings {
+  pull_enabled?: boolean;
+  default_import_clinica_id?: string | null;
+}
 export interface GoogleCalendarStatus {
   connected: boolean;
   calendar_id?: string;
