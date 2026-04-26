@@ -5,6 +5,10 @@ import { Label } from "@/components/ui/label";
 import { FormData } from "./SchedulingModal";
 import CalendarGrid from "./CalendarGrid";
 import TimeSlotPicker from "./TimeSlotPicker";
+import AlternativesSuggestion from "./AlternativesSuggestion";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 interface DateTimeStepProps {
   formData: FormData;
@@ -16,27 +20,76 @@ interface DateTimeStepProps {
 const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStepProps) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(formData.selectedDate || null);
   const [selectedTime, setSelectedTime] = useState<string | null>(formData.selectedTime || null);
+  const [isValidating, setIsValidating] = useState(false);
+  const [highlightAlternativas, setHighlightAlternativas] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
-    setSelectedTime(null); // Reset time when date changes
+    setSelectedTime(null);
     updateFormData({ selectedDate: date, selectedTime: undefined });
+    setHighlightAlternativas(false);
   };
 
   const handleTimeSelect = (time: string) => {
     setSelectedTime(time);
     updateFormData({ selectedTime: time });
+    setHighlightAlternativas(false);
   };
 
   const handleProximoHorarioLivre = (data: Date, horario: string) => {
     setSelectedDate(data);
     setSelectedTime(horario);
     updateFormData({ selectedDate: data, selectedTime: horario });
+    setHighlightAlternativas(false);
   };
 
-  const handleNext = () => {
-    if (selectedDate && selectedTime) {
+  const handleAlternativaSelect = (data: Date, horario: string) => {
+    setSelectedDate(data);
+    setSelectedTime(horario);
+    updateFormData({ selectedDate: data, selectedTime: horario });
+    setHighlightAlternativas(false);
+  };
+
+  const handleNext = async () => {
+    if (!selectedDate || !selectedTime) return;
+
+    setIsValidating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("validar-agendamento", {
+        body: {
+          local_atendimento: formData.location,
+          data_agendamento: format(selectedDate, "yyyy-MM-dd"),
+          hora_agendamento: selectedTime,
+        },
+      });
+
+      if (error) {
+        // Em caso de erro de rede, deixa o usuário avançar (validação final acontece no criar-agendamento)
+        console.warn("[DateTimeStep] Erro ao validar, prosseguindo:", error);
+        onNext();
+        return;
+      }
+
+      if (data && data.disponivel === false) {
+        toast({
+          title: "Horário indisponível",
+          description:
+            data.motivo ||
+            "Esse horário acabou de ser ocupado. Veja as opções abaixo.",
+          variant: "destructive",
+        });
+        setHighlightAlternativas(true);
+        setReloadKey((k) => k + 1);
+        return;
+      }
+
       onNext();
+    } catch (err) {
+      console.warn("[DateTimeStep] Falha de validação, prosseguindo:", err);
+      onNext();
+    } finally {
+      setIsValidating(false);
     }
   };
 
@@ -66,6 +119,7 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
         {/* Time Slots Section */}
         <div className="bg-card rounded-xl border border-border p-4">
           <TimeSlotPicker
+            key={reloadKey}
             selectedDate={selectedDate}
             selectedTime={selectedTime}
             onSelectTime={handleTimeSelect}
@@ -88,6 +142,16 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
           </p>
         </div>
       )}
+
+      {/* Alternativas próximas */}
+      <AlternativesSuggestion
+        selectedDate={selectedDate}
+        selectedTime={selectedTime}
+        localAtendimento={formData.location}
+        acceptFirstAvailable={formData.acceptFirstAvailable}
+        highlight={highlightAlternativas}
+        onSelect={handleAlternativaSelect}
+      />
 
       {/* Checkboxes */}
       <div className="space-y-4 pt-2">
@@ -130,12 +194,12 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
         <Button variant="outline" onClick={onPrev}>
           Voltar
         </Button>
-        <Button 
-          variant="hero" 
+        <Button
+          variant="hero"
           onClick={handleNext}
-          disabled={!canProceed}
+          disabled={!canProceed || isValidating}
         >
-          Avançar
+          {isValidating ? "Verificando..." : "Avançar"}
         </Button>
       </div>
     </div>
