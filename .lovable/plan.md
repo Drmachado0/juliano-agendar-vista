@@ -1,58 +1,80 @@
-# Melhorias na integração com Google Calendar
 
-## Estado atual
-- OAuth funciona, mas `calendar_id` é fixo em `primary` (sem opção de escolher).
-- Sem visibilidade da conta conectada, data, ou status de saúde da sincronização.
-- Sem teste de conexão, ressincronização manual ou pausa temporária.
-- Configurações de evento (duração, lembretes, cor, conteúdo) não são editáveis.
+## Revisão da Conexão com Google Calendar
 
-## Melhorias propostas
+Investiguei o estado atual (logs, banco, código) e a conexão **está funcionando** (check ✅, list ✅, update-calendar ✅, test ✅), mas identifiquei **5 problemas reais** que vou corrigir.
 
-### 1. Seleção de calendário de destino
-- Nova edge function `google-calendar-list` chamando `GET /users/me/calendarList`, retornando apenas calendários com permissão de escrita (owner/writer).
-- UI: `Select` com lista (nome + badge "Principal"). Salvar em `google_calendar_tokens.calendar_id` via nova action `update-calendar`.
+---
 
-### 2. Detalhes da conexão
-- Migração: adicionar `google_email TEXT`, `connected_at TIMESTAMPTZ`, `last_sync_at TIMESTAMPTZ`, `last_sync_error TEXT` em `google_calendar_tokens`.
-- Callback grava `google_email` chamando `oauth2/v2/userinfo` (requer adicionar escopo `userinfo.email`).
-- UI mostra: e-mail conectado, data da conexão, "última sincronização há X min", alerta se houver erro.
+### 🔴 Problema 1 — Fuso horário errado nos eventos
+O código em `google-calendar-sync/index.ts` (linhas 118-119) cria eventos **hardcoded em `America/Sao_Paulo`**, mas o calendário do usuário está em `America/Belem` (1h de diferença). Eventos estão sendo criados no horário errado no Google Calendar.
 
-### 3. Botão "Testar conexão"
-- Nova action `test` na função `google-calendar-sync` faz um GET rápido no calendário e retorna `{ ok, summary, time_zone }`.
-- UI exibe resultado em toast com ícone verde/vermelho.
+**Correção:**
+- Adicionar coluna `time_zone` em `google_calendar_tokens`.
+- Salvar o timezone retornado pelo Google (já vem no `test` e em `calendarList`) no momento da conexão e da seleção de calendário.
+- `buildEvent` passa a usar esse timezone (fallback `America/Sao_Paulo`).
 
-### 4. Configurações de evento personalizáveis
-- Nova tabela `google_calendar_settings` (1 linha por user_id, RLS admin-only):
-  - `default_duration_min` (int, default 30)
-  - `reminder_popup_min` (int[], default `{60, 1440}`)
-  - `event_color_id` (text, IDs Google 1–11)
-  - `include_patient_phone` (bool)
-  - `include_convenio` (bool)
-  - `auto_sync_enabled` (bool) — pausa sincronização sem desconectar
-- UI: switches/inputs + selector visual de cores.
-- `createGoogleCalendarEvent` passa a ler estas settings.
+---
 
-### 5. Ressincronização em lote
-- Nova action `sync-batch` itera agendamentos futuros (próximos 30 dias) sem `google_calendar_event_id` e cria eventos em lote (com pequeno delay).
-- UI: botão "Ressincronizar próximos 30 dias" com toast de progresso/total.
+### 🔴 Problema 2 — `google_email` salvando como `null`
+O response do `check` mostra `google_email: null` mesmo após reconexão. O `userinfo` no callback está em `try/catch` silencioso — se falhar, fica null para sempre.
 
-### 6. Pausar/retomar sincronização
-- Switch lendo `auto_sync_enabled`. Helper `syncAgendamentoToCalendar` respeita a flag.
+**Correção:**
+- Nova action `refresh-email` em `google-calendar-sync` que consulta `oauth2/v2/userinfo` usando o access token atual e atualiza o registro.
+- Botão "Atualizar info da conta" no card de status (executa automaticamente uma vez se `google_email` estiver null).
 
-### 7. Link rápido
-- Botão "Abrir no Google Calendar" → `https://calendar.google.com/calendar/u/0/r?cid=<calendar_id base64>`.
+---
 
-## Arquivos afetados
-- **Migração SQL**: colunas novas em `google_calendar_tokens` + tabela `google_calendar_settings` com RLS.
-- **Edge functions**:
-  - `supabase/functions/google-calendar-list/index.ts` (nova)
-  - `supabase/functions/google-calendar-sync/index.ts` (novas actions: `test`, `update-calendar`, `sync-batch`; ler settings; gravar `last_sync_at`/`last_sync_error`)
-  - `supabase/functions/google-calendar-callback/index.ts` (gravar `google_email` e `connected_at`)
-  - `supabase/functions/_shared/syncGoogleCalendar.ts` (respeitar `auto_sync_enabled`)
-  - `supabase/config.toml` (registrar `google-calendar-list` com `verify_jwt = true`)
-- **Frontend**:
-  - `src/services/googleCalendar.ts` — novas funções (`listGoogleCalendars`, `updateCalendarSelection`, `testConnection`, `getSettings`, `updateSettings`, `resyncBatch`).
-  - `src/pages/admin/Configuracoes.tsx` — card expandido com cabeçalho de status, select de calendário, botões de ação e bloco de configurações.
+### 🟡 Problema 3 — Falhas transitórias quebram a UI
+Log mostra `FunctionsFetchError: Failed to fetch` esporádico no `check`. Hoje isso reseta o status para `{ connected: false }` na UI mesmo com a conexão válida.
 
-## Observação importante
-- Será adicionado o escopo `userinfo.email` no fluxo OAuth, então será necessário **reconectar a conta uma vez** após o deploy para capturar o e-mail (a UI avisará).
+**Correção:**
+- Em `services/googleCalendar.ts`, adicionar **retry com backoff** (2 tentativas, 500ms) no `checkGoogleCalendarConnection`.
+- Tratar erro de rede separadamente de "desconectado": manter o último status conhecido em vez de mostrar "desconectado".
+
+---
+
+### 🟡 Problema 4 — Toggle `auto_sync_enabled` sem feedback visual
+Existe a configuração mas a UI não mostra de forma clara quando a sincronização automática está pausada, nem o `_shared/syncGoogleCalendar.ts` informa no log o motivo.
+
+**Correção:**
+- Banner amarelo no card quando `auto_sync_enabled = false`: "⏸ Sincronização automática pausada — eventos novos não serão criados no Google Calendar até reativar".
+- Manter botão "Resincronizar" sempre disponível para forçar manualmente.
+
+---
+
+### 🟢 Problema 5 — Sem visibilidade de eventos órfãos
+Hoje não há como saber quantos agendamentos estão sincronizados vs. pendentes.
+
+**Correção:**
+- Adicionar contador no card: "📅 X agendamentos sincronizados • Y pendentes (próximos 30 dias)".
+- Nova action leve `sync-stats` que retorna apenas counts (sem chamar Google).
+
+---
+
+### 📋 Resumo de Arquivos
+
+**Migration (1):**
+- Adicionar `time_zone TEXT` em `google_calendar_tokens`.
+
+**Edge Functions:**
+- `google-calendar-sync/index.ts`: 
+  - Usar timezone salvo em `buildEvent`.
+  - Nova action `refresh-email`.
+  - Nova action `sync-stats`.
+  - `update-calendar` também salva o `time_zone` do calendário escolhido.
+  - `test` atualiza o `time_zone` no DB.
+- `google-calendar-callback/index.ts`: log mais verboso quando userinfo falha (para diagnóstico).
+
+**Frontend:**
+- `src/services/googleCalendar.ts`: retry no `check`, novas funções `refreshGoogleEmail` e `getSyncStats`.
+- `src/pages/admin/Configuracoes.tsx`:
+  - Banner de pausa automática.
+  - Contador de sincronização.
+  - Auto-refresh do email se vier null.
+  - Mostrar timezone do calendário selecionado.
+
+---
+
+### ⚠️ O que NÃO vou fazer
+- **Webhooks (push notifications) do Google** — exigem URL pública verificada e renovação a cada 7 dias; complexidade alta para o ganho. Posso adicionar depois se você quiser sincronização bidirecional real.
+- **Forçar reconexão** — sua conexão atual continua válida, só vamos corrigir/enriquecer os dados em background.

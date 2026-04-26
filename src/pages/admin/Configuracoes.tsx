@@ -46,9 +46,12 @@ import {
   testGoogleCalendarConnection,
   resyncBatchGoogleCalendar,
   updateGoogleCalendarSettings,
+  refreshGoogleEmail,
+  getGoogleCalendarSyncStats,
   GoogleCalendarStatus,
   GoogleCalendarItem,
   GoogleCalendarSettings,
+  SyncStats,
 } from "@/services/googleCalendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -82,7 +85,7 @@ export default function Configuracoes() {
     include_convenio: true,
     auto_sync_enabled: true,
   });
-  
+  const [syncStats, setSyncStats] = useState<SyncStats>({ synced: 0, pending: 0 });
   // Google Reviews state
   const [reviewsSyncing, setReviewsSyncing] = useState(false);
   const [reviewsSyncResult, setReviewsSyncResult] = useState<{
@@ -161,7 +164,20 @@ export default function Configuracoes() {
     setGcalLoading(false);
     if (status.connected) {
       loadCalendarList();
+      loadSyncStats();
+      // Auto-refresh do e-mail caso esteja faltando
+      if (!status.google_email) {
+        refreshGoogleEmail(user.id).then(({ google_email }) => {
+          if (google_email) setGcalStatus((prev) => ({ ...prev, google_email }));
+        });
+      }
     }
+  }
+
+  async function loadSyncStats() {
+    if (!user?.id) return;
+    const stats = await getGoogleCalendarSyncStats(user.id);
+    setSyncStats(stats);
   }
 
   async function loadCalendarList() {
@@ -177,7 +193,7 @@ export default function Configuracoes() {
     const { success, error } = await updateCalendarSelection(user.id, calendarId);
     if (success) {
       toast.success('Calendário atualizado');
-      setGcalStatus({ ...gcalStatus, calendar_id: calendarId });
+      checkGCalConnection();
     } else {
       toast.error(error || 'Erro ao atualizar calendário');
     }
@@ -835,11 +851,41 @@ export default function Configuracoes() {
                         </Alert>
                       )}
 
+                      {gcalStatus.connected && gcalSettings.auto_sync_enabled === false && (
+                        <Alert className="border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/30">
+                          <AlertCircle className="h-4 w-4 text-yellow-600" />
+                          <AlertDescription className="text-sm">
+                            <strong>⏸ Sincronização automática pausada.</strong> Novos agendamentos não serão criados no Google Calendar até que você reative a opção abaixo. Você ainda pode sincronizar manualmente pelo botão "Ressincronizar".
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {/* Estatísticas de sincronização */}
+                      <div className="flex flex-wrap gap-3 text-sm">
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-500/30">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <span><strong>{syncStats.synced}</strong> sincronizados</span>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-orange-50 dark:bg-orange-950/30 border border-orange-500/30">
+                          <Clock className="h-4 w-4 text-orange-600" />
+                          <span><strong>{syncStats.pending}</strong> pendentes</span>
+                        </div>
+                        {gcalStatus.time_zone && (
+                          <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted border">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Fuso: <strong className="text-foreground">{gcalStatus.time_zone}</strong></span>
+                          </div>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={loadSyncStats} className="gap-1 h-auto py-1">
+                          <RefreshCw className="h-3 w-3" /> Atualizar
+                        </Button>
+                      </div>
+
                       {!gcalStatus.google_email && (
                         <Alert>
                           <AlertCircle className="h-4 w-4" />
                           <AlertDescription>
-                            Reconecte sua conta para habilitar os novos recursos (e-mail, escolha de calendário).
+                            Buscando informações da conta Google… Se persistir, clique em "Testar conexão" abaixo.
                           </AlertDescription>
                         </Alert>
                       )}

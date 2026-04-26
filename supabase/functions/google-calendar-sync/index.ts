@@ -57,6 +57,19 @@ async function refreshAccessToken(refreshToken: string) {
   return data;
 }
 
+async function fetchUserEmail(accessToken: string): Promise<string | null> {
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j.email ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function getValidAccessToken(supabase: any, userId: string): Promise<string> {
   const { data: tokenData, error } = await supabase
     .from('google_calendar_tokens')
@@ -99,11 +112,19 @@ async function getSettings(supabase: any, userId: string): Promise<GcalSettings>
   };
 }
 
-function buildEvent(agendamento: Agendamento, settings: GcalSettings) {
+function buildEvent(agendamento: Agendamento, settings: GcalSettings, timeZone: string) {
   const [year, month, day] = agendamento.data_agendamento.split('-').map(Number);
   const [hour, minute] = agendamento.hora_agendamento.split(':').map(Number);
-  const startDate = new Date(year, month - 1, day, hour, minute);
-  const endDate = new Date(startDate.getTime() + settings.default_duration_min * 60 * 1000);
+  // Build local-time strings (Calendar API will treat them as the given timeZone)
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const startLocal = `${year}-${pad(month)}-${pad(day)}T${pad(hour)}:${pad(minute)}:00`;
+  const endTotalMin = hour * 60 + minute + settings.default_duration_min;
+  const endHour = Math.floor(endTotalMin / 60) % 24;
+  const endMin = endTotalMin % 60;
+  // If end crosses midnight, advance the day
+  const dayOffset = Math.floor((hour * 60 + minute + settings.default_duration_min) / 1440);
+  const endDateObj = new Date(year, month - 1, day + dayOffset);
+  const endLocal = `${endDateObj.getFullYear()}-${pad(endDateObj.getMonth() + 1)}-${pad(endDateObj.getDate())}T${pad(endHour)}:${pad(endMin)}:00`;
 
   const descLines = [`Paciente: ${agendamento.nome_completo}`];
   if (settings.include_patient_phone) descLines.push(`Telefone: ${agendamento.telefone_whatsapp}`);
@@ -115,8 +136,8 @@ function buildEvent(agendamento: Agendamento, settings: GcalSettings) {
     summary: `${agendamento.tipo_atendimento} - ${agendamento.nome_completo}`,
     description: descLines.join('\n'),
     location: agendamento.local_atendimento,
-    start: { dateTime: startDate.toISOString(), timeZone: 'America/Sao_Paulo' },
-    end: { dateTime: endDate.toISOString(), timeZone: 'America/Sao_Paulo' },
+    start: { dateTime: startLocal, timeZone },
+    end: { dateTime: endLocal, timeZone },
     reminders: {
       useDefault: false,
       overrides: settings.reminder_popup_min.map((m) => ({ method: 'popup', minutes: m })),
@@ -149,7 +170,7 @@ serve(async (req) => {
     if (action === 'check') {
       const { data: tokenData, error } = await supabase
         .from('google_calendar_tokens')
-        .select('id, calendar_id, google_email, connected_at, last_sync_at, last_sync_error, updated_at')
+        .select('id, calendar_id, google_email, time_zone, connected_at, last_sync_at, last_sync_error, updated_at')
         .eq('user_id', user_id)
         .maybeSingle();
 
@@ -160,6 +181,7 @@ serve(async (req) => {
           connected: !error && !!tokenData,
           calendar_id: tokenData?.calendar_id,
           google_email: tokenData?.google_email,
+          time_zone: tokenData?.time_zone,
           connected_at: tokenData?.connected_at,
           last_sync_at: tokenData?.last_sync_at,
           last_sync_error: tokenData?.last_sync_error,
@@ -177,17 +199,32 @@ serve(async (req) => {
       });
     }
 
-    // ---- update-calendar ----
-    if (action === 'update-calendar') {
-      if (!bodyCalendarId) throw new Error('calendar_id é obrigatório');
-      const { error } = await supabase
-        .from('google_calendar_tokens')
-        .update({ calendar_id: bodyCalendarId, updated_at: new Date().toISOString() })
-        .eq('user_id', user_id);
-      if (error) throw error;
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // ---- sync-stats (não chama Google) ----
+    if (action === 'sync-stats') {
+      const today = new Date().toISOString().slice(0, 10);
+      const limitDate = new Date();
+      limitDate.setDate(limitDate.getDate() + 30);
+      const limitStr = limitDate.toISOString().slice(0, 10);
+
+      const { count: synced } = await supabase
+        .from('agendamentos')
+        .select('id', { count: 'exact', head: true })
+        .gte('data_agendamento', today)
+        .lte('data_agendamento', limitStr)
+        .not('google_calendar_event_id', 'is', null);
+
+      const { count: pending } = await supabase
+        .from('agendamentos')
+        .select('id', { count: 'exact', head: true })
+        .gte('data_agendamento', today)
+        .lte('data_agendamento', limitStr)
+        .is('google_calendar_event_id', null)
+        .not('hora_agendamento', 'is', null);
+
+      return new Response(
+        JSON.stringify({ synced: synced ?? 0, pending: pending ?? 0 }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // For remaining actions we need a valid Google token + Google credentials
@@ -196,12 +233,61 @@ serve(async (req) => {
     }
 
     const accessToken = await getValidAccessToken(supabase, user_id);
+
+    // ---- refresh-email ----
+    if (action === 'refresh-email') {
+      const email = await fetchUserEmail(accessToken);
+      if (email) {
+        await supabase
+          .from('google_calendar_tokens')
+          .update({ google_email: email, updated_at: new Date().toISOString() })
+          .eq('user_id', user_id);
+      }
+      return new Response(
+        JSON.stringify({ success: !!email, google_email: email }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ---- update-calendar (também busca timezone) ----
+    if (action === 'update-calendar') {
+      if (!bodyCalendarId) throw new Error('calendar_id é obrigatório');
+      // Buscar timezone do calendário escolhido
+      let tz: string | null = null;
+      try {
+        const r = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(bodyCalendarId)}`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        if (r.ok) {
+          const j = await r.json();
+          tz = j.timeZone ?? null;
+        }
+      } catch (_) { /* fallback abaixo */ }
+
+      const updatePayload: Record<string, unknown> = {
+        calendar_id: bodyCalendarId,
+        updated_at: new Date().toISOString(),
+      };
+      if (tz) updatePayload.time_zone = tz;
+
+      const { error } = await supabase
+        .from('google_calendar_tokens')
+        .update(updatePayload)
+        .eq('user_id', user_id);
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true, time_zone: tz }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { data: tokenData } = await supabase
       .from('google_calendar_tokens')
-      .select('calendar_id')
+      .select('calendar_id, time_zone, google_email')
       .eq('user_id', user_id)
       .single();
     const calendarId = tokenData?.calendar_id || 'primary';
+    const calendarTimeZone = tokenData?.time_zone || 'America/Sao_Paulo';
 
     // ---- test ----
     if (action === 'test') {
@@ -213,6 +299,16 @@ serve(async (req) => {
       if (!resp.ok) {
         await recordSyncStatus(supabase, user_id, data.error?.message || 'Falha no teste');
         throw new Error(data.error?.message || 'Falha no teste de conexão');
+      }
+      // Atualiza timezone e (se faltando) o e-mail
+      const updates: Record<string, unknown> = {};
+      if (data.timeZone) updates.time_zone = data.timeZone;
+      if (!tokenData?.google_email) {
+        const email = await fetchUserEmail(accessToken);
+        if (email) updates.google_email = email;
+      }
+      if (Object.keys(updates).length > 0) {
+        await supabase.from('google_calendar_tokens').update(updates).eq('user_id', user_id);
       }
       await recordSyncStatus(supabase, user_id, null);
       return new Response(
@@ -245,7 +341,7 @@ serve(async (req) => {
 
       for (const ag of pendentes ?? []) {
         try {
-          const eventData = buildEvent(ag, settings);
+          const eventData = buildEvent(ag, settings, calendarTimeZone);
           const resp = await fetch(
             `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
             {
@@ -287,7 +383,7 @@ serve(async (req) => {
         .single();
       if (agendamentoError || !agendamento) throw new Error('Agendamento não encontrado');
 
-      const eventData = buildEvent(agendamento, settings);
+      const eventData = buildEvent(agendamento, settings, calendarTimeZone);
       let eventId = agendamento.google_calendar_event_id;
 
       if (action === 'update' && eventId) {

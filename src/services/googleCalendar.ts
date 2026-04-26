@@ -16,7 +16,13 @@ export interface GoogleCalendarStatus {
   connected_at?: string;
   last_sync_at?: string;
   last_sync_error?: string | null;
+  time_zone?: string;
   settings?: GoogleCalendarSettings;
+}
+
+export interface SyncStats {
+  synced: number;
+  pending: number;
 }
 
 export interface GoogleCalendarItem {
@@ -30,18 +36,57 @@ export interface GoogleCalendarItem {
 }
 
 export async function checkGoogleCalendarConnection(userId: string): Promise<GoogleCalendarStatus> {
+  // Retry com backoff para mitigar erros transitórios "Failed to fetch"
+  let lastError: any = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
+        body: { action: 'check', user_id: userId }
+      });
+      if (error) {
+        lastError = error;
+        if (attempt === 0) {
+          await new Promise((r) => setTimeout(r, 500));
+          continue;
+        }
+        console.error('Error checking Google Calendar connection:', error);
+        // Erro de rede: não derruba o status — retorna marcador
+        return { connected: false, last_sync_error: 'network' };
+      }
+      return data;
+    } catch (err) {
+      lastError = err;
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 500));
+        continue;
+      }
+    }
+  }
+  console.error('Error checking Google Calendar connection:', lastError);
+  return { connected: false, last_sync_error: 'network' };
+}
+
+export async function refreshGoogleEmail(userId: string): Promise<{ google_email: string | null }> {
   try {
     const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
-      body: { action: 'check', user_id: userId }
+      body: { action: 'refresh-email', user_id: userId }
     });
-    if (error) {
-      console.error('Error checking Google Calendar connection:', error);
-      return { connected: false };
-    }
-    return data;
-  } catch (err) {
-    console.error('Error checking Google Calendar connection:', err);
-    return { connected: false };
+    if (error) return { google_email: null };
+    return { google_email: data?.google_email ?? null };
+  } catch {
+    return { google_email: null };
+  }
+}
+
+export async function getGoogleCalendarSyncStats(userId: string): Promise<SyncStats> {
+  try {
+    const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
+      body: { action: 'sync-stats', user_id: userId }
+    });
+    if (error) return { synced: 0, pending: 0 };
+    return { synced: data?.synced ?? 0, pending: data?.pending ?? 0 };
+  } catch {
+    return { synced: 0, pending: 0 };
   }
 }
 
