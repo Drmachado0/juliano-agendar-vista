@@ -103,6 +103,13 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
       newErrors.phone = "Telefone inválido";
     }
 
+    // Data de nascimento é opcional, mas se preenchida precisa estar completa e válida
+    if (birthDateBr.trim()) {
+      if (birthDateBr.length !== 10 || !brToIso(birthDateBr)) {
+        newErrors.birthDate = "Data inválida. Use o formato dd/mm/aaaa";
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
