@@ -3,9 +3,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle, CheckCircle2, UserPlus, Timer } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle, CheckCircle2, UserPlus, Timer, Send, XCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import type { BoasVindasInfo } from "@/hooks/useBoasVindasStatus";
 
 interface KanbanCardProps {
   agendamento: Agendamento;
@@ -13,6 +14,7 @@ interface KanbanCardProps {
   onSendWhatsApp: (agendamento: Agendamento) => void;
   onTriggerAutomation: (agendamento: Agendamento) => void;
   isDragging?: boolean;
+  boasVindas?: BoasVindasInfo;
 }
 
 // Verifica se é um lead incompleto (sem data/hora de agendamento)
