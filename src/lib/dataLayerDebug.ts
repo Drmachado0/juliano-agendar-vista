@@ -12,7 +12,6 @@
 
 declare global {
   interface Window {
-    dataLayer?: any[];
     __dlDebugInstalled?: boolean;
   }
 }
