@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { format, addDays, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { listarClinicas, Clinica } from "@/services/clinicas";
@@ -17,6 +17,9 @@ import { AgendaSlot } from "@/components/admin/AgendaSlot";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
 import { NovoAgendamentoAdminModal } from "@/components/admin/NovoAgendamentoAdminModal";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { pullGoogleCalendarEvents } from "@/services/googleCalendar";
+import { toast } from "@/hooks/use-toast";
 
 export default function Agenda() {
   const [clinicas, setClinicas] = useState<Clinica[]>([]);
