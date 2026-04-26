@@ -352,25 +352,6 @@ const TimeSlotPicker = ({
         })}
       </div>
 
-      {/* Legenda */}
-      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded border-2 border-border bg-background" />
-          Disponível
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded border-2 border-primary bg-primary" />
-          Selecionado
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded border-2 border-amber-500/60 bg-amber-500/20" />
-          Poucos restantes
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded border-2 border-dashed border-border/60 bg-muted/40" />
-          Ocupado
-        </div>
-      </div>
     </div>
   );
 };
