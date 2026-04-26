@@ -118,7 +118,8 @@ const TimeSlotPicker = ({
   };
 
   const handleProximoLivre = () => {
-    if (slots.length > 0) handleSelect(slots[0].horario);
+    const primeiroLiberado = slots.find((s) => horariosLiberados.has(s.horario));
+    if (primeiroLiberado) handleSelect(primeiroLiberado.horario);
   };
 
   if (!selectedDate) {
