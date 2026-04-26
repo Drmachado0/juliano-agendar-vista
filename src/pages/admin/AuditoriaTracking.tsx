@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -18,7 +21,10 @@ import {
   Tag,
   Activity,
   FileCode,
+  RefreshCw,
+  XCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 
 /**
  * AUDITORIA DE TRACKING
@@ -112,6 +118,8 @@ type RuntimeStatus = {
   dataLayerSize: number;
   fbqPresent: boolean;
   gtagPresent: boolean;
+  detectedPixelIds: string[];
+  detectionMethod: string;
 };
 
 const typeColor: Record<TrackingEntry["type"], string> = {
@@ -122,27 +130,124 @@ const typeColor: Record<TrackingEntry["type"], string> = {
   "DataLayer Event": "bg-muted text-muted-foreground border-border",
 };
 
+const EXPECTED_PIXEL_STORAGE_KEY = "expected_meta_pixel_id";
+const DEFAULT_EXPECTED_PIXEL_ID = "1003792428067622";
+
+/**
+ * Detecta Pixel IDs ativos em runtime usando 3 estratégias:
+ * 1. fbq.getState().pixels — API interna do fbq quando carregado
+ * 2. window._fbq.instance.pixelsByID — fallback estado interno
+ * 3. Parsing de scripts/imgs do facebook (fbevents.js / tr?id=...)
+ */
+function detectMetaPixelIds(): { ids: string[]; method: string } {
+  const w = window as any;
+  const found = new Set<string>();
+  const methods: string[] = [];
+
+  try {
+    const fbq = w.fbq;
+    if (typeof fbq === "function" && typeof fbq.getState === "function") {
+      const state = fbq.getState();
+      const pixels = state?.pixels || [];
+      pixels.forEach((p: any) => p?.id && found.add(String(p.id)));
+      if (pixels.length) methods.push("fbq.getState()");
+    }
+  } catch {
+    // ignore
+  }
+
+  try {
+    const inst = w._fbq?.instance?.pixelsByID;
+    if (inst && typeof inst === "object") {
+      Object.keys(inst).forEach((id) => found.add(String(id)));
+      if (Object.keys(inst).length) methods.push("_fbq.instance");
+    }
+  } catch {
+    // ignore
+  }
+
+  // Fallback: ler imagens tr?id=... e scripts fbevents
+  try {
+    const imgs = Array.from(document.images) as HTMLImageElement[];
+    imgs.forEach((img) => {
+      const src = img.src || "";
+      const m = src.match(/facebook\.com\/tr.*?[?&]id=(\d+)/);
+      if (m) found.add(m[1]);
+    });
+    if (Array.from(document.images).some((i) => i.src.includes("facebook.com/tr"))) {
+      methods.push("img tr?id");
+    }
+  } catch {
+    // ignore
+  }
+
+  return {
+    ids: Array.from(found),
+    method: methods.length ? methods.join(", ") : "nenhum método retornou IDs",
+  };
+}
+
 export default function AuditoriaTracking() {
+  const [expectedPixelId, setExpectedPixelId] = useState<string>(() => {
+    if (typeof window === "undefined") return DEFAULT_EXPECTED_PIXEL_ID;
+    return localStorage.getItem(EXPECTED_PIXEL_STORAGE_KEY) || DEFAULT_EXPECTED_PIXEL_ID;
+  });
+  const [pixelInput, setPixelInput] = useState(expectedPixelId);
   const [runtime, setRuntime] = useState<RuntimeStatus>({
     gtmLoaded: false,
     dataLayerSize: 0,
     fbqPresent: false,
     gtagPresent: false,
+    detectedPixelIds: [],
+    detectionMethod: "",
   });
 
-  useEffect(() => {
+  const runDetection = useCallback(() => {
     const w = window as any;
+    const detection = detectMetaPixelIds();
     setRuntime({
       gtmLoaded: Array.isArray(w.dataLayer) && w.dataLayer.some((e: any) => e?.["gtm.start"]),
       dataLayerSize: Array.isArray(w.dataLayer) ? w.dataLayer.length : 0,
       fbqPresent: typeof w.fbq === "function",
       gtagPresent: typeof w.gtag === "function",
+      detectedPixelIds: detection.ids,
+      detectionMethod: detection.method,
     });
   }, []);
+
+  useEffect(() => {
+    runDetection();
+    // Re-checar após GTM/Pixel carregarem (assíncronos)
+    const t1 = setTimeout(runDetection, 1500);
+    const t2 = setTimeout(runDetection, 4000);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [runDetection]);
+
+  const saveExpectedPixel = () => {
+    const trimmed = pixelInput.trim();
+    if (!/^\d{10,20}$/.test(trimmed)) {
+      toast.error("Pixel ID inválido — deve conter apenas dígitos (10-20)");
+      return;
+    }
+    localStorage.setItem(EXPECTED_PIXEL_STORAGE_KEY, trimmed);
+    setExpectedPixelId(trimmed);
+    toast.success("Pixel ID esperado atualizado");
+  };
 
   const pixelOnlyInGtm = TRACKING_INVENTORY.some(
     (t) => t.type === "Meta Pixel" && t.source === "gtm-only"
   );
+
+  const pixelMatch =
+    runtime.detectedPixelIds.length > 0 &&
+    runtime.detectedPixelIds.includes(expectedPixelId);
+  const pixelMismatch =
+    runtime.detectedPixelIds.length > 0 && !pixelMatch;
+  const pixelMissing =
+    runtime.fbqPresent === false && runtime.detectedPixelIds.length === 0;
 
   return (
     <AdminLayout>
