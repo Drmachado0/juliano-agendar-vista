@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { FormData } from "./SchedulingModal";
 import CalendarGrid from "./CalendarGrid";
 import TimeSlotPicker from "./TimeSlotPicker";
-import AlternativesSuggestion from "./AlternativesSuggestion";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
