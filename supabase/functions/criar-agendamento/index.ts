@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validarDisponibilidade } from "../_shared/validarDisponibilidade.ts";
+import { syncAgendamentoToCalendar } from "../_shared/syncGoogleCalendar.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -267,8 +268,13 @@ Deno.serve(async (req) => {
     }).then(() => console.log('[criar-agendamento] Email notification sent'))
       .catch((err: unknown) => console.error('[criar-agendamento] Email notification failed:', err));
 
-    // Aguarda ambas sem bloquear o retorno (best-effort)
-    Promise.allSettled([notifyWhatsApp, notifyEmail]);
+    // Sync com Google Calendar (fire-and-forget)
+    const notifyCalendar = syncAgendamentoToCalendar(supabase, data.id, "create")
+      .then(() => console.log("[criar-agendamento] Google Calendar sync triggered"))
+      .catch((err: unknown) => console.error("[criar-agendamento] Google Calendar sync failed:", err));
+
+    // Aguarda todas sem bloquear o retorno (best-effort)
+    Promise.allSettled([notifyWhatsApp, notifyEmail, notifyCalendar]);
 
     return new Response(
       JSON.stringify({ 
