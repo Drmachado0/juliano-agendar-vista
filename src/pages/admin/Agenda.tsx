@@ -108,6 +108,32 @@ export default function Agenda() {
     carregarAgenda();
   }
 
+  async function handleSyncGoogle() {
+    if (!user?.id) return;
+    setSyncingGoogle(true);
+    try {
+      const r = await pullGoogleCalendarEvents(user.id);
+      if (!r.ok) {
+        toast({
+          title: "Erro ao sincronizar",
+          description: r.error || "Verifique se o Google Calendar está conectado em Configurações.",
+          variant: "destructive",
+        });
+      } else {
+        const t = r.totals;
+        toast({
+          title: "Sincronização concluída",
+          description: t
+            ? `Importados: ${t.imported} · Atualizados: ${t.updated} · Cancelados: ${t.cancelled}${t.conflicts > 0 ? ` · ⚠️ ${t.conflicts} conflito(s)` : ""}`
+            : "Sem novos eventos.",
+        });
+        await carregarAgenda();
+      }
+    } finally {
+      setSyncingGoogle(false);
+    }
+  }
+
   if (loading) {
     return (
       <AdminLayout>
