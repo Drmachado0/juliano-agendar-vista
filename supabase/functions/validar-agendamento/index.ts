@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { local_atendimento, data_agendamento, hora_agendamento } = body;
+    const { local_atendimento, data_agendamento, hora_agendamento, excluir_agendamento_id } = body;
 
     console.log(`[validar-agendamento] Validando: ${data_agendamento} ${hora_agendamento} - ${local_atendimento}`);
 
@@ -64,7 +64,8 @@ Deno.serve(async (req) => {
       supabase,
       data_agendamento,
       hora_agendamento,
-      local_atendimento
+      local_atendimento,
+      excluir_agendamento_id
     );
 
     console.log(`[validar-agendamento] Resultado:`, resultado);
