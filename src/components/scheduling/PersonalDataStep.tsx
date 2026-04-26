@@ -11,8 +11,68 @@ interface PersonalDataStepProps {
   onNext: () => void;
 }
 
+// Converte ISO (yyyy-mm-dd) para BR (dd/mm/aaaa)
+const isoToBr = (iso: string) => {
+  if (!iso) return "";
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return "";
+  return `${m[3]}/${m[2]}/${m[1]}`;
+};
+
+// Converte BR (dd/mm/aaaa) para ISO (yyyy-mm-dd) — retorna "" se incompleto/inválido
+const brToIso = (br: string) => {
+  const m = br.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return "";
+  const dia = parseInt(m[1], 10);
+  const mes = parseInt(m[2], 10);
+  const ano = parseInt(m[3], 10);
+  const d = new Date(ano, mes - 1, dia);
+  if (
+    d.getFullYear() !== ano ||
+    d.getMonth() !== mes - 1 ||
+    d.getDate() !== dia
+  ) {
+    return "";
+  }
+  return `${m[3]}-${m[2]}-${m[1]}`;
+};
+
+// Aplica máscara dd/mm/aaaa enquanto digita
+const formatBirthDateInput = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+};
+
 const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStepProps) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [birthDateBr, setBirthDateBr] = useState<string>(isoToBr(formData.birthDate || ""));
+
+  const handleBirthDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const masked = formatBirthDateInput(e.target.value);
+    setBirthDateBr(masked);
+
+    if (masked.length === 10) {
+      const iso = brToIso(masked);
+      if (iso) {
+        updateFormData({ birthDate: iso });
+        setErrors((prev) => {
+          const { birthDate, ...rest } = prev;
+          return rest;
+        });
+      } else {
+        updateFormData({ birthDate: "" });
+        setErrors((prev) => ({ ...prev, birthDate: "Data inválida" }));
+      }
+    } else {
+      updateFormData({ birthDate: "" });
+      setErrors((prev) => {
+        const { birthDate, ...rest } = prev;
+        return rest;
+      });
+    }
+  };
 
   const formatPhone = (value: string) => {
     const numbers = value.replace(/\D/g, "");
