@@ -131,7 +131,8 @@ export function criarClienteSupabase(): SupabaseClient {
 export async function listarHorariosDisponiveis(
   supabase: SupabaseClient,
   data: string,
-  local?: string
+  local?: string,
+  excluirAgendamentoId?: string,
 ): Promise<SlotDisponivel[]> {
   const dataObj = new Date(data + "T12:00:00-03:00");
   const diaSemana = dataObj.getUTCDay();
@@ -169,12 +170,16 @@ export async function listarHorariosDisponiveis(
     .select("clinica_id, hora_inicio, hora_fim")
     .eq("data", data);
 
-  // 3. Buscar agendamentos existentes nesta data
-  const { data: agendamentos } = await supabase
+  // 3. Buscar agendamentos existentes nesta data (descontando o próprio, se for edição)
+  let agQuery = supabase
     .from("agendamentos")
-    .select("hora_agendamento, clinica_id")
+    .select("id, hora_agendamento, clinica_id")
     .eq("data_agendamento", data)
     .not("status_crm", "in", "(cancelado)");
+  if (excluirAgendamentoId) {
+    agQuery = agQuery.neq("id", excluirAgendamentoId);
+  }
+  const { data: agendamentos } = await agQuery;
 
   const ocupados = new Set(
     (agendamentos || []).map((a: any) => {
