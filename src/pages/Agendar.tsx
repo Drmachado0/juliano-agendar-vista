@@ -436,6 +436,64 @@ const Agendar = () => {
                 </div>
               </div>
 
+              {/* Carrossel de depoimentos — reforço de confiança antes do formulário */}
+              {!isSubmitted && (
+                <div className="mb-6 overflow-hidden rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-5 shadow-sm">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
+                      ))}
+                      <span className="ml-1 text-xs font-semibold text-foreground">
+                        5.0 · pacientes reais
+                      </span>
+                    </div>
+                    <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                      Depoimentos
+                    </span>
+                  </div>
+
+                  <div className="relative min-h-[110px]">
+                    {DEPOIMENTOS.map((d, idx) => (
+                      <div
+                        key={d.nome + d.data}
+                        className={`absolute inset-0 transition-all duration-500 ${
+                          idx === depoimentoAtivo
+                            ? "translate-x-0 opacity-100"
+                            : "pointer-events-none translate-x-2 opacity-0"
+                        }`}
+                        aria-hidden={idx !== depoimentoAtivo}
+                      >
+                        <p className="text-sm italic leading-relaxed text-foreground md:text-base">
+                          "{d.texto}"
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                          <strong className="text-foreground">{d.nome}</strong>
+                          <span className="text-muted-foreground">· {d.cidade}</span>
+                          <span className="text-muted-foreground">· {d.data}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-center gap-1.5">
+                    {DEPOIMENTOS.map((_, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setDepoimentoAtivo(idx)}
+                        aria-label={`Ver depoimento ${idx + 1}`}
+                        className={`h-1.5 rounded-full transition-all ${
+                          idx === depoimentoAtivo
+                            ? "w-6 bg-accent"
+                            : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <p className="mt-4 text-center text-xs text-muted-foreground">
                 <ShieldCheck className="mr-1 inline h-3.5 w-3.5 text-accent" />
                 Seus dados estão protegidos. Atendimento humanizado e sigiloso.
