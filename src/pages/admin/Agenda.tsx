@@ -109,11 +109,11 @@ export default function Agenda() {
     carregarAgenda();
   }
 
-  async function handleSyncGoogle() {
+  async function handleSyncGoogle(range: PullRange = "default") {
     if (!user?.id) return;
     setSyncingGoogle(true);
     try {
-      const r = await pullGoogleCalendarEvents(user.id);
+      const r = await pullGoogleCalendarEvents(user.id, range);
       if (!r.ok) {
         toast({
           title: "Erro ao sincronizar",
@@ -122,8 +122,12 @@ export default function Agenda() {
         });
       } else {
         const t = r.totals;
+        const rangeLabel =
+          range === "hoje" ? " (hoje)" :
+          range === "7dias" ? " (próximos 7 dias)" :
+          range === "mes" ? " (mês atual)" : "";
         toast({
-          title: "Sincronização concluída",
+          title: `Sincronização concluída${rangeLabel}`,
           description: t
             ? `Importados: ${t.imported} · Atualizados: ${t.updated} · Cancelados: ${t.cancelled}${t.conflicts > 0 ? ` · ⚠️ ${t.conflicts} conflito(s)` : ""}`
             : "Sem novos eventos.",
