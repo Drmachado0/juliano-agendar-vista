@@ -28,6 +28,11 @@ export default function AuditLogDrawer({ open, onOpenChange, onOpenAgendamento, 
   const [entries, setEntries] = useState<CrmAuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [filtroAcao, setFiltroAcao] = useState<string>("todas");
+  const [liveConnected, setLiveConnected] = useState(false);
+
+  // Refs para evitar stale closures no callback do Realtime
+  const filtroRef = useRef(filtroAcao);
+  useEffect(() => { filtroRef.current = filtroAcao; }, [filtroAcao]);
 
   const fetch = async () => {
     setLoading(true);
@@ -43,6 +48,59 @@ export default function AuditLogDrawer({ open, onOpenChange, onOpenAgendamento, 
     if (open) fetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, filtroAcao]);
+
+  // Realtime: ouve novos registros enquanto o drawer estiver aberto
+  useEffect(() => {
+    if (!open) {
+      setLiveConnected(false);
+      return;
+    }
+
+    const channel = supabase
+      .channel("crm-audit-log-changes")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "crm_audit_log" },
+        async (payload) => {
+          const novo = payload.new as CrmAuditEntry;
+
+          // Aplica filtro atual (lido do ref para evitar stale closure)
+          const filtro = filtroRef.current;
+          if (filtro !== "todas" && novo.acao !== filtro) return;
+
+          // Realtime não traz joins — buscar dados do agendamento se houver
+          let agendamento: CrmAuditEntry["agendamento"] = null;
+          if (novo.agendamento_id) {
+            try {
+              const { data: ag } = await supabase
+                .from("agendamentos")
+                .select("nome_completo, telefone_whatsapp")
+                .eq("id", novo.agendamento_id)
+                .maybeSingle();
+              agendamento = ag ?? null;
+            } catch {
+              agendamento = null;
+            }
+          }
+
+          const enriched: CrmAuditEntry = { ...novo, agendamento };
+
+          setEntries((prev) => {
+            // Dedup por id; prepend; cap em 200
+            if (prev.some((e) => e.id === enriched.id)) return prev;
+            return [enriched, ...prev].slice(0, 200);
+          });
+        },
+      )
+      .subscribe((status) => {
+        setLiveConnected(status === "SUBSCRIBED");
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+      setLiveConnected(false);
+    };
+  }, [open]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
