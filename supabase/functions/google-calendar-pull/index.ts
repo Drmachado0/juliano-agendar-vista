@@ -177,7 +177,34 @@ interface PullResult {
   errors: string[];
 }
 
-async function pullForUser(supabase: any, tokenRow: any): Promise<PullResult> {
+type RangeOption = "default" | "hoje" | "7dias" | "mes";
+
+function computeRangeWindow(range: RangeOption): { timeMin: string; timeMax: string } | null {
+  const now = new Date();
+  if (range === "hoje") {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    return { timeMin: start.toISOString(), timeMax: end.toISOString() };
+  }
+  if (range === "7dias") {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    return { timeMin: start.toISOString(), timeMax: end.toISOString() };
+  }
+  if (range === "mes") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    return { timeMin: start.toISOString(), timeMax: end.toISOString() };
+  }
+  return null;
+}
+
+async function pullForUser(
+  supabase: any,
+  tokenRow: any,
+  range: RangeOption = "default",
+): Promise<PullResult> {
   const userId = tokenRow.user_id;
   const result: PullResult = {
     user_id: userId,
@@ -215,8 +242,12 @@ async function pullForUser(supabase: any, tokenRow: any): Promise<PullResult> {
   }
 
   const calendarId = tokenRow.calendar_id || "primary";
+  const rangeWindow = computeRangeWindow(range);
+  // Se o admin escolheu um range específico, força full sync nessa janela
+  // (ignora syncToken para que eventos passados/futuros sejam reimportados).
+  const forceFullSync = rangeWindow !== null;
 
-  // Monta URL: usa syncToken se houver, senão full sync com timeMin = agora.
+  // Monta URL: usa syncToken se houver e não estiver forçando range, senão full sync.
   const buildUrl = (syncToken: string | null, pageToken?: string) => {
     const u = new URL(
       `https://www.googleapis.com/calendar/v3/calendars/${
@@ -227,18 +258,25 @@ async function pullForUser(supabase: any, tokenRow: any): Promise<PullResult> {
     u.searchParams.set("showDeleted", "true");
     u.searchParams.set("maxResults", "250");
     if (pageToken) u.searchParams.set("pageToken", pageToken);
-    if (syncToken) {
+    if (syncToken && !forceFullSync) {
       u.searchParams.set("syncToken", syncToken);
     } else {
-      // Full sync — janela: agora até 90 dias à frente
-      u.searchParams.set("timeMin", new Date().toISOString());
-      const future = new Date();
-      future.setDate(future.getDate() + 90);
-      u.searchParams.set("timeMax", future.toISOString());
+      // Full sync — janela escolhida pelo admin OU padrão (agora → +90 dias)
+      if (rangeWindow) {
+        u.searchParams.set("timeMin", rangeWindow.timeMin);
+        u.searchParams.set("timeMax", rangeWindow.timeMax);
+      } else {
+        u.searchParams.set("timeMin", new Date().toISOString());
+        const future = new Date();
+        future.setDate(future.getDate() + 90);
+        u.searchParams.set("timeMax", future.toISOString());
+      }
       u.searchParams.set("orderBy", "startTime");
     }
     return u.toString();
   };
+
+  let syncToken: string | null = forceFullSync ? null : (tokenRow.sync_token ?? null);
 
   let syncToken: string | null = tokenRow.sync_token ?? null;
   let pageToken: string | undefined;
