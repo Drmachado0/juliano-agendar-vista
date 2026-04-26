@@ -299,6 +299,10 @@ const AdminCRM = () => {
               <Send className={`h-4 w-4 mr-2 ${reprocessando ? 'animate-pulse' : ''}`} />
               {reprocessando ? "Enviando..." : "Reprocessar boas-vindas"}
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setDuplicadosOpen(true)} title="Detectar e unificar leads duplicados por telefone">
+              <Copy className="h-4 w-4 mr-2" />
+              Duplicados
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setAuditOpen(true)} title="Ver log de auditoria">
               <History className="h-4 w-4 mr-2" />
               Auditoria
