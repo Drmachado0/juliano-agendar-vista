@@ -1,14 +1,38 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ACAO_LABELS, CrmAuditEntry, listarAuditCrm } from "@/services/crmAudit";
-import { ArrowRight, Clock, ExternalLink, MessageCircle, RefreshCw, User } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  ACAO_LABELS,
+  AuditUserOption,
+  CrmAuditEntry,
+  STATUS_CRM_OPCOES,
+  listarAuditCrm,
+  listarUsuariosAudit,
+} from "@/services/crmAudit";
+import {
+  ArrowRight,
+  CalendarIcon,
+  ChevronDown,
+  Clock,
+  ExternalLink,
+  Filter,
+  MessageCircle,
+  RefreshCw,
+  Search,
+  User,
+  X,
+} from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 interface AuditLogDrawerProps {
   open: boolean;
@@ -24,32 +48,115 @@ const acaoColors: Record<string, string> = {
   automation_trigger: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30",
 };
 
-export default function AuditLogDrawer({ open, onOpenChange, onOpenAgendamento, onOpenWhatsApp }: AuditLogDrawerProps) {
+const TODAS = "todas";
+const QUALQUER = "qualquer";
+
+function digitsOnly(s: string): string {
+  return s.replace(/\D/g, "");
+}
+
+export default function AuditLogDrawer({
+  open,
+  onOpenChange,
+  onOpenAgendamento,
+  onOpenWhatsApp,
+}: AuditLogDrawerProps) {
   const [entries, setEntries] = useState<CrmAuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filtroAcao, setFiltroAcao] = useState<string>("todas");
   const [liveConnected, setLiveConnected] = useState(false);
+  const [usuarios, setUsuarios] = useState<AuditUserOption[]>([]);
+  const [filtrosOpen, setFiltrosOpen] = useState(false);
 
-  // Refs para evitar stale closures no callback do Realtime
-  const filtroRef = useRef(filtroAcao);
-  useEffect(() => { filtroRef.current = filtroAcao; }, [filtroAcao]);
+  // Filtros
+  const [filtroAcao, setFiltroAcao] = useState<string>(TODAS);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filtroUsuario, setFiltroUsuario] = useState<string>(TODAS);
+  const [filtroStatusAnterior, setFiltroStatusAnterior] = useState<string>(QUALQUER);
+  const [filtroStatusNovo, setFiltroStatusNovo] = useState<string>(QUALQUER);
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
+  const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
+
+  // Refs para o callback do Realtime ler valores atuais
+  const filtroAcaoRef = useRef(filtroAcao);
+  const searchRef = useRef(debouncedSearch);
+  const filtroUsuarioRef = useRef(filtroUsuario);
+  const filtroStatusAntRef = useRef(filtroStatusAnterior);
+  const filtroStatusNovoRef = useRef(filtroStatusNovo);
+  const dataInicioRef = useRef<Date | undefined>(dataInicio);
+  const dataFimRef = useRef<Date | undefined>(dataFim);
+  useEffect(() => { filtroAcaoRef.current = filtroAcao; }, [filtroAcao]);
+  useEffect(() => { searchRef.current = debouncedSearch; }, [debouncedSearch]);
+  useEffect(() => { filtroUsuarioRef.current = filtroUsuario; }, [filtroUsuario]);
+  useEffect(() => { filtroStatusAntRef.current = filtroStatusAnterior; }, [filtroStatusAnterior]);
+  useEffect(() => { filtroStatusNovoRef.current = filtroStatusNovo; }, [filtroStatusNovo]);
+  useEffect(() => { dataInicioRef.current = dataInicio; }, [dataInicio]);
+  useEffect(() => { dataFimRef.current = dataFim; }, [dataFim]);
+
+  // Debounce do campo de busca (300 ms)
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Conta filtros avançados ativos (excluindo ação e busca, que ficam no header principal)
+  const advCount = useMemo(() => {
+    let c = 0;
+    if (filtroUsuario !== TODAS) c++;
+    if (filtroStatusAnterior !== QUALQUER) c++;
+    if (filtroStatusNovo !== QUALQUER) c++;
+    if (dataInicio) c++;
+    if (dataFim) c++;
+    return c;
+  }, [filtroUsuario, filtroStatusAnterior, filtroStatusNovo, dataInicio, dataFim]);
+
+  const hasAnyFilter =
+    advCount > 0 || filtroAcao !== TODAS || debouncedSearch.length > 0;
 
   const fetch = async () => {
     setLoading(true);
     const { data } = await listarAuditCrm({
       limit: 200,
-      acao: filtroAcao === "todas" ? undefined : filtroAcao,
+      acao: filtroAcao === TODAS ? undefined : filtroAcao,
+      search: debouncedSearch || undefined,
+      userId: filtroUsuario === TODAS ? undefined : filtroUsuario,
+      statusAnterior:
+        filtroStatusAnterior === QUALQUER ? undefined : filtroStatusAnterior,
+      statusNovo: filtroStatusNovo === QUALQUER ? undefined : filtroStatusNovo,
+      dataInicio: dataInicio ? dataInicio.toISOString() : undefined,
+      // Inclui o dia inteiro da data fim
+      dataFim: dataFim
+        ? new Date(dataFim.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()
+        : undefined,
     });
     setEntries(data);
     setLoading(false);
   };
 
+  // Carrega usuários disponíveis na primeira abertura
+  useEffect(() => {
+    if (open && usuarios.length === 0) {
+      listarUsuariosAudit().then((r) => setUsuarios(r.data));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Refaz busca quando qualquer filtro muda
   useEffect(() => {
     if (open) fetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, filtroAcao]);
+  }, [
+    open,
+    filtroAcao,
+    debouncedSearch,
+    filtroUsuario,
+    filtroStatusAnterior,
+    filtroStatusNovo,
+    dataInicio,
+    dataFim,
+  ]);
 
-  // Realtime: ouve novos registros enquanto o drawer estiver aberto
+  // Realtime: aplica todos os filtros no callback (via refs) antes de inserir
   useEffect(() => {
     if (!open) {
       setLiveConnected(false);
@@ -64,11 +171,25 @@ export default function AuditLogDrawer({ open, onOpenChange, onOpenAgendamento, 
         async (payload) => {
           const novo = payload.new as CrmAuditEntry;
 
-          // Aplica filtro atual (lido do ref para evitar stale closure)
-          const filtro = filtroRef.current;
-          if (filtro !== "todas" && novo.acao !== filtro) return;
+          // Filtros simples
+          if (filtroAcaoRef.current !== TODAS && novo.acao !== filtroAcaoRef.current) return;
+          if (filtroUsuarioRef.current !== TODAS && novo.user_id !== filtroUsuarioRef.current) return;
+          if (
+            filtroStatusAntRef.current !== QUALQUER &&
+            novo.status_anterior !== filtroStatusAntRef.current
+          ) return;
+          if (
+            filtroStatusNovoRef.current !== QUALQUER &&
+            novo.status_novo !== filtroStatusNovoRef.current
+          ) return;
+          const created = new Date(novo.created_at);
+          if (dataInicioRef.current && created < dataInicioRef.current) return;
+          if (dataFimRef.current) {
+            const fim = new Date(dataFimRef.current.getTime() + 24 * 60 * 60 * 1000 - 1);
+            if (created > fim) return;
+          }
 
-          // Realtime não traz joins — buscar dados do agendamento se houver
+          // Enriquece com dados do paciente (Realtime não traz joins)
           let agendamento: CrmAuditEntry["agendamento"] = null;
           if (novo.agendamento_id) {
             try {
@@ -83,10 +204,21 @@ export default function AuditLogDrawer({ open, onOpenChange, onOpenAgendamento, 
             }
           }
 
+          // Filtro de busca textual (pós enriquecimento)
+          const searchTerm = searchRef.current;
+          if (searchTerm) {
+            const nome = agendamento?.nome_completo?.toLowerCase() ?? "";
+            const tel = digitsOnly(agendamento?.telefone_whatsapp ?? "");
+            const termoLower = searchTerm.toLowerCase();
+            const termoDigits = digitsOnly(searchTerm);
+            const matchNome = nome.includes(termoLower);
+            const matchTel = termoDigits.length >= 3 && tel.includes(termoDigits);
+            if (!matchNome && !matchTel) return;
+          }
+
           const enriched: CrmAuditEntry = { ...novo, agendamento };
 
           setEntries((prev) => {
-            // Dedup por id; prepend; cap em 200
             if (prev.some((e) => e.id === enriched.id)) return prev;
             return [enriched, ...prev].slice(0, 200);
           });
@@ -102,6 +234,16 @@ export default function AuditLogDrawer({ open, onOpenChange, onOpenAgendamento, 
     };
   }, [open]);
 
+  function limparFiltros() {
+    setFiltroAcao(TODAS);
+    setSearch("");
+    setFiltroUsuario(TODAS);
+    setFiltroStatusAnterior(QUALQUER);
+    setFiltroStatusNovo(QUALQUER);
+    setDataInicio(undefined);
+    setDataFim(undefined);
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl overflow-hidden flex flex-col">
@@ -115,35 +257,190 @@ export default function AuditLogDrawer({ open, onOpenChange, onOpenAgendamento, 
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex items-center gap-2 py-3 border-b border-border">
-          <Select value={filtroAcao} onValueChange={setFiltroAcao}>
-            <SelectTrigger className="w-[220px]">
-              <SelectValue placeholder="Filtrar por ação" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas as ações</SelectItem>
-              {Object.entries(ACAO_LABELS).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="sm" onClick={fetch} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
-          <div className="ml-auto flex items-center gap-2">
-            {liveConnected && (
-              <span className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75"></span>
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                </span>
-                ao vivo
-              </span>
-            )}
-            <span className="text-xs text-muted-foreground">
-              {entries.length} registro(s)
-            </span>
+        {/* Linha principal: busca + ação + atualizar + status live */}
+        <div className="flex flex-col gap-2 py-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar paciente por nome ou telefone..."
+                className="h-9 pl-8 pr-8 text-sm"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Limpar busca"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <Select value={filtroAcao} onValueChange={setFiltroAcao}>
+              <SelectTrigger className="w-[180px] h-9">
+                <SelectValue placeholder="Ação" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TODAS}>Todas as ações</SelectItem>
+                {Object.entries(ACAO_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={fetch} disabled={loading} title="Recarregar">
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
           </div>
+
+          {/* Filtros avançados (colapsável) */}
+          <Collapsible open={filtrosOpen} onOpenChange={setFiltrosOpen}>
+            <div className="flex items-center justify-between gap-2">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1.5">
+                  <Filter className="h-3.5 w-3.5" />
+                  Filtros avançados
+                  {advCount > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-4 px-1.5 text-[10px]">
+                      {advCount}
+                    </Badge>
+                  )}
+                  <ChevronDown
+                    className={cn("h-3.5 w-3.5 transition-transform", filtrosOpen && "rotate-180")}
+                  />
+                </Button>
+              </CollapsibleTrigger>
+              <div className="flex items-center gap-2">
+                {hasAnyFilter && (
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={limparFiltros}>
+                    <X className="h-3 w-3 mr-1" />
+                    Limpar
+                  </Button>
+                )}
+                {liveConnected && (
+                  <span className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75"></span>
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                    </span>
+                    ao vivo
+                  </span>
+                )}
+                <span className="text-xs text-muted-foreground">{entries.length} registro(s)</span>
+              </div>
+            </div>
+
+            <CollapsibleContent className="pt-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* Usuário */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-muted-foreground">Usuário</label>
+                  <Select value={filtroUsuario} onValueChange={setFiltroUsuario}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={TODAS}>Todos os usuários</SelectItem>
+                      {usuarios.map((u) => (
+                        <SelectItem key={u.user_id} value={u.user_id}>
+                          {u.user_name ?? u.user_email ?? u.user_id.slice(0, 8)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Status anterior */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-muted-foreground">Status anterior</label>
+                  <Select value={filtroStatusAnterior} onValueChange={setFiltroStatusAnterior}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Qualquer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={QUALQUER}>Qualquer</SelectItem>
+                      {STATUS_CRM_OPCOES.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Status novo */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-muted-foreground">Status novo</label>
+                  <Select value={filtroStatusNovo} onValueChange={setFiltroStatusNovo}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Qualquer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={QUALQUER}>Qualquer</SelectItem>
+                      {STATUS_CRM_OPCOES.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Datas */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-muted-foreground">Período</label>
+                  <div className="flex items-center gap-1">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "h-9 flex-1 justify-start text-left font-normal text-xs",
+                            !dataInicio && "text-muted-foreground",
+                          )}
+                        >
+                          <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                          {dataInicio ? format(dataInicio, "dd/MM/yy") : "De"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={dataInicio}
+                          onSelect={setDataInicio}
+                          locale={ptBR}
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "h-9 flex-1 justify-start text-left font-normal text-xs",
+                            !dataFim && "text-muted-foreground",
+                          )}
+                        >
+                          <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                          {dataFim ? format(dataFim, "dd/MM/yy") : "Até"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={dataFim}
+                          onSelect={setDataFim}
+                          locale={ptBR}
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         <ScrollArea className="flex-1 -mx-6 px-6">
