@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ACAO_LABELS, CrmAuditEntry, listarAuditCrm } from "@/services/crmAudit";
-import { ArrowRight, Clock, RefreshCw, User } from "lucide-react";
+import { ArrowRight, Clock, ExternalLink, MessageCircle, RefreshCw, User } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface AuditLogDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onOpenAgendamento?: (agendamentoId: string) => void;
+  onOpenWhatsApp?: (agendamentoId: string, telefone: string) => void;
 }
 
 const acaoColors: Record<string, string> = {
