@@ -57,6 +57,19 @@ async function refreshAccessToken(refreshToken: string) {
   return data;
 }
 
+async function fetchUserEmail(accessToken: string): Promise<string | null> {
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j.email ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function getValidAccessToken(supabase: any, userId: string): Promise<string> {
   const { data: tokenData, error } = await supabase
     .from('google_calendar_tokens')
