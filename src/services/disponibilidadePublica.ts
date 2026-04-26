@@ -536,3 +536,94 @@ export async function verificarDataTemDisponibilidade(data: Date, localAtendimen
   const slots = await gerarHorariosDisponiveis(data, localAtendimento);
   return slots.length > 0;
 }
+
+// ─────────────────────────────────────────────
+// Alternativas próximas (fallback inline na Etapa 3)
+// ─────────────────────────────────────────────
+export interface HorarioAlternativo {
+  data: Date;
+  horario: string;
+  distanciaLabel: string;
+}
+
+function horarioParaMinutos(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + (m || 0);
+}
+
+function rotuloDistanciaMesmoDia(horarioRef: string, horarioAlt: string): string {
+  const diffMin = horarioParaMinutos(horarioAlt) - horarioParaMinutos(horarioRef);
+  if (diffMin === 0) return "Mesmo horário";
+  const abs = Math.abs(diffMin);
+  const horas = Math.floor(abs / 60);
+  const mins = abs % 60;
+  let qty = "";
+  if (horas > 0) qty += `${horas}h`;
+  if (mins > 0) qty += `${horas > 0 ? " " : ""}${mins}min`;
+  return `Mesmo dia · ${qty} ${diffMin > 0 ? "depois" : "antes"}`;
+}
+
+function rotuloDistanciaDias(diasDiff: number): string {
+  if (diasDiff === 1) return "Próximo dia útil";
+  return `Em ${diasDiff} dias`;
+}
+
+/**
+ * Busca até `limite` horários alternativos próximos do horário/data de referência.
+ * Prioriza slots no mesmo dia (ordenados pela distância em minutos do horarioRef)
+ * e completa com slots dos dias seguintes.
+ */
+export async function buscarHorariosAlternativos(
+  dataRef: Date,
+  horarioRef: string | null,
+  localAtendimento?: string,
+  limite: number = 3
+): Promise<HorarioAlternativo[]> {
+  const resultado: HorarioAlternativo[] = [];
+  const dataInicio = startOfDay(dataRef);
+
+  // 1) Mesmo dia: pega slots e ordena pela proximidade ao horarioRef
+  if (horarioRef) {
+    const slotsMesmoDia = await gerarHorariosDisponiveis(dataInicio, localAtendimento);
+    const refMin = horarioParaMinutos(horarioRef);
+    const ordenados = slotsMesmoDia
+      .filter((s) => s.horario !== horarioRef)
+      .map((s) => ({
+        slot: s,
+        diff: Math.abs(horarioParaMinutos(s.horario) - refMin),
+      }))
+      .sort((a, b) => a.diff - b.diff);
+
+    if (ordenados.length > 0) {
+      const escolhido = ordenados[0].slot;
+      resultado.push({
+        data: dataInicio,
+        horario: escolhido.horario,
+        distanciaLabel: rotuloDistanciaMesmoDia(horarioRef, escolhido.horario),
+      });
+    }
+  }
+
+  // 2) Dias seguintes: pega o primeiro horário disponível de cada dia até completar
+  let dataAtual = addDays(dataInicio, 1);
+  const maxDias = 60;
+  let tentativas = 0;
+
+  while (resultado.length < limite && tentativas < maxDias) {
+    const slots = await gerarHorariosDisponiveis(dataAtual, localAtendimento);
+    if (slots.length > 0) {
+      const diffDias = Math.round(
+        (dataAtual.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      resultado.push({
+        data: dataAtual,
+        horario: slots[0].horario,
+        distanciaLabel: rotuloDistanciaDias(diffDias),
+      });
+    }
+    dataAtual = addDays(dataAtual, 1);
+    tentativas++;
+  }
+
+  return resultado.slice(0, limite);
+}
