@@ -46,9 +46,12 @@ import {
   testGoogleCalendarConnection,
   resyncBatchGoogleCalendar,
   updateGoogleCalendarSettings,
+  refreshGoogleEmail,
+  getGoogleCalendarSyncStats,
   GoogleCalendarStatus,
   GoogleCalendarItem,
   GoogleCalendarSettings,
+  SyncStats,
 } from "@/services/googleCalendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
