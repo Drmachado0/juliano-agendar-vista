@@ -33,12 +33,13 @@ const localBadgeColors: Record<string, string> = {
   "Belém (IOB / Vitria)": "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
 };
 
-const KanbanCard = ({ 
-  agendamento, 
-  onViewDetails, 
-  onSendWhatsApp, 
+const KanbanCard = ({
+  agendamento,
+  onViewDetails,
+  onSendWhatsApp,
   onTriggerAutomation,
-  isDragging 
+  isDragging,
+  boasVindas,
 }: KanbanCardProps) => {
   const isLead = isLeadIncompleto(agendamento);
   const atendido = isAtendido(agendamento);
