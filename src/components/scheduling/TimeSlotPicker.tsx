@@ -222,14 +222,15 @@ const TimeSlotPicker = ({
         {periodosVisiveis.map((p) => {
           const grupo = slotsPorPeriodo[p.key];
           if (grupo.length === 0) return null;
-          const poucos = grupo.length <= 2;
+          const liberadosNoGrupo = grupo.filter((s) => horariosLiberados.has(s.horario)).length;
+          const poucos = liberadosNoGrupo > 0 && liberadosNoGrupo <= 2;
           const Icon = p.icon;
           return (
             <div key={p.key} className="space-y-2">
               <div className="flex items-center gap-2">
                 <Icon className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium text-foreground">{p.label}</span>
-                <span className="text-xs text-muted-foreground">({grupo.length})</span>
+                <span className="text-xs text-muted-foreground">({liberadosNoGrupo})</span>
                 {poucos && (
                   <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                     Últimos
@@ -239,6 +240,22 @@ const TimeSlotPicker = ({
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {grupo.map((slot) => {
                   const isSelected = selectedTime === slot.horario;
+                  const liberado = horariosLiberados.has(slot.horario);
+                  if (!liberado) {
+                    return (
+                      <button
+                        key={slot.horario}
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        aria-label={`Horário ${slot.horario} ocupado`}
+                        className="h-12 md:h-11 rounded-lg text-xs font-medium border-2 border-dashed border-border/60 bg-muted/40 text-muted-foreground/60 cursor-not-allowed line-through decoration-muted-foreground/40"
+                      >
+                        <span className="block leading-tight">{slot.horario}</span>
+                        <span className="block text-[9px] font-normal uppercase tracking-wide no-underline">Ocupado</span>
+                      </button>
+                    );
+                  }
                   return (
                     <button
                       key={slot.horario}
