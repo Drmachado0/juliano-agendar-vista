@@ -40,9 +40,14 @@ const TimeSlotPicker = ({
   localAtendimento,
 }: TimeSlotPickerProps) => {
   const [slots, setSlots] = useState<SlotDisponivel[]>([]);
+  const [horariosLiberados, setHorariosLiberados] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [filtroPeriodo, setFiltroPeriodo] = useState<Periodo>("todos");
   const isMobile = useIsMobile();
+
+  // Mantém apenas 2 horários "disponíveis" para o paciente (escolhidos pseudo-aleatoriamente);
+  // os demais aparecem como "Ocupado" para criar escassez.
+  const MAX_VISIVEIS = 2;
 
   useEffect(() => {
     if (selectedDate) {
