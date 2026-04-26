@@ -130,9 +130,20 @@ export default function AuditLogDrawer({ open, onOpenChange, onOpenAgendamento, 
           <Button variant="outline" size="sm" onClick={fetch} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
-          <span className="text-xs text-muted-foreground ml-auto">
-            {entries.length} registro(s)
-          </span>
+          <div className="ml-auto flex items-center gap-2">
+            {liveConnected && (
+              <span className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75"></span>
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                </span>
+                ao vivo
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground">
+              {entries.length} registro(s)
+            </span>
+          </div>
         </div>
 
         <ScrollArea className="flex-1 -mx-6 px-6">
