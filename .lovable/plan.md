@@ -1,42 +1,71 @@
-# Auditoria do CRM em tempo real
-
 ## Objetivo
-Atualizar o drawer de Auditoria do CRM em tempo real, exibindo automaticamente novas ações registradas (mudança de status, reprocessamento de boas-vindas, WhatsApp manual, automações, merge de duplicados) sem precisar clicar em "Atualizar" ou recarregar.
 
-## Arquitetura
-Usar **Supabase Realtime** na tabela `public.crm_audit_log`, inscrevendo apenas no evento `INSERT` (a tabela é append-only — RLS bloqueia UPDATE/DELETE). A inscrição fica ativa **somente enquanto o drawer está aberto**, para economizar conexões.
+Adicionar busca por nome/telefone do paciente e um painel colapsável "Filtros avançados" no drawer de Auditoria (`AuditLogDrawer`), com filtragem **server-side** via uma RPC dedicada para suportar bem o histórico completo (não apenas os 200 já carregados).
 
-## Mudanças
+---
 
-### 1. Migração SQL — habilitar Realtime
-```sql
-ALTER TABLE public.crm_audit_log REPLICA IDENTITY FULL;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.crm_audit_log;
-```
+## 1. Banco de dados — nova RPC `listar_crm_audit`
 
-### 2. `src/components/admin/AuditLogDrawer.tsx`
-- Novo `useEffect` que, enquanto `open === true`:
-  - Cria channel `crm-audit-log-changes` e inscreve em `postgres_changes` (`event: 'INSERT'`, `schema: 'public'`, `table: 'crm_audit_log'`).
-  - No callback:
-    - Lê o filtro atual via `ref` (evita stale closure).
-    - Se `agendamento_id` existir, busca `nome_completo`/`telefone_whatsapp` em `agendamentos` para preencher o join (Realtime não traz relacionamentos).
-    - Aplica filtro `filtroAcao` antes de inserir.
-    - Faz prepend em `entries`, deduplicando por `id`, mantendo no máximo 200.
-  - Cleanup remove o channel.
-- Mantém `fetch()` inicial e botão "Atualizar" para fallback manual.
+Função `SECURITY DEFINER` (somente admin) que faz `JOIN` em `agendamentos` e aplica todos os filtros no Postgres. Retorna o mesmo formato já consumido pelo frontend (`CrmAuditEntry` com `agendamento` aninhado).
 
-### 3. UX — indicador "ao vivo"
-- Ao lado do contador "X registro(s)", mostrar um ponto verde pulsante + texto "ao vivo" quando o channel está `SUBSCRIBED`.
+**Parâmetros:**
+- `p_search text` — busca livre em `nome_completo` e `telefone_whatsapp` (ILIKE + dígitos via `normalizar_telefone` para o telefone)
+- `p_acao text` — filtro de ação (mantém compatibilidade)
+- `p_user_id uuid` — quem fez a ação
+- `p_status_anterior text`
+- `p_status_novo text`
+- `p_data_inicio timestamptz`
+- `p_data_fim timestamptz`
+- `p_limit int` (default 200)
 
-## Não muda
-- RLS, RPC `registrar_crm_audit`, `listarAuditCrm`, demais telas.
-- Como todas as ações já chamam `registrar_crm_audit`, aparecerão automaticamente.
+**Saída:** mesma estrutura de `crm_audit_log` + colunas `paciente_nome` e `paciente_telefone` (frontend monta o objeto `agendamento`).
 
-## Riscos
-- **RLS**: não-admins não recebem eventos (correto — drawer é admin-only).
-- **Race com filtro**: usar `ref` para evitar stale closure e não precisar recriar canal a cada troca.
-- Cap de 200 entries para evitar crescimento ilimitado.
+Guard: `IF NOT public.has_role(auth.uid(), 'admin') THEN RAISE EXCEPTION 'Access denied'`.
 
-## Arquivos
-- `supabase/migrations/<timestamp>_realtime_crm_audit_log.sql` (novo)
-- `src/components/admin/AuditLogDrawer.tsx` (editar)
+## 2. RPC auxiliar `listar_crm_audit_users`
+
+Retorna `user_id, user_name, user_email` distintos presentes em `crm_audit_log` (ordenados por nome) para popular o `<Select>` de "Usuário" sem expor `auth.users` diretamente. Também `SECURITY DEFINER` + guard de admin.
+
+## 3. `src/services/crmAudit.ts`
+
+- Estender `listarAuditCrm` para aceitar os novos filtros e usar a RPC `listar_crm_audit` (mantendo o tipo de retorno `CrmAuditEntry[]`).
+- Novo helper `listarUsuariosAudit()` chamando `listar_crm_audit_users`.
+- Exportar constantes `STATUS_CRM_OPCOES` (NOVO LEAD, AGUARDANDO, CLINICOR, HGP, BELÉM, ATENDIDO) para alimentar os selects.
+
+## 4. `src/components/admin/AuditLogDrawer.tsx`
+
+**Estado novo:**
+- `search` (debounced ~300 ms)
+- `filtroUsuario`, `filtroStatusAnterior`, `filtroStatusNovo`
+- `dataInicio`, `dataFim` (Popover + Calendar shadcn com `pointer-events-auto`)
+- `usuariosDisponiveis` (carregado on-mount do drawer)
+- `filtrosAvancadosOpen` (Collapsible)
+
+**UI:**
+- Linha principal mantém: `<Select>` de ação + busca (Input com ícone Search + clear) + botão Refresh + indicador "ao vivo" + contador.
+- Abaixo, `<Collapsible>` "Filtros avançados" com grid de:
+  - Usuário (Select alimentado por `listarUsuariosAudit`)
+  - Status anterior (Select com STATUS_CRM_OPCOES + "Qualquer")
+  - Status novo (Select)
+  - Data início / Data fim (DatePickers)
+  - Botão "Limpar filtros" (visível quando algum filtro ativo) + badge contando filtros ativos no header do collapsible.
+
+**Comportamento:**
+- Refs sincronizadas com cada filtro (padrão já usado para `filtroAcao`) para o callback do Realtime aplicar todos os filtros sem stale closure, incluindo a busca textual (match local em `paciente_nome`/`paciente_telefone`).
+- `useEffect` que dispara `fetch()` quando qualquer filtro muda (com debounce no `search`).
+- Manter cap de 200 itens e dedup por id no Realtime.
+
+## 5. Realtime — sem mudanças no backend
+
+A subscription continua escutando `INSERT` em `crm_audit_log`. O enriquecimento (busca de `nome_completo`/`telefone_whatsapp`) já existe; basta aplicar os mesmos filtros via refs antes de inserir no estado.
+
+## 6. Arquivos afetados
+
+- **Novo:** `supabase/migrations/<timestamp>_listar_crm_audit_rpc.sql` (cria `listar_crm_audit` + `listar_crm_audit_users`)
+- **Editado:** `src/services/crmAudit.ts` (novos params + helper de usuários + STATUS_CRM_OPCOES)
+- **Editado:** `src/components/admin/AuditLogDrawer.tsx` (busca, painel colapsável, datepickers, selects, debounce, refs para Realtime)
+
+## 7. Fora do escopo (não será alterado)
+
+- `src/pages/admin/CRM.tsx` — continua passando os mesmos callbacks `onOpenAgendamento`/`onOpenWhatsApp`.
+- Tipos `CrmAuditEntry` permanecem; apenas a fonte muda de `.from()` para `.rpc()`.

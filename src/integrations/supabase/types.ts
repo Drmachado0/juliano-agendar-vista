@@ -1035,6 +1035,40 @@ export type Database = {
           hora_agendamento: string
         }[]
       }
+      listar_crm_audit: {
+        Args: {
+          p_acao?: string
+          p_data_fim?: string
+          p_data_inicio?: string
+          p_limit?: number
+          p_search?: string
+          p_status_anterior?: string
+          p_status_novo?: string
+          p_user_id?: string
+        }
+        Returns: {
+          acao: string
+          agendamento_id: string
+          created_at: string
+          detalhes: Json
+          id: string
+          paciente_nome: string
+          paciente_telefone: string
+          status_anterior: string
+          status_novo: string
+          user_email: string
+          user_id: string
+          user_name: string
+        }[]
+      }
+      listar_crm_audit_users: {
+        Args: never
+        Returns: {
+          user_email: string
+          user_id: string
+          user_name: string
+        }[]
+      }
       listar_horarios_disponiveis: {
         Args: { p_data: string; p_local: string }
         Returns: {
