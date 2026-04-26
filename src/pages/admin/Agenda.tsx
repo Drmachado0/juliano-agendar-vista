@@ -22,12 +22,14 @@ import { pullGoogleCalendarEvents } from "@/services/googleCalendar";
 import { toast } from "@/hooks/use-toast";
 
 export default function Agenda() {
+  const { user } = useAuth();
   const [clinicas, setClinicas] = useState<Clinica[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [selectedClinicaId, setSelectedClinicaId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [slots, setSlots] = useState<SlotAgenda[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncingGoogle, setSyncingGoogle] = useState(false);
   
   // Modals
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
