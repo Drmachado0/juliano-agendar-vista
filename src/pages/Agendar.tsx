@@ -340,18 +340,7 @@ const Agendar = () => {
               </h1>
               <p className="text-[11px] text-muted-foreground md:text-xs">Oftalmologista · CRM-PA</p>
             </div>
-            <a
-              href={WHATSAPP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => handleWhatsAppClick("agendar_header")}
-              className="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-4 py-2 text-xs font-semibold text-white shadow-md shadow-[#25D366]/30 transition-all hover:scale-105 hover:bg-[#25D366]/90 md:text-sm"
-              aria-label="Falar com a secretária no WhatsApp"
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">Falar no WhatsApp</span>
-              <span className="sm:hidden">WhatsApp</span>
-            </a>
+            <div />
           </div>
         </header>
 
