@@ -207,15 +207,47 @@ export default function Agenda() {
                   Hoje
                 </Button>
 
-                <Button
-                  variant="outline"
-                  onClick={handleSyncGoogle}
-                  disabled={syncingGoogle}
-                  title="Importar eventos do Google Calendar"
-                >
-                  <RefreshCw className={cn("h-4 w-4 mr-2", syncingGoogle && "animate-spin")} />
-                  {syncingGoogle ? "Sincronizando..." : "Sincronizar Google"}
-                </Button>
+                <div className="flex">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleSyncGoogle("default")}
+                    disabled={syncingGoogle}
+                    title="Sincronização incremental (padrão)"
+                    className="rounded-r-none border-r-0"
+                  >
+                    <RefreshCw className={cn("h-4 w-4 mr-2", syncingGoogle && "animate-spin")} />
+                    {syncingGoogle ? "Sincronizando..." : "Sincronizar Google"}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        disabled={syncingGoogle}
+                        className="rounded-l-none px-2"
+                        title="Opções de sincronização"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Sincronizar período</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleSyncGoogle("default")}>
+                        Padrão (incremental)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSyncGoogle("hoje")}>
+                        Hoje
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSyncGoogle("7dias")}>
+                        Próximos 7 dias
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSyncGoogle("mes")}>
+                        Mês atual
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
           </CardContent>
