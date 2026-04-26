@@ -8,6 +8,7 @@ interface DadosTemplate {
   profissional?: string;
   tipo_atendimento?: string;
   convenio?: string;
+  link_status?: string;
 }
 
 // Templates padrão (fallback caso não exista no banco)
