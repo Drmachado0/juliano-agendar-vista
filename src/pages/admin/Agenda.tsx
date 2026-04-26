@@ -5,7 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, RefreshCw, ChevronDown } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { format, addDays, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { listarClinicas, Clinica } from "@/services/clinicas";
@@ -18,7 +19,7 @@ import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal"
 import { NovoAgendamentoAdminModal } from "@/components/admin/NovoAgendamentoAdminModal";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { pullGoogleCalendarEvents } from "@/services/googleCalendar";
+import { pullGoogleCalendarEvents, PullRange } from "@/services/googleCalendar";
 import { toast } from "@/hooks/use-toast";
 
 export default function Agenda() {
@@ -108,11 +109,11 @@ export default function Agenda() {
     carregarAgenda();
   }
 
-  async function handleSyncGoogle() {
+  async function handleSyncGoogle(range: PullRange = "default") {
     if (!user?.id) return;
     setSyncingGoogle(true);
     try {
-      const r = await pullGoogleCalendarEvents(user.id);
+      const r = await pullGoogleCalendarEvents(user.id, range);
       if (!r.ok) {
         toast({
           title: "Erro ao sincronizar",
@@ -121,8 +122,12 @@ export default function Agenda() {
         });
       } else {
         const t = r.totals;
+        const rangeLabel =
+          range === "hoje" ? " (hoje)" :
+          range === "7dias" ? " (próximos 7 dias)" :
+          range === "mes" ? " (mês atual)" : "";
         toast({
-          title: "Sincronização concluída",
+          title: `Sincronização concluída${rangeLabel}`,
           description: t
             ? `Importados: ${t.imported} · Atualizados: ${t.updated} · Cancelados: ${t.cancelled}${t.conflicts > 0 ? ` · ⚠️ ${t.conflicts} conflito(s)` : ""}`
             : "Sem novos eventos.",
@@ -202,15 +207,47 @@ export default function Agenda() {
                   Hoje
                 </Button>
 
-                <Button
-                  variant="outline"
-                  onClick={handleSyncGoogle}
-                  disabled={syncingGoogle}
-                  title="Importar eventos do Google Calendar"
-                >
-                  <RefreshCw className={cn("h-4 w-4 mr-2", syncingGoogle && "animate-spin")} />
-                  {syncingGoogle ? "Sincronizando..." : "Sincronizar Google"}
-                </Button>
+                <div className="flex">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleSyncGoogle("default")}
+                    disabled={syncingGoogle}
+                    title="Sincronização incremental (padrão)"
+                    className="rounded-r-none border-r-0"
+                  >
+                    <RefreshCw className={cn("h-4 w-4 mr-2", syncingGoogle && "animate-spin")} />
+                    {syncingGoogle ? "Sincronizando..." : "Sincronizar Google"}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        disabled={syncingGoogle}
+                        className="rounded-l-none px-2"
+                        title="Opções de sincronização"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Sincronizar período</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleSyncGoogle("default")}>
+                        Padrão (incremental)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSyncGoogle("hoje")}>
+                        Hoje
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSyncGoogle("7dias")}>
+                        Próximos 7 dias
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSyncGoogle("mes")}>
+                        Mês atual
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
           </CardContent>
