@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { validarDisponibilidade } from "../_shared/validarDisponibilidade.ts";
 import { syncAgendamentoToCalendar } from "../_shared/syncGoogleCalendar.ts";
 
