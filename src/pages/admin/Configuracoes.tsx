@@ -69,6 +69,19 @@ export default function Configuracoes() {
   // Google Calendar state
   const [gcalStatus, setGcalStatus] = useState<GoogleCalendarStatus>({ connected: false });
   const [gcalLoading, setGcalLoading] = useState(false);
+  const [gcalCalendars, setGcalCalendars] = useState<GoogleCalendarItem[]>([]);
+  const [gcalCalendarsLoading, setGcalCalendarsLoading] = useState(false);
+  const [gcalTesting, setGcalTesting] = useState(false);
+  const [gcalResyncing, setGcalResyncing] = useState(false);
+  const [gcalSavingSettings, setGcalSavingSettings] = useState(false);
+  const [gcalSettings, setGcalSettings] = useState<GoogleCalendarSettings>({
+    default_duration_min: 30,
+    reminder_popup_min: [60, 1440],
+    event_color_id: null,
+    include_patient_phone: true,
+    include_convenio: true,
+    auto_sync_enabled: true,
+  });
   
   // Google Reviews state
   const [reviewsSyncing, setReviewsSyncing] = useState(false);
