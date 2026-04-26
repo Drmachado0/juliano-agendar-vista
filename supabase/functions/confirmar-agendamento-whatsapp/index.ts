@@ -151,7 +151,7 @@ serve(async (req) => {
       hora: formatarHora(agendamentoData.hora_agendamento),
       local: agendamentoData.local_atendimento,
       tipo_atendimento: agendamentoData.tipo_atendimento,
-      link_status: `https://drjulianomachado.com/status/${agendamentoData.id}`,
+      link_status: agendamentoId ? `https://drjulianomachado.com/status/${agendamentoId}` : undefined,
     });
 
     console.log('[ConfirmarWhatsApp] Enviando para:', telefoneFormatado);
