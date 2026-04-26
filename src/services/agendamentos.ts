@@ -190,6 +190,22 @@ export async function criarAgendamento(data: AgendamentoInsert): Promise<{ data:
     body: sanitizedData,
   });
 
+  // Detecta erro de slot tomado (HTTP 409). O supabase-js coloca o body no responseData
+  // mesmo quando há error de rede; preferimos olhar o code primeiro.
+  const slotTaken =
+    (responseData as any)?.code === 'SLOT_TAKEN' ||
+    error?.message?.includes('SLOT_TAKEN') ||
+    error?.message?.toLowerCase().includes('reservado por outra pessoa');
+
+  if (slotTaken) {
+    const err = new Error(
+      (responseData as any)?.error ||
+      'Este horário acabou de ser reservado por outra pessoa. Por favor, escolha outro horário.'
+    );
+    (err as any).code = 'SLOT_TAKEN';
+    return { data: null, error: err };
+  }
+
   if (error) {
     console.error('Erro ao criar agendamento:', error);
     return { data: null, error: new Error(error.message || 'Erro ao criar agendamento') };
