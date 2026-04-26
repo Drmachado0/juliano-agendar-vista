@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import AuditLogDrawer from "@/components/admin/AuditLogDrawer";
 import DuplicadosDrawer from "@/components/admin/DuplicadosDrawer";
+import { useBoasVindasStatus } from "@/hooks/useBoasVindasStatus";
 
 const columns = [
   { status: "NOVO LEAD", title: "Novo Lead", color: "bg-emerald-500" },
@@ -232,6 +233,9 @@ const AdminCRM = () => {
     (a) => (a as any).status_funil === 'lead' || !a.data_agendamento || !a.hora_agendamento
   ).length;
   const agendamentosConfirmados = totalItems - leadsIncompletos;
+
+  // Status de boas-vindas para todos os cards visíveis
+  const boasVindasMap = useBoasVindasStatus(allItems.map((a) => a.id));
   
   // Estatísticas de conversão
   const atendidos = agendamentosPorStatus['ATENDIDO']?.length || 0;
@@ -397,6 +401,7 @@ const AdminCRM = () => {
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
                   isDragOver={dragOverColumn === column.status}
+                  boasVindasMap={boasVindasMap}
                 />
               </div>
             ))}
