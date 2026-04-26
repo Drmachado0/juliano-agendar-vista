@@ -984,6 +984,14 @@ export type Database = {
         Args: { encrypted_secret: string }
         Returns: string
       }
+      detectar_duplicados_telefone: {
+        Args: never
+        Returns: {
+          agendamentos: Json
+          telefone_normalizado: string
+          total_duplicados: number
+        }[]
+      }
       encrypt_sensitive_data: { Args: { plain_text: string }; Returns: string }
       encrypt_totp_secret: { Args: { plain_secret: string }; Returns: string }
       get_observacoes_decrypted: {
@@ -1019,6 +1027,7 @@ export type Database = {
           local: string
         }[]
       }
+      normalizar_telefone: { Args: { p_telefone: string }; Returns: string }
       registrar_crm_audit: {
         Args: {
           p_acao: string
@@ -1045,6 +1054,10 @@ export type Database = {
       setup_totp: {
         Args: { p_backup_codes: string; p_secret: string; p_user_id: string }
         Returns: undefined
+      }
+      unificar_duplicados: {
+        Args: { p_principal_id?: string; p_telefone_normalizado: string }
+        Returns: Json
       }
       validar_horario: {
         Args: { p_data: string; p_hora: string; p_local: string }

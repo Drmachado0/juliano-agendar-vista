@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm, reprocessarBoasVindas } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
-import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, Wifi, History } from "lucide-react";
+import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, Wifi, History, Copy } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import AuditLogDrawer from "@/components/admin/AuditLogDrawer";
+import DuplicadosDrawer from "@/components/admin/DuplicadosDrawer";
 
 const columns = [
   { status: "NOVO LEAD", title: "Novo Lead", color: "bg-emerald-500" },
@@ -40,6 +41,7 @@ const AdminCRM = () => {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
+  const [duplicadosOpen, setDuplicadosOpen] = useState(false);
   const isFetchingRef = useRef(false);
 
   const fetchAgendamentos = async (silent = false) => {
@@ -297,6 +299,10 @@ const AdminCRM = () => {
               <Send className={`h-4 w-4 mr-2 ${reprocessando ? 'animate-pulse' : ''}`} />
               {reprocessando ? "Enviando..." : "Reprocessar boas-vindas"}
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setDuplicadosOpen(true)} title="Detectar e unificar leads duplicados por telefone">
+              <Copy className="h-4 w-4 mr-2" />
+              Duplicados
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setAuditOpen(true)} title="Ver log de auditoria">
               <History className="h-4 w-4 mr-2" />
               Auditoria
@@ -413,6 +419,11 @@ const AdminCRM = () => {
       />
 
       <AuditLogDrawer open={auditOpen} onOpenChange={setAuditOpen} />
+      <DuplicadosDrawer
+        open={duplicadosOpen}
+        onOpenChange={setDuplicadosOpen}
+        onMerged={() => fetchAgendamentos(true)}
+      />
     </AdminLayout>
   );
 };
