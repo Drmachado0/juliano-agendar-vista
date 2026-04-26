@@ -1073,6 +1073,7 @@ export type Database = {
         Args: { p_backup_codes: string; p_secret: string; p_user_id: string }
         Returns: undefined
       }
+      trigger_google_calendar_pull: { Args: never; Returns: undefined }
       unificar_duplicados: {
         Args: { p_principal_id?: string; p_telefone_normalizado: string }
         Returns: Json
