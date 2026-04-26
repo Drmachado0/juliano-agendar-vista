@@ -1,83 +1,74 @@
-# Validação automática contra conflitos de agendamento
+
+# Ordenação por data + filtros nos cards do CRM Kanban
+
+## Objetivo
+Tornar a ordem padrão dos cards do CRM por **data da consulta (mais próxima primeiro)** e adicionar uma barra de filtros acima do Kanban.
 
 ## Diagnóstico
+- `src/services/agendamentos.ts` (`listarAgendamentosPorStatus`) ordena por data **decrescente** (mais distante no topo) e usa `created_at` como fallback, misturando leads sem data no topo.
+- `src/pages/admin/CRM.tsx` exibe direto o que vem do service, sem filtros.
 
-Hoje a validação existe **parcialmente**, mas com brechas:
+## Mudanças
 
-| Fluxo | Valida hoje? | Problema |
-|---|---|---|
-| `criar-agendamento` (site público) | ✅ Sim, via `validarDisponibilidade` | Race condition: entre validar e inserir, outra requisição pode pegar o mesmo slot |
-| `converter-lead-agendamento` (Step 4) | ✅ Sim | Mesma race condition |
-| `NovoAgendamentoAdminModal` (admin) | ❌ **Não valida disponibilidade** — insere direto via `criarAgendamento` do service | Admin pode criar duplicado no mesmo horário |
-| `AgendamentoDetailsModal` (edição) | ❌ Não revalida ao mudar data/hora | Edição pode gerar conflito |
-| `TimeSlotPicker` (UI) | Mostra subset aleatório como "disponível" | Slot pode já ter sido pego entre a listagem e o submit |
+### 1. Nova ordenação padrão — `src/services/agendamentos.ts`
+Ajustar o `sort` em `listarAgendamentosPorStatus`:
+1. Cards **com `data_agendamento`** primeiro, em ordem **ascendente** (consulta mais próxima no topo).
+2. Empate → `hora_agendamento` ascendente.
+3. Cards **sem data** vão para o final, por `created_at` descendente.
 
-Não há **constraint no banco** garantindo unicidade de `(clinica_id, data_agendamento, hora_agendamento)` — é a única defesa real contra race condition.
-
----
-
-## Plano
-
-### 1. Migração SQL — Constraint anti-duplicidade (defesa final)
-
-Criar índice único parcial em `agendamentos` para impedir dois registros ativos no mesmo slot/clínica:
-
-```sql
-CREATE UNIQUE INDEX uniq_agendamento_slot_ativo
-ON public.agendamentos (clinica_id, data_agendamento, hora_agendamento)
-WHERE status_crm <> 'cancelado'
-  AND data_agendamento IS NOT NULL
-  AND hora_agendamento IS NOT NULL
-  AND clinica_id IS NOT NULL;
+```ts
+grouped[key].sort((a, b) => {
+  const aTem = !!a.data_agendamento;
+  const bTem = !!b.data_agendamento;
+  if (aTem && !bTem) return -1;
+  if (!aTem && bTem) return 1;
+  if (aTem && bTem) {
+    const dt = a.data_agendamento!.localeCompare(b.data_agendamento!);
+    if (dt !== 0) return dt;
+    return (a.hora_agendamento || '').localeCompare(b.hora_agendamento || '');
+  }
+  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+});
 ```
 
-- Cancelados não bloqueiam (permite reagendar no mesmo slot depois).
-- Antes de aplicar, a migração faz `SELECT` para detectar duplicatas pré-existentes e loga (não falha) — se houver, listo no console e oriento o usuário a unificar via Drawer de Duplicados.
+### 2. Novo componente `src/components/admin/CRMFilters.tsx`
+Barra compacta com:
+- **Busca**: nome ou telefone (debounce 300ms).
+- **Local**: Todos / Clinicor / HGP / Belém (IOB-Vitria) / Hospital Geral.
+- **Tipo**: Todos / Consulta / Retorno / Exame / Cirurgia.
+- **Convênio**: Todos / Particular / Bradesco / Unimed / Cassi / Sul América / Outro.
+- **Período da consulta**: Todas / Hoje / Próximos 7 dias / Este mês / Atrasados / Sem data.
+- **Ordenação**: Data (mais próxima) ▼ / Data (mais distante) / Cadastro mais recente / Cadastro mais antigo.
+- Botão **Limpar filtros** + chip "X resultados".
 
-### 2. Edge Functions — Tratar erro `23505` (violação de unique) com mensagem amigável
+```ts
+interface CrmFilters {
+  busca: string;
+  local?: string;
+  tipo?: string;
+  convenio?: string;
+  periodo: 'todos' | 'hoje' | '7dias' | 'mes' | 'atrasados' | 'sem_data';
+  ordenacao: 'data_asc' | 'data_desc' | 'created_desc' | 'created_asc';
+}
+```
 
-Em `criar-agendamento` e `converter-lead-agendamento`:
-- Após o `.insert()`, se `error.code === '23505'` (unique_violation no índice acima), retornar **HTTP 409** com `{ error: 'Este horário acabou de ser reservado por outra pessoa. Escolha outro horário.', code: 'SLOT_TAKEN' }`.
-- Garante que mesmo numa race condition o segundo INSERT falha com mensagem clara em vez de criar duplicata.
+### 3. Integração em `src/pages/admin/CRM.tsx`
+- `useState<CrmFilters>` com defaults `{ busca: '', periodo: 'todos', ordenacao: 'data_asc' }`.
+- Renderizar `<CRMFilters />` entre as estatísticas e o Kanban.
+- Aplicar filtros + ordenação no client via `useMemo` sobre `agendamentosPorStatus`, produzindo `agendamentosFiltrados` para os `KanbanColumn`.
+- Contadores do header e da coluna refletem o **resultado filtrado**, com total original no tooltip ("8 de 23").
+- Persistir filtros em `localStorage` (`crm:filters:v1`).
 
-### 3. Admin — Validar antes de salvar
+### 4. Ajuste opcional em `KanbanCard.tsx`
+Badge sutil "Atrasado" quando `data_agendamento < hoje` e status ≠ `ATENDIDO`, dando eco visual ao filtro "Atrasados".
 
-**`NovoAgendamentoAdminModal.tsx`**: antes de chamar `criarAgendamento`, invocar a edge function `validar-agendamento` (já existe) e bloquear o submit se `disponivel === false`, mostrando o motivo + alternativas no toast.
+## Arquivos
+- `src/services/agendamentos.ts` — ordenação padrão.
+- `src/components/admin/CRMFilters.tsx` — **novo**.
+- `src/pages/admin/CRM.tsx` — integração + memoização + persistência.
+- `src/components/admin/KanbanCard.tsx` — badge "Atrasado" (opcional).
 
-**`AgendamentoDetailsModal.tsx`**: ao salvar mudança de `data_agendamento` ou `hora_agendamento`, idem — validar contra o novo slot, ignorando o próprio agendamento (passar `excluir_id` para a função).
-
-Para suportar isso, atualizar `validar-agendamento` (edge function) e `validarDisponibilidade` (shared) para aceitar parâmetro opcional `excluir_agendamento_id` que é descontado dos `ocupados`.
-
-### 4. Frontend público — Revalidar imediatamente antes do submit final
-
-No `DateTimeStep.handleNext` já existe validação. Adicionar mesma revalidação no `ConfirmationStep` (Step 4) **um instante antes** do submit final, porque entre Step 3 e Step 4 podem se passar minutos. Se voltar 409/indisponível, abrir um banner com botão "Escolher outro horário" que volta para Step 3 com `reloadKey` incrementado (força refetch dos slots).
-
-### 5. UI — Feedback claro de slot tomado
-
-Quando qualquer fluxo receber 409 SLOT_TAKEN:
-- Toast destrutivo com mensagem
-- Em fluxos com calendário aberto: chamar refresh dos slots imediatamente para o paciente ver o slot sumir
-
----
-
-## Arquivos afetados
-
-- **Nova migration**: `supabase/migrations/<timestamp>_uniq_agendamento_slot.sql`
-- `supabase/functions/_shared/validarDisponibilidade.ts` — aceitar `excluir_agendamento_id`
-- `supabase/functions/validar-agendamento/index.ts` — repassar parâmetro
-- `supabase/functions/criar-agendamento/index.ts` — tratar 23505
-- `supabase/functions/converter-lead-agendamento/index.ts` — tratar 23505
-- `src/services/agendamentos.ts` — tratar erro SLOT_TAKEN no `atualizarAgendamento`
-- `src/components/admin/NovoAgendamentoAdminModal.tsx` — validar antes de salvar
-- `src/components/admin/AgendamentoDetailsModal.tsx` — revalidar ao mudar data/hora
-- `src/components/scheduling/ConfirmationStep.tsx` — revalidar antes do submit final
-- `src/components/scheduling/SchedulingModal.tsx` e `src/pages/Agendar.tsx` — handler do erro SLOT_TAKEN
-
----
-
-## Resultado esperado
-
-- ❌ Impossível existirem dois agendamentos ativos no mesmo `(clinica, data, hora)` — garantido pelo banco.
-- ✅ Admin não consegue mais salvar conflito sem aviso.
-- ✅ Paciente em race condition recebe mensagem clara e é redirecionado a escolher outro horário.
-- ✅ Edição de agendamento existente também é validada.
+## Fora do escopo
+- Filtros por data de cadastro.
+- Persistência server-side dos filtros.
+- Filtro por coluna de status (o Kanban já é essa visão).
