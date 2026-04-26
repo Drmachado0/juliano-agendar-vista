@@ -460,7 +460,11 @@ serve(async (req) => {
       });
     }
 
-    throw new Error('Invalid action');
+    console.warn('[google-calendar-sync] Action desconhecida recebida:', action);
+    return new Response(
+      JSON.stringify({ error: `Invalid action: ${action ?? 'undefined'}` }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[google-calendar-sync]', message);
