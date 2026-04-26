@@ -178,11 +178,19 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
           </Label>
           <Input
             id="birthDate"
-            type="date"
-            value={formData.birthDate}
-            onChange={(e) => updateFormData({ birthDate: e.target.value })}
-            className="bg-secondary border-border focus:border-primary"
+            type="text"
+            inputMode="numeric"
+            value={birthDateBr}
+            onChange={handleBirthDateChange}
+            placeholder="dd/mm/aaaa"
+            maxLength={10}
+            className={`bg-secondary border-border focus:border-primary ${
+              errors.birthDate ? "border-destructive" : ""
+            }`}
           />
+          {errors.birthDate && (
+            <p className="text-sm text-destructive">{errors.birthDate}</p>
+          )}
         </div>
 
         {/* Email */}
