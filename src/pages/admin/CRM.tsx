@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import KanbanColumn from "@/components/admin/KanbanColumn";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
 import WhatsAppModal from "@/components/admin/WhatsAppModal";
 import { Button } from "@/components/ui/button";
-import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm } from "@/services/agendamentos";
+import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm, reprocessarBoasVindas } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
-import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight } from "lucide-react";
+import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, Wifi } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
 
 const columns = [
   { status: "NOVO LEAD", title: "Novo Lead", color: "bg-emerald-500" },
@@ -29,6 +30,8 @@ const AdminCRM = () => {
     "ATENDIDO": [],
   });
   const [loading, setLoading] = useState(true);
+  const [reprocessando, setReprocessando] = useState(false);
+  const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date>(new Date());
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [draggingAgendamento, setDraggingAgendamento] = useState<Agendamento | null>(null);
 
@@ -36,25 +39,78 @@ const AdminCRM = () => {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
 
-  const fetchAgendamentos = async () => {
-    setLoading(true);
+  const isFetchingRef = useRef(false);
+
+  const fetchAgendamentos = async (silent = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    if (!silent) setLoading(true);
     const { data, error } = await listarAgendamentosPorStatus();
-    setLoading(false);
+    if (!silent) setLoading(false);
+    isFetchingRef.current = false;
 
     if (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os agendamentos.",
-        variant: "destructive",
-      });
+      if (!silent) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os agendamentos.",
+          variant: "destructive",
+        });
+      }
     } else {
       setAgendamentosPorStatus(data);
+      setUltimaAtualizacao(new Date());
     }
   };
 
   useEffect(() => {
     fetchAgendamentos();
+
+    // Realtime: atualiza automaticamente quando agendamentos mudam (cron, drag de outro admin, etc.)
+    const channel = supabase
+      .channel('crm-agendamentos-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'agendamentos' },
+        () => {
+          fetchAgendamentos(true);
+        }
+      )
+      .subscribe();
+
+    // Polling de fallback a cada 60s
+    const interval = setInterval(() => fetchAgendamentos(true), 60000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, []);
+
+  const handleReprocessarBoasVindas = async () => {
+    setReprocessando(true);
+    toast({ title: "Processando...", description: "Enviando boas-vindas para leads pendentes." });
+    const { processed, failed, total_pending, error } = await reprocessarBoasVindas();
+    setReprocessando(false);
+
+    if (error) {
+      toast({
+        title: "Erro ao reprocessar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: `${processed} mensagem(ns) enviada(s)`,
+        description: failed > 0
+          ? `${failed} falha(s). ${total_pending} pendente(s) total.`
+          : total_pending === 0
+          ? "Nenhum lead pendente encontrado."
+          : `${total_pending} pendente(s) total.`,
+      });
+      fetchAgendamentos(true);
+    }
+  };
 
   const handleDragStart = (e: React.DragEvent, agendamento: Agendamento) => {
     setDraggingAgendamento(agendamento);
@@ -217,10 +273,26 @@ const AdminCRM = () => {
               </div>
             </div>
           </div>
-          <Button variant="outline" onClick={fetchAgendamentos} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2 py-1 rounded bg-muted/50">
+              <Wifi className="h-3 w-3 text-emerald-500" />
+              <span>Atualizado {ultimaAtualizacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReprocessarBoasVindas}
+              disabled={reprocessando}
+              title="Forçar envio de boas-vindas para leads pendentes"
+            >
+              <Send className={`h-4 w-4 mr-2 ${reprocessando ? 'animate-pulse' : ''}`} />
+              {reprocessando ? "Enviando..." : "Reprocessar boas-vindas"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fetchAgendamentos()} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+          </div>
         </div>
 
         {/* Estatísticas de Conversão */}
