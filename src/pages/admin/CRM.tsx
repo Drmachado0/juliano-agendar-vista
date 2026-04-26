@@ -337,33 +337,34 @@ const AdminCRM = () => {
     }
   };
 
-  // Calcula estatísticas: leads incompletos vs agendamentos confirmados
-  const allItems = Object.values(agendamentosPorStatus).flat();
+  // Calcula estatísticas com base no resultado FILTRADO (header + taxas reagem aos filtros)
+  const allItems = Object.values(agendamentosFiltrados).flat();
   const totalItems = allItems.length;
+  const totalGeralCards = Object.values(agendamentosPorStatus).reduce((s, l) => s + l.length, 0);
   const leadsIncompletos = allItems.filter(
     (a) => (a as any).status_funil === 'lead' || !a.data_agendamento || !a.hora_agendamento
   ).length;
   const agendamentosConfirmados = totalItems - leadsIncompletos;
 
-  // Status de boas-vindas para todos os cards visíveis
+  // Status de boas-vindas para todos os cards visíveis (filtrados)
   const boasVindasMap = useBoasVindasStatus(allItems.map((a) => a.id));
-  
+
   // Estatísticas de conversão
-  const atendidos = agendamentosPorStatus['ATENDIDO']?.length || 0;
-  const emAndamento = (agendamentosPorStatus['CLINICOR']?.length || 0) + 
-                      (agendamentosPorStatus['HGP']?.length || 0) + 
-                      (agendamentosPorStatus['BELÉM']?.length || 0);
-  
+  const atendidos = agendamentosFiltrados['ATENDIDO']?.length || 0;
+  const emAndamento = (agendamentosFiltrados['CLINICOR']?.length || 0) +
+                      (agendamentosFiltrados['HGP']?.length || 0) +
+                      (agendamentosFiltrados['BELÉM']?.length || 0);
+
   // Taxa de conversão: leads que viraram agendamentos confirmados
   const totalLeadsHistorico = agendamentosConfirmados + leadsIncompletos;
-  const taxaConversao = totalLeadsHistorico > 0 
-    ? Math.round((agendamentosConfirmados / totalLeadsHistorico) * 100) 
+  const taxaConversao = totalLeadsHistorico > 0
+    ? Math.round((agendamentosConfirmados / totalLeadsHistorico) * 100)
     : 0;
-  
+
   // Taxa de conclusão: agendados que foram atendidos
   const totalAgendados = agendamentosConfirmados;
-  const taxaConclusao = totalAgendados > 0 
-    ? Math.round((atendidos / totalAgendados) * 100) 
+  const taxaConclusao = totalAgendados > 0
+    ? Math.round((atendidos / totalAgendados) * 100)
     : 0;
 
   return (
