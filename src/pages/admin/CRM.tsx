@@ -488,6 +488,14 @@ const AdminCRM = () => {
           </div>
         </div>
 
+        {/* Filtros */}
+        <CRMFilters
+          filters={filters}
+          onChange={setFilters}
+          totalFiltrado={totalItems}
+          totalGeral={totalGeralCards}
+        />
+
         {/* Kanban board */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -504,7 +512,7 @@ const AdminCRM = () => {
                 <KanbanColumn
                   title={column.title}
                   status={column.status}
-                  agendamentos={agendamentosPorStatus[column.status] || []}
+                  agendamentos={agendamentosFiltrados[column.status] || []}
                   color={column.color}
                   onViewDetails={handleViewDetails}
                   onSendWhatsApp={handleSendWhatsApp}
