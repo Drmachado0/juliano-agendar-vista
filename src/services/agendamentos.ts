@@ -326,12 +326,20 @@ export async function listarAgendamentosPorStatus(): Promise<{
     }
   });
 
-  // Ordenar cada coluna por data (data_agendamento ou created_at)
+  // Ordenar cada coluna: cards COM data primeiro (mais próxima → mais distante),
+  // depois cards SEM data por created_at descendente (mais recente primeiro).
   Object.keys(grouped).forEach(key => {
     grouped[key].sort((a, b) => {
-      const dateA = a.data_agendamento || a.created_at;
-      const dateB = b.data_agendamento || b.created_at;
-      return new Date(dateB).getTime() - new Date(dateA).getTime();
+      const aTem = !!a.data_agendamento;
+      const bTem = !!b.data_agendamento;
+      if (aTem && !bTem) return -1;
+      if (!aTem && bTem) return 1;
+      if (aTem && bTem) {
+        const dt = (a.data_agendamento as string).localeCompare(b.data_agendamento as string);
+        if (dt !== 0) return dt;
+        return (a.hora_agendamento || '').localeCompare(b.hora_agendamento || '');
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   });
 

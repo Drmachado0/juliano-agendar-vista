@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import KanbanColumn from "@/components/admin/KanbanColumn";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
@@ -13,6 +13,103 @@ import { supabase } from "@/integrations/supabase/client";
 import AuditLogDrawer from "@/components/admin/AuditLogDrawer";
 import DuplicadosDrawer from "@/components/admin/DuplicadosDrawer";
 import { useBoasVindasStatus } from "@/hooks/useBoasVindasStatus";
+import CRMFilters, { CrmFilters, DEFAULT_CRM_FILTERS } from "@/components/admin/CRMFilters";
+
+const FILTERS_STORAGE_KEY = "crm:filters:v1";
+
+function loadFilters(): CrmFilters {
+  try {
+    const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
+    if (!raw) return DEFAULT_CRM_FILTERS;
+    return { ...DEFAULT_CRM_FILTERS, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_CRM_FILTERS;
+  }
+}
+
+function aplicarFiltrosEOrdenacao(
+  porStatus: Record<string, Agendamento[]>,
+  filters: CrmFilters
+): Record<string, Agendamento[]> {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const fim7 = new Date(hoje);
+  fim7.setDate(fim7.getDate() + 7);
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
+  const buscaNorm = filters.busca.trim().toLowerCase();
+  const buscaDigitos = buscaNorm.replace(/\D/g, "");
+
+  const matches = (a: Agendamento) => {
+    if (filters.local && a.local_atendimento !== filters.local) return false;
+    if (filters.tipo && a.tipo_atendimento !== filters.tipo) return false;
+    if (filters.convenio && a.convenio !== filters.convenio) return false;
+
+    if (buscaNorm) {
+      const nome = (a.nome_completo || "").toLowerCase();
+      const tel = (a.telefone_whatsapp || "").replace(/\D/g, "");
+      const matchNome = nome.includes(buscaNorm);
+      const matchTel = buscaDigitos.length >= 3 && tel.includes(buscaDigitos);
+      if (!matchNome && !matchTel) return false;
+    }
+
+    if (filters.periodo !== "todos") {
+      const temData = !!a.data_agendamento;
+      if (filters.periodo === "sem_data") {
+        if (temData) return false;
+      } else {
+        if (!temData) return false;
+        const d = new Date(a.data_agendamento + "T00:00:00");
+        if (filters.periodo === "hoje") {
+          if (d.getTime() !== hoje.getTime()) return false;
+        } else if (filters.periodo === "7dias") {
+          if (d < hoje || d > fim7) return false;
+        } else if (filters.periodo === "mes") {
+          if (d < inicioMes || d > fimMes) return false;
+        } else if (filters.periodo === "atrasados") {
+          if (d >= hoje) return false;
+          if (a.status_crm === "ATENDIDO") return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  const sorter = (a: Agendamento, b: Agendamento) => {
+    const aTem = !!a.data_agendamento;
+    const bTem = !!b.data_agendamento;
+    switch (filters.ordenacao) {
+      case "data_asc":
+        if (aTem && !bTem) return -1;
+        if (!aTem && bTem) return 1;
+        if (aTem && bTem) {
+          const dt = (a.data_agendamento as string).localeCompare(b.data_agendamento as string);
+          if (dt !== 0) return dt;
+          return (a.hora_agendamento || "").localeCompare(b.hora_agendamento || "");
+        }
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      case "data_desc":
+        if (aTem && !bTem) return -1;
+        if (!aTem && bTem) return 1;
+        if (aTem && bTem) {
+          const dt = (b.data_agendamento as string).localeCompare(a.data_agendamento as string);
+          if (dt !== 0) return dt;
+          return (b.hora_agendamento || "").localeCompare(a.hora_agendamento || "");
+        }
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      case "created_desc":
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      case "created_asc":
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    }
+  };
+
+  const result: Record<string, Agendamento[]> = {};
+  for (const key of Object.keys(porStatus)) {
+    result[key] = porStatus[key].filter(matches).sort(sorter);
+  }
+  return result;
+}
 
 const columns = [
   { status: "NOVO LEAD", title: "Novo Lead", color: "bg-emerald-500" },
@@ -44,6 +141,20 @@ const AdminCRM = () => {
   const [auditOpen, setAuditOpen] = useState(false);
   const [duplicadosOpen, setDuplicadosOpen] = useState(false);
   const isFetchingRef = useRef(false);
+
+  const [filters, setFilters] = useState<CrmFilters>(() => loadFilters());
+  useEffect(() => {
+    try {
+      localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
+    } catch {
+      /* ignore */
+    }
+  }, [filters]);
+
+  const agendamentosFiltrados = useMemo(
+    () => aplicarFiltrosEOrdenacao(agendamentosPorStatus, filters),
+    [agendamentosPorStatus, filters]
+  );
 
   const fetchAgendamentos = async (silent = false) => {
     if (isFetchingRef.current) return;
@@ -226,33 +337,34 @@ const AdminCRM = () => {
     }
   };
 
-  // Calcula estatísticas: leads incompletos vs agendamentos confirmados
-  const allItems = Object.values(agendamentosPorStatus).flat();
+  // Calcula estatísticas com base no resultado FILTRADO (header + taxas reagem aos filtros)
+  const allItems = Object.values(agendamentosFiltrados).flat();
   const totalItems = allItems.length;
+  const totalGeralCards = Object.values(agendamentosPorStatus).reduce((s, l) => s + l.length, 0);
   const leadsIncompletos = allItems.filter(
     (a) => (a as any).status_funil === 'lead' || !a.data_agendamento || !a.hora_agendamento
   ).length;
   const agendamentosConfirmados = totalItems - leadsIncompletos;
 
-  // Status de boas-vindas para todos os cards visíveis
+  // Status de boas-vindas para todos os cards visíveis (filtrados)
   const boasVindasMap = useBoasVindasStatus(allItems.map((a) => a.id));
-  
+
   // Estatísticas de conversão
-  const atendidos = agendamentosPorStatus['ATENDIDO']?.length || 0;
-  const emAndamento = (agendamentosPorStatus['CLINICOR']?.length || 0) + 
-                      (agendamentosPorStatus['HGP']?.length || 0) + 
-                      (agendamentosPorStatus['BELÉM']?.length || 0);
-  
+  const atendidos = agendamentosFiltrados['ATENDIDO']?.length || 0;
+  const emAndamento = (agendamentosFiltrados['CLINICOR']?.length || 0) +
+                      (agendamentosFiltrados['HGP']?.length || 0) +
+                      (agendamentosFiltrados['BELÉM']?.length || 0);
+
   // Taxa de conversão: leads que viraram agendamentos confirmados
   const totalLeadsHistorico = agendamentosConfirmados + leadsIncompletos;
-  const taxaConversao = totalLeadsHistorico > 0 
-    ? Math.round((agendamentosConfirmados / totalLeadsHistorico) * 100) 
+  const taxaConversao = totalLeadsHistorico > 0
+    ? Math.round((agendamentosConfirmados / totalLeadsHistorico) * 100)
     : 0;
-  
+
   // Taxa de conclusão: agendados que foram atendidos
   const totalAgendados = agendamentosConfirmados;
-  const taxaConclusao = totalAgendados > 0 
-    ? Math.round((atendidos / totalAgendados) * 100) 
+  const taxaConclusao = totalAgendados > 0
+    ? Math.round((atendidos / totalAgendados) * 100)
     : 0;
 
   return (
@@ -376,6 +488,14 @@ const AdminCRM = () => {
           </div>
         </div>
 
+        {/* Filtros */}
+        <CRMFilters
+          filters={filters}
+          onChange={setFilters}
+          totalFiltrado={totalItems}
+          totalGeral={totalGeralCards}
+        />
+
         {/* Kanban board */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -392,7 +512,7 @@ const AdminCRM = () => {
                 <KanbanColumn
                   title={column.title}
                   status={column.status}
-                  agendamentos={agendamentosPorStatus[column.status] || []}
+                  agendamentos={agendamentosFiltrados[column.status] || []}
                   color={column.color}
                   onViewDetails={handleViewDetails}
                   onSendWhatsApp={handleSendWhatsApp}
