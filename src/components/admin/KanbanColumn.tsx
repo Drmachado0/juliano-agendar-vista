@@ -30,6 +30,7 @@ const KanbanColumn = ({
   onDragOver,
   onDrop,
   isDragOver,
+  boasVindasMap,
 }: KanbanColumnProps) => {
   return (
     <div
