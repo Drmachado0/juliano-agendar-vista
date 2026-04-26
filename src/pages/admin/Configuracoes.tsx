@@ -157,7 +157,74 @@ export default function Configuracoes() {
     setGcalLoading(true);
     const status = await checkGoogleCalendarConnection(user.id);
     setGcalStatus(status);
+    if (status.settings) setGcalSettings(status.settings);
     setGcalLoading(false);
+    if (status.connected) {
+      loadCalendarList();
+    }
+  }
+
+  async function loadCalendarList() {
+    if (!user?.id) return;
+    setGcalCalendarsLoading(true);
+    const { calendars, error } = await listGoogleCalendars(user.id);
+    if (!error) setGcalCalendars(calendars);
+    setGcalCalendarsLoading(false);
+  }
+
+  async function handleChangeCalendar(calendarId: string) {
+    if (!user?.id) return;
+    const { success, error } = await updateCalendarSelection(user.id, calendarId);
+    if (success) {
+      toast.success('Calendário atualizado');
+      setGcalStatus({ ...gcalStatus, calendar_id: calendarId });
+    } else {
+      toast.error(error || 'Erro ao atualizar calendário');
+    }
+  }
+
+  async function handleTestConnection() {
+    if (!user?.id) return;
+    setGcalTesting(true);
+    const { ok, summary, time_zone, error } = await testGoogleCalendarConnection(user.id);
+    if (ok) {
+      toast.success(`Conexão OK: ${summary} (${time_zone})`);
+      checkGCalConnection();
+    } else {
+      toast.error(error || 'Falha no teste de conexão');
+    }
+    setGcalTesting(false);
+  }
+
+  async function handleResyncBatch() {
+    if (!user?.id) return;
+    setGcalResyncing(true);
+    const result = await resyncBatchGoogleCalendar(user.id);
+    if (result.success) {
+      toast.success(`Ressincronização concluída: ${result.synced}/${result.total} criados${result.failed ? `, ${result.failed} falharam` : ''}`);
+      checkGCalConnection();
+    } else {
+      toast.error(result.error || 'Erro na ressincronização');
+    }
+    setGcalResyncing(false);
+  }
+
+  async function handleSaveSettings() {
+    if (!user?.id) return;
+    setGcalSavingSettings(true);
+    const { success, error } = await updateGoogleCalendarSettings(user.id, gcalSettings);
+    if (success) {
+      toast.success('Configurações salvas');
+    } else {
+      toast.error(error || 'Erro ao salvar');
+    }
+    setGcalSavingSettings(false);
+  }
+
+  function openInGoogleCalendar() {
+    const cid = gcalStatus.calendar_id || 'primary';
+    const encoded = btoa(cid).replace(/=+$/, '');
+    window.open(`https://calendar.google.com/calendar/u/0/r?cid=${encoded}`, '_blank');
   }
 
   async function carregarDados() {
