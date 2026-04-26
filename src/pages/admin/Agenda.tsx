@@ -19,7 +19,7 @@ import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal"
 import { NovoAgendamentoAdminModal } from "@/components/admin/NovoAgendamentoAdminModal";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { pullGoogleCalendarEvents } from "@/services/googleCalendar";
+import { pullGoogleCalendarEvents, PullRange } from "@/services/googleCalendar";
 import { toast } from "@/hooks/use-toast";
 
 export default function Agenda() {
