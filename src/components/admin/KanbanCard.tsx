@@ -205,6 +205,7 @@ const KanbanCard = ({
         </Button>
       </div>
     </div>
+    </TooltipProvider>
   );
 };
 
