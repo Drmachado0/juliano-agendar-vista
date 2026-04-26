@@ -1,63 +1,73 @@
 ## Objetivo
 
-Garantir que o trigger GTM **"Evento - Meta Lead"** (event name: `meta_lead`) receba o payload completo esperado em **todas as páginas de agendamento** (`/agendamento`, `/agendar`, `/agendar-consulta` e o modal `SchedulingModal`), preservando o `content_name` descritivo por contexto.
+Transformar a página `/agendar` (`src/pages/Agendar.tsx`) em uma landing de conversão no mesmo padrão de `/agendar-consulta`, porém:
+- exibindo **5,0 estrelas** (em vez de 4,9);
+- com **CTA do WhatsApp em destaque** (botão verde grande, com pulso/chamariz e copy: *"Prefere falar com nossa secretária? Chame no WhatsApp"*);
+- mantendo todo o fluxo, integrações e tracking que já funcionam hoje em `/agendar`.
 
-## Estado atual
+## O que muda
 
-`src/hooks/useMetaPixel.ts` → `trackLead()` já dispara:
+### 1. `src/pages/Agendar.tsx` (refatoração de UI)
 
-```js
-window.dataLayer.push({
-  event: 'meta_lead',
-  content_name: <dinâmico>,
-  content_category: 'Consulta Oftalmológica',
-  value: 300,
-  currency: 'BRL',
-});
-```
+Reaproveitar a estrutura visual de `AgendarConsulta.tsx` adaptando-a:
 
-Esse helper é chamado ao avançar da Step 1 (nome + telefone + e-mail) em:
-- `src/pages/Agendamento.tsx` (linha 112)
-- `src/pages/Agendar.tsx`
-- `src/pages/AgendarConsulta.tsx`
-- `src/components/scheduling/SchedulingModal.tsx`
+**Layout em duas colunas (desktop ≥ lg) / empilhado (mobile):**
+- **Coluna esquerda:** título + subtítulo + card do formulário multi-step (mantém `StepIndicator` + `PersonalDataStep` → `ConsultationDetailsStep` → `DateTimeStep` → `ConfirmationStep` → `SuccessStep`, sem alterar a lógica).
+- **Coluna direita (sticky):** prova social com foto do Dr. Juliano (`@/assets/dr-juliano-hero.png`), bullets de credibilidade (13+ anos, 6.000+ pacientes, Paragominas/Belém, convênios, resposta em até 1h) e card de depoimento.
 
-**Faltam no payload:** `form_name`.
+**Header minimalista:**
+- Nome do médico + CRM-PA à esquerda.
+- Link "Voltar ao site" (manter, é diferencial vs. `/agendar-consulta`).
+- CTA WhatsApp à direita no header.
 
-## Mudança
+**Avaliações = 5,0 estrelas:**
+- Banner mobile: `5.0 · 200+ avaliações`.
+- Card de prova social desktop: 5 estrelas preenchidas + texto `5.0/5 (200+ avaliações)`.
+- Mini-card de depoimento: 5 estrelas.
 
-Editar **apenas `src/hooks/useMetaPixel.ts`**, função `trackLead`, para incluir `form_name: 'agendamento'`. Como todas as páginas usam esse helper, a correção se propaga automaticamente.
+**CTA WhatsApp em destaque (novo bloco — diferencial pedido):**
+- Banner verde (`bg-[#25D366]`) logo abaixo do header (mobile) e dentro da coluna direita acima do card de prova social (desktop), com:
+  - Ícone `MessageCircle` animado (`animate-pulse` no halo).
+  - Título: **"Prefere falar com nossa secretária?"**
+  - Subtítulo: *"Atendimento humano pelo WhatsApp — tire dúvidas e agende em minutos."*
+  - Botão grande: **"Chamar no WhatsApp agora"** com seta.
+  - URL: `https://wa.me/5591936180476?text=Ol%C3%A1%21+Gostaria+de+agendar+uma+consulta+oftalmol%C3%B3gica+com+o+Dr.+Juliano+Machado.`
+- O botão WhatsApp do header também fica mais visível (estilo "pill" verde, não apenas link em accent).
 
-Payload final que será enviado ao dataLayer:
+**Rodapé:**
+- Linha sutil com CRM e disclaimer de contato (mesmo padrão da landing).
 
-```js
-{
-  event: 'meta_lead',
-  form_name: 'agendamento',
-  content_name: <descritivo do contexto, ex.: 'Dados Pessoais Preenchidos - Landing'>,
-  content_category: 'Consulta Oftalmológica',
-  value: 300,
-  currency: 'BRL',
-}
-```
+### 2. Tracking / integrações (preservar)
 
-Isso atende:
-- ✅ Trigger GTM `meta_lead` continua disparando exatamente nos mesmos pontos (Step 1 do form).
-- ✅ Adiciona `form_name='agendamento'` (novo) para a tag GTM filtrar/ler.
-- ✅ Mantém `content_category`, `value` conforme solicitado.
-- ✅ Preserva `content_name` dinâmico (útil para distinguir landing vs modal vs página) e mantém `currency: 'BRL'` (extra inofensivo).
+- Manter `useMetaPixel` (`trackViewContent`, `trackLead`, `trackSchedule`, `trackCompleteRegistration`) e `useGoogleTag` (`trackFormSubmitConversion`) já existentes.
+- Reaproveitar `useGoogleTag` para disparar `trackWhatsAppClick` + `trackWhatsAppGoogleAdsConversion` em **todos** os cliques nos novos CTAs WhatsApp (header, banner destaque, eventual repetição mobile), com `button_location` distinto por posição (`agendar_header`, `agendar_destaque_secretaria`).
+- Manter o fluxo `criarLead` → `converterLeadEmAgendamento` → notificações WhatsApp/E-mail → redirect `/obrigado` exatamente como está.
 
-## Arquivos afetados
+### 3. SEO
 
-- `src/hooks/useMetaPixel.ts` — adicionar `form_name: 'agendamento'` no objeto pushado por `trackLead()`.
+- Atualizar `<Helmet>`: `<title>` e `<meta name="description">` para refletir copy persuasivo ("Agende online ou fale com nossa secretária no WhatsApp"). Manter `lang="pt-BR"` global já configurado.
 
-Nenhum outro arquivo precisa ser tocado.
+## O que NÃO muda
 
-## Validação pós-deploy
+- Lógica de steps, validações e estado do formulário.
+- Edge functions, serviços (`leads.ts`, `notificarN8n`, etc.) e tracking de conversão.
+- Página `/agendar-consulta` permanece como está (continua sendo a landing dedicada para campanhas).
+- `WhatsAppButton` flutuante global continua presente.
 
-1. Abrir `/agendamento` em modo Preview do GTM.
-2. Preencher Step 1 e clicar em avançar.
-3. Confirmar no Tag Assistant que:
-   - Evento `meta_lead` aparece no dataLayer com `form_name: 'agendamento'`.
-   - Trigger "Evento - Meta Lead" dispara a tag Meta Pixel `Lead`.
-4. Repetir em `/agendar`, `/agendar-consulta` e no modal de agendamento (homepage).
+## Arquivos a editar
+
+- `src/pages/Agendar.tsx` — refatoração completa do JSX (lógica preservada).
+
+## Arquivos lidos para validar implementação
+
+- `src/pages/AgendarConsulta.tsx` (referência de layout).
+- `src/components/WhatsAppButton.tsx` (referência de animação/estilo verde).
+- `src/hooks/useGoogleTag.ts` (assinatura de `trackWhatsAppClick`).
+
+## Critérios de aceite
+
+1. `/agendar` exibe **5 estrelas cheias** e o texto "5.0/5" em todos os pontos de prova social.
+2. Há um **bloco verde de destaque** com a chamada "Prefere falar com nossa secretária?" e botão grande para WhatsApp, visível tanto em mobile (acima do form) quanto em desktop (topo da coluna direita).
+3. Todos os cliques nos CTAs WhatsApp disparam `trackWhatsAppClick` + conversão Google Ads.
+4. Fluxo de agendamento (4 steps + sucesso) continua funcionando idêntico ao atual.
+5. Layout responsivo: mobile empilhado, desktop em 2 colunas com aside sticky.
