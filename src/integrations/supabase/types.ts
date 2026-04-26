@@ -388,12 +388,55 @@ export type Database = {
           },
         ]
       }
+      google_calendar_settings: {
+        Row: {
+          auto_sync_enabled: boolean
+          created_at: string | null
+          default_duration_min: number
+          event_color_id: string | null
+          id: string
+          include_convenio: boolean
+          include_patient_phone: boolean
+          reminder_popup_min: number[]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auto_sync_enabled?: boolean
+          created_at?: string | null
+          default_duration_min?: number
+          event_color_id?: string | null
+          id?: string
+          include_convenio?: boolean
+          include_patient_phone?: boolean
+          reminder_popup_min?: number[]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auto_sync_enabled?: boolean
+          created_at?: string | null
+          default_duration_min?: number
+          event_color_id?: string | null
+          id?: string
+          include_convenio?: boolean
+          include_patient_phone?: boolean
+          reminder_popup_min?: number[]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       google_calendar_tokens: {
         Row: {
           access_token: string
           calendar_id: string | null
+          connected_at: string | null
           created_at: string | null
+          google_email: string | null
           id: string
+          last_sync_at: string | null
+          last_sync_error: string | null
           refresh_token: string
           token_expiry: string
           updated_at: string | null
@@ -402,8 +445,12 @@ export type Database = {
         Insert: {
           access_token: string
           calendar_id?: string | null
+          connected_at?: string | null
           created_at?: string | null
+          google_email?: string | null
           id?: string
+          last_sync_at?: string | null
+          last_sync_error?: string | null
           refresh_token: string
           token_expiry: string
           updated_at?: string | null
@@ -412,8 +459,12 @@ export type Database = {
         Update: {
           access_token?: string
           calendar_id?: string | null
+          connected_at?: string | null
           created_at?: string | null
+          google_email?: string | null
           id?: string
+          last_sync_at?: string | null
+          last_sync_error?: string | null
           refresh_token?: string
           token_expiry?: string
           updated_at?: string | null

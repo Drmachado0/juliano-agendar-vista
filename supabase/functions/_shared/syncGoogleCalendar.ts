@@ -36,6 +36,19 @@ export async function syncAgendamentoToCalendar(
       return;
     }
 
+    // Respeitar flag auto_sync_enabled das settings
+    const { data: settings } = await supabase
+      .from("google_calendar_settings")
+      .select("auto_sync_enabled")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (settings && settings.auto_sync_enabled === false) {
+      console.log(
+        `[syncGoogleCalendar] Sincronização automática pausada para user ${userId}. Pulando ${agendamentoId}.`,
+      );
+      return;
+    }
+
     console.log(
       `[syncGoogleCalendar] Sincronizando agendamento ${agendamentoId} (action=${action}) com calendário do user ${userId}`,
     );
