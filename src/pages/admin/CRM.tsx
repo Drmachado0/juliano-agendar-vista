@@ -233,6 +233,9 @@ const AdminCRM = () => {
     (a) => (a as any).status_funil === 'lead' || !a.data_agendamento || !a.hora_agendamento
   ).length;
   const agendamentosConfirmados = totalItems - leadsIncompletos;
+
+  // Status de boas-vindas para todos os cards visíveis
+  const boasVindasMap = useBoasVindasStatus(allItems.map((a) => a.id));
   
   // Estatísticas de conversão
   const atendidos = agendamentosPorStatus['ATENDIDO']?.length || 0;
