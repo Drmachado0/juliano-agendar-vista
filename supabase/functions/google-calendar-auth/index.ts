@@ -22,7 +22,8 @@ serve(async (req) => {
 
     const scopes = [
       'https://www.googleapis.com/auth/calendar',
-      'https://www.googleapis.com/auth/calendar.events'
+      'https://www.googleapis.com/auth/calendar.events',
+      'https://www.googleapis.com/auth/userinfo.email',
     ];
 
     // Use the callback edge function as redirect URI
