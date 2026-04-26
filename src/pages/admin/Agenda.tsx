@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { format, addDays, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { listarClinicas, Clinica } from "@/services/clinicas";
@@ -17,14 +17,19 @@ import { AgendaSlot } from "@/components/admin/AgendaSlot";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
 import { NovoAgendamentoAdminModal } from "@/components/admin/NovoAgendamentoAdminModal";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { pullGoogleCalendarEvents } from "@/services/googleCalendar";
+import { toast } from "@/hooks/use-toast";
 
 export default function Agenda() {
+  const { user } = useAuth();
   const [clinicas, setClinicas] = useState<Clinica[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [selectedClinicaId, setSelectedClinicaId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [slots, setSlots] = useState<SlotAgenda[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncingGoogle, setSyncingGoogle] = useState(false);
   
   // Modals
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -103,6 +108,32 @@ export default function Agenda() {
     carregarAgenda();
   }
 
+  async function handleSyncGoogle() {
+    if (!user?.id) return;
+    setSyncingGoogle(true);
+    try {
+      const r = await pullGoogleCalendarEvents(user.id);
+      if (!r.ok) {
+        toast({
+          title: "Erro ao sincronizar",
+          description: r.error || "Verifique se o Google Calendar está conectado em Configurações.",
+          variant: "destructive",
+        });
+      } else {
+        const t = r.totals;
+        toast({
+          title: "Sincronização concluída",
+          description: t
+            ? `Importados: ${t.imported} · Atualizados: ${t.updated} · Cancelados: ${t.cancelled}${t.conflicts > 0 ? ` · ⚠️ ${t.conflicts} conflito(s)` : ""}`
+            : "Sem novos eventos.",
+        });
+        await carregarAgenda();
+      }
+    } finally {
+      setSyncingGoogle(false);
+    }
+  }
+
   if (loading) {
     return (
       <AdminLayout>
@@ -169,6 +200,16 @@ export default function Agenda() {
 
                 <Button variant="outline" onClick={() => setSelectedDate(new Date())}>
                   Hoje
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleSyncGoogle}
+                  disabled={syncingGoogle}
+                  title="Importar eventos do Google Calendar"
+                >
+                  <RefreshCw className={cn("h-4 w-4 mr-2", syncingGoogle && "animate-spin")} />
+                  {syncingGoogle ? "Sincronizando..." : "Sincronizar Google"}
                 </Button>
               </div>
             </div>

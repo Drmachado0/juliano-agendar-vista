@@ -142,6 +142,14 @@ function buildEvent(agendamento: Agendamento, settings: GcalSettings, timeZone: 
       useDefault: false,
       overrides: settings.reminder_popup_min.map((m) => ({ method: 'popup', minutes: m })),
     },
+    // Marca anti-loop: identifica eventos criados pelo nosso sistema para que
+    // o google-calendar-pull os ignore e não recrie como novos agendamentos.
+    extendedProperties: {
+      private: {
+        source: 'lovable',
+        agendamento_id: agendamento.id,
+      },
+    },
   };
   if (settings.event_color_id) event.colorId = settings.event_color_id;
   return event;

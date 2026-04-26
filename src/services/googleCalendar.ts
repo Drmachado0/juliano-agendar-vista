@@ -7,8 +7,27 @@ export interface GoogleCalendarSettings {
   include_patient_phone: boolean;
   include_convenio: boolean;
   auto_sync_enabled: boolean;
+  default_import_clinica_id?: string | null;
+  pull_enabled?: boolean;
 }
 
+export interface PullResult {
+  ok: boolean;
+  processed: number;
+  totals?: {
+    imported: number;
+    updated: number;
+    cancelled: number;
+    conflicts: number;
+    errors: number;
+  };
+  error?: string;
+}
+
+export interface GoogleCalendarPullSettings {
+  pull_enabled?: boolean;
+  default_import_clinica_id?: string | null;
+}
 export interface GoogleCalendarStatus {
   connected: boolean;
   calendar_id?: string;
@@ -219,4 +238,71 @@ export function buildGoogleCalendarAuthUrl(
   const url = new URL(baseAuthUrl);
   url.searchParams.set('state', state);
   return url.toString();
+}
+
+// ============== PULL (Google → Site) ==============
+
+export async function pullGoogleCalendarEvents(userId: string): Promise<PullResult> {
+  try {
+    const { data, error } = await supabase.functions.invoke('google-calendar-pull', {
+      body: { user_id: userId },
+    });
+    if (error) return { ok: false, processed: 0, error: error.message };
+    return data as PullResult;
+  } catch (err: any) {
+    return { ok: false, processed: 0, error: err.message || 'Unknown error' };
+  }
+}
+
+export async function updateGoogleCalendarPullSettings(
+  userId: string,
+  settings: GoogleCalendarPullSettings,
+): Promise<{ success: boolean; error: string | null }> {
+  try {
+    if (settings.default_import_clinica_id !== undefined) {
+      const { error: settErr } = await supabase
+        .from('google_calendar_settings')
+        .upsert(
+          {
+            user_id: userId,
+            default_import_clinica_id: settings.default_import_clinica_id,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id' },
+        );
+      if (settErr) return { success: false, error: settErr.message };
+    }
+
+    if (settings.pull_enabled !== undefined) {
+      const { error: tokErr } = await supabase
+        .from('google_calendar_tokens')
+        .update({ pull_enabled: settings.pull_enabled, updated_at: new Date().toISOString() })
+        .eq('user_id', userId);
+      if (tokErr) return { success: false, error: tokErr.message };
+    }
+
+    return { success: true, error: null };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Unknown error' };
+  }
+}
+
+export async function getPullStatus(userId: string): Promise<{
+  pull_enabled: boolean;
+  last_pull_at: string | null;
+  default_import_clinica_id: string | null;
+}> {
+  try {
+    const [{ data: tok }, { data: sett }] = await Promise.all([
+      supabase.from('google_calendar_tokens').select('pull_enabled, last_pull_at').eq('user_id', userId).maybeSingle(),
+      supabase.from('google_calendar_settings').select('default_import_clinica_id').eq('user_id', userId).maybeSingle(),
+    ]);
+    return {
+      pull_enabled: (tok as any)?.pull_enabled ?? true,
+      last_pull_at: (tok as any)?.last_pull_at ?? null,
+      default_import_clinica_id: (sett as any)?.default_import_clinica_id ?? null,
+    };
+  } catch {
+    return { pull_enabled: true, last_pull_at: null, default_import_clinica_id: null };
+  }
 }

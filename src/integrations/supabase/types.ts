@@ -31,7 +31,9 @@ export type Database = {
           data_nascimento: string | null
           detalhe_exame_ou_cirurgia: string | null
           email: string | null
+          google_calendar_etag: string | null
           google_calendar_event_id: string | null
+          google_calendar_synced_at: string | null
           hora_agendamento: string | null
           id: string
           local_atendimento: string
@@ -63,7 +65,9 @@ export type Database = {
           data_nascimento?: string | null
           detalhe_exame_ou_cirurgia?: string | null
           email?: string | null
+          google_calendar_etag?: string | null
           google_calendar_event_id?: string | null
+          google_calendar_synced_at?: string | null
           hora_agendamento?: string | null
           id?: string
           local_atendimento: string
@@ -95,7 +99,9 @@ export type Database = {
           data_nascimento?: string | null
           detalhe_exame_ou_cirurgia?: string | null
           email?: string | null
+          google_calendar_etag?: string | null
           google_calendar_event_id?: string | null
+          google_calendar_synced_at?: string | null
           hora_agendamento?: string | null
           id?: string
           local_atendimento?: string
@@ -447,6 +453,7 @@ export type Database = {
           auto_sync_enabled: boolean
           created_at: string | null
           default_duration_min: number
+          default_import_clinica_id: string | null
           event_color_id: string | null
           id: string
           include_convenio: boolean
@@ -459,6 +466,7 @@ export type Database = {
           auto_sync_enabled?: boolean
           created_at?: string | null
           default_duration_min?: number
+          default_import_clinica_id?: string | null
           event_color_id?: string | null
           id?: string
           include_convenio?: boolean
@@ -471,6 +479,7 @@ export type Database = {
           auto_sync_enabled?: boolean
           created_at?: string | null
           default_duration_min?: number
+          default_import_clinica_id?: string | null
           event_color_id?: string | null
           id?: string
           include_convenio?: boolean
@@ -489,9 +498,12 @@ export type Database = {
           created_at: string | null
           google_email: string | null
           id: string
+          last_pull_at: string | null
           last_sync_at: string | null
           last_sync_error: string | null
+          pull_enabled: boolean
           refresh_token: string
+          sync_token: string | null
           time_zone: string | null
           token_expiry: string
           updated_at: string | null
@@ -504,9 +516,12 @@ export type Database = {
           created_at?: string | null
           google_email?: string | null
           id?: string
+          last_pull_at?: string | null
           last_sync_at?: string | null
           last_sync_error?: string | null
+          pull_enabled?: boolean
           refresh_token: string
+          sync_token?: string | null
           time_zone?: string | null
           token_expiry: string
           updated_at?: string | null
@@ -519,9 +534,12 @@ export type Database = {
           created_at?: string | null
           google_email?: string | null
           id?: string
+          last_pull_at?: string | null
           last_sync_at?: string | null
           last_sync_error?: string | null
+          pull_enabled?: boolean
           refresh_token?: string
+          sync_token?: string | null
           time_zone?: string | null
           token_expiry?: string
           updated_at?: string | null
@@ -1055,6 +1073,7 @@ export type Database = {
         Args: { p_backup_codes: string; p_secret: string; p_user_id: string }
         Returns: undefined
       }
+      trigger_google_calendar_pull: { Args: never; Returns: undefined }
       unificar_duplicados: {
         Args: { p_principal_id?: string; p_telefone_normalizado: string }
         Returns: Json
