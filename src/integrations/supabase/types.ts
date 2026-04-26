@@ -802,6 +802,42 @@ export type Database = {
         }
         Relationships: []
       }
+      status_acesso_log: {
+        Row: {
+          agendamento_id: string
+          confirmation_status: string | null
+          created_at: string
+          id: string
+          ip_address: string | null
+          referer: string | null
+          status_exibido: string | null
+          status_funil: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          agendamento_id: string
+          confirmation_status?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          referer?: string | null
+          status_exibido?: string | null
+          status_funil?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          agendamento_id?: string
+          confirmation_status?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          referer?: string | null
+          status_exibido?: string | null
+          status_funil?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       templates_whatsapp: {
         Row: {
           ativo: boolean | null
