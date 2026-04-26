@@ -200,6 +200,14 @@ const AdminCRM = () => {
 
     const { success, error } = await notificarN8n('status_crm_atualizado', agendamento);
 
+    // Registrar auditoria (fire-and-forget)
+    const { registrarAuditCrm } = await import('@/services/crmAudit');
+    registrarAuditCrm({
+      agendamentoId: agendamento.id,
+      acao: 'automation_trigger',
+      detalhes: { success, error: error ?? null, status_crm: agendamento.status_crm },
+    });
+
     if (success) {
       toast({
         title: "Automação disparada!",
