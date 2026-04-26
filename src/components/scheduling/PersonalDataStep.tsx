@@ -137,6 +137,27 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
     if (birthDateBr.trim()) {
       if (birthDateBr.length !== 10 || !brToIso(birthDateBr)) {
         newErrors.birthDate = "Data inválida. Use o formato dd/mm/aaaa";
+      } else {
+        const iso = brToIso(birthDateBr);
+        const [ano, mes, dia] = iso.split("-").map(Number);
+        const dataNasc = new Date(ano, mes - 1, dia);
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const idadeMaxima = new Date();
+        idadeMaxima.setFullYear(idadeMaxima.getFullYear() - 120);
+
+        if (dataNasc > hoje) {
+          newErrors.birthDate = "Data de nascimento não pode ser no futuro";
+        } else if (dataNasc < idadeMaxima) {
+          newErrors.birthDate = "Data de nascimento inválida (idade acima de 120 anos)";
+        } else {
+          // Idade mínima razoável: 1 ano
+          const idadeMinima = new Date();
+          idadeMinima.setFullYear(idadeMinima.getFullYear() - 1);
+          if (dataNasc > idadeMinima) {
+            newErrors.birthDate = "Idade mínima de 1 ano";
+          }
+        }
       }
     }
 
