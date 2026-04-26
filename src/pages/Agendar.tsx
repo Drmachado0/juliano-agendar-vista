@@ -111,6 +111,13 @@ const Agendar = () => {
     trackViewContent("Agendamento Online", "Consulta Oftalmológica");
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDepoimentoAtivo((prev) => (prev + 1) % DEPOIMENTOS.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   const updateFormData = (data: Partial<FormData>) => {
     setFormData((prev) => ({ ...prev, ...data }));
   };
