@@ -93,14 +93,37 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
   const validate = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.fullName.trim()) {
+    // Nome completo: obrigatório, mínimo 2 palavras, apenas letras
+    const nome = formData.fullName.trim();
+    if (!nome) {
       newErrors.fullName = "Nome completo é obrigatório";
+    } else if (nome.length < 3) {
+      newErrors.fullName = "Nome muito curto (mínimo 3 caracteres)";
+    } else if (!/\s/.test(nome) || nome.split(/\s+/).filter(Boolean).length < 2) {
+      newErrors.fullName = "Informe nome e sobrenome";
+    } else if (!/^[A-Za-zÀ-ÿ\s'-]+$/.test(nome)) {
+      newErrors.fullName = "Nome deve conter apenas letras";
     }
 
+    // Telefone: obrigatório, DDD válido (11-99) + 10 ou 11 dígitos
+    const digits = formData.phone.replace(/\D/g, "");
     if (!formData.phone.trim()) {
       newErrors.phone = "Telefone (WhatsApp) é obrigatório";
-    } else if (formData.phone.replace(/\D/g, "").length < 10) {
-      newErrors.phone = "Telefone inválido";
+    } else if (digits.length < 10 || digits.length > 11) {
+      newErrors.phone = "Telefone deve ter DDD + número (ex: (91) 99999-9999)";
+    } else {
+      const ddd = parseInt(digits.slice(0, 2), 10);
+      if (ddd < 11 || ddd > 99) {
+        newErrors.phone = "DDD inválido";
+      } else if (digits.length === 11 && digits[2] !== "9") {
+        newErrors.phone = "Celular deve começar com 9 após o DDD";
+      }
+    }
+
+    // E-mail: opcional, mas se preenchido precisa ser válido
+    const emailVal = formData.email.trim();
+    if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+      newErrors.email = "E-mail inválido";
     }
 
     // Data de nascimento é opcional, mas se preenchida precisa estar completa e válida
@@ -204,9 +227,14 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
             type="email"
             value={formData.email}
             onChange={(e) => updateFormData({ email: e.target.value })}
-            placeholder="seu@email.com"
-            className="bg-secondary border-border focus:border-primary"
+            placeholder="seu@email.com (opcional)"
+            className={`bg-secondary border-border focus:border-primary ${
+              errors.email ? "border-destructive" : ""
+            }`}
           />
+          {errors.email && (
+            <p className="text-sm text-destructive">{errors.email}</p>
+          )}
         </div>
       </div>
 
