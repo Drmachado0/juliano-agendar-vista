@@ -170,7 +170,7 @@ serve(async (req) => {
     if (action === 'check') {
       const { data: tokenData, error } = await supabase
         .from('google_calendar_tokens')
-        .select('id, calendar_id, google_email, connected_at, last_sync_at, last_sync_error, updated_at')
+        .select('id, calendar_id, google_email, time_zone, connected_at, last_sync_at, last_sync_error, updated_at')
         .eq('user_id', user_id)
         .maybeSingle();
 
@@ -181,6 +181,7 @@ serve(async (req) => {
           connected: !error && !!tokenData,
           calendar_id: tokenData?.calendar_id,
           google_email: tokenData?.google_email,
+          time_zone: tokenData?.time_zone,
           connected_at: tokenData?.connected_at,
           last_sync_at: tokenData?.last_sync_at,
           last_sync_error: tokenData?.last_sync_error,
@@ -198,17 +199,32 @@ serve(async (req) => {
       });
     }
 
-    // ---- update-calendar ----
-    if (action === 'update-calendar') {
-      if (!bodyCalendarId) throw new Error('calendar_id é obrigatório');
-      const { error } = await supabase
-        .from('google_calendar_tokens')
-        .update({ calendar_id: bodyCalendarId, updated_at: new Date().toISOString() })
-        .eq('user_id', user_id);
-      if (error) throw error;
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // ---- sync-stats (não chama Google) ----
+    if (action === 'sync-stats') {
+      const today = new Date().toISOString().slice(0, 10);
+      const limitDate = new Date();
+      limitDate.setDate(limitDate.getDate() + 30);
+      const limitStr = limitDate.toISOString().slice(0, 10);
+
+      const { count: synced } = await supabase
+        .from('agendamentos')
+        .select('id', { count: 'exact', head: true })
+        .gte('data_agendamento', today)
+        .lte('data_agendamento', limitStr)
+        .not('google_calendar_event_id', 'is', null);
+
+      const { count: pending } = await supabase
+        .from('agendamentos')
+        .select('id', { count: 'exact', head: true })
+        .gte('data_agendamento', today)
+        .lte('data_agendamento', limitStr)
+        .is('google_calendar_event_id', null)
+        .not('hora_agendamento', 'is', null);
+
+      return new Response(
+        JSON.stringify({ synced: synced ?? 0, pending: pending ?? 0 }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // For remaining actions we need a valid Google token + Google credentials
@@ -217,12 +233,61 @@ serve(async (req) => {
     }
 
     const accessToken = await getValidAccessToken(supabase, user_id);
+
+    // ---- refresh-email ----
+    if (action === 'refresh-email') {
+      const email = await fetchUserEmail(accessToken);
+      if (email) {
+        await supabase
+          .from('google_calendar_tokens')
+          .update({ google_email: email, updated_at: new Date().toISOString() })
+          .eq('user_id', user_id);
+      }
+      return new Response(
+        JSON.stringify({ success: !!email, google_email: email }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ---- update-calendar (também busca timezone) ----
+    if (action === 'update-calendar') {
+      if (!bodyCalendarId) throw new Error('calendar_id é obrigatório');
+      // Buscar timezone do calendário escolhido
+      let tz: string | null = null;
+      try {
+        const r = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(bodyCalendarId)}`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        if (r.ok) {
+          const j = await r.json();
+          tz = j.timeZone ?? null;
+        }
+      } catch (_) { /* fallback abaixo */ }
+
+      const updatePayload: Record<string, unknown> = {
+        calendar_id: bodyCalendarId,
+        updated_at: new Date().toISOString(),
+      };
+      if (tz) updatePayload.time_zone = tz;
+
+      const { error } = await supabase
+        .from('google_calendar_tokens')
+        .update(updatePayload)
+        .eq('user_id', user_id);
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true, time_zone: tz }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { data: tokenData } = await supabase
       .from('google_calendar_tokens')
-      .select('calendar_id')
+      .select('calendar_id, time_zone, google_email')
       .eq('user_id', user_id)
       .single();
     const calendarId = tokenData?.calendar_id || 'primary';
+    const calendarTimeZone = tokenData?.time_zone || 'America/Sao_Paulo';
 
     // ---- test ----
     if (action === 'test') {
@@ -234,6 +299,16 @@ serve(async (req) => {
       if (!resp.ok) {
         await recordSyncStatus(supabase, user_id, data.error?.message || 'Falha no teste');
         throw new Error(data.error?.message || 'Falha no teste de conexão');
+      }
+      // Atualiza timezone e (se faltando) o e-mail
+      const updates: Record<string, unknown> = {};
+      if (data.timeZone) updates.time_zone = data.timeZone;
+      if (!tokenData?.google_email) {
+        const email = await fetchUserEmail(accessToken);
+        if (email) updates.google_email = email;
+      }
+      if (Object.keys(updates).length > 0) {
+        await supabase.from('google_calendar_tokens').update(updates).eq('user_id', user_id);
       }
       await recordSyncStatus(supabase, user_id, null);
       return new Response(
@@ -266,7 +341,7 @@ serve(async (req) => {
 
       for (const ag of pendentes ?? []) {
         try {
-          const eventData = buildEvent(ag, settings);
+          const eventData = buildEvent(ag, settings, calendarTimeZone);
           const resp = await fetch(
             `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
             {
