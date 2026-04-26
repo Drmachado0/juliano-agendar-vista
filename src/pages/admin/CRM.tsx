@@ -419,6 +419,11 @@ const AdminCRM = () => {
       />
 
       <AuditLogDrawer open={auditOpen} onOpenChange={setAuditOpen} />
+      <DuplicadosDrawer
+        open={duplicadosOpen}
+        onOpenChange={setDuplicadosOpen}
+        onMerged={() => fetchAgendamentos(true)}
+      />
     </AdminLayout>
   );
 };
