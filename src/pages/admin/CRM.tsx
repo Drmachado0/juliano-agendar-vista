@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm, reprocessarBoasVindas } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
-import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, Wifi } from "lucide-react";
+import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, Wifi, History } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
+import AuditLogDrawer from "@/components/admin/AuditLogDrawer";
 
 const columns = [
   { status: "NOVO LEAD", title: "Novo Lead", color: "bg-emerald-500" },
@@ -38,7 +39,7 @@ const AdminCRM = () => {
   const [selectedAgendamento, setSelectedAgendamento] = useState<Agendamento | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
-
+  const [auditOpen, setAuditOpen] = useState(false);
   const isFetchingRef = useRef(false);
 
   const fetchAgendamentos = async (silent = false) => {
@@ -149,8 +150,8 @@ const AdminCRM = () => {
       return updated;
     });
 
-    // Update in database
-    const { error } = await atualizarStatusCrm(draggingAgendamento.id, newStatus);
+    // Update in database (com auditoria)
+    const { error } = await atualizarStatusCrm(draggingAgendamento.id, newStatus, oldStatus);
 
     if (error) {
       // Revert on error
@@ -199,6 +200,14 @@ const AdminCRM = () => {
     });
 
     const { success, error } = await notificarN8n('status_crm_atualizado', agendamento);
+
+    // Registrar auditoria (fire-and-forget)
+    const { registrarAuditCrm } = await import('@/services/crmAudit');
+    registrarAuditCrm({
+      agendamentoId: agendamento.id,
+      acao: 'automation_trigger',
+      detalhes: { success, error: error ?? null, status_crm: agendamento.status_crm },
+    });
 
     if (success) {
       toast({
@@ -287,6 +296,10 @@ const AdminCRM = () => {
             >
               <Send className={`h-4 w-4 mr-2 ${reprocessando ? 'animate-pulse' : ''}`} />
               {reprocessando ? "Enviando..." : "Reprocessar boas-vindas"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setAuditOpen(true)} title="Ver log de auditoria">
+              <History className="h-4 w-4 mr-2" />
+              Auditoria
             </Button>
             <Button variant="outline" size="sm" onClick={() => fetchAgendamentos()} disabled={loading}>
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -398,6 +411,8 @@ const AdminCRM = () => {
         isOpen={whatsappModalOpen}
         onClose={() => setWhatsappModalOpen(false)}
       />
+
+      <AuditLogDrawer open={auditOpen} onOpenChange={setAuditOpen} />
     </AdminLayout>
   );
 };
