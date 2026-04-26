@@ -297,6 +297,60 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_audit_log: {
+        Row: {
+          acao: string
+          agendamento_id: string | null
+          created_at: string
+          detalhes: Json | null
+          id: string
+          status_anterior: string | null
+          status_novo: string | null
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          acao: string
+          agendamento_id?: string | null
+          created_at?: string
+          detalhes?: Json | null
+          id?: string
+          status_anterior?: string | null
+          status_novo?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          acao?: string
+          agendamento_id?: string | null
+          created_at?: string
+          detalhes?: Json | null
+          id?: string
+          status_anterior?: string | null
+          status_novo?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_audit_log_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_audit_log_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       disponibilidade_especifica: {
         Row: {
           clinica_id: string | null
@@ -964,6 +1018,16 @@ export type Database = {
           id: string
           local: string
         }[]
+      }
+      registrar_crm_audit: {
+        Args: {
+          p_acao: string
+          p_agendamento_id: string
+          p_detalhes?: Json
+          p_status_anterior?: string
+          p_status_novo?: string
+        }
+        Returns: string
       }
       registrar_mensagem: {
         Args: {
