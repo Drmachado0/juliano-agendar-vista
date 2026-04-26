@@ -9,6 +9,8 @@ import AlternativesSuggestion from "./AlternativesSuggestion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface DateTimeStepProps {
   formData: FormData;
@@ -23,6 +25,7 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
   const [isValidating, setIsValidating] = useState(false);
   const [highlightAlternativas, setHighlightAlternativas] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const isMobile = useIsMobile();
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
@@ -105,9 +108,9 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
       </div>
 
       {/* Calendar and Time Slots */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-4 md:gap-6">
         {/* Calendar Section */}
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className="bg-card rounded-xl border border-border p-3 md:p-4">
           <CalendarGrid
             selectedDate={selectedDate}
             onSelectDate={handleDateSelect}
@@ -117,7 +120,7 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
         </div>
 
         {/* Time Slots Section */}
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className="bg-card rounded-xl border border-border p-3 md:p-4">
           <TimeSlotPicker
             key={reloadKey}
             selectedDate={selectedDate}
@@ -130,7 +133,13 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
 
       {/* Selection Summary */}
       {selectedDate && selectedTime && (
-        <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
+        <div
+          id="summary-anchor"
+          className={cn(
+            "p-4 bg-primary/10 border border-primary/20 rounded-lg",
+            isMobile && "sticky bottom-2 z-10 shadow-lg shadow-primary/10 backdrop-blur-sm bg-primary/15"
+          )}
+        >
           <p className="text-sm text-foreground font-medium flex items-center gap-2">
             <span className="text-primary">✓</span>
             Horário selecionado: {selectedTime} em{" "}
