@@ -132,6 +132,20 @@ serve(async (req) => {
       throw new Error('Missing tokens in response');
     }
 
+    // Try to fetch the connected Google account email (best-effort)
+    let google_email: string | null = null;
+    try {
+      const userinfoResp = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+      if (userinfoResp.ok) {
+        const userinfo = await userinfoResp.json();
+        google_email = userinfo.email ?? null;
+      }
+    } catch (e) {
+      console.warn('Could not fetch userinfo:', e);
+    }
+
     // Calculate token expiry
     const token_expiry = new Date(Date.now() + expires_in * 1000).toISOString();
 
@@ -146,6 +160,9 @@ serve(async (req) => {
         refresh_token,
         token_expiry,
         calendar_id: 'primary',
+        google_email,
+        connected_at: new Date().toISOString(),
+        last_sync_error: null,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' });
 
