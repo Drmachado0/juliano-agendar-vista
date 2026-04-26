@@ -1,73 +1,35 @@
 ## Objetivo
+Atualizar `src/pages/Agendamento.tsx` para usar o mesmo layout, prova social e destaque de WhatsApp já aprovados em `src/pages/Agendar.tsx`, **mantendo os trackings específicos** dessa LP (page_view, lp_step_view, lp_lead_generated, lp_appointment_scheduled, captura de UTMs e conversão Google Ads).
 
-Transformar a página `/agendar` (`src/pages/Agendar.tsx`) em uma landing de conversão no mesmo padrão de `/agendar-consulta`, porém:
-- exibindo **5,0 estrelas** (em vez de 4,9);
-- com **CTA do WhatsApp em destaque** (botão verde grande, com pulso/chamariz e copy: *"Prefere falar com nossa secretária? Chame no WhatsApp"*);
-- mantendo todo o fluxo, integrações e tracking que já funcionam hoje em `/agendar`.
+## Arquivo editado
+- `src/pages/Agendamento.tsx`
 
-## O que muda
+## Mudanças visuais (espelhando /agendar)
+- **Header minimalista**: link "Voltar ao site" à esquerda e bloco central "Dr. Juliano Machado · Oftalmologista · CRM-PA". Sem botão WhatsApp duplicado no topo (já existe no destaque).
+- **Layout em duas colunas no desktop** (`lg:grid-cols-[1fr_minmax(320px,400px)]`):
+  - Esquerda: título persuasivo, banner mobile de prova social (5.0 / 6.000+ pacientes / 13+ anos), CTA WhatsApp em destaque (mobile), carrossel de depoimentos auto-rotativo (5s) e card do formulário multi-step.
+  - Direita (sticky, desktop): bloco `WhatsAppHighlight` no topo, card "Por que escolher o Dr. Juliano?" com foto (`@/assets/dr-juliano-hero.png`), 5 estrelas e bullets de autoridade, e card de depoimento curto.
+- **WhatsAppHighlight**: mesmo componente verde (`#25D366`) com animação `animate-ping`, copy "Prefere falar com nossa secretária?" e CTA "Chamar no WhatsApp agora".
+- **Carrossel de depoimentos**: mesma constante `DEPOIMENTOS` (6 itens com nome, cidade, data, texto), `setInterval` de 5s e dots clicáveis.
+- **Footer**: linha simples com CRM e aviso de contato.
 
-### 1. `src/pages/Agendar.tsx` (refatoração de UI)
+## Tracking preservado (específicos da LP /agendamento)
+- `useEffect` inicial mantém: `trackViewContent("Landing Agendamento", ...)`, `pushDL({ event: "page_view", page_type: "landing_agendamento", page_path: "/agendamento" })` e captura de UTMs em `sessionStorage` (`lp_agendamento_utms`).
+- `useEffect` por step continua disparando `lp_step_view` com `page_type: "landing_agendamento"`.
+- Criação do lead (step 2 → 3) continua disparando `lp_lead_generated`.
+- Submit final continua disparando `lp_appointment_scheduled`, `trackSchedule`, `trackCompleteRegistration`, `trackFormSubmitConversion` e a conversão `gtag('event','conversion', { send_to: 'AW-436492720/...' })`.
+- Cliques no novo `WhatsAppHighlight` chamam `trackWhatsAppClick(WHATSAPP_URL, "Falar com a secretária", "whatsapp_<location>", location)`, `trackWhatsAppGoogleAdsConversion()` e `trackMetaContact('WhatsApp')`, com `location` distinto para mobile/desktop (`agendamento_destaque_secretaria_mobile` / `_desktop`) — permite segmentar conversões da LP separadamente de `/agendar`.
 
-Reaproveitar a estrutura visual de `AgendarConsulta.tsx` adaptando-a:
+## SEO/Helmet (mantidos)
+- `<title>` e meta description atuais voltados a "Agendar Consulta — Dr. Juliano Machado".
+- `og:url` e `link rel="canonical"` para `https://drjulianomachado.com/agendamento` permanecem.
 
-**Layout em duas colunas (desktop ≥ lg) / empilhado (mobile):**
-- **Coluna esquerda:** título + subtítulo + card do formulário multi-step (mantém `StepIndicator` + `PersonalDataStep` → `ConsultationDetailsStep` → `DateTimeStep` → `ConfirmationStep` → `SuccessStep`, sem alterar a lógica).
-- **Coluna direita (sticky):** prova social com foto do Dr. Juliano (`@/assets/dr-juliano-hero.png`), bullets de credibilidade (13+ anos, 6.000+ pacientes, Paragominas/Belém, convênios, resposta em até 1h) e card de depoimento.
+## Fluxo de dados (sem alteração)
+- `criarLead` (step 2→3), `converterLeadEmAgendamento` (submit), `notificarN8n("agendamento_criado", ...)`, invocações de `confirmar-agendamento-whatsapp` e `notificar-agendamento-email` com `Promise.race` de 8s, redirecionamento para `/obrigado`.
+- Mesmas validações e mensagens de erro de disponibilidade que já existem.
 
-**Header minimalista:**
-- Nome do médico + CRM-PA à esquerda.
-- Link "Voltar ao site" (manter, é diferencial vs. `/agendar-consulta`).
-- CTA WhatsApp à direita no header.
-
-**Avaliações = 5,0 estrelas:**
-- Banner mobile: `5.0 · 200+ avaliações`.
-- Card de prova social desktop: 5 estrelas preenchidas + texto `5.0/5 (200+ avaliações)`.
-- Mini-card de depoimento: 5 estrelas.
-
-**CTA WhatsApp em destaque (novo bloco — diferencial pedido):**
-- Banner verde (`bg-[#25D366]`) logo abaixo do header (mobile) e dentro da coluna direita acima do card de prova social (desktop), com:
-  - Ícone `MessageCircle` animado (`animate-pulse` no halo).
-  - Título: **"Prefere falar com nossa secretária?"**
-  - Subtítulo: *"Atendimento humano pelo WhatsApp — tire dúvidas e agende em minutos."*
-  - Botão grande: **"Chamar no WhatsApp agora"** com seta.
-  - URL: `https://wa.me/5591936180476?text=Ol%C3%A1%21+Gostaria+de+agendar+uma+consulta+oftalmol%C3%B3gica+com+o+Dr.+Juliano+Machado.`
-- O botão WhatsApp do header também fica mais visível (estilo "pill" verde, não apenas link em accent).
-
-**Rodapé:**
-- Linha sutil com CRM e disclaimer de contato (mesmo padrão da landing).
-
-### 2. Tracking / integrações (preservar)
-
-- Manter `useMetaPixel` (`trackViewContent`, `trackLead`, `trackSchedule`, `trackCompleteRegistration`) e `useGoogleTag` (`trackFormSubmitConversion`) já existentes.
-- Reaproveitar `useGoogleTag` para disparar `trackWhatsAppClick` + `trackWhatsAppGoogleAdsConversion` em **todos** os cliques nos novos CTAs WhatsApp (header, banner destaque, eventual repetição mobile), com `button_location` distinto por posição (`agendar_header`, `agendar_destaque_secretaria`).
-- Manter o fluxo `criarLead` → `converterLeadEmAgendamento` → notificações WhatsApp/E-mail → redirect `/obrigado` exatamente como está.
-
-### 3. SEO
-
-- Atualizar `<Helmet>`: `<title>` e `<meta name="description">` para refletir copy persuasivo ("Agende online ou fale com nossa secretária no WhatsApp"). Manter `lang="pt-BR"` global já configurado.
-
-## O que NÃO muda
-
-- Lógica de steps, validações e estado do formulário.
-- Edge functions, serviços (`leads.ts`, `notificarN8n`, etc.) e tracking de conversão.
-- Página `/agendar-consulta` permanece como está (continua sendo a landing dedicada para campanhas).
-- `WhatsAppButton` flutuante global continua presente.
-
-## Arquivos a editar
-
-- `src/pages/Agendar.tsx` — refatoração completa do JSX (lógica preservada).
-
-## Arquivos lidos para validar implementação
-
-- `src/pages/AgendarConsulta.tsx` (referência de layout).
-- `src/components/WhatsAppButton.tsx` (referência de animação/estilo verde).
-- `src/hooks/useGoogleTag.ts` (assinatura de `trackWhatsAppClick`).
-
-## Critérios de aceite
-
-1. `/agendar` exibe **5 estrelas cheias** e o texto "5.0/5" em todos os pontos de prova social.
-2. Há um **bloco verde de destaque** com a chamada "Prefere falar com nossa secretária?" e botão grande para WhatsApp, visível tanto em mobile (acima do form) quanto em desktop (topo da coluna direita).
-3. Todos os cliques nos CTAs WhatsApp disparam `trackWhatsAppClick` + conversão Google Ads.
-4. Fluxo de agendamento (4 steps + sucesso) continua funcionando idêntico ao atual.
-5. Layout responsivo: mobile empilhado, desktop em 2 colunas com aside sticky.
+## Não muda
+- Componentes de step (`PersonalDataStep`, `ConsultationDetailsStep`, `DateTimeStep`, `ConfirmationStep`, `SuccessStep`, `StepIndicator`).
+- Edge functions, services, RLS, schema do banco.
+- Página `/agendar` permanece como está.
+- Botão flutuante global `WhatsAppButton` segue ativo.

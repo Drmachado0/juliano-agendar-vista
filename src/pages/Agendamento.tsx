@@ -1,7 +1,17 @@
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { Heart, Shield, MapPin, Star, Phone, MessageCircle } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Link } from "react-router-dom";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Star,
+  ShieldCheck,
+  Award,
+  Users,
+  Clock,
+  CheckCircle2,
+  MessageCircle,
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,23 +25,54 @@ import { criarLead, converterLeadEmAgendamento } from "@/services/leads";
 import { notificarN8n } from "@/services/integracoes";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
+import drJulianoHero from "@/assets/dr-juliano-hero.png";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
-declare global {
-  interface Window {
-    fbq?: (...args: any[]) => void;
-  }
-}
-
-const WHATSAPP_NUMBER = "5591936180476";
-const WHATSAPP_MESSAGE = "Olá! Gostaria de agendar uma consulta com o Dr. Juliano Machado.";
-
-const getWhatsAppUrl = () => {
-  const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-  return isMobile
-    ? `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`
-    : `https://web.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+type Depoimento = {
+  nome: string;
+  cidade: string;
+  data: string;
+  texto: string;
 };
+
+const DEPOIMENTOS: Depoimento[] = [
+  {
+    nome: "Maria S.",
+    cidade: "Paragominas, PA",
+    data: "Mar 2025",
+    texto: "Atendimento excelente, médico atencioso e equipe muito profissional. Recomendo demais!",
+  },
+  {
+    nome: "João P.",
+    cidade: "Belém, PA",
+    data: "Fev 2025",
+    texto: "Dr. Juliano explicou tudo com calma. Saí da consulta com todas as dúvidas resolvidas.",
+  },
+  {
+    nome: "Ana L.",
+    cidade: "Paragominas, PA",
+    data: "Jan 2025",
+    texto: "Marquei pelo WhatsApp e fui atendida no horário. Estrutura impecável e muito cuidado.",
+  },
+  {
+    nome: "Carlos M.",
+    cidade: "Tomé-Açu, PA",
+    data: "Dez 2024",
+    texto: "Cirurgia de catarata tranquila e segura. Voltei a enxergar como antes. Gratidão!",
+  },
+  {
+    nome: "Fernanda R.",
+    cidade: "Belém, PA",
+    data: "Nov 2024",
+    texto: "Profissional de altíssimo nível. Atencioso, paciente e extremamente competente.",
+  },
+  {
+    nome: "Roberto A.",
+    cidade: "Paragominas, PA",
+    data: "Out 2024",
+    texto: "Recomendo de olhos fechados. Atendimento humano e diagnóstico preciso.",
+  },
+];
 
 const initialFormData: FormData = {
   fullName: "",
@@ -51,6 +92,9 @@ const initialFormData: FormData = {
   acceptNotifications: true,
 };
 
+const WHATSAPP_URL =
+  "https://wa.me/5591936180476?text=Ol%C3%A1%21+Gostaria+de+agendar+uma+consulta+oftalmol%C3%B3gica+com+o+Dr.+Juliano+Machado.";
+
 const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "fbclid"];
 
 const pushDL = (data: Record<string, any>) => {
@@ -66,8 +110,19 @@ const Agendamento = () => {
   const [leadId, setLeadId] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { trackViewContent, trackLead, trackSchedule, trackCompleteRegistration, trackContact: trackMetaContact } = useMetaPixel();
-  const { trackFormSubmitConversion, trackWhatsAppClick, trackWhatsAppGoogleAdsConversion, trackPhoneClick } = useGoogleTag();
+  const [depoimentoAtivo, setDepoimentoAtivo] = useState(0);
+  const {
+    trackViewContent,
+    trackLead,
+    trackSchedule,
+    trackCompleteRegistration,
+    trackContact: trackMetaContact,
+  } = useMetaPixel();
+  const {
+    trackFormSubmitConversion,
+    trackWhatsAppClick,
+    trackWhatsAppGoogleAdsConversion,
+  } = useGoogleTag();
 
   const totalSteps = 4;
 
@@ -102,8 +157,22 @@ const Agendamento = () => {
     }
   }, [currentStep, isSubmitted]);
 
+  // Carrossel auto
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDepoimentoAtivo((prev) => (prev + 1) % DEPOIMENTOS.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   const updateFormData = (data: Partial<FormData>) => {
     setFormData((prev) => ({ ...prev, ...data }));
+  };
+
+  const handleWhatsAppClick = (location: string) => {
+    trackWhatsAppClick(WHATSAPP_URL, "Falar com a secretária", `whatsapp_${location}`, location);
+    trackWhatsAppGoogleAdsConversion();
+    trackMetaContact("WhatsApp");
   };
 
   const nextStep = async () => {
@@ -112,7 +181,6 @@ const Agendamento = () => {
         trackLead("Dados Pessoais Preenchidos - Landing");
       }
 
-      // Cria o lead ao avançar da etapa 2 para 3
       if (currentStep === 2 && !leadId) {
         const leadData = {
           nome_completo: formData.fullName,
@@ -195,7 +263,6 @@ const Agendamento = () => {
         return;
       }
 
-      // n8n
       await notificarN8n("agendamento_criado", {
         id: leadId,
         nome_completo: formData.fullName,
@@ -205,7 +272,6 @@ const Agendamento = () => {
         hora_agendamento: formData.selectedTime,
       });
 
-      // Notificações com timeout de 8s
       const NOTIFICATION_TIMEOUT_MS = 8000;
       const notificationsPromise = Promise.allSettled([
         supabase.functions.invoke("confirmar-agendamento-whatsapp", {
@@ -284,195 +350,300 @@ const Agendamento = () => {
     setIsSubmitted(false);
   };
 
+  const WhatsAppHighlight = ({ location }: { location: string }) => (
+    <a
+      href={WHATSAPP_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={() => handleWhatsAppClick(location)}
+      className="group relative block overflow-hidden rounded-2xl bg-[#25D366] p-5 shadow-xl shadow-[#25D366]/30 ring-2 ring-[#25D366]/30 ring-offset-2 ring-offset-background transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-[#25D366]/40"
+    >
+      <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+      <div className="relative flex items-center gap-4">
+        <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20">
+          <span className="absolute inset-0 animate-ping rounded-full bg-white/30" />
+          <MessageCircle className="relative h-6 w-6 text-white" />
+        </div>
+        <div className="flex-1 text-white">
+          <p className="text-sm font-bold leading-tight md:text-base">
+            Prefere falar com nossa secretária?
+          </p>
+          <p className="mt-0.5 text-xs text-white/90 md:text-sm">
+            Atendimento humano pelo WhatsApp — tire dúvidas e agende em minutos.
+          </p>
+        </div>
+      </div>
+      <div className="relative mt-4 flex items-center justify-between rounded-xl bg-white/15 px-4 py-2.5 backdrop-blur-sm transition-colors group-hover:bg-white/25">
+        <span className="text-sm font-semibold text-white">Chamar no WhatsApp agora</span>
+        <ArrowRight className="h-4 w-4 text-white transition-transform group-hover:translate-x-1" />
+      </div>
+    </a>
+  );
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <>
       <Helmet>
         <title>Agendar Consulta — Dr. Juliano Machado | Oftalmologista</title>
         <meta
           name="description"
-          content="Agende sua consulta online com o Dr. Juliano Machado. Oftalmologista em Paragominas e Belém. Rápido, fácil e sem complicação."
+          content="Agende sua consulta com Dr. Juliano Machado: oftalmologista 5 estrelas em Paragominas e Belém. Agendamento online ou direto com nossa secretária pelo WhatsApp."
         />
         <meta property="og:url" content="https://drjulianomachado.com/agendamento" />
         <meta property="og:title" content="Agendar Consulta — Dr. Juliano Machado | Oftalmologista" />
-        <meta property="og:description" content="Agende sua consulta online com o Dr. Juliano Machado. Oftalmologista em Paragominas e Belém. Rápido, fácil e sem complicação." />
+        <meta
+          property="og:description"
+          content="Agende sua consulta com Dr. Juliano Machado: oftalmologista 5 estrelas em Paragominas e Belém. Agendamento online ou direto com nossa secretária pelo WhatsApp."
+        />
         <link rel="canonical" href="https://drjulianomachado.com/agendamento" />
       </Helmet>
 
-      {/* Header minimal */}
-      <header className="border-b border-border/40 bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="font-serif text-base sm:text-lg font-bold gradient-text leading-tight">
-              Dr. Juliano Machado
-            </span>
-            <span className="text-[11px] sm:text-xs text-muted-foreground leading-tight">
-              Oftalmologista · Paragominas
-            </span>
-          </div>
-          <a
-            href={getWhatsAppUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => {
-              trackWhatsAppClick(getWhatsAppUrl(), 'Header Agendamento', 'whatsapp_agendamento_header', 'agendamento_header');
-              trackWhatsAppGoogleAdsConversion();
-              trackMetaContact('WhatsApp');
-            }}
-            className="inline-flex items-center gap-2 text-sm font-medium text-[#25D366] hover:text-[#20BD5A] transition-colors"
-            aria-label="Falar no WhatsApp"
-          >
-            <MessageCircle className="w-5 h-5" />
-            <span className="hidden sm:inline">WhatsApp</span>
-          </a>
-        </div>
-      </header>
-
-      {/* Hero + Form */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 hero-gradient opacity-60" aria-hidden />
-        <div className="absolute inset-0 noise-overlay" aria-hidden />
-
-        <div className="container mx-auto px-4 py-10 sm:py-14 relative">
-          <div className="max-w-xl mx-auto text-center mb-8 animate-fade-in">
-            <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold tracking-wide uppercase mb-4">
-              Agendamento Online
-            </span>
-            <h1 className="font-serif text-3xl sm:text-5xl font-bold mb-3 leading-tight">
-              {isSubmitted ? (
-                <>Agendamento <span className="gradient-text">Enviado!</span></>
-              ) : (
-                <>Agende sua <span className="gradient-text">Consulta</span></>
-              )}
-            </h1>
-            {!isSubmitted && (
-              <p className="text-base sm:text-lg text-muted-foreground">
-                Oftalmologia em Paragominas e Belém — Dr. Juliano Machado
-              </p>
-            )}
-            <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-1 mt-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <span className="flex items-center gap-0.5">
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <Star key={i} className="w-4 h-4 fill-primary text-primary" />
-                  ))}
-                </span>
-                <span className="font-bold text-foreground ml-1">5.0</span>
-              </span>
-              <span>✓ 13+ anos de experiência</span>
-              <span>✓ 6.000+ pacientes atendidos</span>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+        {/* Header */}
+        <header className="sticky top-0 z-50 border-b border-border/50 bg-background/90 backdrop-blur-sm">
+          <div className="container mx-auto flex items-center justify-between gap-3 px-4 py-3">
+            <Link
+              to="/"
+              className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span className="hidden text-sm font-medium sm:inline">Voltar ao site</span>
+            </Link>
+            <div className="hidden text-center md:block">
+              <h1 className="text-base font-serif font-semibold leading-tight text-foreground md:text-lg">
+                Dr. Juliano Machado
+              </h1>
+              <p className="text-[11px] text-muted-foreground md:text-xs">Oftalmologista · CRM-PA</p>
             </div>
+            <div />
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-6 md:py-10">
+          {/* Banner de prova social mobile */}
+          <div className="mb-5 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground lg:hidden">
+            <span className="flex items-center gap-1">
+              <Star className="h-3.5 w-3.5 fill-accent text-accent" />
+              <strong className="text-foreground">5.0</strong> · 200+ avaliações
+            </span>
+            <span className="flex items-center gap-1">
+              <Users className="h-3.5 w-3.5 text-accent" />
+              <strong className="text-foreground">6.000+</strong> pacientes
+            </span>
+            <span className="flex items-center gap-1">
+              <Award className="h-3.5 w-3.5 text-accent" />
+              <strong className="text-foreground">13+</strong> anos
+            </span>
           </div>
 
-          <Card className="max-w-xl mx-auto card-premium border-primary/20 shadow-2xl animate-fade-in">
-            <CardContent className="p-6 sm:p-8">
-              {!isSubmitted && <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />}
+          {/* CTA WhatsApp em destaque (mobile, acima do form) */}
+          <div className="mb-6 lg:hidden">
+            <WhatsAppHighlight location="agendamento_destaque_secretaria_mobile" />
+          </div>
 
-              <div className="mt-6">
-                {isSubmitted ? (
-                  <SuccessStep onClose={handleReset} formData={formData} />
-                ) : (
-                  <>
-                    {currentStep === 1 && (
-                      <PersonalDataStep
-                        formData={formData}
-                        updateFormData={updateFormData}
-                        onNext={nextStep}
-                      />
-                    )}
-                    {currentStep === 2 && (
-                      <ConsultationDetailsStep
-                        formData={formData}
-                        updateFormData={updateFormData}
-                        onNext={nextStep}
-                        onPrev={prevStep}
-                      />
-                    )}
-                    {currentStep === 3 && (
-                      <DateTimeStep
-                        formData={formData}
-                        updateFormData={updateFormData}
-                        onNext={nextStep}
-                        onPrev={prevStep}
-                      />
-                    )}
-                    {currentStep === 4 && (
-                      <ConfirmationStep
-                        formData={formData}
-                        onSubmit={handleSubmit}
-                        onPrev={prevStep}
-                        isSubmitting={isSubmitting}
-                      />
-                    )}
-                  </>
+          <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_minmax(320px,400px)] lg:gap-12">
+            {/* COLUNA ESQUERDA: Form */}
+            <div>
+              <div className="mb-6 text-center lg:text-left">
+                <h2 className="mb-2 font-serif text-2xl font-bold text-foreground md:text-3xl lg:text-4xl">
+                  {isSubmitted ? "Agendamento enviado!" : "Agende sua consulta oftalmológica"}
+                </h2>
+                {!isSubmitted && (
+                  <p className="text-sm text-muted-foreground md:text-base">
+                    Preencha os dados abaixo e nossa equipe confirma seu horário pelo WhatsApp —
+                    ou, se preferir, fale agora com a nossa secretária.
+                  </p>
                 )}
               </div>
-            </CardContent>
-          </Card>
 
-          {!isSubmitted && (
-            <p className="text-center text-xs text-muted-foreground mt-6 max-w-xl mx-auto">
-              Ao prosseguir, você concorda em receber contato da nossa equipe via WhatsApp.
-            </p>
-          )}
-        </div>
-      </section>
+              {/* Carrossel de depoimentos */}
+              {!isSubmitted && (
+                <div className="mb-6 overflow-hidden rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-5 shadow-sm">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
+                      ))}
+                      <span className="ml-1 text-xs font-semibold text-foreground">
+                        5.0 · pacientes reais
+                      </span>
+                    </div>
+                    <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                      Depoimentos
+                    </span>
+                  </div>
 
-      {/* Trust cards */}
-      <section className="container mx-auto px-4 py-12 sm:py-16">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-5xl mx-auto">
-          {[
-            {
-              icon: Heart,
-              title: "Atendimento Humanizado",
-              desc: "Cuidado individual e atenção em cada consulta com escuta ativa.",
-            },
-            {
-              icon: Shield,
-              title: "Convênios Aceitos",
-              desc: "Bradesco, Unimed, Cassi, Sul América e particular.",
-            },
-            {
-              icon: MapPin,
-              title: "Paragominas e Belém",
-              desc: "Clinicor, Hospital Geral e atendimento também em Belém.",
-            },
-          ].map((item) => (
-            <Card key={item.title} className="card-glass border-primary/20 hover:border-primary/40 transition-all">
-              <CardContent className="p-6 text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
-                  <item.icon className="w-6 h-6" />
+                  <div className="relative min-h-[120px]">
+                    {DEPOIMENTOS.map((d, idx) => (
+                      <div
+                        key={d.nome + d.data}
+                        className={`absolute inset-0 transition-all duration-500 ${
+                          idx === depoimentoAtivo
+                            ? "translate-x-0 opacity-100"
+                            : "pointer-events-none translate-x-2 opacity-0"
+                        }`}
+                        aria-hidden={idx !== depoimentoAtivo}
+                      >
+                        <p className="text-sm italic leading-relaxed text-foreground md:text-base">
+                          "{d.texto}"
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                          <strong className="text-foreground">{d.nome}</strong>
+                          <span className="text-muted-foreground">· {d.cidade}</span>
+                          <span className="text-muted-foreground">· {d.data}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-center gap-1.5">
+                    {DEPOIMENTOS.map((_, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setDepoimentoAtivo(idx)}
+                        aria-label={`Ver depoimento ${idx + 1}`}
+                        className={`h-1.5 rounded-full transition-all ${
+                          idx === depoimentoAtivo
+                            ? "w-6 bg-accent"
+                            : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <h3 className="font-serif text-lg font-semibold mb-2">{item.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+              )}
 
-      {/* Footer */}
-      <footer className="border-t border-border/40 py-8">
-        <div className="container mx-auto px-4 text-center space-y-2">
-          <p className="font-serif font-semibold gradient-text">Dr. Juliano Machado</p>
-          <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-            <Phone className="w-4 h-4" />
-            <a
-              href={`tel:+${WHATSAPP_NUMBER}`}
-              onClick={() => trackPhoneClick(`tel:+${WHATSAPP_NUMBER}`)}
-              className="hover:text-primary transition-colors"
-            >
-              (91) 93618-0476
-            </a>
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Clinicor · Av. Pres. Vargas, 1234 — Paragominas/PA
-          </p>
-          <p className="text-xs text-muted-foreground/70 pt-2">
-            © {new Date().getFullYear()} Dr. Juliano Machado · Todos os direitos reservados
-          </p>
-        </div>
-      </footer>
-    </div>
+              <div className="rounded-xl border border-border bg-card p-6 shadow-lg md:p-8">
+                {!isSubmitted && <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />}
+
+                <div className="mt-6">
+                  {isSubmitted ? (
+                    <SuccessStep onClose={handleReset} formData={formData} />
+                  ) : (
+                    <>
+                      {currentStep === 1 && (
+                        <PersonalDataStep
+                          formData={formData}
+                          updateFormData={updateFormData}
+                          onNext={nextStep}
+                        />
+                      )}
+                      {currentStep === 2 && (
+                        <ConsultationDetailsStep
+                          formData={formData}
+                          updateFormData={updateFormData}
+                          onNext={nextStep}
+                          onPrev={prevStep}
+                        />
+                      )}
+                      {currentStep === 3 && (
+                        <DateTimeStep
+                          formData={formData}
+                          updateFormData={updateFormData}
+                          onNext={nextStep}
+                          onPrev={prevStep}
+                        />
+                      )}
+                      {currentStep === 4 && (
+                        <ConfirmationStep
+                          formData={formData}
+                          onSubmit={handleSubmit}
+                          onPrev={prevStep}
+                          isSubmitting={isSubmitting}
+                        />
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <p className="mt-4 text-center text-xs text-muted-foreground">
+                <ShieldCheck className="mr-1 inline h-3.5 w-3.5 text-accent" />
+                Seus dados estão protegidos. Atendimento humanizado e sigiloso.
+              </p>
+            </div>
+
+            {/* COLUNA DIREITA: prova social (desktop) */}
+            <aside className="sticky top-24 hidden self-start lg:flex lg:flex-col lg:gap-6">
+              <WhatsAppHighlight location="agendamento_destaque_secretaria_desktop" />
+
+              <div className="rounded-xl border border-border bg-card p-6 shadow-md">
+                <div className="mb-3 flex items-center gap-1">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className="h-5 w-5 fill-accent text-accent" />
+                  ))}
+                  <span className="ml-2 text-sm font-semibold text-foreground">5.0/5</span>
+                  <span className="text-xs text-muted-foreground">(200+ avaliações)</span>
+                </div>
+
+                <img
+                  src={drJulianoHero}
+                  alt="Dr. Juliano Machado, oftalmologista"
+                  className="mb-4 h-48 w-full rounded-lg object-cover"
+                  loading="lazy"
+                />
+
+                <h3 className="mb-3 font-serif text-lg font-semibold text-foreground">
+                  Por que escolher o Dr. Juliano?
+                </h3>
+
+                <ul className="space-y-2.5 text-sm">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                    <span className="text-muted-foreground">
+                      <strong className="text-foreground">13+ anos</strong> de experiência em oftalmologia
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                    <span className="text-muted-foreground">
+                      <strong className="text-foreground">6.000+ pacientes</strong> atendidos
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                    <span className="text-muted-foreground">
+                      Atendimento em <strong className="text-foreground">Paragominas e Belém</strong>
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                    <span className="text-muted-foreground">
+                      Convênios: <strong className="text-foreground">Unimed, Bradesco, Cassi, Sul América</strong>
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                    <span className="text-muted-foreground">
+                      <strong className="text-foreground">Resposta em até 1h</strong> em horário comercial
+                    </span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="rounded-xl border border-primary/10 bg-primary/5 p-5">
+                <div className="mb-2 flex items-center gap-1">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
+                  ))}
+                </div>
+                <p className="text-sm italic leading-relaxed text-foreground">
+                  "Atendimento excelente, médico atencioso e equipe muito profissional. Recomendo!"
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">— Maria S., paciente</p>
+              </div>
+            </aside>
+          </div>
+        </main>
+
+        <footer className="mt-12 border-t border-border/40 py-6">
+          <div className="container mx-auto space-y-1 px-4 text-center text-xs text-muted-foreground">
+            <p>Dr. Juliano Machado · Oftalmologista · CRM-PA</p>
+            <p>Ao prosseguir, você concorda em receber contato via WhatsApp e e-mail.</p>
+          </div>
+        </footer>
+      </div>
+    </>
   );
 };
 
