@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm, reprocessarBoasVindas } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
-import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, Wifi, History } from "lucide-react";
+import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, Wifi, History, Copy } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import AuditLogDrawer from "@/components/admin/AuditLogDrawer";
+import DuplicadosDrawer from "@/components/admin/DuplicadosDrawer";
 
 const columns = [
   { status: "NOVO LEAD", title: "Novo Lead", color: "bg-emerald-500" },
