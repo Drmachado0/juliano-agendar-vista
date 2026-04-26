@@ -75,14 +75,21 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
   };
 
   const formatPhone = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    if (numbers.length <= 11) {
-      return numbers
-        .replace(/^(\d{2})/, "($1) ")
-        .replace(/(\d{5})(\d)/, "$1-$2")
-        .trim();
+    // Mantém apenas dígitos e limita a 11 (DDD + 9 dígitos)
+    const numbers = value.replace(/\D/g, "").slice(0, 11);
+
+    if (numbers.length === 0) return "";
+    if (numbers.length <= 2) return `(${numbers}`;
+    if (numbers.length <= 6) {
+      // (XX) X ou (XX) XXXX
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
     }
-    return value.slice(0, 15);
+    if (numbers.length <= 10) {
+      // Formato parcial até 10 dígitos: (XX) XXXX-XXXX
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
+    }
+    // 11 dígitos — celular: (XX) 9XXXX-XXXX
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,7 +190,9 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
             id="phone"
             value={formData.phone}
             onChange={handlePhoneChange}
-            placeholder="(00) 00000-0000"
+            placeholder="(91) 99999-9999"
+            inputMode="tel"
+            maxLength={15}
             className={`bg-secondary border-border focus:border-primary ${
               errors.phone ? "border-destructive" : ""
             }`}
