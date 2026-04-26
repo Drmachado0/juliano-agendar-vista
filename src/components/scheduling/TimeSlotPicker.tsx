@@ -172,7 +172,7 @@ const TimeSlotPicker = ({
           {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
         </h4>
         <p className="text-xs text-muted-foreground mt-1">
-          {slots.length} {slots.length === 1 ? "horário disponível" : "horários disponíveis"}
+          {horariosLiberados.size} {horariosLiberados.size === 1 ? "horário disponível" : "horários disponíveis"}
         </p>
       </div>
 
