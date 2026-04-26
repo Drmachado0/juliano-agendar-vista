@@ -101,6 +101,16 @@ Deno.serve(async (req) => {
 
     if (updateError) {
       console.error(`[converter-lead] Erro no update:`, updateError);
+      // Race condition: outro agendamento foi criado no mesmo slot entre validar e atualizar
+      if ((updateError as any).code === "23505") {
+        return new Response(
+          JSON.stringify({
+            error: "Este horário acabou de ser reservado por outra pessoa. Por favor, escolha outro horário.",
+            code: "SLOT_TAKEN",
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       return new Response(
         JSON.stringify({ error: updateError.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
