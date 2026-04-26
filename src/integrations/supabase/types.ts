@@ -438,6 +438,7 @@ export type Database = {
           last_sync_at: string | null
           last_sync_error: string | null
           refresh_token: string
+          time_zone: string | null
           token_expiry: string
           updated_at: string | null
           user_id: string
@@ -452,6 +453,7 @@ export type Database = {
           last_sync_at?: string | null
           last_sync_error?: string | null
           refresh_token: string
+          time_zone?: string | null
           token_expiry: string
           updated_at?: string | null
           user_id: string
@@ -466,6 +468,7 @@ export type Database = {
           last_sync_at?: string | null
           last_sync_error?: string | null
           refresh_token?: string
+          time_zone?: string | null
           token_expiry?: string
           updated_at?: string | null
           user_id?: string
