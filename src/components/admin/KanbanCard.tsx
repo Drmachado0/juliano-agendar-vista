@@ -100,6 +100,59 @@ const KanbanCard = ({
         </TooltipContent>
       </Tooltip>
 
+      {/* Boas-vindas status */}
+      {boasVindas && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              className={cn(
+                "flex items-center gap-2 text-xs font-medium px-2 py-1 rounded",
+                boasVindas.status === "enviada" &&
+                  "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300",
+                boasVindas.status === "falhou" &&
+                  "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300",
+                boasVindas.status === "tentativa" &&
+                  "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+              )}
+            >
+              {boasVindas.status === "enviada" && <Send className="h-3 w-3" />}
+              {boasVindas.status === "falhou" && <XCircle className="h-3 w-3" />}
+              {boasVindas.status === "tentativa" && <Loader2 className="h-3 w-3 animate-spin" />}
+              <span>
+                {boasVindas.status === "enviada" && "Boas-vindas enviada"}
+                {boasVindas.status === "falhou" && "Boas-vindas falhou"}
+                {boasVindas.status === "tentativa" && "Boas-vindas em tentativa"}
+              </span>
+              <span className="ml-auto opacity-70">
+                {format(new Date(boasVindas.data), "dd/MM HH:mm", { locale: ptBR })}
+              </span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">
+            <div className="text-xs space-y-1">
+              <div><strong>Status:</strong> {boasVindas.status}</div>
+              <div>
+                <strong>Quando:</strong>{" "}
+                {format(new Date(boasVindas.data), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+              </div>
+              <div className="opacity-80">
+                {formatDistanceToNow(new Date(boasVindas.data), { locale: ptBR, addSuffix: true })}
+              </div>
+              {boasVindas.status === "falhou" && boasVindas.motivoErro && (
+                <div className="pt-1 mt-1 border-t border-border/50">
+                  <strong>Motivo:</strong> {boasVindas.motivoErro}
+                </div>
+              )}
+              {boasVindas.status === "falhou" && !boasVindas.motivoErro && (
+                <div className="pt-1 mt-1 border-t border-border/50 opacity-80">
+                  Sem detalhe do erro registrado.
+                </div>
+              )}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      )}
+
       {/* Lead Indicator */}
       {isLead && (
         <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded">
