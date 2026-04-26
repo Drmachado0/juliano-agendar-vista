@@ -16,7 +16,13 @@ export interface GoogleCalendarStatus {
   connected_at?: string;
   last_sync_at?: string;
   last_sync_error?: string | null;
+  time_zone?: string;
   settings?: GoogleCalendarSettings;
+}
+
+export interface SyncStats {
+  synced: number;
+  pending: number;
 }
 
 export interface GoogleCalendarItem {
