@@ -423,7 +423,52 @@ const AdminCRM = () => {
         onClose={() => setWhatsappModalOpen(false)}
       />
 
-      <AuditLogDrawer open={auditOpen} onOpenChange={setAuditOpen} />
+      <AuditLogDrawer
+        open={auditOpen}
+        onOpenChange={setAuditOpen}
+        onOpenAgendamento={async (id) => {
+          // Procura primeiro nos agendamentos em memória
+          const todos = Object.values(agendamentosPorStatus).flat();
+          const found = todos.find((a) => a.id === id);
+          if (found) {
+            setSelectedAgendamento(found);
+            setDetailsModalOpen(true);
+            return;
+          }
+          // Fallback: busca no banco
+          const { data, error } = await buscarAgendamento(id);
+          if (data) {
+            setSelectedAgendamento(data);
+            setDetailsModalOpen(true);
+          } else {
+            toast({
+              title: "Agendamento não encontrado",
+              description: error?.message || "O registro pode ter sido excluído ou unificado.",
+              variant: "destructive",
+            });
+          }
+        }}
+        onOpenWhatsApp={async (id) => {
+          const todos = Object.values(agendamentosPorStatus).flat();
+          const found = todos.find((a) => a.id === id);
+          if (found) {
+            setSelectedAgendamento(found);
+            setWhatsappModalOpen(true);
+            return;
+          }
+          const { data, error } = await buscarAgendamento(id);
+          if (data) {
+            setSelectedAgendamento(data);
+            setWhatsappModalOpen(true);
+          } else {
+            toast({
+              title: "Paciente não encontrado",
+              description: error?.message || "O registro pode ter sido excluído ou unificado.",
+              variant: "destructive",
+            });
+          }
+        }}
+      />
       <DuplicadosDrawer
         open={duplicadosOpen}
         onOpenChange={setDuplicadosOpen}
