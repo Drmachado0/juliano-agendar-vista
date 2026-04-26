@@ -70,6 +70,7 @@ const KanbanColumn = ({
                 onViewDetails={onViewDetails}
                 onSendWhatsApp={onSendWhatsApp}
                 onTriggerAutomation={onTriggerAutomation}
+                boasVindas={boasVindasMap?.[agendamento.id]}
               />
             </div>
           ))
