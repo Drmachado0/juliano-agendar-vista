@@ -112,11 +112,19 @@ async function getSettings(supabase: any, userId: string): Promise<GcalSettings>
   };
 }
 
-function buildEvent(agendamento: Agendamento, settings: GcalSettings) {
+function buildEvent(agendamento: Agendamento, settings: GcalSettings, timeZone: string) {
   const [year, month, day] = agendamento.data_agendamento.split('-').map(Number);
   const [hour, minute] = agendamento.hora_agendamento.split(':').map(Number);
-  const startDate = new Date(year, month - 1, day, hour, minute);
-  const endDate = new Date(startDate.getTime() + settings.default_duration_min * 60 * 1000);
+  // Build local-time strings (Calendar API will treat them as the given timeZone)
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const startLocal = `${year}-${pad(month)}-${pad(day)}T${pad(hour)}:${pad(minute)}:00`;
+  const endTotalMin = hour * 60 + minute + settings.default_duration_min;
+  const endHour = Math.floor(endTotalMin / 60) % 24;
+  const endMin = endTotalMin % 60;
+  // If end crosses midnight, advance the day
+  const dayOffset = Math.floor((hour * 60 + minute + settings.default_duration_min) / 1440);
+  const endDateObj = new Date(year, month - 1, day + dayOffset);
+  const endLocal = `${endDateObj.getFullYear()}-${pad(endDateObj.getMonth() + 1)}-${pad(endDateObj.getDate())}T${pad(endHour)}:${pad(endMin)}:00`;
 
   const descLines = [`Paciente: ${agendamento.nome_completo}`];
   if (settings.include_patient_phone) descLines.push(`Telefone: ${agendamento.telefone_whatsapp}`);
@@ -128,8 +136,8 @@ function buildEvent(agendamento: Agendamento, settings: GcalSettings) {
     summary: `${agendamento.tipo_atendimento} - ${agendamento.nome_completo}`,
     description: descLines.join('\n'),
     location: agendamento.local_atendimento,
-    start: { dateTime: startDate.toISOString(), timeZone: 'America/Sao_Paulo' },
-    end: { dateTime: endDate.toISOString(), timeZone: 'America/Sao_Paulo' },
+    start: { dateTime: startLocal, timeZone },
+    end: { dateTime: endLocal, timeZone },
     reminders: {
       useDefault: false,
       overrides: settings.reminder_popup_min.map((m) => ({ method: 'popup', minutes: m })),
