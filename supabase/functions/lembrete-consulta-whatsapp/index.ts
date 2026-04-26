@@ -103,6 +103,7 @@ serve(async (req) => {
           hora: formatarHora(agendamento.hora_agendamento),
           local: agendamento.local_atendimento,
           tipo_atendimento: agendamento.tipo_atendimento,
+          link_status: `https://drjulianomachado.com/status/${agendamento.id}`,
         });
 
         console.log(`[lembrete-consulta] Enviando lembrete para: ${telefone}`);
