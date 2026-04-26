@@ -340,6 +340,31 @@ export async function atualizarStatusCrm(
   return { error: null };
 }
 
+// Reprocessar boas-vindas pendentes manualmente (admin)
+export async function reprocessarBoasVindas(): Promise<{
+  processed: number;
+  failed: number;
+  total_pending: number;
+  error: Error | null;
+}> {
+  try {
+    const { data, error } = await supabase.functions.invoke('enviar-boas-vindas-lead', {
+      body: {},
+    });
+    if (error) {
+      return { processed: 0, failed: 0, total_pending: 0, error: new Error(error.message) };
+    }
+    return {
+      processed: data?.processed ?? 0,
+      failed: data?.failed ?? 0,
+      total_pending: data?.total_pending ?? 0,
+      error: null,
+    };
+  } catch (err) {
+    return { processed: 0, failed: 0, total_pending: 0, error: err as Error };
+  }
+}
+
 // Update observações internas
 export async function atualizarObservacoes(
   id: string, 
