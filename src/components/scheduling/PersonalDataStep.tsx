@@ -190,7 +190,9 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
             id="phone"
             value={formData.phone}
             onChange={handlePhoneChange}
-            placeholder="(00) 00000-0000"
+            placeholder="(91) 99999-9999"
+            inputMode="tel"
+            maxLength={15}
             className={`bg-secondary border-border focus:border-primary ${
               errors.phone ? "border-destructive" : ""
             }`}
