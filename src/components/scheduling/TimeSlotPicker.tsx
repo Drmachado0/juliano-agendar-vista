@@ -194,7 +194,9 @@ const TimeSlotPicker = ({
             noite: "Noite",
           };
           const count =
-            p === "todos" ? slots.length : slotsPorPeriodo[p as Exclude<Periodo, "todos">].length;
+            p === "todos"
+              ? horariosLiberados.size
+              : slotsPorPeriodo[p as Exclude<Periodo, "todos">].filter((s) => horariosLiberados.has(s.horario)).length;
           if (p !== "todos" && count === 0) return null;
           const ativo = filtroPeriodo === p;
           return (
