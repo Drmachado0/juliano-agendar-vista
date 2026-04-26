@@ -1,8 +1,32 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export interface GoogleCalendarSettings {
+  default_duration_min: number;
+  reminder_popup_min: number[];
+  event_color_id: string | null;
+  include_patient_phone: boolean;
+  include_convenio: boolean;
+  auto_sync_enabled: boolean;
+}
+
 export interface GoogleCalendarStatus {
   connected: boolean;
   calendar_id?: string;
+  google_email?: string;
+  connected_at?: string;
+  last_sync_at?: string;
+  last_sync_error?: string | null;
+  settings?: GoogleCalendarSettings;
+}
+
+export interface GoogleCalendarItem {
+  id: string;
+  summary: string;
+  description?: string;
+  primary: boolean;
+  access_role: string;
+  background_color?: string;
+  time_zone?: string;
 }
 
 export async function checkGoogleCalendarConnection(userId: string): Promise<GoogleCalendarStatus> {
@@ -10,12 +34,10 @@ export async function checkGoogleCalendarConnection(userId: string): Promise<Goo
     const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
       body: { action: 'check', user_id: userId }
     });
-
     if (error) {
       console.error('Error checking Google Calendar connection:', error);
       return { connected: false };
     }
-
     return data;
   } catch (err) {
     console.error('Error checking Google Calendar connection:', err);
@@ -28,37 +50,23 @@ export async function initiateGoogleCalendarAuth(redirectUri?: string): Promise<
     const { data, error } = await supabase.functions.invoke('google-calendar-auth', {
       body: { redirect_uri: redirectUri }
     });
-
-    if (error) {
-      console.error('Error initiating Google Calendar auth:', error);
-      return { auth_url: null, error: error.message };
-    }
-
+    if (error) return { auth_url: null, error: error.message };
     return { auth_url: data.auth_url, error: null };
   } catch (err: any) {
-    console.error('Error initiating Google Calendar auth:', err);
     return { auth_url: null, error: err.message || 'Unknown error' };
   }
 }
 
 export async function exchangeGoogleCalendarCode(
-  code: string, 
-  userId: string, 
-  redirectUri?: string
+  code: string, userId: string, redirectUri?: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
-    const { data, error } = await supabase.functions.invoke('google-calendar-callback', {
+    const { error } = await supabase.functions.invoke('google-calendar-callback', {
       body: { code, user_id: userId, redirect_uri: redirectUri }
     });
-
-    if (error) {
-      console.error('Error exchanging Google Calendar code:', error);
-      return { success: false, error: error.message };
-    }
-
+    if (error) return { success: false, error: error.message };
     return { success: true, error: null };
   } catch (err: any) {
-    console.error('Error exchanging Google Calendar code:', err);
     return { success: false, error: err.message || 'Unknown error' };
   }
 }
@@ -72,33 +80,81 @@ export async function syncAppointmentToGoogleCalendar(
     const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
       body: { action, agendamento_id: agendamentoId, user_id: userId }
     });
-
-    if (error) {
-      console.error('Error syncing to Google Calendar:', error);
-      return { success: false, error: error.message };
-    }
-
+    if (error) return { success: false, error: error.message };
     return { success: true, event_id: data.event_id, error: null };
   } catch (err: any) {
-    console.error('Error syncing to Google Calendar:', err);
     return { success: false, error: err.message || 'Unknown error' };
   }
 }
 
 export async function disconnectGoogleCalendar(userId: string): Promise<{ success: boolean; error: string | null }> {
   try {
-    const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
+    const { error } = await supabase.functions.invoke('google-calendar-sync', {
       body: { action: 'disconnect', user_id: userId }
     });
-
-    if (error) {
-      console.error('Error disconnecting Google Calendar:', error);
-      return { success: false, error: error.message };
-    }
-
+    if (error) return { success: false, error: error.message };
     return { success: true, error: null };
   } catch (err: any) {
-    console.error('Error disconnecting Google Calendar:', err);
+    return { success: false, error: err.message || 'Unknown error' };
+  }
+}
+
+export async function listGoogleCalendars(userId: string): Promise<{ calendars: GoogleCalendarItem[]; error: string | null }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('google-calendar-list', {
+      body: { user_id: userId }
+    });
+    if (error) return { calendars: [], error: error.message };
+    return { calendars: data.calendars || [], error: null };
+  } catch (err: any) {
+    return { calendars: [], error: err.message || 'Unknown error' };
+  }
+}
+
+export async function updateCalendarSelection(userId: string, calendarId: string): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const { error } = await supabase.functions.invoke('google-calendar-sync', {
+      body: { action: 'update-calendar', user_id: userId, calendar_id: calendarId }
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true, error: null };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Unknown error' };
+  }
+}
+
+export async function testGoogleCalendarConnection(userId: string): Promise<{ ok: boolean; summary?: string; time_zone?: string; error: string | null }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
+      body: { action: 'test', user_id: userId }
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: !!data.ok, summary: data.summary, time_zone: data.time_zone, error: null };
+  } catch (err: any) {
+    return { ok: false, error: err.message || 'Unknown error' };
+  }
+}
+
+export async function resyncBatchGoogleCalendar(userId: string): Promise<{ success: boolean; total?: number; synced?: number; failed?: number; error: string | null }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
+      body: { action: 'sync-batch', user_id: userId }
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true, total: data.total, synced: data.synced, failed: data.failed, error: null };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Unknown error' };
+  }
+}
+
+export async function updateGoogleCalendarSettings(userId: string, settings: GoogleCalendarSettings): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const { error } = await supabase
+      .from('google_calendar_settings')
+      .upsert({ user_id: userId, ...settings, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    if (error) return { success: false, error: error.message };
+    return { success: true, error: null };
+  } catch (err: any) {
     return { success: false, error: err.message || 'Unknown error' };
   }
 }
@@ -115,7 +171,6 @@ export function buildGoogleCalendarAuthUrl(
     redirect_uri: redirectUri,
     app_redirect: appRedirect,
   }));
-
   const url = new URL(baseAuthUrl);
   url.searchParams.set('state', state);
   return url.toString();
