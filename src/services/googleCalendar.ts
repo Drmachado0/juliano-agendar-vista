@@ -242,10 +242,15 @@ export function buildGoogleCalendarAuthUrl(
 
 // ============== PULL (Google → Site) ==============
 
-export async function pullGoogleCalendarEvents(userId: string): Promise<PullResult> {
+export type PullRange = "default" | "hoje" | "7dias" | "mes";
+
+export async function pullGoogleCalendarEvents(
+  userId: string,
+  range: PullRange = "default",
+): Promise<PullResult> {
   try {
     const { data, error } = await supabase.functions.invoke('google-calendar-pull', {
-      body: { user_id: userId },
+      body: { user_id: userId, range },
     });
     if (error) return { ok: false, processed: 0, error: error.message };
     return data as PullResult;
