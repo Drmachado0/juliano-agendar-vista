@@ -30,6 +30,8 @@ const AdminCRM = () => {
     "ATENDIDO": [],
   });
   const [loading, setLoading] = useState(true);
+  const [reprocessando, setReprocessando] = useState(false);
+  const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date>(new Date());
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [draggingAgendamento, setDraggingAgendamento] = useState<Agendamento | null>(null);
 
@@ -37,25 +39,78 @@ const AdminCRM = () => {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
 
-  const fetchAgendamentos = async () => {
-    setLoading(true);
+  const isFetchingRef = useRef(false);
+
+  const fetchAgendamentos = async (silent = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    if (!silent) setLoading(true);
     const { data, error } = await listarAgendamentosPorStatus();
-    setLoading(false);
+    if (!silent) setLoading(false);
+    isFetchingRef.current = false;
 
     if (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os agendamentos.",
-        variant: "destructive",
-      });
+      if (!silent) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os agendamentos.",
+          variant: "destructive",
+        });
+      }
     } else {
       setAgendamentosPorStatus(data);
+      setUltimaAtualizacao(new Date());
     }
   };
 
   useEffect(() => {
     fetchAgendamentos();
+
+    // Realtime: atualiza automaticamente quando agendamentos mudam (cron, drag de outro admin, etc.)
+    const channel = supabase
+      .channel('crm-agendamentos-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'agendamentos' },
+        () => {
+          fetchAgendamentos(true);
+        }
+      )
+      .subscribe();
+
+    // Polling de fallback a cada 60s
+    const interval = setInterval(() => fetchAgendamentos(true), 60000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, []);
+
+  const handleReprocessarBoasVindas = async () => {
+    setReprocessando(true);
+    toast({ title: "Processando...", description: "Enviando boas-vindas para leads pendentes." });
+    const { processed, failed, total_pending, error } = await reprocessarBoasVindas();
+    setReprocessando(false);
+
+    if (error) {
+      toast({
+        title: "Erro ao reprocessar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: `${processed} mensagem(ns) enviada(s)`,
+        description: failed > 0
+          ? `${failed} falha(s). ${total_pending} pendente(s) total.`
+          : total_pending === 0
+          ? "Nenhum lead pendente encontrado."
+          : `${total_pending} pendente(s) total.`,
+      });
+      fetchAgendamentos(true);
+    }
+  };
 
   const handleDragStart = (e: React.DragEvent, agendamento: Agendamento) => {
     setDraggingAgendamento(agendamento);
