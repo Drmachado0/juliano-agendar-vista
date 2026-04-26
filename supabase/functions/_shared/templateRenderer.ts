@@ -23,6 +23,8 @@ Recebemos seu pedido de agendamento na clínica do *Dr. Juliano Machado - Oftalm
 
 ⚠️ *Importante:* O atendimento será realizado por *ordem de chegada*. Recomendamos chegar com antecedência.
 
+🔗 Acompanhe seu agendamento: {{link_status}}
+
 Caso precise reagendar ou cancelar, entre em contato conosco.
 
 Agradecemos a preferência! 🙏`,
@@ -36,6 +38,8 @@ Este é um lembrete do seu agendamento na clínica do *Dr. Juliano Machado - Oft
 📍 *Local:* {{local}}
 
 ⚠️ *Lembre-se:* O atendimento será por *ordem de chegada*.
+
+🔗 Detalhes do agendamento: {{link_status}}
 
 Caso não possa comparecer, por favor nos avise.
 
@@ -62,6 +66,8 @@ Sua consulta foi *reagendada* para:
 📍 *Local:* {{local}}
 
 ⚠️ *Lembre-se:* O atendimento será por *ordem de chegada*.
+
+🔗 Acompanhe seu agendamento: {{link_status}}
 
 Qualquer dúvida, estamos à disposição! 🙏`,
 
