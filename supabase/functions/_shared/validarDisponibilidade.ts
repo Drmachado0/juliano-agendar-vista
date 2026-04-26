@@ -252,14 +252,15 @@ export async function validarDisponibilidade(
   supabase: SupabaseClient,
   data: string,
   hora: string,
-  local: string
+  local: string,
+  excluirAgendamentoId?: string,
 ): Promise<ResultadoValidacao> {
   const clinica = resolverClinica(local);
   if (!clinica) {
     return { disponivel: false, motivo: `Clínica "${local}" não encontrada.` };
   }
 
-  const slots = await listarHorariosDisponiveis(supabase, data, local);
+  const slots = await listarHorariosDisponiveis(supabase, data, local, excluirAgendamentoId);
   const encontrado = slots.find(
     (s) => s.horario === hora && s.clinica_id === clinica.id
   );
