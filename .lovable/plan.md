@@ -1,80 +1,78 @@
 
-## Revisão da Conexão com Google Calendar
+# Diagnóstico do CRM Kanban
 
-Investiguei o estado atual (logs, banco, código) e a conexão **está funcionando** (check ✅, list ✅, update-calendar ✅, test ✅), mas identifiquei **5 problemas reais** que vou corrigir.
+Após inspecionar banco, código e edge functions, identifiquei **3 problemas reais** + a melhoria solicitada:
 
----
+## 🔍 O que encontrei
 
-### 🔴 Problema 1 — Fuso horário errado nos eventos
-O código em `google-calendar-sync/index.ts` (linhas 118-119) cria eventos **hardcoded em `America/Sao_Paulo`**, mas o calendário do usuário está em `America/Belem` (1h de diferença). Eventos estão sendo criados no horário errado no Google Calendar.
+### 1. ✅ Automação de boas-vindas **está funcionando** (mas com 1 lead "preso")
+Verifiquei o banco: **9 dos 10 leads** receberam mensagem de boas-vindas e migraram corretamente de **NOVO LEAD → AGUARDANDO**. 
 
-**Correção:**
-- Adicionar coluna `time_zone` em `google_calendar_tokens`.
-- Salvar o timezone retornado pelo Google (já vem no `test` e em `calendarList`) no momento da conexão e da seleção de calendário.
-- `buildEvent` passa a usar esse timezone (fallback `America/Sao_Paulo`).
+**Porém**, o lead `Eliosvaldo de Melo Lima` (13/03) ficou em **NOVO LEAD com 0 mensagens** — provavelmente foi um lead duplicado (existe outro do mesmo paciente 1 minuto antes que recebeu). A função de boas-vindas tem o filtro correto por telefone, mas leads antigos travados nunca serão reprocessados porque o cron só pega últimos 20.
 
----
+### 2. ❌ **Cards NÃO atualizam automaticamente no Kanban**
+O `CRM.tsx` faz `fetchAgendamentos()` apenas no `useEffect` inicial. Quando o cron de boas-vindas roda em background e move o lead para AGUARDANDO, **a tela não reflete** — o admin precisa clicar manualmente em "Atualizar". Isso dá a falsa impressão de que a automação não funciona.
 
-### 🔴 Problema 2 — `google_email` salvando como `null`
-O response do `check` mostra `google_email: null` mesmo após reconexão. O `userinfo` no callback está em `try/catch` silencioso — se falhar, fica null para sempre.
+### 3. ❌ **Não existe coluna/campo "Data de Contato"** no card
+Hoje os cards mostram só telefone, data do agendamento (se houver) e badges. Você quer ver claramente **quando o lead chegou** (created_at) para monitorar há quanto tempo está parado em cada fase.
 
-**Correção:**
-- Nova action `refresh-email` em `google-calendar-sync` que consulta `oauth2/v2/userinfo` usando o access token atual e atualiza o registro.
-- Botão "Atualizar info da conta" no card de status (executa automaticamente uma vez se `google_email` estiver null).
+### 4. ⚠️ Migração para ATENDIDO depende de cron manual
+Função `migrar-atendidos` existe mas não vi confirmação de que está agendada. Leads em CLINICOR/HGP só viram ATENDIDO se o cron rodar.
 
 ---
 
-### 🟡 Problema 3 — Falhas transitórias quebram a UI
-Log mostra `FunctionsFetchError: Failed to fetch` esporádico no `check`. Hoje isso reseta o status para `{ connected: false }` na UI mesmo com a conexão válida.
+# 📋 Plano de Correção
 
-**Correção:**
-- Em `services/googleCalendar.ts`, adicionar **retry com backoff** (2 tentativas, 500ms) no `checkGoogleCalendarConnection`.
-- Tratar erro de rede separadamente de "desconectado": manter o último status conhecido em vez de mostrar "desconectado".
+## A. Adicionar "Data de Contato" no Kanban Card (`KanbanCard.tsx`)
+- Mostrar **sempre** no topo do card: `📞 Contato em DD/MM/YY · há X dias` (usa `created_at`)
+- Adicionar **indicador visual de urgência**: 
+  - Verde: ≤ 1 dia
+  - Amarelo: 2-7 dias  
+  - Vermelho: > 7 dias parado na mesma fase (compara `updated_at` da última mudança)
+- Tooltip ao passar o mouse: data/hora exata de criação
 
----
+## B. Atualização automática do Kanban (`CRM.tsx`)
+- **Realtime Supabase**: subscrever mudanças na tabela `agendamentos` para refletir instantaneamente quando:
+  - Cron de boas-vindas move NOVO LEAD → AGUARDANDO
+  - Cron `migrar-atendidos` move HGP/CLINICOR → ATENDIDO
+  - Outro admin arrasta um card
+- **Polling de fallback**: refresh silencioso a cada 60s
+- **Indicador visual** de "Atualizado agora" no header
 
-### 🟡 Problema 4 — Toggle `auto_sync_enabled` sem feedback visual
-Existe a configuração mas a UI não mostra de forma clara quando a sincronização automática está pausada, nem o `_shared/syncGoogleCalendar.ts` informa no log o motivo.
+## C. Botão "Reprocessar boas-vindas" (admin manual)
+- No header do CRM, novo botão "🔄 Forçar envio de boas-vindas pendentes"
+- Invoca a edge function `enviar-boas-vindas-lead` manualmente (sem esperar cron)
+- Útil para destravar leads antigos como o caso do Eliosvaldo
 
-**Correção:**
-- Banner amarelo no card quando `auto_sync_enabled = false`: "⏸ Sincronização automática pausada — eventos novos não serão criados no Google Calendar até reativar".
-- Manter botão "Resincronizar" sempre disponível para forçar manualmente.
+## D. Garantir crons ativos (migration)
+Verificar e (re)criar via SQL os cron jobs:
+- `enviar-boas-vindas-lead` — a cada 5 min
+- `migrar-atendidos` — diário às 03h
+- `enviar-confirmacao-whatsapp` — a cada 15 min
 
----
+## E. Indicador de "tempo na fase" + alertas
+- Card mostra "Parado há X dias nesta fase" quando `updated_at` > 3 dias e status ainda não é ATENDIDO
+- Filtro no header: "Mostrar apenas leads parados há +3 dias"
 
-### 🟢 Problema 5 — Sem visibilidade de eventos órfãos
-Hoje não há como saber quantos agendamentos estão sincronizados vs. pendentes.
-
-**Correção:**
-- Adicionar contador no card: "📅 X agendamentos sincronizados • Y pendentes (próximos 30 dias)".
-- Nova action leve `sync-stats` que retorna apenas counts (sem chamar Google).
-
----
-
-### 📋 Resumo de Arquivos
-
-**Migration (1):**
-- Adicionar `time_zone TEXT` em `google_calendar_tokens`.
-
-**Edge Functions:**
-- `google-calendar-sync/index.ts`: 
-  - Usar timezone salvo em `buildEvent`.
-  - Nova action `refresh-email`.
-  - Nova action `sync-stats`.
-  - `update-calendar` também salva o `time_zone` do calendário escolhido.
-  - `test` atualiza o `time_zone` no DB.
-- `google-calendar-callback/index.ts`: log mais verboso quando userinfo falha (para diagnóstico).
-
-**Frontend:**
-- `src/services/googleCalendar.ts`: retry no `check`, novas funções `refreshGoogleEmail` e `getSyncStats`.
-- `src/pages/admin/Configuracoes.tsx`:
-  - Banner de pausa automática.
-  - Contador de sincronização.
-  - Auto-refresh do email se vier null.
-  - Mostrar timezone do calendário selecionado.
+## F. Melhorar a função `enviar-boas-vindas-lead`
+- Aumentar limite de busca de 20 para 50 leads
+- Adicionar log estruturado de quantos leads pulou (já enviado) vs processou
+- Retentar leads sem mensagem mesmo se forem antigos (>24h)
 
 ---
 
-### ⚠️ O que NÃO vou fazer
-- **Webhooks (push notifications) do Google** — exigem URL pública verificada e renovação a cada 7 dias; complexidade alta para o ganho. Posso adicionar depois se você quiser sincronização bidirecional real.
-- **Forçar reconexão** — sua conexão atual continua válida, só vamos corrigir/enriquecer os dados em background.
+# 📁 Arquivos afetados
+
+1. `src/components/admin/KanbanCard.tsx` — adicionar "Data de Contato" + alertas de tempo
+2. `src/pages/admin/CRM.tsx` — Realtime subscription + botão reprocessar + filtro
+3. `src/services/agendamentos.ts` — função `reprocessarBoasVindas()` 
+4. `supabase/functions/enviar-boas-vindas-lead/index.ts` — limite maior + logs melhores
+5. **SQL/Insert tool** — verificar/recriar cron jobs ativos
+
+# ⚙️ O que NÃO vou mexer (já funciona)
+- Fluxo de criação de lead (`criar-lead` edge function) ✅
+- Conversão lead → agendamento (`converter-lead-agendamento`) ✅
+- Determinação de coluna por local (CLINICOR/HGP/BELÉM) ✅
+- Drag-and-drop entre colunas ✅
+
+Aprovar para eu implementar tudo de uma vez.
