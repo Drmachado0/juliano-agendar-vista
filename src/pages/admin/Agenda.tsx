@@ -201,6 +201,16 @@ export default function Agenda() {
                 <Button variant="outline" onClick={() => setSelectedDate(new Date())}>
                   Hoje
                 </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleSyncGoogle}
+                  disabled={syncingGoogle}
+                  title="Importar eventos do Google Calendar"
+                >
+                  <RefreshCw className={cn("h-4 w-4 mr-2", syncingGoogle && "animate-spin")} />
+                  {syncingGoogle ? "Sincronizando..." : "Sincronizar Google"}
+                </Button>
               </div>
             </div>
           </CardContent>
