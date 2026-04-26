@@ -48,23 +48,31 @@ export function installDataLayerDebug() {
   window.dataLayer.push = ((...args: any[]) => {
     for (const entry of args) {
       // eslint-disable-next-line no-console
-      console.log('[DL] push:', entry);
+      console.log('[DL] Evento recebido:', entry);
 
       if (entry && typeof entry === 'object' && entry.event === 'meta_lead') {
         const diffs = diffPayload(entry, EXPECTED_META_LEAD);
         if (diffs.length === 0) {
           // eslint-disable-next-line no-console
           console.log(
-            '%c[DL] ✅ meta_lead OK — payload bate com o esperado',
+            '%c[DL] ✅ Evento meta_lead ACEITO — payload corresponde ao esperado',
             'color: #16a34a; font-weight: bold;',
-            entry
+            { payloadRecebido: entry }
           );
         } else {
           // eslint-disable-next-line no-console
           console.warn(
-            '%c[DL] ❌ meta_lead DIVERGENTE',
+            '%c[DL] ❌ Evento meta_lead DIVERGENTE — payload não corresponde ao esperado',
             'color: #dc2626; font-weight: bold;',
-            { recebido: entry, esperado: EXPECTED_META_LEAD, diffs }
+            {
+              payloadRecebido: entry,
+              payloadEsperado: EXPECTED_META_LEAD,
+              camposDivergentes: diffs.map((d) => ({
+                campo: d.key,
+                valorEsperado: d.expected,
+                valorRecebido: d.actual,
+              })),
+            }
           );
         }
       }
@@ -75,7 +83,7 @@ export function installDataLayerDebug() {
   window.__dlDebugInstalled = true;
   // eslint-disable-next-line no-console
   console.log(
-    '%c[DL] Debug do dataLayer ATIVO — aguardando eventos…',
+    '%c[DL] Depurador do dataLayer ATIVO — aguardando eventos…',
     'color: #2563eb; font-weight: bold;'
   );
 }
