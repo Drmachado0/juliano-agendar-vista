@@ -31,7 +31,7 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.google-calendar-sync]
-verify_jwt = true
+verify_jwt = false
 
 [functions.notificar-agendamento-email]
 verify_jwt = true

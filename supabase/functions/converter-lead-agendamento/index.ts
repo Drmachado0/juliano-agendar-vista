@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { validarDisponibilidade } from "../_shared/validarDisponibilidade.ts";
+import { syncAgendamentoToCalendar } from "../_shared/syncGoogleCalendar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -115,6 +116,12 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[converter-lead] Lead ${lead_id} convertido com sucesso`);
+
+    // Sync com Google Calendar (fire-and-forget, não bloqueia resposta)
+    syncAgendamentoToCalendar(supabase, updated.id, "create")
+      .then(() => console.log("[converter-lead] Google Calendar sync triggered"))
+      .catch((err: unknown) => console.error("[converter-lead] Google Calendar sync failed:", err));
+
     return new Response(
       JSON.stringify({ success: true, id: updated.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
