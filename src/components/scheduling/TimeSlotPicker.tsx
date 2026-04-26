@@ -176,6 +176,28 @@ const TimeSlotPicker = ({
         </p>
       </div>
 
+      {/* Legenda fixa (sticky) — sempre visível ao rolar */}
+      <div className="sticky top-0 z-10 -mx-1 px-2 py-2 rounded-lg bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border border-border/60 shadow-sm">
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-[11px] sm:text-xs">
+          <div className="flex items-center gap-1.5">
+            <span aria-hidden className="inline-block h-3 w-3 rounded border-2 border-border bg-background" />
+            <span className="font-medium text-foreground">Disponível</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span aria-hidden className="inline-block h-3 w-3 rounded border-2 border-amber-500/60 bg-amber-500/20" />
+            <span className="font-medium text-amber-600 dark:text-amber-400">Alternativo</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span aria-hidden className="inline-block h-3 w-3 rounded border-2 border-dashed border-border/60 bg-muted/40" />
+            <span className="font-medium text-muted-foreground">Lotado</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span aria-hidden className="inline-block h-3 w-3 rounded border-2 border-primary bg-primary" />
+            <span className="font-medium text-primary">Selecionado</span>
+          </div>
+        </div>
+      </div>
+
       {/* Quick picks */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
         <button
