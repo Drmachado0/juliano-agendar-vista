@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { FormData } from "./SchedulingModal";
 import CalendarGrid from "./CalendarGrid";
 import TimeSlotPicker from "./TimeSlotPicker";
-import AlternativesSuggestion from "./AlternativesSuggestion";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -152,15 +152,6 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
         </div>
       )}
 
-      {/* Alternativas próximas */}
-      <AlternativesSuggestion
-        selectedDate={selectedDate}
-        selectedTime={selectedTime}
-        localAtendimento={formData.location}
-        acceptFirstAvailable={formData.acceptFirstAvailable}
-        highlight={highlightAlternativas}
-        onSelect={handleAlternativaSelect}
-      />
 
       {/* Checkboxes */}
       <div className="space-y-4 pt-2">
