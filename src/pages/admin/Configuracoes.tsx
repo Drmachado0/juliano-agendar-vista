@@ -164,7 +164,20 @@ export default function Configuracoes() {
     setGcalLoading(false);
     if (status.connected) {
       loadCalendarList();
+      loadSyncStats();
+      // Auto-refresh do e-mail caso esteja faltando
+      if (!status.google_email) {
+        refreshGoogleEmail(user.id).then(({ google_email }) => {
+          if (google_email) setGcalStatus((prev) => ({ ...prev, google_email }));
+        });
+      }
     }
+  }
+
+  async function loadSyncStats() {
+    if (!user?.id) return;
+    const stats = await getGoogleCalendarSyncStats(user.id);
+    setSyncStats(stats);
   }
 
   async function loadCalendarList() {
