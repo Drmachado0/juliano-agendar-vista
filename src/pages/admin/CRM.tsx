@@ -149,8 +149,8 @@ const AdminCRM = () => {
       return updated;
     });
 
-    // Update in database
-    const { error } = await atualizarStatusCrm(draggingAgendamento.id, newStatus);
+    // Update in database (com auditoria)
+    const { error } = await atualizarStatusCrm(draggingAgendamento.id, newStatus, oldStatus);
 
     if (error) {
       // Revert on error
