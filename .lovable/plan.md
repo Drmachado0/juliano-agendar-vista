@@ -1,33 +1,42 @@
+# Auditoria do CRM em tempo real
+
 ## Objetivo
-No `AuditLogDrawer`, cada entrada de auditoria que tiver `agendamento_id` ganha um link/botão direto para abrir o **modal de detalhes do agendamento** (`AgendamentoDetailsModal`) e um atalho para **abrir o WhatsApp** com o paciente. Hoje o drawer apenas mostra o nome/telefone como texto estático.
+Atualizar o drawer de Auditoria do CRM em tempo real, exibindo automaticamente novas ações registradas (mudança de status, reprocessamento de boas-vindas, WhatsApp manual, automações, merge de duplicados) sem precisar clicar em "Atualizar" ou recarregar.
+
+## Arquitetura
+Usar **Supabase Realtime** na tabela `public.crm_audit_log`, inscrevendo apenas no evento `INSERT` (a tabela é append-only — RLS bloqueia UPDATE/DELETE). A inscrição fica ativa **somente enquanto o drawer está aberto**, para economizar conexões.
 
 ## Mudanças
 
-### 1. `src/components/admin/AuditLogDrawer.tsx`
-- Adicionar props opcionais:
-  - `onOpenAgendamento?: (agendamentoId: string) => void`
-  - `onOpenWhatsApp?: (agendamentoId: string, telefone: string) => void`
-- Na renderização de cada item:
-  - Transformar o nome do paciente em **botão/link** (ícone `ExternalLink`) que chama `onOpenAgendamento(e.agendamento_id)`.
-  - Adicionar um botão pequeno ao lado com ícone `MessageCircle` que chama `onOpenWhatsApp` (passando telefone do `e.agendamento.telefone_whatsapp`).
-  - Ambos só aparecem quando `e.agendamento_id` existe e o callback foi passado.
-- Fechar o drawer ao clicar no link (chamar `onOpenChange(false)` antes de disparar o callback) para o modal ficar visível.
+### 1. Migração SQL — habilitar Realtime
+```sql
+ALTER TABLE public.crm_audit_log REPLICA IDENTITY FULL;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.crm_audit_log;
+```
 
-### 2. `src/pages/admin/CRM.tsx`
-- Criar handler `handleOpenAgendamentoFromAudit(id)`:
-  - Procurar o agendamento dentro de `agendamentosPorStatus` (todos os status). Se encontrado → `setSelectedAgendamento(...)` + `setDetailsModalOpen(true)`.
-  - Caso não encontrado em memória (ex.: já arquivado/excluído), buscar via `buscarAgendamento(id)` de `src/services/agendamentos.ts` e abrir o modal; se também falhar, mostrar `toast` "Agendamento não encontrado (pode ter sido excluído)".
-- Criar handler `handleOpenWhatsAppFromAudit(id, telefone)` com a mesma lógica (busca local → fallback no service) e abrir `WhatsAppModal`.
-- Passar ambos para `<AuditLogDrawer ... onOpenAgendamento={...} onOpenWhatsApp={...} />`.
+### 2. `src/components/admin/AuditLogDrawer.tsx`
+- Novo `useEffect` que, enquanto `open === true`:
+  - Cria channel `crm-audit-log-changes` e inscreve em `postgres_changes` (`event: 'INSERT'`, `schema: 'public'`, `table: 'crm_audit_log'`).
+  - No callback:
+    - Lê o filtro atual via `ref` (evita stale closure).
+    - Se `agendamento_id` existir, busca `nome_completo`/`telefone_whatsapp` em `agendamentos` para preencher o join (Realtime não traz relacionamentos).
+    - Aplica filtro `filtroAcao` antes de inserir.
+    - Faz prepend em `entries`, deduplicando por `id`, mantendo no máximo 200.
+  - Cleanup remove o channel.
+- Mantém `fetch()` inicial e botão "Atualizar" para fallback manual.
 
-### 3. UX detalhe
-- Quando o agendamento foi removido (ex.: unificação de duplicados), o link fica desabilitado com tooltip "Registro removido".
-  - Detectado quando `e.agendamento` (join) vier `null` mesmo com `agendamento_id` preenchido.
-
-## Arquivos afetados
-- `src/components/admin/AuditLogDrawer.tsx` (edit)
-- `src/pages/admin/CRM.tsx` (edit)
+### 3. UX — indicador "ao vivo"
+- Ao lado do contador "X registro(s)", mostrar um ponto verde pulsante + texto "ao vivo" quando o channel está `SUBSCRIBED`.
 
 ## Não muda
-- Sem alterações de banco / RPC / edge functions.
-- `crmAudit.ts` e schema permanecem iguais — o join `agendamento:agendamentos(...)` já traz os dados necessários.
+- RLS, RPC `registrar_crm_audit`, `listarAuditCrm`, demais telas.
+- Como todas as ações já chamam `registrar_crm_audit`, aparecerão automaticamente.
+
+## Riscos
+- **RLS**: não-admins não recebem eventos (correto — drawer é admin-only).
+- **Race com filtro**: usar `ref` para evitar stale closure e não precisar recriar canal a cada troca.
+- Cap de 200 entries para evitar crescimento ilimitado.
+
+## Arquivos
+- `supabase/migrations/<timestamp>_realtime_crm_audit_log.sql` (novo)
+- `src/components/admin/AuditLogDrawer.tsx` (editar)

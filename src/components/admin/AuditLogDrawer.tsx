@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { ACAO_LABELS, CrmAuditEntry, listarAuditCrm } from "@/services/crmAudit"
 import { ArrowRight, Clock, ExternalLink, MessageCircle, RefreshCw, User } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuditLogDrawerProps {
   open: boolean;
@@ -27,6 +28,11 @@ export default function AuditLogDrawer({ open, onOpenChange, onOpenAgendamento, 
   const [entries, setEntries] = useState<CrmAuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [filtroAcao, setFiltroAcao] = useState<string>("todas");
+  const [liveConnected, setLiveConnected] = useState(false);
+
+  // Refs para evitar stale closures no callback do Realtime
+  const filtroRef = useRef(filtroAcao);
+  useEffect(() => { filtroRef.current = filtroAcao; }, [filtroAcao]);
 
   const fetch = async () => {
     setLoading(true);
@@ -42,6 +48,59 @@ export default function AuditLogDrawer({ open, onOpenChange, onOpenAgendamento, 
     if (open) fetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, filtroAcao]);
+
+  // Realtime: ouve novos registros enquanto o drawer estiver aberto
+  useEffect(() => {
+    if (!open) {
+      setLiveConnected(false);
+      return;
+    }
+
+    const channel = supabase
+      .channel("crm-audit-log-changes")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "crm_audit_log" },
+        async (payload) => {
+          const novo = payload.new as CrmAuditEntry;
+
+          // Aplica filtro atual (lido do ref para evitar stale closure)
+          const filtro = filtroRef.current;
+          if (filtro !== "todas" && novo.acao !== filtro) return;
+
+          // Realtime não traz joins — buscar dados do agendamento se houver
+          let agendamento: CrmAuditEntry["agendamento"] = null;
+          if (novo.agendamento_id) {
+            try {
+              const { data: ag } = await supabase
+                .from("agendamentos")
+                .select("nome_completo, telefone_whatsapp")
+                .eq("id", novo.agendamento_id)
+                .maybeSingle();
+              agendamento = ag ?? null;
+            } catch {
+              agendamento = null;
+            }
+          }
+
+          const enriched: CrmAuditEntry = { ...novo, agendamento };
+
+          setEntries((prev) => {
+            // Dedup por id; prepend; cap em 200
+            if (prev.some((e) => e.id === enriched.id)) return prev;
+            return [enriched, ...prev].slice(0, 200);
+          });
+        },
+      )
+      .subscribe((status) => {
+        setLiveConnected(status === "SUBSCRIBED");
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+      setLiveConnected(false);
+    };
+  }, [open]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -71,9 +130,20 @@ export default function AuditLogDrawer({ open, onOpenChange, onOpenAgendamento, 
           <Button variant="outline" size="sm" onClick={fetch} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
-          <span className="text-xs text-muted-foreground ml-auto">
-            {entries.length} registro(s)
-          </span>
+          <div className="ml-auto flex items-center gap-2">
+            {liveConnected && (
+              <span className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75"></span>
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                </span>
+                ao vivo
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground">
+              {entries.length} registro(s)
+            </span>
+          </div>
         </div>
 
         <ScrollArea className="flex-1 -mx-6 px-6">
