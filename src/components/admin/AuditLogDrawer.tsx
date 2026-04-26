@@ -112,10 +112,52 @@ export default function AuditLogDrawer({ open, onOpenChange, onOpenAgendamento, 
                     )}
                   </div>
 
-                  {e.agendamento && (
-                    <div className="text-xs text-muted-foreground">
-                      Paciente: <span className="font-medium text-foreground">{e.agendamento.nome_completo}</span>
-                      {" · "}{e.agendamento.telefone_whatsapp}
+                  {e.agendamento_id && (
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <div className="text-muted-foreground truncate">
+                        Paciente:{" "}
+                        {e.agendamento ? (
+                          <span className="font-medium text-foreground">{e.agendamento.nome_completo}</span>
+                        ) : (
+                          <span className="italic">registro removido</span>
+                        )}
+                        {e.agendamento?.telefone_whatsapp && (
+                          <> · {e.agendamento.telefone_whatsapp}</>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {onOpenAgendamento && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                            disabled={!e.agendamento}
+                            title={e.agendamento ? "Abrir agendamento" : "Registro removido"}
+                            onClick={() => {
+                              onOpenChange(false);
+                              onOpenAgendamento(e.agendamento_id!);
+                            }}
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {onOpenWhatsApp && e.agendamento?.telefone_whatsapp && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                            title="Abrir WhatsApp do paciente"
+                            onClick={() => {
+                              onOpenChange(false);
+                              onOpenWhatsApp(e.agendamento_id!, e.agendamento!.telefone_whatsapp);
+                            }}
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   )}
 
