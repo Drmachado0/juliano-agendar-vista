@@ -150,13 +150,6 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
           newErrors.birthDate = "Data de nascimento não pode ser no futuro";
         } else if (dataNasc < idadeMaxima) {
           newErrors.birthDate = "Data de nascimento inválida (idade acima de 120 anos)";
-        } else {
-          // Idade mínima razoável: 1 ano
-          const idadeMinima = new Date();
-          idadeMinima.setFullYear(idadeMinima.getFullYear() - 1);
-          if (dataNasc > idadeMinima) {
-            newErrors.birthDate = "Idade mínima de 1 ano";
-          }
         }
       }
     }
