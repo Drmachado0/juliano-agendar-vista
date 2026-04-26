@@ -7,7 +7,21 @@ export interface GoogleCalendarSettings {
   include_patient_phone: boolean;
   include_convenio: boolean;
   auto_sync_enabled: boolean;
+  default_import_clinica_id?: string | null;
+  pull_enabled?: boolean;
 }
+
+export interface PullResult {
+  ok: boolean;
+  processed: number;
+  totals?: {
+    imported: number;
+    updated: number;
+    cancelled: number;
+    conflicts: number;
+    errors: number;
+  };
+  error?: string;
 
 export interface GoogleCalendarStatus {
   connected: boolean;
