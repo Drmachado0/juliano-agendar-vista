@@ -401,6 +401,7 @@ const AdminCRM = () => {
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
                   isDragOver={dragOverColumn === column.status}
+                  boasVindasMap={boasVindasMap}
                 />
               </div>
             ))}
