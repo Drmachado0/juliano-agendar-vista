@@ -93,6 +93,34 @@ serve(async (req) => {
     // Apenas primeiro nome para reduzir exposição caso o link vaze
     const primeiroNome = (data.nome_completo || "").trim().split(/\s+/)[0] || "Paciente";
 
+    // Determina o status exibido (mesma lógica do frontend)
+    let statusExibido = "recebido";
+    if (data.confirmation_status === "confirmado" || data.status_crm === "ATENDIDO") {
+      statusExibido = "confirmado";
+    } else if (data.confirmation_status === "cancelado") {
+      statusExibido = "cancelado";
+    } else if (data.status_funil === "lead") {
+      statusExibido = "aguardando";
+    }
+
+    // Registra acesso (fire-and-forget, não bloqueia resposta)
+    const userAgent = req.headers.get("user-agent")?.slice(0, 500) ?? null;
+    const referer = req.headers.get("referer")?.slice(0, 500) ?? null;
+    supabase
+      .from("status_acesso_log")
+      .insert({
+        agendamento_id: data.id,
+        ip_address: ip,
+        user_agent: userAgent,
+        referer,
+        status_exibido: statusExibido,
+        confirmation_status: data.confirmation_status,
+        status_funil: data.status_funil,
+      })
+      .then(({ error: logErr }) => {
+        if (logErr) console.error("[status-agendamento] log falhou:", logErr.message);
+      });
+
     return new Response(
       JSON.stringify({
         id: data.id,
