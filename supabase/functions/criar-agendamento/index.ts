@@ -227,6 +227,16 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error(`[criar-agendamento] Database error:`, error);
+      // Race condition: outro agendamento foi criado no mesmo slot entre validar e inserir
+      if ((error as any).code === '23505') {
+        return new Response(
+          JSON.stringify({
+            error: 'Este horário acabou de ser reservado por outra pessoa. Por favor, escolha outro horário.',
+            code: 'SLOT_TAKEN',
+          }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       return new Response(
         JSON.stringify({ error: 'Erro ao salvar agendamento. Tente novamente.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
