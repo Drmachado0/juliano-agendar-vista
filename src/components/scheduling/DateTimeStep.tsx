@@ -25,6 +25,7 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
   const [isValidating, setIsValidating] = useState(false);
   const [highlightAlternativas, setHighlightAlternativas] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const isMobile = useIsMobile();
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
