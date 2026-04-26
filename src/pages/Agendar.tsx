@@ -101,6 +101,7 @@ const Agendar = () => {
   const [leadId, setLeadId] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [depoimentoAtivo, setDepoimentoAtivo] = useState(0);
   const { trackViewContent, trackLead, trackSchedule, trackCompleteRegistration } = useMetaPixel();
   const { trackFormSubmitConversion, trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
 
