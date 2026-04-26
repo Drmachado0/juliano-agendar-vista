@@ -411,6 +411,8 @@ const AdminCRM = () => {
         isOpen={whatsappModalOpen}
         onClose={() => setWhatsappModalOpen(false)}
       />
+
+      <AuditLogDrawer open={auditOpen} onOpenChange={setAuditOpen} />
     </AdminLayout>
   );
 };
