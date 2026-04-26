@@ -237,7 +237,55 @@ const TimeSlotPicker = ({
                   </span>
                 )}
               </div>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {/* Mobile: rolagem horizontal com snap e seleção em um toque */}
+              <div
+                className="sm:hidden -mx-1 px-1 flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-none [scroll-padding-left:0.25rem]"
+                role="listbox"
+                aria-label={`Horários da ${p.label}`}
+              >
+                {grupo.map((slot) => {
+                  const isSelected = selectedTime === slot.horario;
+                  const liberado = horariosLiberados.has(slot.horario);
+                  if (!liberado) {
+                    return (
+                      <button
+                        key={`m-${slot.horario}`}
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        aria-label={`Horário ${slot.horario} ocupado`}
+                        className="snap-start shrink-0 min-w-[88px] h-14 rounded-xl text-xs font-medium border-2 border-dashed border-border/60 bg-muted/40 text-muted-foreground/60 cursor-not-allowed flex flex-col items-center justify-center"
+                      >
+                        <span className="leading-tight line-through decoration-muted-foreground/40">{slot.horario}</span>
+                        <span className="text-[9px] font-normal uppercase tracking-wide mt-0.5">Ocupado</span>
+                      </button>
+                    );
+                  }
+                  return (
+                    <button
+                      key={`m-${slot.horario}`}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      onClick={() => handleSelect(slot.horario)}
+                      className={cn(
+                        "snap-start shrink-0 min-w-[88px] h-14 rounded-xl text-base font-semibold border-2 transition-all active:scale-95 touch-manipulation",
+                        isSelected
+                          ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/30"
+                          : poucos
+                            ? "bg-amber-500/5 border-amber-500/40 text-foreground"
+                            : "bg-background border-border text-foreground"
+                      )}
+                      aria-label={`Selecionar horário ${slot.horario}`}
+                    >
+                      {slot.horario}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Tablet/Desktop: grid responsivo */}
+              <div className="hidden sm:grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {grupo.map((slot) => {
                   const isSelected = selectedTime === slot.horario;
                   const liberado = horariosLiberados.has(slot.horario);
