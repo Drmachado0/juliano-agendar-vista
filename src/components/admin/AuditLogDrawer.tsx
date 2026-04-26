@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ACAO_LABELS, CrmAuditEntry, listarAuditCrm } from "@/services/crmAudit";
-import { ArrowRight, Clock, RefreshCw, User } from "lucide-react";
+import { ArrowRight, Clock, ExternalLink, MessageCircle, RefreshCw, User } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface AuditLogDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onOpenAgendamento?: (agendamentoId: string) => void;
+  onOpenWhatsApp?: (agendamentoId: string, telefone: string) => void;
 }
 
 const acaoColors: Record<string, string> = {
@@ -21,7 +23,7 @@ const acaoColors: Record<string, string> = {
   automation_trigger: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30",
 };
 
-export default function AuditLogDrawer({ open, onOpenChange }: AuditLogDrawerProps) {
+export default function AuditLogDrawer({ open, onOpenChange, onOpenAgendamento, onOpenWhatsApp }: AuditLogDrawerProps) {
   const [entries, setEntries] = useState<CrmAuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [filtroAcao, setFiltroAcao] = useState<string>("todas");
@@ -110,10 +112,52 @@ export default function AuditLogDrawer({ open, onOpenChange }: AuditLogDrawerPro
                     )}
                   </div>
 
-                  {e.agendamento && (
-                    <div className="text-xs text-muted-foreground">
-                      Paciente: <span className="font-medium text-foreground">{e.agendamento.nome_completo}</span>
-                      {" · "}{e.agendamento.telefone_whatsapp}
+                  {e.agendamento_id && (
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <div className="text-muted-foreground truncate">
+                        Paciente:{" "}
+                        {e.agendamento ? (
+                          <span className="font-medium text-foreground">{e.agendamento.nome_completo}</span>
+                        ) : (
+                          <span className="italic">registro removido</span>
+                        )}
+                        {e.agendamento?.telefone_whatsapp && (
+                          <> · {e.agendamento.telefone_whatsapp}</>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {onOpenAgendamento && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                            disabled={!e.agendamento}
+                            title={e.agendamento ? "Abrir agendamento" : "Registro removido"}
+                            onClick={() => {
+                              onOpenChange(false);
+                              onOpenAgendamento(e.agendamento_id!);
+                            }}
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {onOpenWhatsApp && e.agendamento?.telefone_whatsapp && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                            title="Abrir WhatsApp do paciente"
+                            onClick={() => {
+                              onOpenChange(false);
+                              onOpenWhatsApp(e.agendamento_id!, e.agendamento!.telefone_whatsapp);
+                            }}
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   )}
 

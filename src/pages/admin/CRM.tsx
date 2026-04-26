@@ -4,7 +4,7 @@ import KanbanColumn from "@/components/admin/KanbanColumn";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
 import WhatsAppModal from "@/components/admin/WhatsAppModal";
 import { Button } from "@/components/ui/button";
-import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm, reprocessarBoasVindas } from "@/services/agendamentos";
+import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm, reprocessarBoasVindas, buscarAgendamento } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
 import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, Wifi, History, Copy } from "lucide-react";
@@ -423,7 +423,52 @@ const AdminCRM = () => {
         onClose={() => setWhatsappModalOpen(false)}
       />
 
-      <AuditLogDrawer open={auditOpen} onOpenChange={setAuditOpen} />
+      <AuditLogDrawer
+        open={auditOpen}
+        onOpenChange={setAuditOpen}
+        onOpenAgendamento={async (id) => {
+          // Procura primeiro nos agendamentos em memória
+          const todos = Object.values(agendamentosPorStatus).flat();
+          const found = todos.find((a) => a.id === id);
+          if (found) {
+            setSelectedAgendamento(found);
+            setDetailsModalOpen(true);
+            return;
+          }
+          // Fallback: busca no banco
+          const { data, error } = await buscarAgendamento(id);
+          if (data) {
+            setSelectedAgendamento(data);
+            setDetailsModalOpen(true);
+          } else {
+            toast({
+              title: "Agendamento não encontrado",
+              description: error?.message || "O registro pode ter sido excluído ou unificado.",
+              variant: "destructive",
+            });
+          }
+        }}
+        onOpenWhatsApp={async (id) => {
+          const todos = Object.values(agendamentosPorStatus).flat();
+          const found = todos.find((a) => a.id === id);
+          if (found) {
+            setSelectedAgendamento(found);
+            setWhatsappModalOpen(true);
+            return;
+          }
+          const { data, error } = await buscarAgendamento(id);
+          if (data) {
+            setSelectedAgendamento(data);
+            setWhatsappModalOpen(true);
+          } else {
+            toast({
+              title: "Paciente não encontrado",
+              description: error?.message || "O registro pode ter sido excluído ou unificado.",
+              variant: "destructive",
+            });
+          }
+        }}
+      />
       <DuplicadosDrawer
         open={duplicadosOpen}
         onOpenChange={setDuplicadosOpen}
