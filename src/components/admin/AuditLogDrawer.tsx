@@ -23,7 +23,7 @@ const acaoColors: Record<string, string> = {
   automation_trigger: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30",
 };
 
-export default function AuditLogDrawer({ open, onOpenChange }: AuditLogDrawerProps) {
+export default function AuditLogDrawer({ open, onOpenChange, onOpenAgendamento, onOpenWhatsApp }: AuditLogDrawerProps) {
   const [entries, setEntries] = useState<CrmAuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [filtroAcao, setFiltroAcao] = useState<string>("todas");
