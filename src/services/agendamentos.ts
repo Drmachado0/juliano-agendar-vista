@@ -478,6 +478,13 @@ export async function atualizarAgendamento(
 
   if (error) {
     console.error('Erro ao atualizar agendamento:', error);
+    if ((error as any).code === '23505') {
+      const err = new Error(
+        'Este horário já está ocupado por outro paciente nesta clínica. Escolha outro horário.'
+      );
+      (err as any).code = 'SLOT_TAKEN';
+      return { error: err };
+    }
     return { error: new Error(error.message) };
   }
 
