@@ -766,57 +766,249 @@ export default function Configuracoes() {
                       <Calendar className="h-6 w-6 text-primary" />
                     </div>
                     <div className="flex-1">
-                      <CardTitle className="text-lg flex items-center gap-2">
+                      <CardTitle className="text-lg flex items-center gap-2 flex-wrap">
                         Google Calendar
                         {gcalStatus.connected && (
                           <Badge variant="default" className="bg-green-600">Conectado</Badge>
                         )}
+                        {gcalStatus.connected && gcalSettings.auto_sync_enabled === false && (
+                          <Badge variant="outline" className="border-amber-500 text-amber-600">Sincronização pausada</Badge>
+                        )}
                       </CardTitle>
                       <CardDescription>
-                        Sincronize agendamentos automaticamente com o Google Calendar
+                        {gcalStatus.connected && gcalStatus.google_email
+                          ? `Conta: ${gcalStatus.google_email}`
+                          : "Sincronize agendamentos automaticamente com o Google Calendar"}
                       </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {gcalStatus.connected ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>Calendário:</span>
-                        <code className="px-2 py-1 bg-muted rounded">
-                          {gcalStatus.calendar_id || 'primary'}
-                        </code>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Novos agendamentos serão automaticamente adicionados ao seu Google Calendar.
-                      </p>
-                      <Button
-                        variant="outline"
-                        onClick={handleDisconnectGoogleCalendar}
-                        disabled={gcalLoading}
-                        className="gap-2"
-                      >
-                        {gcalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
-                        Desconectar
-                      </Button>
-                    </div>
-                  ) : (
+                  {!gcalStatus.connected ? (
                     <div className="space-y-4">
                       <p className="text-sm text-muted-foreground">
                         Conecte sua conta Google para sincronizar automaticamente os agendamentos.
                       </p>
-                      <Button
-                        onClick={handleConnectGoogleCalendar}
-                        disabled={gcalLoading}
-                        className="gap-2"
-                      >
+                      <Button onClick={handleConnectGoogleCalendar} disabled={gcalLoading} className="gap-2">
                         {gcalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
                         Conectar Google Calendar
                       </Button>
                     </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Status / saúde */}
+                      <div className="grid gap-3 md:grid-cols-3 text-sm">
+                        <div className="rounded-md border p-3">
+                          <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Conectado em</p>
+                          <p className="font-medium">
+                            {gcalStatus.connected_at
+                              ? new Date(gcalStatus.connected_at).toLocaleString('pt-BR')
+                              : '—'}
+                          </p>
+                        </div>
+                        <div className="rounded-md border p-3">
+                          <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Última sincronização</p>
+                          <p className="font-medium">
+                            {gcalStatus.last_sync_at
+                              ? new Date(gcalStatus.last_sync_at).toLocaleString('pt-BR')
+                              : 'Nunca'}
+                          </p>
+                        </div>
+                        <div className="rounded-md border p-3">
+                          <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Status</p>
+                          <p className="font-medium flex items-center gap-1">
+                            {gcalStatus.last_sync_error ? (
+                              <><XCircle className="h-4 w-4 text-destructive" /> Com erro</>
+                            ) : (
+                              <><CheckCircle2 className="h-4 w-4 text-green-600" /> Saudável</>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      {gcalStatus.last_sync_error && (
+                        <Alert variant="destructive">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription>
+                            <strong>Último erro:</strong> {gcalStatus.last_sync_error}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {!gcalStatus.google_email && (
+                        <Alert>
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription>
+                            Reconecte sua conta para habilitar os novos recursos (e-mail, escolha de calendário).
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {/* Seleção de calendário */}
+                      <div className="space-y-2">
+                        <Label>Calendário de destino</Label>
+                        {gcalCalendarsLoading ? (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" /> Carregando calendários…
+                          </div>
+                        ) : gcalCalendars.length > 0 ? (
+                          <Select
+                            value={gcalStatus.calendar_id || 'primary'}
+                            onValueChange={handleChangeCalendar}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {gcalCalendars.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  <div className="flex items-center gap-2">
+                                    {c.background_color && (
+                                      <span
+                                        className="inline-block h-3 w-3 rounded-full"
+                                        style={{ backgroundColor: c.background_color }}
+                                      />
+                                    )}
+                                    <span>{c.summary}</span>
+                                    {c.primary && <Badge variant="secondary" className="text-[10px]">Principal</Badge>}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <code className="px-2 py-1 bg-muted rounded text-xs">{gcalStatus.calendar_id || 'primary'}</code>
+                            <Button size="sm" variant="ghost" onClick={loadCalendarList}>Carregar lista</Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Ações rápidas */}
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" size="sm" onClick={handleTestConnection} disabled={gcalTesting} className="gap-2">
+                          {gcalTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                          Testar conexão
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={handleResyncBatch} disabled={gcalResyncing} className="gap-2">
+                          {gcalResyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                          Ressincronizar (30 dias)
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={openInGoogleCalendar} className="gap-2">
+                          <ExternalLink className="h-4 w-4" /> Abrir no Google
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={handleDisconnectGoogleCalendar} disabled={gcalLoading} className="gap-2 ml-auto">
+                          {gcalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
+                          Desconectar
+                        </Button>
+                      </div>
+
+                      {/* Configurações de evento */}
+                      <div className="border-t pt-4 space-y-4">
+                        <div className="flex items-center gap-2">
+                          <SettingsIcon className="h-4 w-4 text-muted-foreground" />
+                          <h3 className="font-semibold">Configurações dos eventos</h3>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label>Duração padrão (minutos)</Label>
+                            <Input
+                              type="number"
+                              min={5}
+                              max={240}
+                              value={gcalSettings.default_duration_min}
+                              onChange={(e) => setGcalSettings({ ...gcalSettings, default_duration_min: parseInt(e.target.value) || 30 })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Lembretes (minutos antes, separados por vírgula)</Label>
+                            <Input
+                              value={gcalSettings.reminder_popup_min.join(', ')}
+                              onChange={(e) => {
+                                const arr = e.target.value
+                                  .split(',')
+                                  .map((s) => parseInt(s.trim()))
+                                  .filter((n) => !isNaN(n) && n > 0);
+                                setGcalSettings({ ...gcalSettings, reminder_popup_min: arr });
+                              }}
+                              placeholder="60, 1440"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Cor do evento</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {[
+                              { id: null, color: 'transparent', label: 'Padrão' },
+                              { id: '1', color: '#7986cb', label: 'Lavanda' },
+                              { id: '2', color: '#33b679', label: 'Sálvia' },
+                              { id: '3', color: '#8e24aa', label: 'Uva' },
+                              { id: '4', color: '#e67c73', label: 'Flamingo' },
+                              { id: '5', color: '#f6c026', label: 'Banana' },
+                              { id: '6', color: '#f5511d', label: 'Tangerina' },
+                              { id: '7', color: '#039be5', label: 'Pavão' },
+                              { id: '8', color: '#616161', label: 'Grafite' },
+                              { id: '9', color: '#3f51b5', label: 'Mirtilo' },
+                              { id: '10', color: '#0b8043', label: 'Manjericão' },
+                              { id: '11', color: '#d60000', label: 'Tomate' },
+                            ].map((c) => (
+                              <button
+                                key={c.id ?? 'default'}
+                                type="button"
+                                title={c.label}
+                                onClick={() => setGcalSettings({ ...gcalSettings, event_color_id: c.id })}
+                                className={`h-8 w-8 rounded-full border-2 transition ${
+                                  gcalSettings.event_color_id === c.id
+                                    ? 'border-foreground scale-110'
+                                    : 'border-transparent hover:border-muted-foreground'
+                                }`}
+                                style={{ backgroundColor: c.color, backgroundImage: c.id === null ? 'repeating-linear-gradient(45deg, hsl(var(--muted)), hsl(var(--muted)) 4px, transparent 4px, transparent 8px)' : undefined }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label className="cursor-pointer">Sincronização automática</Label>
+                              <p className="text-xs text-muted-foreground">Pause sem desconectar a conta</p>
+                            </div>
+                            <Switch
+                              checked={gcalSettings.auto_sync_enabled}
+                              onCheckedChange={(checked) => setGcalSettings({ ...gcalSettings, auto_sync_enabled: checked })}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Label className="cursor-pointer">Incluir telefone do paciente na descrição</Label>
+                            <Switch
+                              checked={gcalSettings.include_patient_phone}
+                              onCheckedChange={(checked) => setGcalSettings({ ...gcalSettings, include_patient_phone: checked })}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Label className="cursor-pointer">Incluir convênio na descrição</Label>
+                            <Switch
+                              checked={gcalSettings.include_convenio}
+                              onCheckedChange={(checked) => setGcalSettings({ ...gcalSettings, include_convenio: checked })}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <Button onClick={handleSaveSettings} disabled={gcalSavingSettings} className="gap-2">
+                            {gcalSavingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                            Salvar configurações
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </CardContent>
               </Card>
+
 
               {/* Google Reviews Sync */}
               <Card>
