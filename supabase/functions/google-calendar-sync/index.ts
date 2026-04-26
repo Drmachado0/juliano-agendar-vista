@@ -383,7 +383,7 @@ serve(async (req) => {
         .single();
       if (agendamentoError || !agendamento) throw new Error('Agendamento não encontrado');
 
-      const eventData = buildEvent(agendamento, settings);
+      const eventData = buildEvent(agendamento, settings, calendarTimeZone);
       let eventId = agendamento.google_calendar_event_id;
 
       if (action === 'update' && eventId) {
