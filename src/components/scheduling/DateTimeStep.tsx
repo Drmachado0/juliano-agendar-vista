@@ -152,15 +152,6 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
         </div>
       )}
 
-      {/* Alternativas próximas */}
-      <AlternativesSuggestion
-        selectedDate={selectedDate}
-        selectedTime={selectedTime}
-        localAtendimento={formData.location}
-        acceptFirstAvailable={formData.acceptFirstAvailable}
-        highlight={highlightAlternativas}
-        onSelect={handleAlternativaSelect}
-      />
 
       {/* Checkboxes */}
       <div className="space-y-4 pt-2">
