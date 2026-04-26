@@ -64,7 +64,8 @@ Deno.serve(async (req) => {
       supabase,
       data_agendamento,
       hora_agendamento,
-      local_atendimento
+      local_atendimento,
+      excluir_agendamento_id
     );
 
     console.log(`[validar-agendamento] Resultado:`, resultado);
