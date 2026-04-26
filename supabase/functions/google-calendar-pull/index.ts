@@ -439,6 +439,7 @@ serve(async (req) => {
 
     let targetUserId: string | null = null;
     let isAdminCall = false;
+    let range: RangeOption = "default";
 
     if (!isCron) {
       const authHeader = req.headers.get("Authorization") || "";
@@ -473,10 +474,12 @@ serve(async (req) => {
         );
       }
       isAdminCall = true;
-      // Body opcional: { user_id }
+      // Body opcional: { user_id, range }
       try {
         const body = await req.json();
         targetUserId = body?.user_id ?? userData.user.id;
+        const r = body?.range;
+        if (r === "hoje" || r === "7dias" || r === "mes") range = r;
       } catch {
         targetUserId = userData.user.id;
       }
@@ -500,7 +503,7 @@ serve(async (req) => {
 
     const results: PullResult[] = [];
     for (const tok of tokens) {
-      const r = await pullForUser(supabase, tok);
+      const r = await pullForUser(supabase, tok, range);
       results.push(r);
       console.log(
         `[gcal-pull] user=${r.user_id} imported=${r.imported} updated=${r.updated} cancelled=${r.cancelled} conflicts=${r.conflicts} errors=${r.errors.length}`,
