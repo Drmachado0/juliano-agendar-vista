@@ -1,71 +1,105 @@
 ## Objetivo
-
-Adicionar busca por nome/telefone do paciente e um painel colapsável "Filtros avançados" no drawer de Auditoria (`AuditLogDrawer`), com filtragem **server-side** via uma RPC dedicada para suportar bem o histórico completo (não apenas os 200 já carregados).
+Criar uma página pública `/status/:id` onde o paciente acessa um link único (UUID do agendamento) e visualiza em tempo real o status do seu agendamento, com data/hora, local, tipo e convênio. O link será incluído automaticamente no template de confirmação enviado por WhatsApp.
 
 ---
 
-## 1. Banco de dados — nova RPC `listar_crm_audit`
+## 1. Backend — Edge Function pública
 
-Função `SECURITY DEFINER` (somente admin) que faz `JOIN` em `agendamentos` e aplica todos os filtros no Postgres. Retorna o mesmo formato já consumido pelo frontend (`CrmAuditEntry` com `agendamento` aninhado).
+**Nova edge function**: `supabase/functions/status-agendamento/index.ts`
+- **JWT desabilitado** (público) — adicionar bloco em `supabase/config.toml` com `verify_jwt = false`.
+- Recebe `id` (UUID) via query string ou body.
+- Usa `service_role_key` para fazer SELECT em `agendamentos` somente dos campos não sensíveis:
+  - `id`, `nome_completo` (apenas primeiro nome para privacidade), `data_agendamento`, `hora_agendamento`, `local_atendimento`, `tipo_atendimento`, `detalhe_exame_ou_cirurgia`, `convenio`, `status_crm`, `status_funil`, `confirmation_status`, `created_at`.
+- **NÃO retorna**: `telefone_whatsapp`, `email`, `data_nascimento`, `observacoes_internas`, IDs internos extras.
+- Validação: se `id` inválido ou não encontrado → 404 com mensagem genérica ("Agendamento não encontrado").
+- Rate limiting básico por IP (10 req/min) para evitar enumeração.
 
-**Parâmetros:**
-- `p_search text` — busca livre em `nome_completo` e `telefone_whatsapp` (ILIKE + dígitos via `normalizar_telefone` para o telefone)
-- `p_acao text` — filtro de ação (mantém compatibilidade)
-- `p_user_id uuid` — quem fez a ação
-- `p_status_anterior text`
-- `p_status_novo text`
-- `p_data_inicio timestamptz`
-- `p_data_fim timestamptz`
-- `p_limit int` (default 200)
+**Por que edge function e não RLS pública?** A tabela `agendamentos` contém dados sensíveis (telefone, email, observações criptografadas) e a política atual restringe SELECT a admins. Uma edge function com service_role e projeção controlada é a forma segura de expor apenas o necessário — alinhado ao padrão `mem://security/public-availability-data-protection`.
 
-**Saída:** mesma estrutura de `crm_audit_log` + colunas `paciente_nome` e `paciente_telefone` (frontend monta o objeto `agendamento`).
+---
 
-Guard: `IF NOT public.has_role(auth.uid(), 'admin') THEN RAISE EXCEPTION 'Access denied'`.
+## 2. Frontend — Nova página `/status/:id`
 
-## 2. RPC auxiliar `listar_crm_audit_users`
+**Novo arquivo**: `src/pages/StatusAgendamento.tsx`
+- Usa `useParams` para pegar o UUID e chama a edge function `status-agendamento`.
+- Estados: loading, erro (link inválido), sucesso.
+- Layout dark, alinhado à identidade visual (Navy/Gold + Plus Jakarta Sans / Fraunces).
+- Conteúdo:
+  - **Badge de status** grande com cor e ícone:
+    - `confirmation_status = 'confirmado'` ou `status_crm = 'ATENDIDO'` → verde "Confirmado" ✅
+    - `confirmation_status = 'cancelado'` → vermelho "Cancelado" ❌
+    - `status_funil = 'lead'` → amarelo "Aguardando contato da equipe" ⏳
+    - default → azul "Agendamento recebido" 📋
+  - **Card com detalhes**:
+    - Saudação: "Olá, {primeiro_nome}!"
+    - 📅 Data formatada (dd/MM/yyyy, dia da semana em pt-BR via `date-fns`)
+    - ⏰ Horário (HH:mm) — com aviso "Atendimento por ordem de chegada"
+    - 📍 Local (label amigável)
+    - 🩺 Tipo de atendimento (+ detalhe se exame/cirurgia)
+    - 💳 Convênio
+  - **CTA WhatsApp**: botão verde "Falar com a clínica" abrindo `https://wa.me/5591936180476`.
+  - Rodapé com logo/nome do Dr. Juliano Machado e link para o site.
+- SEO: `<Helmet>` com `noindex, nofollow` (página privada por link).
 
-Retorna `user_id, user_name, user_email` distintos presentes em `crm_audit_log` (ordenados por nome) para popular o `<Select>` de "Usuário" sem expor `auth.users` diretamente. Também `SECURITY DEFINER` + guard de admin.
+**Registrar rota** em `src/App.tsx`: `<Route path="/status/:id" element={<StatusAgendamento />} />` (acima do catch-all).
 
-## 3. `src/services/crmAudit.ts`
+---
 
-- Estender `listarAuditCrm` para aceitar os novos filtros e usar a RPC `listar_crm_audit` (mantendo o tipo de retorno `CrmAuditEntry[]`).
-- Novo helper `listarUsuariosAudit()` chamando `listar_crm_audit_users`.
-- Exportar constantes `STATUS_CRM_OPCOES` (NOVO LEAD, AGUARDANDO, CLINICOR, HGP, BELÉM, ATENDIDO) para alimentar os selects.
+## 3. Integração com template de confirmação WhatsApp
 
-## 4. `src/components/admin/AuditLogDrawer.tsx`
+**Atualizar** `supabase/functions/_shared/templateRenderer.ts`:
+- Adicionar variável `{{link_status}}` ao mapeamento de `renderizarTemplate` e à interface `DadosTemplate`.
+- Atualizar template padrão `confirmacao_agendamento` para incluir:
+  ```
+  🔗 Acompanhe seu agendamento: {{link_status}}
+  ```
+- Idem para `lembrete_24h` e `reagendamento`.
 
-**Estado novo:**
-- `search` (debounced ~300 ms)
-- `filtroUsuario`, `filtroStatusAnterior`, `filtroStatusNovo`
-- `dataInicio`, `dataFim` (Popover + Calendar shadcn com `pointer-events-auto`)
-- `usuariosDisponiveis` (carregado on-mount do drawer)
-- `filtrosAvancadosOpen` (Collapsible)
+**Atualizar quem chama o renderer** (passar `link_status: \`https://drjulianomachado.com/status/${agendamentoId}\``):
+- `supabase/functions/enviar-confirmacao-whatsapp/index.ts`
+- `supabase/functions/confirmar-agendamento-whatsapp/index.ts`
+- `supabase/functions/lembrete-consulta-whatsapp/index.ts`
 
-**UI:**
-- Linha principal mantém: `<Select>` de ação + busca (Input com ícone Search + clear) + botão Refresh + indicador "ao vivo" + contador.
-- Abaixo, `<Collapsible>` "Filtros avançados" com grid de:
-  - Usuário (Select alimentado por `listarUsuariosAudit`)
-  - Status anterior (Select com STATUS_CRM_OPCOES + "Qualquer")
-  - Status novo (Select)
-  - Data início / Data fim (DatePickers)
-  - Botão "Limpar filtros" (visível quando algum filtro ativo) + badge contando filtros ativos no header do collapsible.
+**Migration de dados** (insert tool, não migration de schema): atualizar registros em `templates_whatsapp` (tipos `confirmacao_agendamento`, `lembrete_24h`, `reagendamento`) para incluir `{{link_status}}` no conteúdo, e adicionar `link_status` ao array `variaveis_disponiveis`.
 
-**Comportamento:**
-- Refs sincronizadas com cada filtro (padrão já usado para `filtroAcao`) para o callback do Realtime aplicar todos os filtros sem stale closure, incluindo a busca textual (match local em `paciente_nome`/`paciente_telefone`).
-- `useEffect` que dispara `fetch()` quando qualquer filtro muda (com debounce no `search`).
-- Manter cap de 200 itens e dedup por id no Realtime.
+---
 
-## 5. Realtime — sem mudanças no backend
+## 4. Admin — Copiar link do status
 
-A subscription continua escutando `INSERT` em `crm_audit_log`. O enriquecimento (busca de `nome_completo`/`telefone_whatsapp`) já existe; basta aplicar os mesmos filtros via refs antes de inserir no estado.
+**Atualizar** `src/components/admin/AgendamentoDetailsModal.tsx`:
+- Adicionar botão "Copiar link de status" que copia `https://drjulianomachado.com/status/{id}` para o clipboard, com toast de confirmação.
+- Útil para a equipe enviar manualmente quando necessário.
 
-## 6. Arquivos afetados
+---
 
-- **Novo:** `supabase/migrations/<timestamp>_listar_crm_audit_rpc.sql` (cria `listar_crm_audit` + `listar_crm_audit_users`)
-- **Editado:** `src/services/crmAudit.ts` (novos params + helper de usuários + STATUS_CRM_OPCOES)
-- **Editado:** `src/components/admin/AuditLogDrawer.tsx` (busca, painel colapsável, datepickers, selects, debounce, refs para Realtime)
+## 5. Segurança e considerações
 
-## 7. Fora do escopo (não será alterado)
+- **UUID v4 como token**: 122 bits de entropia — inviável de adivinhar por força bruta.
+- **Rate limit** na edge function previne enumeração.
+- **Projeção mínima** de campos: nada de telefone, email ou observações expostos.
+- **Primeiro nome apenas**: reduz exposição do nome completo caso o link vaze.
+- **noindex** evita indexação por buscadores.
+- **HTTPS obrigatório** (já garantido por Lovable hosting).
 
-- `src/pages/admin/CRM.tsx` — continua passando os mesmos callbacks `onOpenAgendamento`/`onOpenWhatsApp`.
-- Tipos `CrmAuditEntry` permanecem; apenas a fonte muda de `.from()` para `.rpc()`.
+---
+
+## Arquivos criados/editados
+
+**Criar:**
+- `supabase/functions/status-agendamento/index.ts`
+- `src/pages/StatusAgendamento.tsx`
+
+**Editar:**
+- `supabase/config.toml` (bloco `verify_jwt = false` para a nova função)
+- `supabase/functions/_shared/templateRenderer.ts`
+- `supabase/functions/enviar-confirmacao-whatsapp/index.ts`
+- `supabase/functions/confirmar-agendamento-whatsapp/index.ts`
+- `supabase/functions/lembrete-consulta-whatsapp/index.ts`
+- `src/App.tsx` (nova rota)
+- `src/components/admin/AgendamentoDetailsModal.tsx` (botão copiar link)
+- Dados em `templates_whatsapp` (via insert tool)
+
+---
+
+## Resultado esperado
+O paciente recebe a mensagem de confirmação no WhatsApp com um link `https://drjulianomachado.com/status/{uuid}`. Ao clicar, vê uma página limpa, branded, com o status atual do agendamento (confirmado, aguardando, atendido, cancelado), todos os detalhes da consulta e um botão direto para falar com a clínica via WhatsApp. Equipe interna pode copiar o link diretamente do modal de detalhes no admin.
