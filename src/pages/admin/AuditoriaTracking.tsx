@@ -281,6 +281,143 @@ export default function AuditoriaTracking() {
           </Alert>
         )}
 
+        {/* Verificação automática de Meta Pixel */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5 text-primary" />
+                  Verificação do Meta Pixel
+                </CardTitle>
+                <CardDescription>
+                  Compara o Pixel ID detectado em runtime com o esperado.
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={runDetection}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Re-checar
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {pixelMatch && (
+              <Alert className="border-emerald-500/50 bg-emerald-500/5">
+                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                <AlertTitle className="text-emerald-600">
+                  Pixel ID confere
+                </AlertTitle>
+                <AlertDescription className="text-muted-foreground">
+                  O Pixel <code className="text-xs">{expectedPixelId}</code> foi
+                  detectado corretamente em runtime via{" "}
+                  <code className="text-xs">{runtime.detectionMethod}</code>.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {pixelMismatch && (
+              <Alert className="border-destructive/50 bg-destructive/5">
+                <XCircle className="h-5 w-5 text-destructive" />
+                <AlertTitle className="text-destructive">
+                  Divergência detectada no Meta Pixel
+                </AlertTitle>
+                <AlertDescription className="text-muted-foreground">
+                  Esperado: <code className="text-xs">{expectedPixelId}</code>
+                  <br />
+                  Detectado em runtime:{" "}
+                  {runtime.detectedPixelIds.map((id) => (
+                    <code key={id} className="text-xs bg-muted px-1 rounded mr-1">
+                      {id}
+                    </code>
+                  ))}
+                  <br />
+                  Verifique se a tag do Meta Pixel no GTM (
+                  <code className="text-xs">GTM-K3C2NNF6</code>) está com o ID
+                  correto e foi publicada.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {pixelMissing && (
+              <Alert className="border-gold-500/50 bg-gold-500/5">
+                <AlertTriangle className="h-5 w-5 text-gold-600" />
+                <AlertTitle className="text-gold-700">
+                  Meta Pixel não detectado
+                </AlertTitle>
+                <AlertDescription className="text-muted-foreground">
+                  Nenhum Pixel ID foi encontrado em runtime. Causas possíveis:
+                  bloqueador de anúncios ativo, tag do Pixel não publicada no
+                  GTM, ou GTM bloqueado pela rede. Reabra esta página em uma aba
+                  anônima sem extensões para confirmar.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!pixelMatch && !pixelMismatch && !pixelMissing && (
+              <Alert>
+                <Activity className="h-5 w-5" />
+                <AlertTitle>Aguardando carregamento do Pixel...</AlertTitle>
+                <AlertDescription className="text-muted-foreground">
+                  A detecção é re-executada automaticamente após 1.5s e 4s.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div className="rounded-lg border border-border p-3">
+                <div className="text-xs text-muted-foreground mb-1">
+                  Pixel(s) detectado(s)
+                </div>
+                {runtime.detectedPixelIds.length === 0 ? (
+                  <div className="text-sm text-muted-foreground italic">
+                    nenhum
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {runtime.detectedPixelIds.map((id) => (
+                      <code
+                        key={id}
+                        className={`text-xs px-2 py-1 rounded ${
+                          id === expectedPixelId
+                            ? "bg-emerald-500/10 text-emerald-600"
+                            : "bg-destructive/10 text-destructive"
+                        }`}
+                      >
+                        {id}
+                      </code>
+                    ))}
+                  </div>
+                )}
+                <div className="text-xs text-muted-foreground mt-2">
+                  método: {runtime.detectionMethod}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border p-3 space-y-2">
+                <Label htmlFor="expected-pixel" className="text-xs">
+                  Pixel ID esperado (configurado no GTM)
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="expected-pixel"
+                    value={pixelInput}
+                    onChange={(e) => setPixelInput(e.target.value)}
+                    placeholder="ex: 1003792428067622"
+                    className="font-mono text-sm"
+                  />
+                  <Button onClick={saveExpectedPixel} size="sm">
+                    Salvar
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Salvo localmente no navegador. Atualize sempre que mudar o
+                  Pixel ID no GTM.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Runtime status */}
         <Card>
           <CardHeader>
