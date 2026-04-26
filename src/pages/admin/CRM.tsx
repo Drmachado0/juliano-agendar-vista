@@ -297,6 +297,10 @@ const AdminCRM = () => {
               <Send className={`h-4 w-4 mr-2 ${reprocessando ? 'animate-pulse' : ''}`} />
               {reprocessando ? "Enviando..." : "Reprocessar boas-vindas"}
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setAuditOpen(true)} title="Ver log de auditoria">
+              <History className="h-4 w-4 mr-2" />
+              Auditoria
+            </Button>
             <Button variant="outline" size="sm" onClick={() => fetchAgendamentos()} disabled={loading}>
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Atualizar
