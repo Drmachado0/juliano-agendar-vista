@@ -142,6 +142,20 @@ const AdminCRM = () => {
   const [duplicadosOpen, setDuplicadosOpen] = useState(false);
   const isFetchingRef = useRef(false);
 
+  const [filters, setFilters] = useState<CrmFilters>(() => loadFilters());
+  useEffect(() => {
+    try {
+      localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
+    } catch {
+      /* ignore */
+    }
+  }, [filters]);
+
+  const agendamentosFiltrados = useMemo(
+    () => aplicarFiltrosEOrdenacao(agendamentosPorStatus, filters),
+    [agendamentosPorStatus, filters]
+  );
+
   const fetchAgendamentos = async (silent = false) => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
