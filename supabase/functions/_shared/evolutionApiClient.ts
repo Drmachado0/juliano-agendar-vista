@@ -170,11 +170,13 @@ export function buildAppointmentConfirmationMessage(
   date: string,
   time: string,
   location: string,
-  professionalName: string = 'Dr. Juliano Machado'
+  professionalName: string = 'Dr. Juliano Machado',
+  statusLink?: string
 ): string {
   const formattedDate = formatDateBR(date);
   const formattedTime = formatTimeBR(time);
-  
+  const statusLine = statusLink ? `\n🔗 Acompanhe seu agendamento: ${statusLink}\n` : '';
+
   return `Olá, ${patientName}! 👋✨
 
 🗓️ Você possui um *agendamento* confirmado:
@@ -185,7 +187,7 @@ export function buildAppointmentConfirmationMessage(
 📍 Local: *${location}*
 
 ⚠️ *Importante:* O atendimento será por *ordem de chegada*. Recomendamos chegar com antecedência para garantir seu lugar!
-
+${statusLine}
 Se não puder comparecer, avise-nos com antecedência. Agradecemos a preferência! 🙏💙`;
 }
 
