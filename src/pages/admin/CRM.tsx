@@ -41,6 +41,7 @@ const AdminCRM = () => {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
+  const [duplicadosOpen, setDuplicadosOpen] = useState(false);
   const isFetchingRef = useRef(false);
 
   const fetchAgendamentos = async (silent = false) => {
