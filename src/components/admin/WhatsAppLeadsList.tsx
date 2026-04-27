@@ -199,7 +199,10 @@ const WhatsAppLeadsList = ({
       <NovaMensagemWhatsAppModal
         open={novaMensagemModalOpen}
         onOpenChange={setNovaMensagemModalOpen}
-        onMessageSent={fetchLeads}
+        onMessageSent={async (agendamentoId) => {
+          await fetchLeads();
+          if (agendamentoId) onLeadCreated?.(agendamentoId);
+        }}
       />
     </div>
   );
