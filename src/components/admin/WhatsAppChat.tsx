@@ -312,9 +312,19 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
           </div>
         </div>
         
-        <Badge variant="outline" className="hidden sm:flex">
-          {lead.status_crm}
-        </Badge>
+        <div className="hidden sm:flex flex-col items-end gap-1">
+          <Badge variant="outline">{lead.status_crm}</Badge>
+          {ultimaIntencao && (
+            <Badge
+              variant={INTENCAO_VARIANT[ultimaIntencao.intencao] || "secondary"}
+              title={ultimaIntencao.resumo || ""}
+              className="text-[10px]"
+            >
+              🤖 {INTENCAO_LABEL[ultimaIntencao.intencao] || ultimaIntencao.intencao}
+              {ultimaIntencao.confianca != null && ` · ${Math.round(ultimaIntencao.confianca * 100)}%`}
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Appointment info */}
