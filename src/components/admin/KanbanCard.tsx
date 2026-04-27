@@ -68,9 +68,26 @@ const KanbanCard = ({
         "bg-card border border-border rounded-lg p-4 space-y-3 shadow-sm transition-all cursor-grab active:cursor-grabbing border-l-4",
         urgenciaColor,
         isDragging && "shadow-lg ring-2 ring-primary/50 opacity-90",
-        atendido && "opacity-70"
+        atendido && "opacity-70",
+        agendamento.is_sandbox && "ring-2 ring-orange-400/60 bg-orange-50/40 dark:bg-orange-900/10"
       )}
     >
+      {/* Selo TESTE / Sandbox */}
+      {agendamento.is_sandbox && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide bg-orange-500 text-white px-2 py-1 rounded w-fit">
+              <FlaskConical className="h-3 w-3" />
+              <span>Teste / Sandbox</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="text-xs max-w-xs">
+              {agendamento.sandbox_reason || "Contato marcado como teste — não entra nas métricas reais."}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      )}
       {/* Data de Contato - sempre visível no topo */}
       <Tooltip>
         <TooltipTrigger asChild>
