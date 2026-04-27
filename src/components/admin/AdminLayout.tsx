@@ -45,6 +45,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { href: "/admin/lembretes", label: "Lembretes Anuais", icon: Bell },
     { href: "/admin/avaliacoes", label: "Avaliações", icon: Star },
     { href: "/admin/whatsapp", label: "WhatsApp", icon: MessageCircle },
+    { href: "/admin/monitor-envios", label: "Monitor Envios", icon: Activity },
     { href: "/admin/hermes", label: "Hermes Copiloto", icon: Bot },
     { href: "/admin/relatorios", label: "Relatórios", icon: FileBarChart },
     { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
