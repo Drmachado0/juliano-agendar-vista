@@ -14,6 +14,7 @@ import AuditLogDrawer from "@/components/admin/AuditLogDrawer";
 import DuplicadosDrawer from "@/components/admin/DuplicadosDrawer";
 import { useBoasVindasStatus } from "@/hooks/useBoasVindasStatus";
 import CRMFilters, { CrmFilters, DEFAULT_CRM_FILTERS } from "@/components/admin/CRMFilters";
+import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
 
 const FILTERS_STORAGE_KEY = "crm:filters:v1";
 
@@ -436,6 +437,7 @@ const AdminCRM = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <EvolutionStatusBadge />
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2 py-1 rounded bg-muted/50">
               <Wifi className="h-3 w-3 text-emerald-500" />
               <span>Atualizado {ultimaAtualizacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
