@@ -309,13 +309,17 @@ export async function gerarMensagemConfirmacaoIA(
 
 // Hermes — sugerir resposta contextual usando histórico da conversa
 export async function sugerirRespostaHermes(params: {
+  agendamento_id?: string | null;
+  telefone?: string | null;
   agendamento: Partial<Agendamento> & { is_sandbox?: boolean | null; status_funil?: string | null };
   mensagens: Array<{ direcao: "IN" | "OUT"; conteudo: string; created_at?: string }>;
   instrucao?: string | null;
-}): Promise<{ sugestao: string | null; error: string | null }> {
+}): Promise<{ sugestao: string | null; draft_id: string | null; error: string | null }> {
   try {
     const { data, error } = await supabase.functions.invoke("hermes-sugerir-resposta", {
       body: {
+        agendamento_id: params.agendamento_id ?? null,
+        telefone: params.telefone ?? null,
         agendamento: {
           nome_completo: params.agendamento.nome_completo,
           tipo_atendimento: params.agendamento.tipo_atendimento,
@@ -334,12 +338,12 @@ export async function sugerirRespostaHermes(params: {
 
     if (error) {
       console.error("Erro Hermes:", error);
-      return { sugestao: null, error: error.message };
+      return { sugestao: null, draft_id: null, error: error.message };
     }
-    return { sugestao: data?.sugestao || null, error: null };
+    return { sugestao: data?.sugestao || null, draft_id: data?.draft_id ?? null, error: null };
   } catch (err: any) {
     console.error("Erro Hermes:", err);
-    return { sugestao: null, error: err.message || "Erro desconhecido" };
+    return { sugestao: null, draft_id: null, error: err.message || "Erro desconhecido" };
   }
 }
 

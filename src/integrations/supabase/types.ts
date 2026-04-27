@@ -553,6 +553,85 @@ export type Database = {
         }
         Relationships: []
       }
+      hermes_drafts: {
+        Row: {
+          agendamento_id: string | null
+          conteudo_final: string | null
+          contexto_resumo: Json | null
+          created_at: string
+          created_by: string | null
+          id: string
+          instrucao: string | null
+          latencia_ms: number | null
+          mensagem_id: string | null
+          modelo: string
+          status: string
+          sugestao: string
+          telefone: string | null
+          updated_at: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          agendamento_id?: string | null
+          conteudo_final?: string | null
+          contexto_resumo?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instrucao?: string | null
+          latencia_ms?: number | null
+          mensagem_id?: string | null
+          modelo?: string
+          status?: string
+          sugestao: string
+          telefone?: string | null
+          updated_at?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          agendamento_id?: string | null
+          conteudo_final?: string | null
+          contexto_resumo?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instrucao?: string | null
+          latencia_ms?: number | null
+          mensagem_id?: string | null
+          modelo?: string
+          status?: string
+          sugestao?: string
+          telefone?: string | null
+          updated_at?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hermes_drafts_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hermes_drafts_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hermes_drafts_mensagem_id_fkey"
+            columns: ["mensagem_id"]
+            isOneToOne: false
+            referencedRelation: "mensagens_whatsapp"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       horarios_disponiveis: {
         Row: {
           created_at: string | null
@@ -1209,6 +1288,15 @@ export type Database = {
           user_email: string
           user_id: string
         }[]
+      }
+      marcar_hermes_draft_status: {
+        Args: {
+          p_conteudo_final?: string
+          p_draft_id: string
+          p_mensagem_id?: string
+          p_status: string
+        }
+        Returns: undefined
       }
       normalizar_telefone: { Args: { p_telefone: string }; Returns: string }
       registrar_crm_audit: {

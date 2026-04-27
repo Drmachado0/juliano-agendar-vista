@@ -1,5 +1,5 @@
-// Hermes — Sugerir resposta contextual para o atendente no chat WhatsApp
-// Usa Lovable AI Gateway (openai/gpt-5-mini) e recebe histórico + dados do agendamento.
+// Hermes — Sugerir resposta contextual + persistir draft em hermes_drafts
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +14,7 @@ interface MensagemHistorico {
 }
 
 interface Body {
+  agendamento_id?: string | null;
   agendamento?: {
     nome_completo?: string | null;
     tipo_atendimento?: string | null;
@@ -25,9 +26,12 @@ interface Body {
     status_funil?: string | null;
     is_sandbox?: boolean | null;
   } | null;
+  telefone?: string | null;
   mensagens?: MensagemHistorico[];
-  instrucao?: string | null; // dica opcional do atendente ("recusar", "remarcar", etc)
+  instrucao?: string | null;
 }
+
+const MODEL = "openai/gpt-5-mini";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -36,16 +40,33 @@ Deno.serve(async (req) => {
 
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     if (!LOVABLE_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY não configurada" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY não configurada" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const body = (await req.json()) as Body;
     const ag = body.agendamento ?? null;
-    const msgs = (body.mensagens ?? []).slice(-30); // últimas 30 mensagens
+    const msgs = (body.mensagens ?? []).slice(-30);
+
+    // Identifica usuário (admin) a partir do JWT (se presente)
+    let userId: string | null = null;
+    const authHeader = req.headers.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      try {
+        const userClient = createClient(SUPABASE_URL, SERVICE_ROLE, {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { data: u } = await userClient.auth.getUser();
+        userId = u?.user?.id ?? null;
+      } catch {/* ignore */}
+    }
+
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
     const contexto = ag
       ? [
@@ -58,15 +79,11 @@ Deno.serve(async (req) => {
           ag.convenio ? `Convênio: ${ag.convenio}` : null,
           ag.status_crm ? `Status CRM: ${ag.status_crm}` : null,
           ag.is_sandbox ? "⚠️ Contato de TESTE (sandbox)" : null,
-        ]
-          .filter(Boolean)
-          .join("\n")
+        ].filter(Boolean).join("\n")
       : "Sem dados do agendamento.";
 
     const historico = msgs.length
-      ? msgs
-          .map((m) => `${m.direcao === "IN" ? "Paciente" : "Clínica"}: ${m.conteudo}`)
-          .join("\n")
+      ? msgs.map((m) => `${m.direcao === "IN" ? "Paciente" : "Clínica"}: ${m.conteudo}`).join("\n")
       : "(sem mensagens anteriores)";
 
     const systemPrompt = `Você é o Hermes, secretária virtual da clínica do Dr. Juliano Machado (oftalmologista em Paragominas/Belém).
@@ -87,6 +104,7 @@ ${historico}
 
 ${body.instrucao ? `Instrução do atendente: ${body.instrucao}\n` : ""}Sugira a próxima resposta da clínica ao paciente.`;
 
+    const t0 = Date.now();
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -94,17 +112,32 @@ ${body.instrucao ? `Instrução do atendente: ${body.instrucao}\n` : ""}Sugira a
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-5-mini",
+        model: MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
       }),
     });
+    const latencia_ms = Date.now() - t0;
 
     if (!resp.ok) {
       const txt = await resp.text();
       console.error("Lovable AI error:", resp.status, txt);
+
+      // Persiste erro também
+      await admin.from("hermes_drafts").insert({
+        agendamento_id: body.agendamento_id ?? null,
+        telefone: body.telefone ?? null,
+        sugestao: "(falha)",
+        instrucao: body.instrucao ?? null,
+        modelo: MODEL,
+        latencia_ms,
+        status: "error",
+        created_by: userId,
+        contexto_resumo: { erro: txt.slice(0, 500), http_status: resp.status, total_msgs: msgs.length },
+      });
+
       if (resp.status === 429) {
         return new Response(
           JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em instantes." }),
@@ -117,16 +150,44 @@ ${body.instrucao ? `Instrução do atendente: ${body.instrucao}\n` : ""}Sugira a
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      return new Response(
-        JSON.stringify({ error: "Falha ao gerar sugestão" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Falha ao gerar sugestão" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const data = await resp.json();
     const sugestao: string = data?.choices?.[0]?.message?.content?.trim() ?? "";
 
-    return new Response(JSON.stringify({ sugestao }), {
+    // Persiste o draft
+    let draft_id: string | null = null;
+    try {
+      const { data: inserted } = await admin
+        .from("hermes_drafts")
+        .insert({
+          agendamento_id: body.agendamento_id ?? null,
+          telefone: body.telefone ?? null,
+          sugestao,
+          instrucao: body.instrucao ?? null,
+          modelo: MODEL,
+          latencia_ms,
+          status: "pending",
+          created_by: userId,
+          contexto_resumo: {
+            total_msgs: msgs.length,
+            tem_agendamento: !!ag,
+            is_sandbox: ag?.is_sandbox ?? false,
+            status_crm: ag?.status_crm ?? null,
+          },
+        })
+        .select("id")
+        .single();
+      draft_id = inserted?.id ?? null;
+    } catch (e) {
+      console.error("Falha ao persistir draft Hermes:", e);
+    }
+
+    return new Response(JSON.stringify({ sugestao, draft_id, latencia_ms }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
