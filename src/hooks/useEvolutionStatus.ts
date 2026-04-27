@@ -101,6 +101,7 @@ export function useEvolutionStatus(autoCheck = true, intervalMs = 30000) {
   const reiniciar = useCallback(() => executeAction("restart"), [executeAction]);
   const conectar = useCallback(() => executeAction("connect"), [executeAction]);
   const reconectar = useCallback(() => executeAction("reconnect"), [executeAction]);
+  const desconectar = useCallback(() => executeAction("logout"), [executeAction]);
 
   // Initial check
   useEffect(() => {
