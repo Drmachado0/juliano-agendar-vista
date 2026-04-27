@@ -101,6 +101,9 @@ export interface Agendamento {
   confirmation_sent_at: string | null;
   confirmation_response_at: string | null;
   confirmation_channel: string | null;
+  // Sandbox / contatos de teste
+  is_sandbox: boolean;
+  sandbox_reason: string | null;
 }
 
 export interface AgendamentoInsert {
@@ -132,6 +135,7 @@ export interface AgendamentoFilters {
   localAtendimento?: string;
   statusCrm?: string;
   busca?: string;
+  sandbox?: "reais" | "todos" | "somente_testes"; // default reais
 }
 
 // Determine CRM status based on location
@@ -254,6 +258,10 @@ export async function listarAgendamentos(
       .replace(/[%_\\]/g, '\\$&'); // Escape ILIKE wildcards: %, _, \
     query = query.or(`nome_completo.ilike.%${sanitizedSearch}%,telefone_whatsapp.ilike.%${sanitizedSearch}%`);
   }
+  // Sandbox filter (default: somente reais)
+  const sandboxMode = filters.sandbox ?? "reais";
+  if (sandboxMode === "reais") query = query.eq('is_sandbox', false);
+  else if (sandboxMode === "somente_testes") query = query.eq('is_sandbox', true);
 
   // Order and paginate
   query = query
@@ -496,5 +504,23 @@ export async function atualizarAgendamento(
     return { error: new Error(error.message) };
   }
 
+  return { error: null };
+}
+
+// Marca/desmarca um agendamento como sandbox (teste). Auditoria é registrada no servidor.
+export async function marcarSandbox(
+  id: string,
+  isSandbox: boolean,
+  reason?: string | null
+): Promise<{ error: Error | null }> {
+  const { error } = await (supabase as any).rpc('set_agendamento_sandbox', {
+    p_agendamento_id: id,
+    p_is_sandbox: isSandbox,
+    p_reason: reason ?? null,
+  });
+  if (error) {
+    console.error('Erro ao alterar sandbox:', error);
+    return { error: new Error(error.message) };
+  }
   return { error: null };
 }

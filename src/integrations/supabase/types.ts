@@ -36,12 +36,14 @@ export type Database = {
           google_calendar_synced_at: string | null
           hora_agendamento: string | null
           id: string
+          is_sandbox: boolean
           local_atendimento: string
           nome_completo: string
           observacoes_internas: string | null
           observacoes_internas_encrypted: string | null
           origem: string | null
           profissional_id: string | null
+          sandbox_reason: string | null
           servico_id: string | null
           status_crm: string
           status_funil: string | null
@@ -70,12 +72,14 @@ export type Database = {
           google_calendar_synced_at?: string | null
           hora_agendamento?: string | null
           id?: string
+          is_sandbox?: boolean
           local_atendimento: string
           nome_completo: string
           observacoes_internas?: string | null
           observacoes_internas_encrypted?: string | null
           origem?: string | null
           profissional_id?: string | null
+          sandbox_reason?: string | null
           servico_id?: string | null
           status_crm?: string
           status_funil?: string | null
@@ -104,12 +108,14 @@ export type Database = {
           google_calendar_synced_at?: string | null
           hora_agendamento?: string | null
           id?: string
+          is_sandbox?: boolean
           local_atendimento?: string
           nome_completo?: string
           observacoes_internas?: string | null
           observacoes_internas_encrypted?: string | null
           origem?: string | null
           profissional_id?: string | null
+          sandbox_reason?: string | null
           servico_id?: string | null
           status_crm?: string
           status_funil?: string | null
@@ -1217,6 +1223,14 @@ export type Database = {
           p_source: string
         }
         Returns: string
+      }
+      set_agendamento_sandbox: {
+        Args: {
+          p_agendamento_id: string
+          p_is_sandbox: boolean
+          p_reason?: string
+        }
+        Returns: undefined
       }
       setup_totp: {
         Args: { p_backup_codes: string; p_secret: string; p_user_id: string }

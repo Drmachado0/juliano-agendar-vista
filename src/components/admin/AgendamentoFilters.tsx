@@ -25,20 +25,45 @@ const statusCrm = [
   { value: "HGP", label: "HGP" },
 ];
 
+const sandboxOpcoes: { value: "reais" | "todos" | "somente_testes"; label: string }[] = [
+  { value: "reais", label: "Somente reais" },
+  { value: "todos", label: "Incluir testes" },
+  { value: "somente_testes", label: "Somente testes" },
+];
+
 const AgendamentoFilters = ({ filters, onFiltersChange, onClearFilters }: AgendamentoFiltersProps) => {
-  const hasActiveFilters = filters.busca || filters.dataInicio || filters.dataFim || 
-    filters.localAtendimento || filters.statusCrm;
+  const sandboxAtual = filters.sandbox ?? "reais";
+  const hasActiveFilters = filters.busca || filters.dataInicio || filters.dataFim ||
+    filters.localAtendimento || filters.statusCrm || sandboxAtual !== "reais";
 
   return (
     <div className="bg-card rounded-xl border border-border p-4 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="font-semibold text-foreground">Filtros</h3>
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-muted-foreground">
-            <X className="h-4 w-4 mr-1" />
-            Limpar
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-md border border-border overflow-hidden">
+            {sandboxOpcoes.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => onFiltersChange({ ...filters, sandbox: o.value })}
+                className={`px-3 py-1.5 text-xs transition-colors ${
+                  sandboxAtual === o.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-card hover:bg-muted text-muted-foreground"
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-muted-foreground">
+              <X className="h-4 w-4 mr-1" />
+              Limpar
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">

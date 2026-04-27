@@ -4,7 +4,7 @@ import KanbanColumn from "@/components/admin/KanbanColumn";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
 import WhatsAppModal from "@/components/admin/WhatsAppModal";
 import { Button } from "@/components/ui/button";
-import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm, reprocessarBoasVindas, buscarAgendamento } from "@/services/agendamentos";
+import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm, reprocessarBoasVindas, buscarAgendamento, marcarSandbox } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
 import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, Wifi, History, Copy } from "lucide-react";
@@ -41,6 +41,10 @@ function aplicarFiltrosEOrdenacao(
   const buscaDigitos = buscaNorm.replace(/\D/g, "");
 
   const matches = (a: Agendamento) => {
+    // Sandbox filter (default: somente reais)
+    if (filters.sandbox === "reais" && a.is_sandbox) return false;
+    if (filters.sandbox === "somente_testes" && !a.is_sandbox) return false;
+
     if (filters.local && a.local_atendimento !== filters.local) return false;
     if (filters.tipo && a.tipo_atendimento !== filters.tipo) return false;
     if (filters.convenio && a.convenio !== filters.convenio) return false;
@@ -337,6 +341,35 @@ const AdminCRM = () => {
     }
   };
 
+  const handleToggleSandbox = async (agendamento: Agendamento) => {
+    const novoEstado = !agendamento.is_sandbox;
+    let reason: string | null = null;
+    if (novoEstado) {
+      reason = window.prompt("Motivo (opcional) para marcar como teste:", "Contato de teste") || null;
+    } else {
+      if (!window.confirm(`Remover marcação de teste de "${agendamento.nome_completo}"?`)) return;
+    }
+    // Optimistic update
+    setAgendamentosPorStatus((prev) => {
+      const updated = { ...prev };
+      const col = agendamento.status_crm;
+      updated[col] = updated[col].map((a) =>
+        a.id === agendamento.id ? { ...a, is_sandbox: novoEstado, sandbox_reason: reason } : a
+      );
+      return updated;
+    });
+    const { error } = await marcarSandbox(agendamento.id, novoEstado, reason);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      fetchAgendamentos(true);
+    } else {
+      toast({
+        title: novoEstado ? "Marcado como teste" : "Marcação de teste removida",
+        description: agendamento.nome_completo,
+      });
+    }
+  };
+
   // Calcula estatísticas com base no resultado FILTRADO (header + taxas reagem aos filtros)
   const allItems = Object.values(agendamentosFiltrados).flat();
   const totalItems = allItems.length;
@@ -517,6 +550,7 @@ const AdminCRM = () => {
                   onViewDetails={handleViewDetails}
                   onSendWhatsApp={handleSendWhatsApp}
                   onTriggerAutomation={handleTriggerAutomation}
+                  onToggleSandbox={handleToggleSandbox}
                   onDragStart={handleDragStart}
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}

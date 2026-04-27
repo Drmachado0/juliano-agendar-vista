@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle, CheckCircle2, UserPlus, Timer, Send, XCircle, Loader2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle, CheckCircle2, UserPlus, Timer, Send, XCircle, Loader2, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { BoasVindasInfo } from "@/hooks/useBoasVindasStatus";
@@ -13,6 +13,7 @@ interface KanbanCardProps {
   onViewDetails: (agendamento: Agendamento) => void;
   onSendWhatsApp: (agendamento: Agendamento) => void;
   onTriggerAutomation: (agendamento: Agendamento) => void;
+  onToggleSandbox?: (agendamento: Agendamento) => void;
   isDragging?: boolean;
   boasVindas?: BoasVindasInfo;
 }
@@ -38,6 +39,7 @@ const KanbanCard = ({
   onViewDetails,
   onSendWhatsApp,
   onTriggerAutomation,
+  onToggleSandbox,
   isDragging,
   boasVindas,
 }: KanbanCardProps) => {
@@ -66,9 +68,26 @@ const KanbanCard = ({
         "bg-card border border-border rounded-lg p-4 space-y-3 shadow-sm transition-all cursor-grab active:cursor-grabbing border-l-4",
         urgenciaColor,
         isDragging && "shadow-lg ring-2 ring-primary/50 opacity-90",
-        atendido && "opacity-70"
+        atendido && "opacity-70",
+        agendamento.is_sandbox && "ring-2 ring-orange-400/60 bg-orange-50/40 dark:bg-orange-900/10"
       )}
     >
+      {/* Selo TESTE / Sandbox */}
+      {agendamento.is_sandbox && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide bg-orange-500 text-white px-2 py-1 rounded w-fit">
+              <FlaskConical className="h-3 w-3" />
+              <span>Teste / Sandbox</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="text-xs max-w-xs">
+              {agendamento.sandbox_reason || "Contato marcado como teste — não entra nas métricas reais."}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      )}
       {/* Data de Contato - sempre visível no topo */}
       <Tooltip>
         <TooltipTrigger asChild>
@@ -247,6 +266,25 @@ const KanbanCard = ({
           >
             <Zap className="h-4 w-4" />
           </Button>
+          {onToggleSandbox && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "h-8 w-8 p-0",
+                agendamento.is_sandbox
+                  ? "text-orange-700 hover:text-orange-800 hover:bg-orange-100"
+                  : "text-muted-foreground hover:text-orange-600 hover:bg-orange-50"
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSandbox(agendamento);
+              }}
+              title={agendamento.is_sandbox ? "Remover marcação de teste" : "Marcar como teste"}
+            >
+              <FlaskConical className="h-4 w-4" />
+            </Button>
+          )}
         </div>
         <Button
           variant="ghost"

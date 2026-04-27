@@ -7,6 +7,7 @@ import { Search, X, Filter } from "lucide-react";
 
 export type CrmPeriodo = "todos" | "hoje" | "7dias" | "mes" | "atrasados" | "sem_data";
 export type CrmOrdenacao = "data_asc" | "data_desc" | "created_desc" | "created_asc";
+export type CrmSandboxFiltro = "reais" | "todos" | "somente_testes";
 
 export interface CrmFilters {
   busca: string;
@@ -15,12 +16,14 @@ export interface CrmFilters {
   convenio?: string;
   periodo: CrmPeriodo;
   ordenacao: CrmOrdenacao;
+  sandbox: CrmSandboxFiltro;
 }
 
 export const DEFAULT_CRM_FILTERS: CrmFilters = {
   busca: "",
   periodo: "todos",
   ordenacao: "data_asc",
+  sandbox: "reais",
 };
 
 interface CRMFiltersProps {
@@ -71,6 +74,12 @@ const ordenacoes: { value: CrmOrdenacao; label: string }[] = [
   { value: "created_asc", label: "Cadastro mais antigo" },
 ];
 
+const sandboxOpcoes: { value: CrmSandboxFiltro; label: string }[] = [
+  { value: "reais", label: "Somente reais" },
+  { value: "todos", label: "Incluir testes" },
+  { value: "somente_testes", label: "Somente testes" },
+];
+
 const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFiltersProps) => {
   // Debounce da busca
   const [buscaLocal, setBuscaLocal] = useState(filters.busca);
@@ -90,7 +99,8 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
     !!filters.tipo ||
     !!filters.convenio ||
     filters.periodo !== "todos" ||
-    filters.ordenacao !== "data_asc";
+    filters.ordenacao !== "data_asc" ||
+    filters.sandbox !== "reais";
 
   return (
     <div className="bg-card rounded-xl border border-border p-4 space-y-4">
@@ -116,6 +126,27 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
             Limpar
           </Button>
         )}
+      </div>
+
+      {/* Sandbox toggle (linha separada para destaque) */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Label className="text-xs text-muted-foreground">Contatos:</Label>
+        <div className="flex rounded-md border border-border overflow-hidden">
+          {sandboxOpcoes.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => onChange({ ...filters, sandbox: o.value })}
+              className={`px-3 py-1.5 text-xs transition-colors ${
+                filters.sandbox === o.value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card hover:bg-muted text-muted-foreground"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
