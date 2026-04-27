@@ -70,7 +70,11 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
       // Load full appointment data for AI generation
       const { data: agendamento } = await buscarAgendamentoParaChat(lead.agendamento_id);
       setAgendamentoCompleto(agendamento);
-      
+
+      // Load latest detected intent
+      const intent = await buscarUltimaIntencao(lead.agendamento_id);
+      setUltimaIntencao(intent);
+
       // Mark messages as read
       await marcarMensagensComoLidas(lead.agendamento_id);
       
@@ -120,6 +124,11 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
           
           if (newMessage.direcao === "IN") {
             marcarMensagensComoLidas(lead.agendamento_id);
+            // Após ~3s, recarrega a última intenção (assistente roda em background no webhook)
+            setTimeout(async () => {
+              const intent = await buscarUltimaIntencao(lead.agendamento_id);
+              if (intent) setUltimaIntencao(intent);
+            }, 3500);
           }
         }
       )
