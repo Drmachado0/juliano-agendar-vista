@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { registrarMensagemWhatsapp } from "../_shared/registrarMensagem.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -425,6 +426,7 @@ const handler = async (req: Request): Promise<Response> => {
         telefone: telefoneParaSalvar,
         direcao: "IN",
         conteudo: conteudo,
+        tipo_mensagem: "recebida",
         status_envio: null, // null for incoming messages
         mensagem_externa_id: mensagemExternaId,
         lida: false,
@@ -503,13 +505,13 @@ Obrigado pela compreensão! 🙏`;
             // Enviar resposta automática
             const sendResult = await sendWhatsappTextMessage(telefoneParaSalvar, mensagemResposta);
             
-            // Salvar a resposta automática na tabela de mensagens
-            await supabase.from('mensagens_whatsapp').insert({
-              agendamento_id: agendamento.id,
+            // Salvar a resposta automática via RPC universal
+            await registrarMensagemWhatsapp(supabase, {
               telefone: telefoneParaSalvar,
               direcao: 'OUT',
               conteudo: mensagemResposta,
               tipo_mensagem: 'resposta_automatica',
+              agendamento_id: agendamento.id,
               status_envio: sendResult.success ? 'enviado' : 'erro',
               error_message: sendResult.errorMessage || null,
             });

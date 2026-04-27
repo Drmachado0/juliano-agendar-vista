@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { registrarMensagemWhatsapp } from "../_shared/registrarMensagem.ts";
 
 // CORS configuration
 const corsHeaders = {
@@ -11,6 +13,8 @@ const corsHeaders = {
 const whatsAppRequestSchema = z.object({
   telefone: z.string().min(10).max(15).regex(/^[\d\s\-\(\)\+]+$/),
   mensagem: z.string().min(1).max(4096),
+  agendamento_id: z.string().uuid().optional().nullable(),
+  tipo_mensagem: z.string().optional(),
 });
 
 type WhatsAppRequest = z.infer<typeof whatsAppRequestSchema>;
@@ -93,8 +97,14 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const { telefone, mensagem }: WhatsAppRequest = validationResult.data;
+    const { telefone, mensagem, agendamento_id, tipo_mensagem }: WhatsAppRequest = validationResult.data;
     const phoneFormatted = normalizePhone(telefone);
+
+    // Supabase admin client para registrar a mensagem (sucesso ou falha)
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
 
     // 2. Get Evolution API config
     let evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
@@ -145,7 +155,7 @@ serve(async (req: Request): Promise<Response> => {
 
     // 4. Handle response
     if (response.ok) {
-      let data;
+      let data: any;
       try {
         data = JSON.parse(responseText);
       } catch {
@@ -153,9 +163,22 @@ serve(async (req: Request): Promise<Response> => {
       }
 
       console.log("[enviar-whatsapp] ✓ Mensagem enviada com sucesso");
+
+      // Registro universal — sucesso
+      await registrarMensagemWhatsapp(supabase, {
+        telefone,
+        direcao: "OUT",
+        conteudo: mensagem,
+        tipo_mensagem: (tipo_mensagem as any) ?? "manual",
+        agendamento_id: agendamento_id ?? null,
+        status_envio: "enviado",
+        mensagem_externa_id: data?.key?.id ?? null,
+        payload: data ?? null,
+      });
+
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           data,
           elapsed: `${elapsed}ms`,
         }),
@@ -167,6 +190,17 @@ serve(async (req: Request): Promise<Response> => {
     const errorInfo = categorizeError(responseText, response.status);
     console.error("[enviar-whatsapp] ✗ Erro:", errorInfo.code);
 
+    // Registro universal — erro
+    await registrarMensagemWhatsapp(supabase, {
+      telefone,
+      direcao: "OUT",
+      conteudo: mensagem,
+      tipo_mensagem: (tipo_mensagem as any) ?? "manual",
+      agendamento_id: agendamento_id ?? null,
+      status_envio: "erro",
+      error_message: `[${errorInfo.code}] ${errorInfo.message} · ${responseText.slice(0, 300)}`,
+    });
+
     return new Response(
       JSON.stringify({
         success: false,
@@ -174,9 +208,9 @@ serve(async (req: Request): Promise<Response> => {
         userMessage: errorInfo.message,
         elapsed: `${elapsed}ms`,
       }),
-      { 
-        status: response.status >= 400 && response.status < 500 ? 400 : 500, 
-        headers: { "Content-Type": "application/json", ...corsHeaders } 
+      {
+        status: response.status >= 400 && response.status < 500 ? 400 : 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders }
       }
     );
 

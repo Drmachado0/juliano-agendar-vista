@@ -1,4 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { registrarMensagemWhatsapp } from "../_shared/registrarMensagem.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -101,7 +103,12 @@ serve(async (req) => {
   }
 
   try {
-    const { telefone, imageBase64: rawImageBase64, imageUrl, caption } = await req.json();
+    const { telefone, imageBase64: rawImageBase64, imageUrl, caption, agendamento_id, tipo_mensagem } = await req.json();
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
 
     if (!telefone) {
       return new Response(
@@ -205,19 +212,21 @@ serve(async (req) => {
     console.log('Método usado:', usedMethod);
     console.log('Resposta Evolution:', result.status, result.text.substring(0, 200));
 
+    const conteudoLog = caption ? `[imagem] ${caption}` : "[imagem]";
+
     if (!result.ok) {
       console.error('Erro da Evolution API:', result.status, result.text);
-      
+
       // Check for specific error types
       let userFriendlyError = `Erro Evolution API: ${result.status}`;
       let isConnectionError = false;
-      
+
       const errorText = result.text.toLowerCase();
       const responseMessage = result.data?.response?.message;
-      
+
       // Check for connection closed error
-      if (errorText.includes('connection closed') || 
-          (Array.isArray(responseMessage) && responseMessage.some((m: string) => 
+      if (errorText.includes('connection closed') ||
+          (Array.isArray(responseMessage) && responseMessage.some((m: string) =>
             typeof m === 'string' && m.toLowerCase().includes('connection closed')))) {
         userFriendlyError = 'WhatsApp desconectado. Reconecte o WhatsApp nas configurações da Evolution API antes de enviar mensagens.';
         isConnectionError = true;
@@ -229,19 +238,42 @@ serve(async (req) => {
           userFriendlyError = 'Número não encontrado no WhatsApp. Verifique se o número está correto e possui WhatsApp ativo.';
         }
       }
-      
+
+      // Registro universal — erro
+      await registrarMensagemWhatsapp(supabase, {
+        telefone,
+        direcao: "OUT",
+        conteudo: conteudoLog,
+        tipo_mensagem: (tipo_mensagem as any) ?? "imagem",
+        agendamento_id: agendamento_id ?? null,
+        status_envio: "erro",
+        error_message: `[${result.status}] ${userFriendlyError} · ${result.text.slice(0, 300)}`,
+      });
+
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: userFriendlyError, 
+        JSON.stringify({
+          success: false,
+          error: userFriendlyError,
           details: result.text,
-          isConnectionError 
+          isConnectionError
         }),
         { status: result.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     console.log('Imagem enviada com sucesso via', usedMethod);
+
+    // Registro universal — sucesso
+    await registrarMensagemWhatsapp(supabase, {
+      telefone,
+      direcao: "OUT",
+      conteudo: conteudoLog,
+      tipo_mensagem: (tipo_mensagem as any) ?? "imagem",
+      agendamento_id: agendamento_id ?? null,
+      status_envio: "enviado",
+      mensagem_externa_id: result.data?.key?.id ?? null,
+      payload: { method: usedMethod, imageUrl: imageUrl ?? null, response: result.data ?? null },
+    });
 
     return new Response(
       JSON.stringify({ success: true, data: result.data, method: usedMethod }),
