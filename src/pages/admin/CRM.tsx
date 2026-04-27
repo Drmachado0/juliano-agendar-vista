@@ -117,6 +117,7 @@ function aplicarFiltrosEOrdenacao(
 
 const columns = [
   { status: "NOVO LEAD", title: "Novo Lead", color: "bg-emerald-500" },
+  { status: "AGUARDANDO HUMANO", title: "Precisa de humano", color: "bg-rose-500" },
   { status: "AGUARDANDO", title: "Aguardando", color: "bg-yellow-500" },
   { status: "CLINICOR", title: "Clinicor", color: "bg-blue-500" },
   { status: "HGP", title: "HGP", color: "bg-purple-500" },
