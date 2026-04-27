@@ -39,6 +39,7 @@ const KanbanCard = ({
   onViewDetails,
   onSendWhatsApp,
   onTriggerAutomation,
+  onToggleSandbox,
   isDragging,
   boasVindas,
 }: KanbanCardProps) => {
