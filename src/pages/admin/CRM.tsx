@@ -41,6 +41,10 @@ function aplicarFiltrosEOrdenacao(
   const buscaDigitos = buscaNorm.replace(/\D/g, "");
 
   const matches = (a: Agendamento) => {
+    // Sandbox filter (default: somente reais)
+    if (filters.sandbox === "reais" && a.is_sandbox) return false;
+    if (filters.sandbox === "somente_testes" && !a.is_sandbox) return false;
+
     if (filters.local && a.local_atendimento !== filters.local) return false;
     if (filters.tipo && a.tipo_atendimento !== filters.tipo) return false;
     if (filters.convenio && a.convenio !== filters.convenio) return false;
