@@ -26,6 +26,7 @@ const INTENCOES = [
 ] as const;
 
 const INTENCOES_BOT = new Set(["agendar", "remarcar"]);
+const INTENCOES_SENSIVEIS = new Set(["cancelar", "urgencia"]);
 
 interface ReqBody {
   telefone: string;
