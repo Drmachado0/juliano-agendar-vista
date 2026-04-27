@@ -199,7 +199,7 @@ serve(async (req) => {
   try {
     let evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
     const evolutionToken = Deno.env.get("EVOLUTION_API_TOKEN");
-    const instanceName = Deno.env.get("EVOLUTION_API_INSTANCE") || "Agente ia";
+    const instanceName = Deno.env.get("EVOLUTION_API_INSTANCE");
 
     if (!evolutionBaseUrl || !evolutionToken) {
       return new Response(

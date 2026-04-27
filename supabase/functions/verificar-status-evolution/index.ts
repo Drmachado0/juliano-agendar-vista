@@ -23,7 +23,7 @@ serve(async (req) => {
   try {
     let evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
     const evolutionToken = Deno.env.get("EVOLUTION_API_TOKEN");
-    const instanceName = Deno.env.get("EVOLUTION_API_INSTANCE") || "Agente ia";
+    const instanceName = Deno.env.get("EVOLUTION_API_INSTANCE");
 
     if (!evolutionBaseUrl || !evolutionToken) {
       console.error("[verificar-status-evolution] Variáveis não configuradas");
@@ -110,7 +110,7 @@ serve(async (req) => {
       JSON.stringify({
         connected: false,
         state: isTimeout ? "timeout" : "error",
-        instanceName: Deno.env.get("EVOLUTION_API_INSTANCE") || "Agente ia",
+        instanceName: Deno.env.get("EVOLUTION_API_INSTANCE"),
         error: isTimeout ? "Tempo limite ao verificar status" : error.message,
       } as InstanceStatus),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

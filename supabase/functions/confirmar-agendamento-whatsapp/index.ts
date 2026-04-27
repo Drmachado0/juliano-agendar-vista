@@ -128,7 +128,7 @@ serve(async (req) => {
     // Configurações da Evolution API
     const evolutionBaseUrl = Deno.env.get('EVOLUTION_API_BASE_URL');
     const evolutionToken = Deno.env.get('EVOLUTION_API_TOKEN');
-    const evolutionInstance = Deno.env.get('EVOLUTION_API_INSTANCE') || 'Agente ia';
+    const evolutionInstance = Deno.env.get("EVOLUTION_API_INSTANCE");
 
     if (!evolutionBaseUrl || !evolutionToken) {
       console.error('[ConfirmarWhatsApp] Variáveis de ambiente da Evolution não configuradas');
