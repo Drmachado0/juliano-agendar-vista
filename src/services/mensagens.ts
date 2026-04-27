@@ -226,6 +226,57 @@ export const buscarAgendamentoParaChat = async (
 
     return { data, error: null };
   } catch (error) {
+
+// Buscar agendamento existente pelo telefone (últimos 8 dígitos)
+export interface AgendamentoMatch {
+  id: string;
+  nome_completo: string;
+  telefone_whatsapp: string;
+  status_crm: string;
+  status_funil: string | null;
+  local_atendimento: string | null;
+  is_sandbox: boolean;
+  created_at: string;
+}
+
+export const buscarAgendamentoPorTelefone = async (
+  telefone: string
+): Promise<{ data: AgendamentoMatch | null; error: Error | null }> => {
+  try {
+    const { data, error } = await (supabase as any).rpc(
+      "buscar_agendamento_por_telefone",
+      { p_telefone: telefone }
+    );
+    if (error) throw error;
+    const match = Array.isArray(data) && data.length > 0 ? (data[0] as AgendamentoMatch) : null;
+    return { data: match, error: null };
+  } catch (error) {
+    console.error("Erro ao buscar agendamento por telefone:", error);
+    return { data: null, error: error as Error };
+  }
+};
+
+// Cria um lead novo (CRM "NOVO LEAD") direto da aba WhatsApp
+export const criarLeadManualWhatsApp = async (params: {
+  nome: string;
+  telefone: string;
+  isSandbox?: boolean;
+  observacoes?: string;
+}): Promise<{ id: string | null; error: Error | null }> => {
+  try {
+    const { data, error } = await (supabase as any).rpc("criar_lead_manual_whatsapp", {
+      p_nome: params.nome,
+      p_telefone: params.telefone,
+      p_is_sandbox: !!params.isSandbox,
+      p_observacoes: params.observacoes ?? null,
+    });
+    if (error) throw error;
+    return { id: (data as string) ?? null, error: null };
+  } catch (error) {
+    console.error("Erro ao criar lead manual:", error);
+    return { id: null, error: error as Error };
+  }
+};
     console.error("Erro ao buscar agendamento:", error);
     return { data: null, error: error as Error };
   }
