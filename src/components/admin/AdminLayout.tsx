@@ -47,6 +47,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { href: "/admin/whatsapp", label: "WhatsApp", icon: MessageCircle },
     { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
     { href: "/admin/auditoria-tracking", label: "Auditoria Tracking", icon: ShieldCheck },
+    { href: "/admin/logs", label: "Logs do Sistema", icon: ScrollText },
   ];
 
   const handleSignOut = async () => {
