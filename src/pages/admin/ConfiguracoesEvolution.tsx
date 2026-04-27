@@ -259,6 +259,38 @@ const ConfiguracoesEvolution = () => {
                 <Zap className={cn("h-4 w-4 mr-2", actionLoading && "animate-spin")} />
                 Reconexão Completa
               </Button>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={actionLoading || !status?.connected}
+                  >
+                    <PowerOff className="h-4 w-4 mr-2" />
+                    Desconectar WhatsApp
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Desconectar WhatsApp?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      A instância ficará offline e o bot Hermes parará de receber e enviar mensagens
+                      até você reconectar. Para voltar a usar, clique em "Forçar Conexão" e escaneie
+                      um novo QR Code. A instância <strong>não será excluída</strong>.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDesconectar}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Sim, desconectar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
 
             {/* Last Checked */}
