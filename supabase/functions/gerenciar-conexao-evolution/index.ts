@@ -306,6 +306,20 @@ serve(async (req) => {
         break;
       }
 
+      case "logout": {
+        const logoutResult = await logoutInstance(evolutionBaseUrl, instanceName, evolutionToken);
+        await delay(2000);
+        const checkAfter = await checkConnectionState(evolutionBaseUrl, instanceName, evolutionToken);
+        result = {
+          success: logoutResult.success,
+          action: "logout",
+          state: checkAfter.state,
+          connected: checkAfter.connected,
+          error: logoutResult.error,
+        };
+        break;
+      }
+
       case "reconnect": {
         result = await fullReconnect(evolutionBaseUrl, instanceName, evolutionToken);
         break;
