@@ -18,6 +18,7 @@ interface WhatsAppLeadsListProps {
   selectedLeadId: string | null;
   onSelectLead: (lead: LeadComMensagens) => void;
   onLeadsUpdate?: (leads: LeadComMensagens[]) => void;
+  onLeadCreated?: (agendamentoId: string) => void;
 }
 
 const sandboxOpcoes: { value: SandboxFiltro; label: string }[] = [
@@ -30,6 +31,7 @@ const WhatsAppLeadsList = ({
   selectedLeadId,
   onSelectLead,
   onLeadsUpdate,
+  onLeadCreated,
 }: WhatsAppLeadsListProps) => {
   const [leads, setLeads] = useState<LeadComMensagens[]>([]);
   const [loading, setLoading] = useState(true);
@@ -197,7 +199,10 @@ const WhatsAppLeadsList = ({
       <NovaMensagemWhatsAppModal
         open={novaMensagemModalOpen}
         onOpenChange={setNovaMensagemModalOpen}
-        onMessageSent={fetchLeads}
+        onMessageSent={async (agendamentoId) => {
+          await fetchLeads();
+          if (agendamentoId) onLeadCreated?.(agendamentoId);
+        }}
       />
     </div>
   );

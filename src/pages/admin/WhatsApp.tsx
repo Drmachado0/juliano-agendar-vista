@@ -108,6 +108,14 @@ const AdminWhatsApp = () => {
                 selectedLeadId={selectedLead?.agendamento_id || null}
                 onSelectLead={handleSelectLead}
                 onLeadsUpdate={setLeads}
+                onLeadCreated={(agendamentoId) => {
+                  // Após fetchLeads(), encontra o lead recém-criado e abre o chat
+                  setLeads((prev) => {
+                    const novo = prev.find((l) => l.agendamento_id === agendamentoId);
+                    if (novo) handleSelectLead(novo);
+                    return prev;
+                  });
+                }}
               />
             </div>
 

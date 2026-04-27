@@ -1055,6 +1055,19 @@ export type Database = {
       }
     }
     Functions: {
+      buscar_agendamento_por_telefone: {
+        Args: { p_telefone: string }
+        Returns: {
+          created_at: string
+          id: string
+          is_sandbox: boolean
+          local_atendimento: string
+          nome_completo: string
+          status_crm: string
+          status_funil: string
+          telefone_whatsapp: string
+        }[]
+      }
       buscar_paciente: {
         Args: { p_phone_number: string }
         Returns: {
@@ -1077,6 +1090,15 @@ export type Database = {
           mensagem: string
           sucesso: boolean
         }[]
+      }
+      criar_lead_manual_whatsapp: {
+        Args: {
+          p_is_sandbox?: boolean
+          p_nome: string
+          p_observacoes?: string
+          p_telefone: string
+        }
+        Returns: string
       }
       decrypt_sensitive_data: {
         Args: { encrypted_data: string }
