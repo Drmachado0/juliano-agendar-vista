@@ -409,3 +409,25 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--primary) / 0.4);
 }
+
+/* Kanban horizontal scrollbar - sempre visível */
+.kanban-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.4) hsl(var(--muted));
+}
+.kanban-scroll::-webkit-scrollbar {
+  height: 12px;
+  width: 12px;
+}
+.kanban-scroll::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 6px;
+}
+.kanban-scroll::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.5);
+  border-radius: 6px;
+  border: 2px solid hsl(var(--muted));
+}
+.kanban-scroll::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.8);
+}
