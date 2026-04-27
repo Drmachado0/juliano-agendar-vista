@@ -99,7 +99,8 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
     !!filters.tipo ||
     !!filters.convenio ||
     filters.periodo !== "todos" ||
-    filters.ordenacao !== "data_asc";
+    filters.ordenacao !== "data_asc" ||
+    filters.sandbox !== "reais";
 
   return (
     <div className="bg-card rounded-xl border border-border p-4 space-y-4">
