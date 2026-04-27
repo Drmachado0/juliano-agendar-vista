@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle, CheckCircle2, UserPlus, Timer, Send, XCircle, Loader2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle, CheckCircle2, UserPlus, Timer, Send, XCircle, Loader2, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { BoasVindasInfo } from "@/hooks/useBoasVindasStatus";
@@ -13,6 +13,7 @@ interface KanbanCardProps {
   onViewDetails: (agendamento: Agendamento) => void;
   onSendWhatsApp: (agendamento: Agendamento) => void;
   onTriggerAutomation: (agendamento: Agendamento) => void;
+  onToggleSandbox?: (agendamento: Agendamento) => void;
   isDragging?: boolean;
   boasVindas?: BoasVindasInfo;
 }
