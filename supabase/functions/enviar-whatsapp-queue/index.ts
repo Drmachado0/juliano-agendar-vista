@@ -149,12 +149,24 @@ serve(async (req: Request): Promise<Response> => {
         responseData = { raw: responseText };
       }
 
+      const externalId = responseData?.key?.id || responseData?.id || null;
       console.log("[enviar-whatsapp-queue] ✓ Mensagem enviada com sucesso");
+
+      // Persist success log (fire-and-forget)
+      logEnvio({
+        telefone: phoneFormatted,
+        conteudo: mensagem,
+        status: "enviado",
+        campaign,
+        externalId,
+        payload: { campaign, priority, elapsed_ms: elapsed },
+      });
+
       return new Response(
         JSON.stringify({ 
           success: true, 
           status: "sent",
-          messageId: responseData?.key?.id || responseData?.id || null,
+          messageId: externalId,
           elapsed: `${elapsed}ms`
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -170,13 +182,23 @@ serve(async (req: Request): Promise<Response> => {
     
     if (lowerResponse.includes('"exists":false') || lowerResponse.includes('"exists": false')) {
       userMessage = "Número não encontrado no WhatsApp";
-    } else if (lowerResponse.includes("not connected") || lowerResponse.includes("disconnected")) {
-      userMessage = "WhatsApp não conectado. Escaneie o QR Code.";
+    } else if (lowerResponse.includes("not connected") || lowerResponse.includes("disconnected") || lowerResponse.includes("connection closed")) {
+      userMessage = "WhatsApp desconectado. Escaneie o QR Code em /admin/configuracoes/evolution.";
     } else if (evolutionResponse.status === 401) {
       userMessage = "Erro de autenticação com Evolution API";
     } else if (evolutionResponse.status === 404) {
       userMessage = "Instância do WhatsApp não encontrada";
     }
+
+    // Persist failure log (fire-and-forget)
+    logEnvio({
+      telefone: phoneFormatted,
+      conteudo: mensagem,
+      status: "erro",
+      campaign,
+      errorMessage: `[${evolutionResponse.status}] ${userMessage} · ${responseText.substring(0, 300)}`,
+      payload: { campaign, priority, http_status: evolutionResponse.status, elapsed_ms: elapsed, raw: responseText.substring(0, 500) },
+    });
 
     return new Response(
       JSON.stringify({ 
