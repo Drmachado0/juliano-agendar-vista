@@ -341,6 +341,35 @@ const AdminCRM = () => {
     }
   };
 
+  const handleToggleSandbox = async (agendamento: Agendamento) => {
+    const novoEstado = !agendamento.is_sandbox;
+    let reason: string | null = null;
+    if (novoEstado) {
+      reason = window.prompt("Motivo (opcional) para marcar como teste:", "Contato de teste") || null;
+    } else {
+      if (!window.confirm(`Remover marcação de teste de "${agendamento.nome_completo}"?`)) return;
+    }
+    // Optimistic update
+    setAgendamentosPorStatus((prev) => {
+      const updated = { ...prev };
+      const col = agendamento.status_crm;
+      updated[col] = updated[col].map((a) =>
+        a.id === agendamento.id ? { ...a, is_sandbox: novoEstado, sandbox_reason: reason } : a
+      );
+      return updated;
+    });
+    const { error } = await marcarSandbox(agendamento.id, novoEstado, reason);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      fetchAgendamentos(true);
+    } else {
+      toast({
+        title: novoEstado ? "Marcado como teste" : "Marcação de teste removida",
+        description: agendamento.nome_completo,
+      });
+    }
+  };
+
   // Calcula estatísticas com base no resultado FILTRADO (header + taxas reagem aos filtros)
   const allItems = Object.values(agendamentosFiltrados).flat();
   const totalItems = allItems.length;
