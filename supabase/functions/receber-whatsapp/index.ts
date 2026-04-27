@@ -505,13 +505,13 @@ Obrigado pela compreensão! 🙏`;
             // Enviar resposta automática
             const sendResult = await sendWhatsappTextMessage(telefoneParaSalvar, mensagemResposta);
             
-            // Salvar a resposta automática na tabela de mensagens
-            await supabase.from('mensagens_whatsapp').insert({
-              agendamento_id: agendamento.id,
+            // Salvar a resposta automática via RPC universal
+            await registrarMensagemWhatsapp(supabase, {
               telefone: telefoneParaSalvar,
               direcao: 'OUT',
               conteudo: mensagemResposta,
               tipo_mensagem: 'resposta_automatica',
+              agendamento_id: agendamento.id,
               status_envio: sendResult.success ? 'enviado' : 'erro',
               error_message: sendResult.errorMessage || null,
             });
