@@ -18,6 +18,12 @@ import {
 } from "@/services/mensagens";
 import { enviarMensagemWhatsApp, gerarMensagemConfirmacaoIA, sugerirRespostaHermes } from "@/services/integracoes";
 import { marcarHermesDraftStatus } from "@/services/hermesDrafts";
+import {
+  buscarUltimaIntencao,
+  INTENCAO_LABEL,
+  INTENCAO_VARIANT,
+  ConversationIntent,
+} from "@/services/conversationIntents";
 import WhatsAppMessageBubble from "./WhatsAppMessageBubble";
 
 interface WhatsAppChatProps {
@@ -36,6 +42,7 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
   const [generatingHermes, setGeneratingHermes] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [agendamentoCompleto, setAgendamentoCompleto] = useState<any>(null);
+  const [ultimaIntencao, setUltimaIntencao] = useState<ConversationIntent | null>(null);
   // Hermes draft tracking
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [draftSugestao, setDraftSugestao] = useState<string | null>(null);
@@ -63,7 +70,11 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
       // Load full appointment data for AI generation
       const { data: agendamento } = await buscarAgendamentoParaChat(lead.agendamento_id);
       setAgendamentoCompleto(agendamento);
-      
+
+      // Load latest detected intent
+      const intent = await buscarUltimaIntencao(lead.agendamento_id);
+      setUltimaIntencao(intent);
+
       // Mark messages as read
       await marcarMensagensComoLidas(lead.agendamento_id);
       
@@ -113,6 +124,11 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
           
           if (newMessage.direcao === "IN") {
             marcarMensagensComoLidas(lead.agendamento_id);
+            // Após ~3s, recarrega a última intenção (assistente roda em background no webhook)
+            setTimeout(async () => {
+              const intent = await buscarUltimaIntencao(lead.agendamento_id);
+              if (intent) setUltimaIntencao(intent);
+            }, 3500);
           }
         }
       )
@@ -296,9 +312,19 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
           </div>
         </div>
         
-        <Badge variant="outline" className="hidden sm:flex">
-          {lead.status_crm}
-        </Badge>
+        <div className="hidden sm:flex flex-col items-end gap-1">
+          <Badge variant="outline">{lead.status_crm}</Badge>
+          {ultimaIntencao && (
+            <Badge
+              variant={INTENCAO_VARIANT[ultimaIntencao.intencao] || "secondary"}
+              title={ultimaIntencao.resumo || ""}
+              className="text-[10px]"
+            >
+              🤖 {INTENCAO_LABEL[ultimaIntencao.intencao] || ultimaIntencao.intencao}
+              {ultimaIntencao.confianca != null && ` · ${Math.round(ultimaIntencao.confianca * 100)}%`}
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Appointment info */}

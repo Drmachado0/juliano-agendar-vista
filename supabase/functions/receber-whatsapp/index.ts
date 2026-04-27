@@ -518,6 +518,39 @@ Obrigado pela compreensão! 🙏`;
       }
     }
 
+    // ============= ASSISTENTE AUTOMÁTICO DE PRÉ-AGENDAMENTO (bot) =============
+    // Dispara em background; só roda se não for resposta de confirmação tratada acima.
+    const ehRespostaConfirmacao =
+      agendamento &&
+      agendamento.confirmation_status === "aguardando_confirmacao" &&
+      (primeiroCaractere === "1" || primeiroCaractere === "2" ||
+        conteudoLimpo.startsWith("sim") || conteudoLimpo.startsWith("não") ||
+        conteudoLimpo.startsWith("confirm") || conteudoLimpo.startsWith("cancel"));
+
+    if (!ehRespostaConfirmacao) {
+      const assistentePayload = {
+        telefone: telefoneParaSalvar,
+        conteudo,
+        agendamento_id: agendamento?.id ?? null,
+        mensagem_id: novaMensagem.id,
+      };
+      // Fire-and-forget: chama edge function via fetch interno
+      const assistenteUrl = `${supabaseUrl}/functions/v1/assistente-pre-agendamento`;
+      fetch(assistenteUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${supabaseServiceKey}`,
+        },
+        body: JSON.stringify(assistentePayload),
+      })
+        .then(async (r) => {
+          const txt = await r.text();
+          console.log(`[assistente] status=${r.status} body=${txt.slice(0, 200)}`);
+        })
+        .catch((e) => console.error("[assistente] erro fetch:", e));
+    }
+
     return new Response(
       JSON.stringify({ success: true, data: { id: novaMensagem.id } }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }

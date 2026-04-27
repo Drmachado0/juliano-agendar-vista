@@ -18,6 +18,8 @@ export type Database = {
         Row: {
           aceita_contato_whatsapp_email: boolean | null
           aceita_primeiro_horario: boolean | null
+          bot_ativo: boolean
+          bot_ultima_acao_at: string | null
           clinica_id: string | null
           confirmacao_enviada: boolean | null
           confirmation_channel: string | null
@@ -54,6 +56,8 @@ export type Database = {
         Insert: {
           aceita_contato_whatsapp_email?: boolean | null
           aceita_primeiro_horario?: boolean | null
+          bot_ativo?: boolean
+          bot_ultima_acao_at?: string | null
           clinica_id?: string | null
           confirmacao_enviada?: boolean | null
           confirmation_channel?: string | null
@@ -90,6 +94,8 @@ export type Database = {
         Update: {
           aceita_contato_whatsapp_email?: boolean | null
           aceita_primeiro_horario?: boolean | null
+          bot_ativo?: boolean
+          bot_ultima_acao_at?: string | null
           clinica_id?: string | null
           confirmacao_enviada?: boolean | null
           confirmation_channel?: string | null
@@ -246,6 +252,64 @@ export type Database = {
           },
         ]
       }
+      bot_assistente_log: {
+        Row: {
+          acao: string
+          agendamento_id: string | null
+          created_at: string
+          detalhes: Json | null
+          id: string
+          intencao: string | null
+          latencia_ms: number | null
+          mensagem_id: string | null
+          telefone: string
+        }
+        Insert: {
+          acao: string
+          agendamento_id?: string | null
+          created_at?: string
+          detalhes?: Json | null
+          id?: string
+          intencao?: string | null
+          latencia_ms?: number | null
+          mensagem_id?: string | null
+          telefone: string
+        }
+        Update: {
+          acao?: string
+          agendamento_id?: string | null
+          created_at?: string
+          detalhes?: Json | null
+          id?: string
+          intencao?: string | null
+          latencia_ms?: number | null
+          mensagem_id?: string | null
+          telefone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_assistente_log_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_assistente_log_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_assistente_log_mensagem_id_fkey"
+            columns: ["mensagem_id"]
+            isOneToOne: false
+            referencedRelation: "mensagens_whatsapp"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinicas: {
         Row: {
           ativo: boolean | null
@@ -308,6 +372,73 @@ export type Database = {
           valor_consulta?: number | null
         }
         Relationships: []
+      }
+      conversation_intents: {
+        Row: {
+          agendamento_id: string | null
+          confianca: number | null
+          created_at: string
+          id: string
+          intencao: string
+          mensagem_id: string | null
+          modelo: string
+          proxima_acao: string | null
+          raw_output: Json | null
+          resumo: string | null
+          sentimento: string | null
+          telefone: string
+        }
+        Insert: {
+          agendamento_id?: string | null
+          confianca?: number | null
+          created_at?: string
+          id?: string
+          intencao: string
+          mensagem_id?: string | null
+          modelo?: string
+          proxima_acao?: string | null
+          raw_output?: Json | null
+          resumo?: string | null
+          sentimento?: string | null
+          telefone: string
+        }
+        Update: {
+          agendamento_id?: string | null
+          confianca?: number | null
+          created_at?: string
+          id?: string
+          intencao?: string
+          mensagem_id?: string | null
+          modelo?: string
+          proxima_acao?: string | null
+          raw_output?: Json | null
+          resumo?: string | null
+          sentimento?: string | null
+          telefone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_intents_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_intents_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_intents_mensagem_id_fkey"
+            columns: ["mensagem_id"]
+            isOneToOne: false
+            referencedRelation: "mensagens_whatsapp"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       crm_audit_log: {
         Row: {
@@ -1299,6 +1430,18 @@ export type Database = {
         Returns: undefined
       }
       normalizar_telefone: { Args: { p_telefone: string }; Returns: string }
+      registrar_bot_log: {
+        Args: {
+          p_acao: string
+          p_agendamento_id?: string
+          p_detalhes?: Json
+          p_intencao?: string
+          p_latencia_ms?: number
+          p_mensagem_id?: string
+          p_telefone: string
+        }
+        Returns: string
+      }
       registrar_crm_audit: {
         Args: {
           p_acao: string
