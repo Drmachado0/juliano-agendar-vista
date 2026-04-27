@@ -13,12 +13,13 @@ export interface MensagemWhatsApp {
 }
 
 export interface MensagemInsert {
-  agendamento_id?: string;
+  agendamento_id?: string | null;
   telefone: string;
   direcao: "IN" | "OUT";
   conteudo: string;
   status_envio?: string;
   mensagem_externa_id?: string;
+  tipo_mensagem?: string;
 }
 
 export interface LeadComMensagens {
