@@ -684,6 +684,57 @@ export type Database = {
         }
         Relationships: []
       }
+      hermes_conversation_state: {
+        Row: {
+          ambiguous_count: number
+          available_slots: Json | null
+          awaiting: string | null
+          created_at: string
+          id: string
+          last_intent: string | null
+          last_options: Json | null
+          lead_id: string | null
+          phone: string
+          sandbox: boolean
+          selected_data: string | null
+          selected_local: string | null
+          selected_periodo: string | null
+          updated_at: string
+        }
+        Insert: {
+          ambiguous_count?: number
+          available_slots?: Json | null
+          awaiting?: string | null
+          created_at?: string
+          id?: string
+          last_intent?: string | null
+          last_options?: Json | null
+          lead_id?: string | null
+          phone: string
+          sandbox?: boolean
+          selected_data?: string | null
+          selected_local?: string | null
+          selected_periodo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ambiguous_count?: number
+          available_slots?: Json | null
+          awaiting?: string | null
+          created_at?: string
+          id?: string
+          last_intent?: string | null
+          last_options?: Json | null
+          lead_id?: string | null
+          phone?: string
+          sandbox?: boolean
+          selected_data?: string | null
+          selected_local?: string | null
+          selected_periodo?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hermes_drafts: {
         Row: {
           acoes_sugeridas: Json | null
