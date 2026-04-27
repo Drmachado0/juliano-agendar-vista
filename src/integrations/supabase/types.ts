@@ -1465,6 +1465,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      registrar_mensagem_whatsapp: {
+        Args: {
+          p_agendamento_id?: string
+          p_conteudo: string
+          p_direcao: string
+          p_error_message?: string
+          p_mensagem_externa_id?: string
+          p_payload?: Json
+          p_status_envio?: string
+          p_telefone: string
+          p_tipo_mensagem?: string
+        }
+        Returns: string
+      }
       registrar_system_log: {
         Args: {
           p_agendamento_id?: string
