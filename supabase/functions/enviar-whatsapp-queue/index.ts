@@ -1,5 +1,39 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+async function logEnvio(opts: {
+  telefone: string;
+  conteudo: string;
+  status: "enviado" | "erro";
+  campaign?: string;
+  errorMessage?: string;
+  externalId?: string | null;
+  payload?: any;
+}) {
+  try {
+    await supabaseAdmin.rpc("registrar_mensagem_whatsapp", {
+      p_telefone: opts.telefone,
+      p_direcao: "OUT",
+      p_conteudo: opts.conteudo,
+      p_tipo_mensagem: opts.campaign === "boas-vindas" ? "boas_vindas"
+        : opts.campaign === "lembrete-anual" ? "lembrete_anual"
+        : opts.campaign === "avaliacao" ? "avaliacao"
+        : opts.campaign === "lembrete-24h" ? "lembrete_24h"
+        : "manual",
+      p_status_envio: opts.status,
+      p_mensagem_externa_id: opts.externalId ?? null,
+      p_error_message: opts.errorMessage ?? null,
+      p_payload: opts.payload ?? null,
+    });
+  } catch (e) {
+    console.error("[enviar-whatsapp-queue] Falha ao gravar log:", e);
+  }
+}
 
 // CORS configuration
 const corsHeaders = {
