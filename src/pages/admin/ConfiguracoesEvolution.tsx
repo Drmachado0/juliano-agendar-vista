@@ -5,22 +5,34 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { 
-  RefreshCw, 
-  ExternalLink, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  RefreshCw,
+  ExternalLink,
+  CheckCircle2,
+  XCircle,
   AlertTriangle,
   Smartphone,
   QrCode,
   Settings2,
   RotateCcw,
   Plug,
-  Zap
+  Zap,
+  PowerOff
 } from "lucide-react";
 import { useEvolutionStatus } from "@/hooks/useEvolutionStatus";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const ConfiguracoesEvolution = () => {
   const { 
@@ -31,7 +43,8 @@ const ConfiguracoesEvolution = () => {
     refresh,
     reiniciar,
     conectar,
-    reconectar
+    reconectar,
+    desconectar
   } = useEvolutionStatus(true, 30000);
   
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -81,6 +94,18 @@ const ConfiguracoesEvolution = () => {
       toast.info("Reconexão parcial. Pode ser necessário escanear o QR Code.");
     } else {
       toast.error(result.error || "Falha na reconexão");
+    }
+  };
+
+  const handleDesconectar = async () => {
+    toast.loading("Desconectando WhatsApp...", { id: "logout" });
+    const result = await desconectar();
+    toast.dismiss("logout");
+
+    if (result.success) {
+      toast.success("WhatsApp desconectado. A instância está offline.");
+    } else {
+      toast.error(result.error || "Erro ao desconectar");
     }
   };
 
@@ -234,6 +259,38 @@ const ConfiguracoesEvolution = () => {
                 <Zap className={cn("h-4 w-4 mr-2", actionLoading && "animate-spin")} />
                 Reconexão Completa
               </Button>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={actionLoading || !status?.connected}
+                  >
+                    <PowerOff className="h-4 w-4 mr-2" />
+                    Desconectar WhatsApp
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Desconectar WhatsApp?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      A instância ficará offline e o bot Hermes parará de receber e enviar mensagens
+                      até você reconectar. Para voltar a usar, clique em "Forçar Conexão" e escaneie
+                      um novo QR Code. A instância <strong>não será excluída</strong>.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDesconectar}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Sim, desconectar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
 
             {/* Last Checked */}
