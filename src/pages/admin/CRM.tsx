@@ -550,6 +550,7 @@ const AdminCRM = () => {
                   onViewDetails={handleViewDetails}
                   onSendWhatsApp={handleSendWhatsApp}
                   onTriggerAutomation={handleTriggerAutomation}
+                  onToggleSandbox={handleToggleSandbox}
                   onDragStart={handleDragStart}
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
