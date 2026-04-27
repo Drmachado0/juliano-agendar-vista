@@ -74,6 +74,12 @@ const ordenacoes: { value: CrmOrdenacao; label: string }[] = [
   { value: "created_asc", label: "Cadastro mais antigo" },
 ];
 
+const sandboxOpcoes: { value: CrmSandboxFiltro; label: string }[] = [
+  { value: "reais", label: "Somente reais" },
+  { value: "todos", label: "Incluir testes" },
+  { value: "somente_testes", label: "Somente testes" },
+];
+
 const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFiltersProps) => {
   // Debounce da busca
   const [buscaLocal, setBuscaLocal] = useState(filters.busca);
