@@ -31,6 +31,7 @@ const WhatsAppLeadsList = ({
   selectedLeadId,
   onSelectLead,
   onLeadsUpdate,
+  onLeadCreated,
 }: WhatsAppLeadsListProps) => {
   const [leads, setLeads] = useState<LeadComMensagens[]>([]);
   const [loading, setLoading] = useState(true);
