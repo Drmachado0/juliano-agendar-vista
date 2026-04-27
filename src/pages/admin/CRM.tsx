@@ -128,6 +128,7 @@ const columns = [
 const AdminCRM = () => {
   const [agendamentosPorStatus, setAgendamentosPorStatus] = useState<Record<string, Agendamento[]>>({
     "NOVO LEAD": [],
+    "AGUARDANDO HUMANO": [],
     "AGUARDANDO": [],
     "CLINICOR": [],
     "HGP": [],
