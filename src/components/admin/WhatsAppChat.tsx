@@ -18,6 +18,12 @@ import {
 } from "@/services/mensagens";
 import { enviarMensagemWhatsApp, gerarMensagemConfirmacaoIA, sugerirRespostaHermes } from "@/services/integracoes";
 import { marcarHermesDraftStatus } from "@/services/hermesDrafts";
+import {
+  buscarUltimaIntencao,
+  INTENCAO_LABEL,
+  INTENCAO_VARIANT,
+  ConversationIntent,
+} from "@/services/conversationIntents";
 import WhatsAppMessageBubble from "./WhatsAppMessageBubble";
 
 interface WhatsAppChatProps {
