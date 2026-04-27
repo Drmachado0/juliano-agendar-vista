@@ -103,7 +103,12 @@ serve(async (req) => {
   }
 
   try {
-    const { telefone, imageBase64: rawImageBase64, imageUrl, caption } = await req.json();
+    const { telefone, imageBase64: rawImageBase64, imageUrl, caption, agendamento_id, tipo_mensagem } = await req.json();
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
 
     if (!telefone) {
       return new Response(
