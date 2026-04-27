@@ -258,6 +258,10 @@ export async function listarAgendamentos(
       .replace(/[%_\\]/g, '\\$&'); // Escape ILIKE wildcards: %, _, \
     query = query.or(`nome_completo.ilike.%${sanitizedSearch}%,telefone_whatsapp.ilike.%${sanitizedSearch}%`);
   }
+  // Sandbox filter (default: somente reais)
+  const sandboxMode = filters.sandbox ?? "reais";
+  if (sandboxMode === "reais") query = query.eq('is_sandbox', false);
+  else if (sandboxMode === "somente_testes") query = query.eq('is_sandbox', true);
 
   // Order and paginate
   query = query
