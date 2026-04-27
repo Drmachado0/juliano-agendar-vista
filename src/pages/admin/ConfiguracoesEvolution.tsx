@@ -5,22 +5,34 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { 
-  RefreshCw, 
-  ExternalLink, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  RefreshCw,
+  ExternalLink,
+  CheckCircle2,
+  XCircle,
   AlertTriangle,
   Smartphone,
   QrCode,
   Settings2,
   RotateCcw,
   Plug,
-  Zap
+  Zap,
+  PowerOff
 } from "lucide-react";
 import { useEvolutionStatus } from "@/hooks/useEvolutionStatus";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const ConfiguracoesEvolution = () => {
   const { 
