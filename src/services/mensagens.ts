@@ -226,6 +226,10 @@ export const buscarAgendamentoParaChat = async (
 
     return { data, error: null };
   } catch (error) {
+    console.error("Erro ao buscar agendamento:", error);
+    return { data: null, error: error as Error };
+  }
+};
 
 // Buscar agendamento existente pelo telefone (últimos 8 dígitos)
 export interface AgendamentoMatch {
