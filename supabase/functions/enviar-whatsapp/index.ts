@@ -155,7 +155,7 @@ serve(async (req: Request): Promise<Response> => {
 
     // 4. Handle response
     if (response.ok) {
-      let data;
+      let data: any;
       try {
         data = JSON.parse(responseText);
       } catch {
@@ -163,9 +163,22 @@ serve(async (req: Request): Promise<Response> => {
       }
 
       console.log("[enviar-whatsapp] ✓ Mensagem enviada com sucesso");
+
+      // Registro universal — sucesso
+      await registrarMensagemWhatsapp(supabase, {
+        telefone,
+        direcao: "OUT",
+        conteudo: mensagem,
+        tipo_mensagem: (tipo_mensagem as any) ?? "manual",
+        agendamento_id: agendamento_id ?? null,
+        status_envio: "enviado",
+        mensagem_externa_id: data?.key?.id ?? null,
+        payload: data ?? null,
+      });
+
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           data,
           elapsed: `${elapsed}ms`,
         }),
@@ -177,6 +190,17 @@ serve(async (req: Request): Promise<Response> => {
     const errorInfo = categorizeError(responseText, response.status);
     console.error("[enviar-whatsapp] ✗ Erro:", errorInfo.code);
 
+    // Registro universal — erro
+    await registrarMensagemWhatsapp(supabase, {
+      telefone,
+      direcao: "OUT",
+      conteudo: mensagem,
+      tipo_mensagem: (tipo_mensagem as any) ?? "manual",
+      agendamento_id: agendamento_id ?? null,
+      status_envio: "erro",
+      error_message: `[${errorInfo.code}] ${errorInfo.message} · ${responseText.slice(0, 300)}`,
+    });
+
     return new Response(
       JSON.stringify({
         success: false,
@@ -184,9 +208,9 @@ serve(async (req: Request): Promise<Response> => {
         userMessage: errorInfo.message,
         elapsed: `${elapsed}ms`,
       }),
-      { 
-        status: response.status >= 400 && response.status < 500 ? 400 : 500, 
-        headers: { "Content-Type": "application/json", ...corsHeaders } 
+      {
+        status: response.status >= 400 && response.status < 500 ? 400 : 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders }
       }
     );
 
