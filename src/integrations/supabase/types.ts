@@ -838,6 +838,27 @@ export type Database = {
         }
         Relationships: []
       }
+      lgpd_rate_limit: {
+        Row: {
+          acao: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mensagens_whatsapp: {
         Row: {
           agendamento_id: string | null
@@ -1271,6 +1292,11 @@ export type Database = {
       }
     }
     Functions: {
+      apagar_dados_paciente: {
+        Args: { p_confirmar?: boolean; p_telefone: string }
+        Returns: Json
+      }
+      aplicar_retencao_lgpd: { Args: never; Returns: Json }
       buscar_agendamento_por_telefone: {
         Args: { p_telefone: string }
         Returns: {
@@ -1334,6 +1360,7 @@ export type Database = {
       }
       encrypt_sensitive_data: { Args: { plain_text: string }; Returns: string }
       encrypt_totp_secret: { Args: { plain_secret: string }; Returns: string }
+      exportar_dados_paciente: { Args: { p_telefone: string }; Returns: Json }
       get_observacoes_decrypted: {
         Args: { agendamento_id: string }
         Returns: string
@@ -1356,6 +1383,14 @@ export type Database = {
           data_agendamento: string
           hora_agendamento: string
         }[]
+      }
+      lgpd_check_rate_limit: {
+        Args: { p_acao: string; p_limite?: number }
+        Returns: undefined
+      }
+      lgpd_log: {
+        Args: { p_acao: string; p_detalhes: Json; p_telefone: string }
+        Returns: undefined
       }
       listar_crm_audit: {
         Args: {
@@ -1435,7 +1470,11 @@ export type Database = {
         }
         Returns: undefined
       }
+      mask_email: { Args: { p_email: string }; Returns: string }
+      mask_nome: { Args: { p_nome: string }; Returns: string }
+      mask_telefone: { Args: { p_tel: string }; Returns: string }
       normalizar_telefone: { Args: { p_telefone: string }; Returns: string }
+      preview_dados_paciente: { Args: { p_telefone: string }; Returns: Json }
       registrar_bot_log: {
         Args: {
           p_acao: string
