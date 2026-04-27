@@ -24,6 +24,7 @@ import AdminAvaliacoes from "./pages/admin/Avaliacoes";
 import AdminLembretes from "./pages/admin/Lembretes";
 import AdminConfiguracoesEvolution from "./pages/admin/ConfiguracoesEvolution";
 import AdminAuditoriaTracking from "./pages/admin/AuditoriaTracking";
+import AdminLogs from "./pages/admin/Logs";
 import RouteChangeTracker from "./components/RouteChangeTracker";
 
 const queryClient = new QueryClient();
