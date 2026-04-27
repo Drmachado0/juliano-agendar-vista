@@ -65,7 +65,7 @@ const KanbanCard = ({
     <TooltipProvider delayDuration={200}>
     <div
       className={cn(
-        "bg-card border border-border rounded-lg p-2.5 space-y-1.5 shadow-sm transition-all cursor-grab active:cursor-grabbing border-l-4 text-xs",
+        "bg-card border border-border rounded-lg p-2 sm:p-2.5 space-y-1 sm:space-y-1.5 shadow-sm transition-all cursor-grab active:cursor-grabbing border-l-4 text-[11px] sm:text-xs",
         urgenciaColor,
         isDragging && "shadow-lg ring-2 ring-primary/50 opacity-90",
         atendido && "opacity-70",
