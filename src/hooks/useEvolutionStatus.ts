@@ -54,7 +54,7 @@ export function useEvolutionStatus(autoCheck = true, intervalMs = 30000) {
   }, []);
 
   // Execute a connection management action
-  const executeAction = useCallback(async (action: "check" | "restart" | "connect" | "reconnect"): Promise<ConnectionActionResult> => {
+  const executeAction = useCallback(async (action: "check" | "restart" | "connect" | "reconnect" | "logout"): Promise<ConnectionActionResult> => {
     setActionLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("gerenciar-conexao-evolution", {
