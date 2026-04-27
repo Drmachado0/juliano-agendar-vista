@@ -101,6 +101,9 @@ export interface Agendamento {
   confirmation_sent_at: string | null;
   confirmation_response_at: string | null;
   confirmation_channel: string | null;
+  // Sandbox / contatos de teste
+  is_sandbox: boolean;
+  sandbox_reason: string | null;
 }
 
 export interface AgendamentoInsert {
