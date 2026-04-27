@@ -135,6 +135,7 @@ export interface AgendamentoFilters {
   localAtendimento?: string;
   statusCrm?: string;
   busca?: string;
+  sandbox?: "reais" | "todos" | "somente_testes"; // default reais
 }
 
 // Determine CRM status based on location
