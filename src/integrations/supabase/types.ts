@@ -686,6 +686,7 @@ export type Database = {
       }
       hermes_drafts: {
         Row: {
+          acoes_sugeridas: Json | null
           agendamento_id: string | null
           conteudo_final: string | null
           contexto_resumo: Json | null
@@ -699,11 +700,13 @@ export type Database = {
           status: string
           sugestao: string
           telefone: string | null
+          tipo_origem: string
           updated_at: string
           used_at: string | null
           used_by: string | null
         }
         Insert: {
+          acoes_sugeridas?: Json | null
           agendamento_id?: string | null
           conteudo_final?: string | null
           contexto_resumo?: Json | null
@@ -717,11 +720,13 @@ export type Database = {
           status?: string
           sugestao: string
           telefone?: string | null
+          tipo_origem?: string
           updated_at?: string
           used_at?: string | null
           used_by?: string | null
         }
         Update: {
+          acoes_sugeridas?: Json | null
           agendamento_id?: string | null
           conteudo_final?: string | null
           contexto_resumo?: Json | null
@@ -735,6 +740,7 @@ export type Database = {
           status?: string
           sugestao?: string
           telefone?: string | null
+          tipo_origem?: string
           updated_at?: string
           used_at?: string | null
           used_by?: string | null
