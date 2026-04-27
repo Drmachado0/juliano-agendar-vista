@@ -1,4 +1,4 @@
-// Hermes — Sugerir resposta contextual + persistir draft em hermes_drafts
+// Hermes — Sugerir resposta contextual + ações + persistir draft em hermes_drafts
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -29,9 +29,21 @@ interface Body {
   telefone?: string | null;
   mensagens?: MensagemHistorico[];
   instrucao?: string | null;
+  tipo_origem?: string | null; // 'manual' | 'auto_escalacao'
 }
 
 const MODEL = "openai/gpt-5-mini";
+
+const STATUS_VALIDOS = [
+  "NOVO LEAD",
+  "AGUARDANDO HUMANO",
+  "AGUARDANDO",
+  "CLINICOR",
+  "HGP",
+  "BELÉM",
+  "ATENDIDO",
+  "PERDIDO",
+];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -52,8 +64,8 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as Body;
     const ag = body.agendamento ?? null;
     const msgs = (body.mensagens ?? []).slice(-30);
+    const tipo_origem = body.tipo_origem ?? "manual";
 
-    // Identifica usuário (admin) a partir do JWT (se presente)
     let userId: string | null = null;
     const authHeader = req.headers.get("authorization");
     if (authHeader?.startsWith("Bearer ")) {
@@ -86,15 +98,12 @@ Deno.serve(async (req) => {
       ? msgs.map((m) => `${m.direcao === "IN" ? "Paciente" : "Clínica"}: ${m.conteudo}`).join("\n")
       : "(sem mensagens anteriores)";
 
-    const systemPrompt = `Você é o Hermes, secretária virtual da clínica do Dr. Juliano Machado (oftalmologista em Paragominas/Belém).
-Sua tarefa é sugerir UMA mensagem curta de resposta ao paciente, no tom da clínica:
-- Cordial, profissional, em português brasileiro
-- Até 3 frases curtas (máx ~280 caracteres)
-- Sem assinatura "Atenciosamente" nem nome do atendente
-- Use no máximo 1 emoji discreto se fizer sentido (✨, 😊, 👋)
-- Nunca invente data/hora/preço/convênio que não estejam no contexto
-- Se o paciente pediu algo que requer confirmação humana, peça gentilmente os dados que faltam
-- Responda APENAS com o texto da mensagem sugerida — sem aspas, sem prefixos, sem explicações`;
+    const systemPrompt = `Você é o Hermes, copiloto da secretária da clínica do Dr. Juliano Machado (oftalmologista em Paragominas/Belém).
+Sua tarefa é gerar:
+1) Uma mensagem curta (até 3 frases, máx ~280 caracteres) para a secretária ENVIAR ao paciente — cordial, profissional, em PT-BR, no máximo 1 emoji discreto, sem assinatura.
+2) Um resumo de 1 frase do que o paciente quer.
+3) Lista de ações sugeridas no CRM (ex.: mover status, agendar follow-up). Use apenas os tipos definidos.
+NUNCA invente data/hora/preço/convênio que não estejam no contexto.`;
 
     const userPrompt = `Contexto do agendamento:
 ${contexto}
@@ -102,7 +111,7 @@ ${contexto}
 Histórico recente da conversa (mais antigo → mais recente):
 ${historico}
 
-${body.instrucao ? `Instrução do atendente: ${body.instrucao}\n` : ""}Sugira a próxima resposta da clínica ao paciente.`;
+${body.instrucao ? `Instrução do atendente: ${body.instrucao}\n` : ""}Gere sugestão e ações.`;
 
     const t0 = Date.now();
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -117,6 +126,52 @@ ${body.instrucao ? `Instrução do atendente: ${body.instrucao}\n` : ""}Sugira a
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "sugerir",
+              description: "Sugere resposta para o paciente + ações no CRM.",
+              parameters: {
+                type: "object",
+                properties: {
+                  sugestao: { type: "string", description: "Mensagem pronta para enviar ao paciente." },
+                  resumo: { type: "string", description: "Resumo curto do que o paciente quer." },
+                  acoes: {
+                    type: "array",
+                    description: "Lista de 0 a 3 ações sugeridas para o atendente executar.",
+                    items: {
+                      type: "object",
+                      properties: {
+                        tipo: {
+                          type: "string",
+                          enum: [
+                            "mover_status_crm",
+                            "marcar_atendido",
+                            "agendar_followup",
+                            "marcar_perdido",
+                            "nenhuma",
+                          ],
+                        },
+                        status_destino: {
+                          type: "string",
+                          enum: STATUS_VALIDOS,
+                          description: "Quando tipo=mover_status_crm, status para onde mover.",
+                        },
+                        descricao: { type: "string", description: "Frase curta explicando a ação." },
+                      },
+                      required: ["tipo", "descricao"],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+                required: ["sugestao", "resumo", "acoes"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "sugerir" } },
       }),
     });
     const latencia_ms = Date.now() - t0;
@@ -125,7 +180,6 @@ ${body.instrucao ? `Instrução do atendente: ${body.instrucao}\n` : ""}Sugira a
       const txt = await resp.text();
       console.error("Lovable AI error:", resp.status, txt);
 
-      // Persiste erro também
       await admin.from("hermes_drafts").insert({
         agendamento_id: body.agendamento_id ?? null,
         telefone: body.telefone ?? null,
@@ -134,6 +188,7 @@ ${body.instrucao ? `Instrução do atendente: ${body.instrucao}\n` : ""}Sugira a
         modelo: MODEL,
         latencia_ms,
         status: "error",
+        tipo_origem,
         created_by: userId,
         contexto_resumo: { erro: txt.slice(0, 500), http_status: resp.status, total_msgs: msgs.length },
       });
@@ -157,9 +212,24 @@ ${body.instrucao ? `Instrução do atendente: ${body.instrucao}\n` : ""}Sugira a
     }
 
     const data = await resp.json();
-    const sugestao: string = data?.choices?.[0]?.message?.content?.trim() ?? "";
+    const toolArgs = data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    let sugestao = "";
+    let resumo = "";
+    let acoes: any[] = [];
+    if (toolArgs) {
+      try {
+        const parsed = JSON.parse(toolArgs);
+        sugestao = String(parsed.sugestao ?? "").trim();
+        resumo = String(parsed.resumo ?? "").trim();
+        acoes = Array.isArray(parsed.acoes) ? parsed.acoes : [];
+      } catch (e) {
+        console.error("Erro parse tool args:", e);
+      }
+    }
+    if (!sugestao) {
+      sugestao = (data?.choices?.[0]?.message?.content ?? "").trim();
+    }
 
-    // Persiste o draft
     let draft_id: string | null = null;
     try {
       const { data: inserted } = await admin
@@ -172,12 +242,15 @@ ${body.instrucao ? `Instrução do atendente: ${body.instrucao}\n` : ""}Sugira a
           modelo: MODEL,
           latencia_ms,
           status: "pending",
+          tipo_origem,
+          acoes_sugeridas: acoes,
           created_by: userId,
           contexto_resumo: {
             total_msgs: msgs.length,
             tem_agendamento: !!ag,
             is_sandbox: ag?.is_sandbox ?? false,
             status_crm: ag?.status_crm ?? null,
+            resumo,
           },
         })
         .select("id")
@@ -187,7 +260,7 @@ ${body.instrucao ? `Instrução do atendente: ${body.instrucao}\n` : ""}Sugira a
       console.error("Falha ao persistir draft Hermes:", e);
     }
 
-    return new Response(JSON.stringify({ sugestao, draft_id, latencia_ms }), {
+    return new Response(JSON.stringify({ sugestao, resumo, acoes, draft_id, latencia_ms }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
