@@ -28,6 +28,7 @@ import AdminLogs from "./pages/admin/Logs";
 import AdminHermes from "./pages/admin/Hermes";
 import AdminLGPD from "./pages/admin/LGPD";
 import AdminRelatorios from "./pages/admin/Relatorios";
+import AdminMonitorEnvios from "./pages/admin/MonitorEnvios";
 import RouteChangeTracker from "./components/RouteChangeTracker";
 
 const queryClient = new QueryClient();
