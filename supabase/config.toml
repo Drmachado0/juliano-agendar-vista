@@ -90,3 +90,6 @@ verify_jwt = false
 [functions.converter-lead-agendamento]
 verify_jwt = false
 
+[functions.hermes-whatsapp-webhook]
+verify_jwt = false
+
