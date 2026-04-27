@@ -27,6 +27,7 @@ const KanbanColumn = ({
   onViewDetails,
   onSendWhatsApp,
   onTriggerAutomation,
+  onToggleSandbox,
   onDragStart,
   onDragOver,
   onDrop,
