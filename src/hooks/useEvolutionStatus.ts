@@ -127,6 +127,7 @@ export function useEvolutionStatus(autoCheck = true, intervalMs = 30000) {
     reiniciar,
     conectar,
     reconectar,
+    desconectar,
     executeAction,
   };
 }
