@@ -97,6 +97,18 @@ const ConfiguracoesEvolution = () => {
     }
   };
 
+  const handleDesconectar = async () => {
+    toast.loading("Desconectando WhatsApp...", { id: "logout" });
+    const result = await desconectar();
+    toast.dismiss("logout");
+
+    if (result.success) {
+      toast.success("WhatsApp desconectado. A instância está offline.");
+    } else {
+      toast.error(result.error || "Erro ao desconectar");
+    }
+  };
+
   const getStatusDisplay = () => {
     if (loading && !status) {
       return {
