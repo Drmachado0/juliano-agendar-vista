@@ -11,6 +11,7 @@ interface KanbanColumnProps {
   onViewDetails: (agendamento: Agendamento) => void;
   onSendWhatsApp: (agendamento: Agendamento) => void;
   onTriggerAutomation: (agendamento: Agendamento) => void;
+  onToggleSandbox?: (agendamento: Agendamento) => void;
   onDragStart: (e: React.DragEvent, agendamento: Agendamento) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent, status: string) => void;
