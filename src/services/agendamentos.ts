@@ -501,3 +501,21 @@ export async function atualizarAgendamento(
 
   return { error: null };
 }
+
+// Marca/desmarca um agendamento como sandbox (teste). Auditoria é registrada no servidor.
+export async function marcarSandbox(
+  id: string,
+  isSandbox: boolean,
+  reason?: string | null
+): Promise<{ error: Error | null }> {
+  const { error } = await (supabase as any).rpc('set_agendamento_sandbox', {
+    p_agendamento_id: id,
+    p_is_sandbox: isSandbox,
+    p_reason: reason ?? null,
+  });
+  if (error) {
+    console.error('Erro ao alterar sandbox:', error);
+    return { error: new Error(error.message) };
+  }
+  return { error: null };
+}
