@@ -1,13 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
-import { AlertCircle, CheckCircle2, Clock, RefreshCw, Send, XCircle } from "lucide-react";
+import { AlertCircle, Bell, BellOff, CheckCircle2, Clock, RefreshCw, Send, Settings, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -27,10 +31,71 @@ interface MensagemRow {
 
 const PAGE_SIZE = 50;
 
+interface AlertConfig {
+  enabled: boolean;
+  threshold: number;        // nº de falhas
+  windowMin: number;        // janela em minutos
+  browserNotif: boolean;
+  sound: boolean;
+}
+
+const DEFAULT_CONFIG: AlertConfig = {
+  enabled: true,
+  threshold: 3,
+  windowMin: 10,
+  browserNotif: true,
+  sound: true,
+};
+
+const STORAGE_KEY = "monitor-envios-alert-config";
+
+function loadConfig(): AlertConfig {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
+  } catch {}
+  return DEFAULT_CONFIG;
+}
+
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.type = "sine";
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0.15, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    o.start();
+    o.stop(ctx.currentTime + 0.4);
+  } catch {}
+}
+
 export default function MonitorEnvios() {
   const [loading, setLoading] = useState(true);
   const [mensagens, setMensagens] = useState<MensagemRow[]>([]);
   const [tab, setTab] = useState<"todos" | "erro" | "enviado" | "pendente">("erro");
+  const [config, setConfig] = useState<AlertConfig>(loadConfig);
+  const [showSettings, setShowSettings] = useState(false);
+  const [thresholdAlertActive, setThresholdAlertActive] = useState(false);
+
+  const seenErrorIdsRef = useRef<Set<string>>(new Set());
+  const initializedRef = useRef(false);
+  const lastThresholdToastRef = useRef<number>(0);
+
+  // Persist config
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); } catch {}
+  }, [config]);
+
+  // Request browser notification permission when enabled
+  useEffect(() => {
+    if (config.enabled && config.browserNotif && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, [config.enabled, config.browserNotif]);
 
   const carregar = async () => {
     setLoading(true);
@@ -77,6 +142,85 @@ export default function MonitorEnvios() {
     const taxa = total > 0 ? Math.round((enviados / total) * 100) : 0;
     return { enviados, erros, pendentes, total, taxa };
   }, [mensagens]);
+
+  // Erros dentro da janela configurada
+  const errosNaJanela = useMemo(() => {
+    const cutoff = Date.now() - config.windowMin * 60 * 1000;
+    return mensagens.filter(
+      m => m.status_envio === "erro" && new Date(m.created_at).getTime() >= cutoff
+    );
+  }, [mensagens, config.windowMin]);
+
+  // Detectar novos erros + disparar alertas
+  useEffect(() => {
+    const errorRows = mensagens.filter(m => m.status_envio === "erro");
+
+    // Primeira passagem: marcar como já vistos sem alertar
+    if (!initializedRef.current) {
+      errorRows.forEach(m => seenErrorIdsRef.current.add(m.id));
+      initializedRef.current = true;
+      return;
+    }
+
+    if (!config.enabled) return;
+
+    const novos = errorRows.filter(m => !seenErrorIdsRef.current.has(m.id));
+    novos.forEach(m => seenErrorIdsRef.current.add(m.id));
+
+    if (novos.length > 0) {
+      // Toast por novos erros
+      novos.slice(0, 3).forEach(n => {
+        const isSendFailed = (n.error_message ?? "").includes("SEND_FAILED") || (n.error_message ?? "").toLowerCase().includes("send_failed");
+        toast.error(
+          isSendFailed ? "SEND_FAILED no WhatsApp" : "Falha de envio WhatsApp",
+          {
+            description: `${n.telefone} · ${(n.error_message ?? "Sem detalhe").slice(0, 120)}`,
+            duration: 8000,
+          }
+        );
+      });
+      if (novos.length > 3) {
+        toast.error(`+${novos.length - 3} novas falhas registradas`);
+      }
+
+      if (config.sound) playBeep();
+      if (config.browserNotif && "Notification" in window && Notification.permission === "granted") {
+        try {
+          new Notification("Falhas de envio WhatsApp", {
+            body: `${novos.length} nova(s) falha(s) detectada(s).`,
+            icon: "/favicon.ico",
+            tag: "monitor-envios-falha",
+          });
+        } catch {}
+      }
+    }
+
+    // Threshold da janela
+    const overThreshold = errosNaJanela.length >= config.threshold;
+    setThresholdAlertActive(overThreshold);
+
+    if (overThreshold) {
+      const now = Date.now();
+      // dispara no máximo a cada 2 min
+      if (now - lastThresholdToastRef.current > 120000) {
+        lastThresholdToastRef.current = now;
+        toast.error("⚠️ Limite de falhas atingido", {
+          description: `${errosNaJanela.length} falhas em ${config.windowMin} min (limite: ${config.threshold}).`,
+          duration: 10000,
+        });
+        if (config.browserNotif && "Notification" in window && Notification.permission === "granted") {
+          try {
+            new Notification("⚠️ Limite de falhas WhatsApp", {
+              body: `${errosNaJanela.length} falhas nos últimos ${config.windowMin} min.`,
+              icon: "/favicon.ico",
+              tag: "monitor-envios-threshold",
+              requireInteraction: true,
+            });
+          } catch {}
+        }
+      }
+    }
+  }, [mensagens, config, errosNaJanela]);
 
   const filtradas = useMemo(() => {
     if (tab === "todos") return mensagens;
@@ -125,12 +269,87 @@ export default function MonitorEnvios() {
           </div>
           <div className="flex items-center gap-2">
             <EvolutionStatusBadge />
+            <Button
+              variant={config.enabled ? "default" : "outline"}
+              size="sm"
+              onClick={() => setConfig(c => ({ ...c, enabled: !c.enabled }))}
+              title={config.enabled ? "Alertas ativos" : "Alertas desativados"}
+            >
+              {config.enabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowSettings(s => !s)}>
+              <Settings className="h-4 w-4 mr-2" />Alertas
+            </Button>
             <Button variant="outline" size="sm" onClick={carregar} disabled={loading}>
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
               Atualizar
             </Button>
           </div>
         </div>
+
+        {/* Painel de configuração de alertas */}
+        {showSettings && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Settings className="h-4 w-4" />Configuração de alertas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="threshold">Limite de falhas</Label>
+                <Input
+                  id="threshold"
+                  type="number"
+                  min={1}
+                  value={config.threshold}
+                  onChange={(e) => setConfig(c => ({ ...c, threshold: Math.max(1, Number(e.target.value) || 1) }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="window">Janela (minutos)</Label>
+                <Input
+                  id="window"
+                  type="number"
+                  min={1}
+                  value={config.windowMin}
+                  onChange={(e) => setConfig(c => ({ ...c, windowMin: Math.max(1, Number(e.target.value) || 1) }))}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-2 rounded-md border p-3">
+                <Label htmlFor="notif" className="text-sm">Notificação do navegador</Label>
+                <Switch
+                  id="notif"
+                  checked={config.browserNotif}
+                  onCheckedChange={(v) => setConfig(c => ({ ...c, browserNotif: v }))}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-2 rounded-md border p-3">
+                <Label htmlFor="sound" className="text-sm">Som de alerta</Label>
+                <Switch
+                  id="sound"
+                  checked={config.sound}
+                  onCheckedChange={(v) => setConfig(c => ({ ...c, sound: v }))}
+                />
+              </div>
+              <div className="md:col-span-4 text-xs text-muted-foreground">
+                Será disparado um alerta quando houver <b>{config.threshold}+ falhas</b> em <b>{config.windowMin} min</b>. Cada nova falha individual também gera um toast.
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Banner de alerta de threshold */}
+        {thresholdAlertActive && config.enabled && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Limite de falhas ultrapassado</AlertTitle>
+            <AlertDescription>
+              {errosNaJanela.length} falhas registradas nos últimos {config.windowMin} minutos
+              (limite configurado: {config.threshold}). Verifique a conexão da Evolution API.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -142,9 +361,12 @@ export default function MonitorEnvios() {
             <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Enviados</CardTitle></CardHeader>
             <CardContent><div className="text-2xl font-bold text-emerald-600">{stats.enviados}</div><div className="text-xs text-muted-foreground">{stats.taxa}% sucesso</div></CardContent>
           </Card>
-          <Card>
+          <Card className={thresholdAlertActive ? "border-destructive" : ""}>
             <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Falhas</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold text-destructive">{stats.erros}</div></CardContent>
+            <CardContent>
+              <div className="text-2xl font-bold text-destructive">{stats.erros}</div>
+              <div className="text-xs text-muted-foreground">{errosNaJanela.length} em {config.windowMin}min</div>
+            </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Pendentes</CardTitle></CardHeader>
