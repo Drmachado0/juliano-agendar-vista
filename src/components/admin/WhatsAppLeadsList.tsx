@@ -138,6 +138,24 @@ const WhatsAppLeadsList = ({
             <SelectItem value="BELÉM">Belém</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Sandbox toggle */}
+        <div className="flex rounded-md border border-border overflow-hidden">
+          {sandboxOpcoes.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => setSandboxFilter(o.value)}
+              className={`flex-1 px-2 py-1.5 text-[11px] transition-colors ${
+                sandboxFilter === o.value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card hover:bg-muted text-muted-foreground"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Lead list */}
