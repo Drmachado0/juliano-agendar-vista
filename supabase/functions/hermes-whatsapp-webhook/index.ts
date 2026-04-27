@@ -1,17 +1,13 @@
 // Endpoint seguro para o Hermes Agent enviar eventos de WhatsApp normalizados.
-// Autentica via header X-Hermes-Secret. Não depende de sessão admin.
-// Não envia WhatsApp diretamente — apenas devolve `reply_text` para o Hermes enviar via Evolution.
+// Autentica via header X-Hermes-Secret. Não envia WhatsApp — apenas devolve `reply_text`.
+//
+// Estado da conversa persistido em `public.hermes_conversation_state` (TTL 30min).
 //
 // Resposta padrão:
-// {
-//   ok, lead_id, action ("reply" | "none"), reply_text, crm_status,
-//   intent, needs_human, appointment_created, appointment
-// }
-//
-// Modo sandbox: ativo se telefone terminar com 0174 OU se payload trouxer `sandbox: true`.
-// Em produção (sandbox=false), o bot apenas registra a mensagem e pede humano (não cria agendamento real).
+// { ok, lead_id, action, reply_text, crm_status, intent, needs_human,
+//   appointment_created, appointment, sandbox, deduped? , error? }
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { registrarMensagemWhatsapp } from "../_shared/registrarMensagem.ts";
 
@@ -41,10 +37,9 @@ const payloadSchema = z.object({
   raw_payload: z.record(z.any()).optional().nullable(),
   sandbox: z.boolean().optional(),
 });
-
 type Payload = z.infer<typeof payloadSchema>;
 
-// ----- Helpers de resposta padronizada -----
+// ----- Resposta padrão -----
 interface StdResponse {
   ok: boolean;
   lead_id?: string | null;
@@ -59,7 +54,6 @@ interface StdResponse {
   sandbox?: boolean;
   deduped?: boolean;
 }
-
 function jsonResp(body: StdResponse, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -116,44 +110,65 @@ function fmtDataBR(yyyyMmDd: string): string {
 }
 
 function crmStatusFromLocal(local: string): string {
-  if (local.toLowerCase().includes("clinicor")) return "CLINICOR";
-  if (local.toLowerCase().includes("hgp") || local.toLowerCase().includes("hospital geral")) return "HGP";
+  const l = (local || "").toLowerCase();
+  if (l.includes("clinicor")) return "CLINICOR";
+  if (l.includes("hgp") || l.includes("hospital geral")) return "HGP";
   return "AGENDADO";
 }
 
-// ----- Conversation state (in-memory por instância; suficiente para conversas curtas) -----
+// ----- Estado persistente -----
 interface ConvState {
-  last_intent: string;
+  phone: string;
+  lead_id: string | null;
+  last_intent: string | null;
+  awaiting: "escolha_periodo" | "escolha_horario" | null;
+  last_options: Array<{ n: number; data: string; periodo: string; local: string }> | null;
+  selected_data: string | null;
+  selected_periodo: string | null;
+  selected_local: string | null;
+  available_slots: string[] | null;
   ambiguous_count: number;
-  last_options?: Array<{ n: number; data: string; periodo: string; local: string }>;
-  awaiting?: "escolha_periodo" | "escolha_horario" | null;
-  selected_data?: string;
-  selected_periodo?: string;
-  selected_local?: string;
-  available_slots?: string[];
-  updated_at: number;
+  sandbox: boolean;
+  updated_at: string;
 }
-const convStore = new Map<string, ConvState>();
-const CONV_TTL_MS = 30 * 60 * 1000;
-function getState(phone: string): ConvState {
-  const k = normalizePhone(phone);
-  const s = convStore.get(k);
-  if (s && Date.now() - s.updated_at < CONV_TTL_MS) return s;
-  const fresh: ConvState = { last_intent: "", ambiguous_count: 0, updated_at: Date.now() };
-  convStore.set(k, fresh);
-  return fresh;
+
+const STATE_TTL_MIN = 30;
+
+async function loadState(supabase: SupabaseClient, phone: string): Promise<ConvState | null> {
+  const { data, error } = await supabase
+    .from("hermes_conversation_state")
+    .select("*")
+    .eq("phone", phone)
+    .maybeSingle();
+  if (error || !data) return null;
+  // TTL
+  const ageMin = (Date.now() - new Date(data.updated_at).getTime()) / 60000;
+  if (ageMin > STATE_TTL_MIN) return null;
+  return data as unknown as ConvState;
 }
-function saveState(phone: string, s: ConvState) {
-  s.updated_at = Date.now();
-  convStore.set(normalizePhone(phone), s);
+
+async function saveState(
+  supabase: SupabaseClient,
+  phone: string,
+  patch: Partial<Omit<ConvState, "phone" | "updated_at">>,
+) {
+  const row = {
+    phone,
+    ...patch,
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await supabase
+    .from("hermes_conversation_state")
+    .upsert(row, { onConflict: "phone" });
+  if (error) console.error("[hermes-webhook] saveState erro:", error.message);
 }
 
 // ----- Lead lookup / creation -----
 async function findOrCreateLead(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   phone: string,
   sandbox: boolean,
-): Promise<{ id: string; created: boolean; status_crm: string | null; status_funil: string | null }> {
+): Promise<{ id: string; created: boolean; status_crm: string | null }> {
   const norm = normalizePhone(phone);
   const l8 = last8(norm);
 
@@ -169,7 +184,6 @@ async function findOrCreateLead(
       id: existing[0].id as string,
       created: false,
       status_crm: (existing[0].status_crm as string) ?? null,
-      status_funil: (existing[0].status_funil as string) ?? null,
     };
   }
 
@@ -185,23 +199,20 @@ async function findOrCreateLead(
       status_crm: "NOVO LEAD",
       status_funil: "lead",
       is_sandbox: sandbox,
-      sandbox_reason: sandbox ? "Hermes webhook (telefone teste 0174 ou sandbox=true)" : null,
+      sandbox_reason: sandbox
+        ? "Hermes webhook (telefone teste 0174 ou sandbox=true)"
+        : null,
     })
-    .select("id, status_crm, status_funil")
+    .select("id, status_crm")
     .single();
 
   if (error) throw new Error(`Falha ao criar lead: ${error.message}`);
-  return {
-    id: created.id as string,
-    created: true,
-    status_crm: created.status_crm as string,
-    status_funil: created.status_funil as string,
-  };
+  return { id: created.id as string, created: true, status_crm: created.status_crm as string };
 }
 
-// ----- Auditoria CRM (origem Hermes/Evolution) -----
+// ----- Auditoria -----
 async function logHermes(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   agendamentoId: string | null,
   acao: string,
   intent: string,
@@ -219,9 +230,9 @@ async function logHermes(
   } catch (_) { /* best-effort */ }
 }
 
-// ----- Salvar mensagem OUT (resposta do bot) -----
+// ----- Salvar OUT -----
 async function salvarOutbound(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   phoneNorm: string,
   agendamentoId: string,
   texto: string,
@@ -230,15 +241,16 @@ async function salvarOutbound(
   await registrarMensagemWhatsapp(supabase, {
     telefone: phoneNorm,
     direcao: "OUT",
+    // tipo aceito pela RPC (validado server-side)
+    tipo_mensagem: "sistema",
     conteudo: texto,
-    tipo_mensagem: "resposta_automatica",
     agendamento_id: agendamentoId,
-    status_envio: "preparado_hermes",
-    payload: { source: "hermes-webhook", intent },
+    status_envio: "enviado",
+    payload: { source: "hermes-webhook", intent, status_envio_real: "preparado_hermes" },
   });
 }
 
-// ----- Disponibilidade (próximos N dias agrupados em opções) -----
+// ----- Disponibilidade agrupada -----
 async function buscarOpcoesAgrupadas(
   supabaseUrl: string,
   serviceKey: string,
@@ -251,7 +263,6 @@ async function buscarOpcoesAgrupadas(
       ano: hoje.getMonth() + 2 > 12 ? hoje.getFullYear() + 1 : hoje.getFullYear(),
     },
   ];
-
   const locais = ["Clinicor – Paragominas", "Hospital Geral de Paragominas"];
   const opcoes: Array<{ data: string; periodo: string; local: string }> = [];
 
@@ -262,8 +273,11 @@ async function buscarOpcoesAgrupadas(
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
         body: JSON.stringify({ mes: m.mes, ano: m.ano, local_atendimento: local }),
       });
-      if (!resp.ok) continue;
-      const json = await resp.json();
+      if (!resp.ok) {
+        await resp.text().catch(() => "");
+        continue;
+      }
+      const json = await resp.json().catch(() => ({}));
       const datas: Array<{ data: string }> = json?.datas_disponiveis ?? [];
       for (const d of datas.slice(0, 4)) {
         const r2 = await fetch(`${supabaseUrl}/functions/v1/listar-horarios-disponiveis`, {
@@ -271,11 +285,14 @@ async function buscarOpcoesAgrupadas(
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
           body: JSON.stringify({ data: d.data, local_atendimento: local }),
         });
-        if (!r2.ok) continue;
-        const j2 = await r2.json();
-        const horarios: string[] = (j2?.horarios_disponiveis ?? []).map((h: any) =>
-          typeof h === "string" ? h : h?.hora ?? "",
-        ).filter(Boolean);
+        if (!r2.ok) {
+          await r2.text().catch(() => "");
+          continue;
+        }
+        const j2 = await r2.json().catch(() => ({}));
+        const horarios: string[] = (j2?.horarios_disponiveis ?? [])
+          .map((h: any) => (typeof h === "string" ? h : h?.hora ?? ""))
+          .filter(Boolean);
         const periodos = new Set<string>();
         for (const h of horarios) periodos.add(periodoFromHora(h));
         for (const p of periodos) opcoes.push({ data: d.data, periodo: p, local });
@@ -308,21 +325,28 @@ async function buscarHorariosDoPeriodo(
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
     body: JSON.stringify({ data, local_atendimento: local }),
   });
-  if (!resp.ok) return [];
-  const j = await resp.json();
-  const horarios: string[] = (j?.horarios_disponiveis ?? []).map((h: any) =>
-    typeof h === "string" ? h : h?.hora ?? "",
-  ).filter(Boolean);
+  if (!resp.ok) {
+    await resp.text().catch(() => "");
+    return [];
+  }
+  const j = await resp.json().catch(() => ({}));
+  const horarios: string[] = (j?.horarios_disponiveis ?? [])
+    .map((h: any) => (typeof h === "string" ? h : h?.hora ?? ""))
+    .filter(Boolean);
   return horarios.filter((h) => periodoFromHora(h) === periodo);
 }
 
-// ----- Texto das respostas -----
-function montarTextoOpcoes(opcoes: Array<{ n: number; data: string; periodo: string; local: string }>): string {
+function montarTextoOpcoes(
+  opcoes: Array<{ n: number; data: string; periodo: string; local: string }>,
+): string {
   if (opcoes.length === 0) {
     return "No momento não tenho horários disponíveis. Vou te encaminhar para nossa equipe humana, ok? 🙏";
   }
   const linhas = opcoes.map(
-    (o) => `${o.n}) ${fmtDataBR(o.data).slice(0, 5)} — ${o.periodo} — ${o.local.includes("Clinicor") ? "Clinicor" : "HGP"}`,
+    (o) =>
+      `${o.n}) ${fmtDataBR(o.data).slice(0, 5)} — ${o.periodo} — ${
+        o.local.includes("Clinicor") ? "Clinicor" : "HGP"
+      }`,
   );
   return [
     "Tenho estas opções para sua consulta com o Dr. Juliano:",
@@ -333,11 +357,14 @@ function montarTextoOpcoes(opcoes: Array<{ n: number; data: string; periodo: str
   ].join("\n");
 }
 
-// ----- Handler principal -----
+// ----- Handler -----
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") {
-    return jsonResp({ ok: false, action: "none", reply_text: null, error: "Method not allowed" }, 405);
+    return jsonResp(
+      { ok: false, action: "none", reply_text: null, error: "Method not allowed" },
+      405,
+    );
   }
 
   // 1. Auth
@@ -345,20 +372,34 @@ Deno.serve(async (req: Request) => {
   const headerSecret = req.headers.get("x-hermes-secret");
   if (!expectedSecret) {
     console.error("[hermes-webhook] HERMES_WEBHOOK_SECRET não configurado");
-    return jsonResp({ ok: false, action: "none", reply_text: null, error: "Server misconfigured" }, 500);
+    return jsonResp(
+      { ok: false, action: "none", reply_text: null, error: "Server misconfigured" },
+      500,
+    );
   }
   if (!headerSecret || headerSecret !== expectedSecret) {
-    return jsonResp({ ok: false, action: "none", reply_text: null, error: "Unauthorized" }, 401);
+    return jsonResp(
+      { ok: false, action: "none", reply_text: null, error: "Unauthorized" },
+      401,
+    );
   }
 
   // 2. Parse + validate
   let raw: unknown;
-  try { raw = await req.json(); } catch {
-    return jsonResp({ ok: false, action: "none", reply_text: null, error: "Invalid JSON" }, 400);
+  try {
+    raw = await req.json();
+  } catch {
+    return jsonResp(
+      { ok: false, action: "none", reply_text: null, error: "Invalid JSON" },
+      400,
+    );
   }
   const parsed = payloadSchema.safeParse(raw);
   if (!parsed.success) {
-    return jsonResp({ ok: false, action: "none", reply_text: null, error: "Invalid payload" }, 400);
+    return jsonResp(
+      { ok: false, action: "none", reply_text: null, error: "Invalid payload" },
+      400,
+    );
   }
   const p: Payload = parsed.data;
 
@@ -383,7 +424,13 @@ Deno.serve(async (req: Request) => {
       .limit(1)
       .maybeSingle();
     if (dup) {
-      return jsonResp({ ok: true, action: "none", reply_text: null, deduped: true });
+      return jsonResp({
+        ok: true,
+        action: "none",
+        reply_text: null,
+        deduped: true,
+        sandbox,
+      });
     }
   }
 
@@ -392,15 +439,19 @@ Deno.serve(async (req: Request) => {
     const lead = await findOrCreateLead(supabase, phoneNorm, sandbox);
 
     // 6. Texto efetivo
-    const isMedia = ["audio", "image", "video", "document", "sticker", "media"].includes(p.message_type);
+    const isMedia = ["audio", "image", "video", "document", "sticker", "media"].includes(
+      p.message_type,
+    );
     const effectiveText = (p.text || "").trim();
 
-    // 7. Salvar mensagem IN
+    // 7. Salvar IN
     const tipoMsg =
       p.message_type === "text"
         ? "recebida"
-        : (["audio", "image", "video", "document", "sticker", "reaction"] as const).includes(p.message_type as any)
-        ? (p.message_type as any)
+        : (["audio", "image", "video", "document", "sticker", "reaction"] as const).includes(
+            p.message_type as any,
+          )
+        ? (p.message_type as any === "document" ? "documento" : p.message_type as any === "reaction" ? "reacao" : p.message_type as any)
         : "recebida";
 
     await registrarMensagemWhatsapp(supabase, {
@@ -411,17 +462,28 @@ Deno.serve(async (req: Request) => {
       agendamento_id: lead.id,
       status_envio: "entregue",
       mensagem_externa_id: p.external_message_id ?? null,
-      payload: (p.raw_payload as Record<string, unknown>) ?? { event: p.event, instance: p.instance, source: "hermes" },
+      payload:
+        (p.raw_payload as Record<string, unknown>) ?? {
+          event: p.event,
+          instance: p.instance,
+          source: "hermes",
+        },
     });
 
-    // ----- Helper para responder + salvar OUT + log -----
+    // Helper: enviar resposta + salvar OUT + log + retorno padrão
     const replyAndLog = async (
       reply: string,
       intent: string,
       extras: Partial<StdResponse> = {},
     ) => {
       await salvarOutbound(supabase, phoneNorm, lead.id, reply, intent);
-      await logHermes(supabase, lead.id, "reply", intent, { sandbox, ...extras });
+      await logHermes(supabase, lead.id, "reply", intent, {
+        sandbox,
+        external_message_id: p.external_message_id ?? null,
+        needs_human: extras.needs_human ?? false,
+        appointment_created: extras.appointment_created ?? false,
+        crm_status: extras.crm_status ?? null,
+      });
       return jsonResp({
         ok: true,
         lead_id: lead.id,
@@ -446,7 +508,7 @@ Deno.serve(async (req: Request) => {
 
     // 9. Classificar
     const intent = classifyIntent(effectiveText);
-    const state = getState(phoneNorm);
+    const state = (await loadState(supabase, phoneNorm)) ?? null;
 
     // 10. Urgência
     if (intent === "urgencia") {
@@ -454,7 +516,13 @@ Deno.serve(async (req: Request) => {
         .from("agendamentos")
         .update({ status_crm: "URGENTE", bot_ativo: false })
         .eq("id", lead.id);
-      saveState(phoneNorm, { ...state, last_intent: intent, ambiguous_count: 0 });
+      await saveState(supabase, phoneNorm, {
+        lead_id: lead.id,
+        last_intent: intent,
+        ambiguous_count: 0,
+        awaiting: null,
+        sandbox,
+      });
       return replyAndLog(
         "Entendi que é uma situação urgente 🙏 Por segurança, *não posso avaliar sintomas por aqui*. Estou chamando agora nossa equipe humana para te orientar. Se houver perda súbita de visão, dor intensa ou trauma ocular, procure imediatamente o pronto-socorro oftalmológico mais próximo.",
         "urgencia",
@@ -464,7 +532,10 @@ Deno.serve(async (req: Request) => {
 
     // 11. Pedido de humano
     if (intent === "humano") {
-      await supabase.from("agendamentos").update({ status_crm: "PRECISA_DE_HUMANO", bot_ativo: false }).eq("id", lead.id);
+      await supabase
+        .from("agendamentos")
+        .update({ status_crm: "PRECISA_DE_HUMANO", bot_ativo: false })
+        .eq("id", lead.id);
       return replyAndLog(
         "Claro! Vou te transferir para nossa equipe humana agora mesmo. Aguarde só um instante 🙏",
         "humano",
@@ -472,44 +543,89 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 12. Cancelar / remarcar / confirmar prévio / endereço / convênio
-    if (["cancelar", "remarcar", "confirmar_agendamento", "endereco", "convenio_valor"].includes(intent)) {
+    // 12. cancelar / remarcar / confirmar prévio / endereço / convênio
+    if (
+      ["cancelar", "remarcar", "confirmar_agendamento", "endereco", "convenio_valor"].includes(
+        intent,
+      )
+    ) {
       const replies: Record<string, string> = {
-        cancelar: "Sem problema, vou pedir para nossa equipe te ajudar com o cancelamento. Em instantes alguém te chama por aqui 🙏",
-        remarcar: "Posso te ajudar a remarcar! Vou te passar para nossa equipe que vai sugerir novos horários disponíveis 🙏",
-        confirmar_agendamento: "Perfeito! Vou registrar sua confirmação e nossa equipe te confirma os detalhes finais em instantes ✅",
-        endereco: "Nossos endereços:\n• *Clinicor* — Av. Pres. Vargas, 760, Centro, Paragominas\n• *HGP* — Hospital Geral de Paragominas\n\nQuer que eu te ajude a agendar?",
-        convenio_valor: "Atendemos *Particular*, *Bradesco*, *Unimed*, *Cassi* e *Sul América*. Para valores e convênios específicos, vou te passar para nossa equipe 🙏",
+        cancelar:
+          "Sem problema, vou pedir para nossa equipe te ajudar com o cancelamento. Em instantes alguém te chama por aqui 🙏",
+        remarcar:
+          "Posso te ajudar a remarcar! Vou te passar para nossa equipe que vai sugerir novos horários disponíveis 🙏",
+        confirmar_agendamento:
+          "Perfeito! Vou registrar sua confirmação e nossa equipe te confirma os detalhes finais em instantes ✅",
+        endereco:
+          "Nossos endereços:\n• *Clinicor* — Av. Pres. Vargas, 760, Centro, Paragominas\n• *HGP* — Hospital Geral de Paragominas\n\nQuer que eu te ajude a agendar?",
+        convenio_valor:
+          "Atendemos *Particular*, *Bradesco*, *Unimed*, *Cassi* e *Sul América*. Para valores e convênios específicos, vou te passar para nossa equipe 🙏",
       };
       const needsHuman = intent !== "endereco";
       let crmStatus = lead.status_crm ?? "NOVO LEAD";
       if (needsHuman) {
         crmStatus = "PRECISA_DE_HUMANO";
-        await supabase.from("agendamentos").update({ status_crm: crmStatus, bot_ativo: false }).eq("id", lead.id);
+        await supabase
+          .from("agendamentos")
+          .update({ status_crm: crmStatus, bot_ativo: false })
+          .eq("id", lead.id);
       }
-      return replyAndLog(replies[intent], intent, { needs_human: needsHuman, crm_status: crmStatus });
+      return replyAndLog(replies[intent], intent, {
+        needs_human: needsHuman,
+        crm_status: crmStatus,
+      });
     }
 
     // 13. Escolha numérica de opção previamente enviada
-    if (intent === "escolha_opcao" && state.last_options && state.last_options.length > 0 && state.awaiting === "escolha_periodo") {
+    if (
+      intent === "escolha_opcao" &&
+      state &&
+      state.last_options &&
+      state.last_options.length > 0 &&
+      state.awaiting === "escolha_periodo"
+    ) {
       const num = parseInt(effectiveText, 10);
       const escolhida = state.last_options.find((o) => o.n === num);
       if (!escolhida) {
-        return replyAndLog(`Não encontrei a opção ${num}. Pode me dizer o número que aparece antes do horário? 😊`, "opcao_invalida");
+        return replyAndLog(
+          `Não encontrei a opção ${num}. Pode me dizer o número que aparece antes do horário? 😊`,
+          "opcao_invalida",
+        );
       }
 
-      const horarios = await buscarHorariosDoPeriodo(supabaseUrl, serviceKey, escolhida.data, escolhida.local, escolhida.periodo);
-
-      // Em produção (não-sandbox), por segurança não criamos agendamento real automaticamente
+      // Em produção: trava humana
       if (!sandbox) {
-        await supabase.from("agendamentos").update({ status_crm: "PRECISA_DE_HUMANO" }).eq("id", lead.id);
+        await supabase
+          .from("agendamentos")
+          .update({ status_crm: "PRECISA_DE_HUMANO" })
+          .eq("id", lead.id);
+        await saveState(supabase, phoneNorm, {
+          lead_id: lead.id,
+          last_intent: "escolha_opcao",
+          ambiguous_count: 0,
+          awaiting: null,
+          selected_data: escolhida.data,
+          selected_periodo: escolhida.periodo,
+          selected_local: escolhida.local,
+          sandbox,
+        });
         return replyAndLog(
-          `Anotado! ${fmtDataBR(escolhida.data)} no período da ${escolhida.periodo} no ${escolhida.local.includes("Clinicor") ? "Clinicor" : "HGP"}. Vou pedir para nossa equipe finalizar e te confirmar o horário exato 🙏`,
+          `Anotado! ${fmtDataBR(escolhida.data)} no período da ${escolhida.periodo} no ${
+            escolhida.local.includes("Clinicor") ? "Clinicor" : "HGP"
+          }. Vou pedir para nossa equipe finalizar e te confirmar o horário exato 🙏`,
           "agendamento_pendente_humano",
           { needs_human: true, crm_status: "PRECISA_DE_HUMANO" },
         );
       }
 
+      // Sandbox: cria no primeiro horário livre do período
+      const horarios = await buscarHorariosDoPeriodo(
+        supabaseUrl,
+        serviceKey,
+        escolhida.data,
+        escolhida.local,
+        escolhida.periodo,
+      );
       if (horarios.length === 0) {
         return replyAndLog(
           "Esse período acabou de ficar lotado 😕 Vou te passar para nossa equipe escolher outra data com você.",
@@ -518,23 +634,31 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Sandbox: cria automaticamente no primeiro horário livre
       const horarioEscolhido = horarios[0].slice(0, 5);
-      const convResp = await fetch(`${supabaseUrl}/functions/v1/converter-lead-agendamento`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
-        body: JSON.stringify({
-          lead_id: lead.id,
-          data_agendamento: escolhida.data,
-          hora_agendamento: horarioEscolhido,
-          local_atendimento: escolhida.local,
-          aceita_primeiro_horario: true,
-          aceita_contato_whatsapp_email: true,
-        }),
-      });
-      const convJson = await convResp.json().catch(() => ({}));
+      const convResp = await fetch(
+        `${supabaseUrl}/functions/v1/converter-lead-agendamento`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({
+            lead_id: lead.id,
+            data_agendamento: escolhida.data,
+            hora_agendamento: horarioEscolhido,
+            local_atendimento: escolhida.local,
+            aceita_primeiro_horario: true,
+            aceita_contato_whatsapp_email: true,
+          }),
+        },
+      );
+      const convText = await convResp.text();
+      let convJson: any = {};
+      try { convJson = JSON.parse(convText); } catch { /* */ }
 
       if (!convResp.ok || convJson?.error) {
+        console.error("[hermes-webhook] converter-lead falhou:", convResp.status, convText);
         return replyAndLog(
           "Tive um probleminha para confirmar esse horário 😕 Vou te passar para nossa equipe finalizar o agendamento.",
           "agendamento_falhou",
@@ -548,7 +672,18 @@ Deno.serve(async (req: Request) => {
         .update({ status_crm: novoStatus, status_funil: "agendado" })
         .eq("id", lead.id);
 
-      saveState(phoneNorm, { last_intent: "agendado", ambiguous_count: 0, awaiting: null, updated_at: Date.now() });
+      await saveState(supabase, phoneNorm, {
+        lead_id: lead.id,
+        last_intent: "agendado",
+        ambiguous_count: 0,
+        awaiting: null,
+        last_options: null,
+        selected_data: escolhida.data,
+        selected_periodo: escolhida.periodo,
+        selected_local: escolhida.local,
+        available_slots: null,
+        sandbox,
+      });
 
       return replyAndLog(
         [
@@ -564,7 +699,11 @@ Deno.serve(async (req: Request) => {
           needs_human: false,
           appointment_created: true,
           crm_status: novoStatus,
-          appointment: { date: escolhida.data, time: horarioEscolhido, location: escolhida.local },
+          appointment: {
+            date: escolhida.data,
+            time: horarioEscolhido,
+            location: escolhida.local,
+          },
         },
       );
     }
@@ -572,25 +711,44 @@ Deno.serve(async (req: Request) => {
     // 14. Agendar / saudação → mostrar opções
     if (intent === "agendar_consulta" || intent === "saudacao") {
       const opcoes = await buscarOpcoesAgrupadas(supabaseUrl, serviceKey);
-      saveState(phoneNorm, {
-        ...state,
+      await saveState(supabase, phoneNorm, {
+        lead_id: lead.id,
         last_intent: "agendar_consulta",
         ambiguous_count: 0,
         awaiting: "escolha_periodo",
         last_options: opcoes,
+        sandbox,
       });
-      const greeting = intent === "saudacao"
-        ? "Olá! Sou a assistente do Dr. Juliano Machado, oftalmologista 👋\n\n"
-        : "";
-      await supabase.from("agendamentos").update({ status_crm: "AGUARDANDO" }).eq("id", lead.id);
-      return replyAndLog(greeting + montarTextoOpcoes(opcoes), "agendar_consulta", { crm_status: "AGUARDANDO" });
+      const greeting =
+        intent === "saudacao"
+          ? "Olá! Sou a assistente do Dr. Juliano Machado, oftalmologista 👋\n\n"
+          : "";
+      await supabase
+        .from("agendamentos")
+        .update({ status_crm: "AGUARDANDO" })
+        .eq("id", lead.id);
+      return replyAndLog(
+        greeting + montarTextoOpcoes(opcoes),
+        "agendar_consulta",
+        { crm_status: "AGUARDANDO" },
+      );
     }
 
     // 15. Ambíguo
-    const ambig = (state.ambiguous_count ?? 0) + 1;
-    saveState(phoneNorm, { ...state, last_intent: "ambiguo", ambiguous_count: ambig });
+    const ambig = (state?.ambiguous_count ?? 0) + 1;
+    await saveState(supabase, phoneNorm, {
+      lead_id: lead.id,
+      last_intent: "ambiguo",
+      ambiguous_count: ambig,
+      awaiting: state?.awaiting ?? null,
+      last_options: state?.last_options ?? null,
+      sandbox,
+    });
     if (ambig >= 3) {
-      await supabase.from("agendamentos").update({ status_crm: "PRECISA_DE_HUMANO", bot_ativo: false }).eq("id", lead.id);
+      await supabase
+        .from("agendamentos")
+        .update({ status_crm: "PRECISA_DE_HUMANO", bot_ativo: false })
+        .eq("id", lead.id);
       return replyAndLog(
         "Acho melhor nossa equipe humana te atender pra entender direitinho 🙏 Já estou chamando alguém aqui.",
         "ambiguo",
@@ -604,11 +762,14 @@ Deno.serve(async (req: Request) => {
     );
   } catch (err) {
     console.error("[hermes-webhook] erro:", err);
-    return jsonResp({
-      ok: false,
-      action: "none",
-      reply_text: null,
-      error: err instanceof Error ? err.message : String(err),
-    }, 500);
+    return jsonResp(
+      {
+        ok: false,
+        action: "none",
+        reply_text: null,
+        error: err instanceof Error ? err.message : String(err),
+      },
+      500,
+    );
   }
 });
