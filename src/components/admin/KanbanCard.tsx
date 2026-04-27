@@ -266,6 +266,25 @@ const KanbanCard = ({
           >
             <Zap className="h-4 w-4" />
           </Button>
+          {onToggleSandbox && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "h-8 w-8 p-0",
+                agendamento.is_sandbox
+                  ? "text-orange-700 hover:text-orange-800 hover:bg-orange-100"
+                  : "text-muted-foreground hover:text-orange-600 hover:bg-orange-50"
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSandbox(agendamento);
+              }}
+              title={agendamento.is_sandbox ? "Remover marcação de teste" : "Marcar como teste"}
+            >
+              <FlaskConical className="h-4 w-4" />
+            </Button>
+          )}
         </div>
         <Button
           variant="ghost"
