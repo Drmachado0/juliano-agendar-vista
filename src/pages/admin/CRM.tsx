@@ -537,7 +537,7 @@ const AdminCRM = () => {
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
           </div>
         ) : (
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          <div className="flex gap-3 overflow-x-auto pb-4 kanban-scroll">
             {columns.map((column) => (
               <div
                 key={column.status}

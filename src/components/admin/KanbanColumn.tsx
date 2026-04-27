@@ -37,7 +37,7 @@ const KanbanColumn = ({
   return (
     <div
       className={cn(
-        "flex-1 min-w-[320px] bg-muted/30 rounded-xl p-4 transition-colors",
+        "w-[260px] shrink-0 bg-muted/30 rounded-xl p-3 transition-colors",
         isDragOver && "bg-primary/10 ring-2 ring-primary/30"
       )}
       onDragOver={onDragOver}
