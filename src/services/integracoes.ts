@@ -307,6 +307,42 @@ export async function gerarMensagemConfirmacaoIA(
   }
 }
 
+// Hermes — sugerir resposta contextual usando histórico da conversa
+export async function sugerirRespostaHermes(params: {
+  agendamento: Partial<Agendamento> & { is_sandbox?: boolean | null; status_funil?: string | null };
+  mensagens: Array<{ direcao: "IN" | "OUT"; conteudo: string; created_at?: string }>;
+  instrucao?: string | null;
+}): Promise<{ sugestao: string | null; error: string | null }> {
+  try {
+    const { data, error } = await supabase.functions.invoke("hermes-sugerir-resposta", {
+      body: {
+        agendamento: {
+          nome_completo: params.agendamento.nome_completo,
+          tipo_atendimento: params.agendamento.tipo_atendimento,
+          local_atendimento: params.agendamento.local_atendimento,
+          data_agendamento: params.agendamento.data_agendamento,
+          hora_agendamento: params.agendamento.hora_agendamento,
+          convenio: params.agendamento.convenio,
+          status_crm: (params.agendamento as any).status_crm,
+          status_funil: params.agendamento.status_funil,
+          is_sandbox: params.agendamento.is_sandbox,
+        },
+        mensagens: params.mensagens,
+        instrucao: params.instrucao ?? null,
+      },
+    });
+
+    if (error) {
+      console.error("Erro Hermes:", error);
+      return { sugestao: null, error: error.message };
+    }
+    return { sugestao: data?.sugestao || null, error: null };
+  } catch (err: any) {
+    console.error("Erro Hermes:", err);
+    return { sugestao: null, error: err.message || "Erro desconhecido" };
+  }
+}
+
 // Generate default WhatsApp message (fallback)
 export function gerarMensagemPadrao(agendamento: Agendamento): string {
   if (!agendamento.data_agendamento || !agendamento.hora_agendamento) {

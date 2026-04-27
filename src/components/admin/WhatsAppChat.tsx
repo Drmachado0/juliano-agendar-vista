@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Sparkles, ArrowLeft, Phone, MapPin, Calendar } from "lucide-react";
+import { Send, Sparkles, ArrowLeft, Phone, MapPin, Calendar, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -16,7 +16,7 @@ import {
   marcarMensagensComoLidas,
   buscarAgendamentoParaChat,
 } from "@/services/mensagens";
-import { enviarMensagemWhatsApp, gerarMensagemConfirmacaoIA } from "@/services/integracoes";
+import { enviarMensagemWhatsApp, gerarMensagemConfirmacaoIA, sugerirRespostaHermes } from "@/services/integracoes";
 import WhatsAppMessageBubble from "./WhatsAppMessageBubble";
 
 interface WhatsAppChatProps {
@@ -32,6 +32,7 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
+  const [generatingHermes, setGeneratingHermes] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [agendamentoCompleto, setAgendamentoCompleto] = useState<any>(null);
 
@@ -138,6 +139,42 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
     }
     
     setGeneratingAI(false);
+  };
+
+  // Hermes — sugerir resposta com base no histórico
+  const handleHermes = async () => {
+    if (!lead) return;
+
+    setGeneratingHermes(true);
+    const { sugestao, error } = await sugerirRespostaHermes({
+      agendamento: {
+        ...(agendamentoCompleto || {}),
+        nome_completo: lead.nome_completo,
+        status_funil: (lead as any).status_funil,
+        is_sandbox: (lead as any).is_sandbox,
+      },
+      mensagens: messages.map((m) => ({
+        direcao: m.direcao,
+        conteudo: m.conteudo,
+        created_at: m.created_at,
+      })),
+    });
+
+    if (error || !sugestao) {
+      toast({
+        title: "Hermes não conseguiu sugerir",
+        description: error || "Tente novamente em instantes.",
+        variant: "destructive",
+      });
+    } else {
+      setNewMessage(sugestao);
+      toast({
+        title: "Sugestão pronta ✨",
+        description: "Revise antes de enviar.",
+      });
+    }
+
+    setGeneratingHermes(false);
   };
 
   // Send message
@@ -282,7 +319,7 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
 
       {/* Input */}
       <div className="p-4 border-t border-border bg-card">
-        <div className="flex gap-2 mb-2">
+        <div className="flex flex-wrap gap-2 mb-2">
           <Button
             variant="outline"
             size="sm"
@@ -292,6 +329,18 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
           >
             <Sparkles className={`h-4 w-4 ${generatingAI ? "animate-pulse" : ""}`} />
             {generatingAI ? "Gerando..." : "Gerar com IA"}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleHermes}
+            disabled={generatingHermes}
+            className="gap-2 border-primary/40 text-primary hover:bg-primary/10"
+            title="Hermes sugere uma resposta com base no histórico da conversa"
+          >
+            <Wand2 className={`h-4 w-4 ${generatingHermes ? "animate-pulse" : ""}`} />
+            {generatingHermes ? "Hermes pensando..." : "Hermes sugerir resposta"}
           </Button>
         </div>
         
