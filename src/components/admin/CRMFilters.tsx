@@ -128,6 +128,27 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
         )}
       </div>
 
+      {/* Sandbox toggle (linha separada para destaque) */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Label className="text-xs text-muted-foreground">Contatos:</Label>
+        <div className="flex rounded-md border border-border overflow-hidden">
+          {sandboxOpcoes.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => onChange({ ...filters, sandbox: o.value })}
+              className={`px-3 py-1.5 text-xs transition-colors ${
+                filters.sandbox === o.value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card hover:bg-muted text-muted-foreground"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
         {/* Busca */}
         <div className="lg:col-span-2 space-y-1.5">
