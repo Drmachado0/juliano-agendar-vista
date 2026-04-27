@@ -7,6 +7,7 @@ import { Search, X, Filter } from "lucide-react";
 
 export type CrmPeriodo = "todos" | "hoje" | "7dias" | "mes" | "atrasados" | "sem_data";
 export type CrmOrdenacao = "data_asc" | "data_desc" | "created_desc" | "created_asc";
+export type CrmSandboxFiltro = "reais" | "todos" | "somente_testes";
 
 export interface CrmFilters {
   busca: string;
@@ -15,12 +16,14 @@ export interface CrmFilters {
   convenio?: string;
   periodo: CrmPeriodo;
   ordenacao: CrmOrdenacao;
+  sandbox: CrmSandboxFiltro;
 }
 
 export const DEFAULT_CRM_FILTERS: CrmFilters = {
   busca: "",
   periodo: "todos",
   ordenacao: "data_asc",
+  sandbox: "reais",
 };
 
 interface CRMFiltersProps {
