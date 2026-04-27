@@ -1,74 +1,58 @@
+# Central de Logs do Sistema (`/admin/logs`)
 
-# Ordenação por data + filtros nos cards do CRM Kanban
+## Visão Geral
+Página administrativa única que consolida toda a observabilidade do site: erros de Edge Functions, ações no CRM, mensagens WhatsApp, acessos públicos e ações administrativas. Hoje os logs estão espalhados (Supabase Edge Logs, `crm_audit_log`, `mensagens_whatsapp`, `status_acesso_log`), o que dificulta diagnóstico rápido.
 
-## Objetivo
-Tornar a ordem padrão dos cards do CRM por **data da consulta (mais próxima primeiro)** e adicionar uma barra de filtros acima do Kanban.
+## 1. Banco — Nova tabela `system_logs`
+Campos: `id`, `level` (info/warn/error/critical), `category` (edge_function/agendamento/whatsapp/google_calendar/cron/admin_action/auth/frontend), `source` (nome da função/componente), `message`, `details jsonb`, `user_id`, `user_email`, `agendamento_id`, `request_id`, `created_at`.
 
-## Diagnóstico
-- `src/services/agendamentos.ts` (`listarAgendamentosPorStatus`) ordena por data **decrescente** (mais distante no topo) e usa `created_at` como fallback, misturando leads sem data no topo.
-- `src/pages/admin/CRM.tsx` exibe direto o que vem do service, sem filtros.
+Índices em `created_at desc`, `level`, `category`, `source`, `agendamento_id`.
+RLS: apenas admins fazem SELECT; INSERT só via service_role ou RPC SECURITY DEFINER.
 
-## Mudanças
+## 2. RPCs SECURITY DEFINER
+- `registrar_system_log(...)` — usado pelo frontend (ações administrativas).
+- `listar_system_logs(p_search, p_level, p_category, p_source, p_user_id, p_data_inicio, p_data_fim, p_limit)` — filtros server-side com checagem de role admin (mesmo padrão do `listar_crm_audit`).
 
-### 1. Nova ordenação padrão — `src/services/agendamentos.ts`
-Ajustar o `sort` em `listarAgendamentosPorStatus`:
-1. Cards **com `data_agendamento`** primeiro, em ordem **ascendente** (consulta mais próxima no topo).
-2. Empate → `hora_agendamento` ascendente.
-3. Cards **sem data** vão para o final, por `created_at` descendente.
+## 3. Helper compartilhado para Edge Functions
+`supabase/functions/_shared/systemLogger.ts` com `logSystem({ level, category, source, message, details, ... })` que insere via service_role em fire-and-forget.
 
-```ts
-grouped[key].sort((a, b) => {
-  const aTem = !!a.data_agendamento;
-  const bTem = !!b.data_agendamento;
-  if (aTem && !bTem) return -1;
-  if (!aTem && bTem) return 1;
-  if (aTem && bTem) {
-    const dt = a.data_agendamento!.localeCompare(b.data_agendamento!);
-    if (dt !== 0) return dt;
-    return (a.hora_agendamento || '').localeCompare(b.hora_agendamento || '');
-  }
-  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-});
-```
+Instrumentar pontos críticos:
+- `criar-agendamento`, `criar-lead`, `converter-lead-agendamento` — sucesso, erro Zod, conflito SLOT_TAKEN.
+- `enviar-whatsapp`, `enviar-whatsapp-queue`, `receber-whatsapp` — falhas Evolution, rate-limit, mensagens sem vínculo.
+- `enviar-boas-vindas-lead`, `lembrete-consulta-whatsapp` — execuções cron com contagens.
+- `notificar-n8n` — payloads inválidos, falhas HMAC.
+- `google-calendar-pull/sync` — falhas de token, contagens.
 
-### 2. Novo componente `src/components/admin/CRMFilters.tsx`
-Barra compacta com:
-- **Busca**: nome ou telefone (debounce 300ms).
-- **Local**: Todos / Clinicor / HGP / Belém (IOB-Vitria) / Hospital Geral.
-- **Tipo**: Todos / Consulta / Retorno / Exame / Cirurgia.
-- **Convênio**: Todos / Particular / Bradesco / Unimed / Cassi / Sul América / Outro.
-- **Período da consulta**: Todas / Hoje / Próximos 7 dias / Este mês / Atrasados / Sem data.
-- **Ordenação**: Data (mais próxima) ▼ / Data (mais distante) / Cadastro mais recente / Cadastro mais antigo.
-- Botão **Limpar filtros** + chip "X resultados".
+## 4. Service frontend (`src/services/systemLogs.ts`)
+- Type `LogEntry`, função `listarSystemLogs(filtros)`, `registrarLogAdmin(...)`, `exportarLogsCsv(entries)`.
 
-```ts
-interface CrmFilters {
-  busca: string;
-  local?: string;
-  tipo?: string;
-  convenio?: string;
-  periodo: 'todos' | 'hoje' | '7dias' | 'mes' | 'atrasados' | 'sem_data';
-  ordenacao: 'data_asc' | 'data_desc' | 'created_desc' | 'created_asc';
-}
-```
+## 5. Página `/admin/logs` com 4 abas
+- **(a) Sistema** — `system_logs` com filtros (nível, categoria, fonte, busca, período, usuário). Badges coloridos por severidade. Expand-row para ver `details` JSON.
+- **(b) CRM** — reaproveita `crm_audit_log` (mesma lógica do `AuditLogDrawer` em formato de tabela inline).
+- **(c) WhatsApp** — `mensagens_whatsapp` com filtros (direção IN/OUT, `status_envio`, busca por telefone, link para o agendamento).
+- **(d) Acessos públicos** — `status_acesso_log` (rastreio dos pacientes que abrem a página de status).
 
-### 3. Integração em `src/pages/admin/CRM.tsx`
-- `useState<CrmFilters>` com defaults `{ busca: '', periodo: 'todos', ordenacao: 'data_asc' }`.
-- Renderizar `<CRMFilters />` entre as estatísticas e o Kanban.
-- Aplicar filtros + ordenação no client via `useMemo` sobre `agendamentosPorStatus`, produzindo `agendamentosFiltrados` para os `KanbanColumn`.
-- Contadores do header e da coluna refletem o **resultado filtrado**, com total original no tooltip ("8 de 23").
-- Persistir filtros em `localStorage` (`crm:filters:v1`).
+Header com botões: **Atualizar**, **Auto-refresh (10s)**, **Exportar CSV**, toggle **"Ao vivo"** (Realtime).
 
-### 4. Ajuste opcional em `KanbanCard.tsx`
-Badge sutil "Atrasado" quando `data_agendamento < hoje` e status ≠ `ATENDIDO`, dando eco visual ao filtro "Atrasados".
+## 6. Realtime
+Habilitar Realtime na tabela `system_logs`. Subscrição ativa apenas quando "Ao vivo" estiver ligado, com prepend de novos logs no topo.
+
+## 7. Navegação
+- Adicionar item **"Logs do Sistema"** (ícone `ScrollText`) em `AdminLayout.tsx`.
+- Adicionar rota `/admin/logs` em `src/App.tsx`.
+- Manter `/admin/auditoria-tracking` separada (foco em pixels/tags de marketing).
+
+## 8. Retenção (limpeza automática)
+Cron pg_cron diário: deletar `info` > 30 dias e `warn/error/critical` > 90 dias.
+
+## 9. Validação
+1. Criar agendamento → entrada `info` em `criar-agendamento`.
+2. Forçar SLOT_TAKEN → entrada `warn`.
+3. Mover card no CRM → aparece na aba CRM.
+4. Falha de envio WhatsApp → `error` na aba Sistema + registro na aba WhatsApp.
+5. Toggle "Ao vivo" deve mostrar novos logs em tempo real.
 
 ## Arquivos
-- `src/services/agendamentos.ts` — ordenação padrão.
-- `src/components/admin/CRMFilters.tsx` — **novo**.
-- `src/pages/admin/CRM.tsx` — integração + memoização + persistência.
-- `src/components/admin/KanbanCard.tsx` — badge "Atrasado" (opcional).
+**Criar:** `supabase/migrations/[ts]_create_system_logs.sql`, `supabase/functions/_shared/systemLogger.ts`, `src/services/systemLogs.ts`, `src/pages/admin/Logs.tsx`, `src/components/admin/LogDetailsDrawer.tsx`.
 
-## Fora do escopo
-- Filtros por data de cadastro.
-- Persistência server-side dos filtros.
-- Filtro por coluna de status (o Kanban já é essa visão).
+**Editar:** `src/App.tsx`, `src/components/admin/AdminLayout.tsx`, e instrumentar as Edge Functions principais (`criar-agendamento`, `criar-lead`, `converter-lead-agendamento`, `enviar-boas-vindas-lead`, `enviar-whatsapp`, `receber-whatsapp`, `notificar-n8n`, `google-calendar-pull`, `lembrete-consulta-whatsapp`).
