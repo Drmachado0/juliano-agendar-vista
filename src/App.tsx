@@ -28,6 +28,7 @@ import AdminLogs from "./pages/admin/Logs";
 import AdminHermes from "./pages/admin/Hermes";
 import AdminLGPD from "./pages/admin/LGPD";
 import AdminRelatorios from "./pages/admin/Relatorios";
+import AdminMonitorEnvios from "./pages/admin/MonitorEnvios";
 import RouteChangeTracker from "./components/RouteChangeTracker";
 
 const queryClient = new QueryClient();
@@ -65,6 +66,7 @@ const App = () => (
               <Route path="/admin/logs" element={<AdminLogs />} />
               <Route path="/admin/lgpd" element={<AdminLGPD />} />
               <Route path="/admin/relatorios" element={<AdminRelatorios />} />
+              <Route path="/admin/monitor-envios" element={<AdminMonitorEnvios />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

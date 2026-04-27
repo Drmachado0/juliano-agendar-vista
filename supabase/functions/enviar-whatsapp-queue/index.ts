@@ -1,5 +1,39 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+async function logEnvio(opts: {
+  telefone: string;
+  conteudo: string;
+  status: "enviado" | "erro";
+  campaign?: string;
+  errorMessage?: string;
+  externalId?: string | null;
+  payload?: any;
+}) {
+  try {
+    await supabaseAdmin.rpc("registrar_mensagem_whatsapp", {
+      p_telefone: opts.telefone,
+      p_direcao: "OUT",
+      p_conteudo: opts.conteudo,
+      p_tipo_mensagem: opts.campaign === "boas-vindas" ? "boas_vindas"
+        : opts.campaign === "lembrete-anual" ? "lembrete_anual"
+        : opts.campaign === "avaliacao" ? "avaliacao"
+        : opts.campaign === "lembrete-24h" ? "lembrete_24h"
+        : "manual",
+      p_status_envio: opts.status,
+      p_mensagem_externa_id: opts.externalId ?? null,
+      p_error_message: opts.errorMessage ?? null,
+      p_payload: opts.payload ?? null,
+    });
+  } catch (e) {
+    console.error("[enviar-whatsapp-queue] Falha ao gravar log:", e);
+  }
+}
 
 // CORS configuration
 const corsHeaders = {
@@ -115,12 +149,24 @@ serve(async (req: Request): Promise<Response> => {
         responseData = { raw: responseText };
       }
 
+      const externalId = responseData?.key?.id || responseData?.id || null;
       console.log("[enviar-whatsapp-queue] ✓ Mensagem enviada com sucesso");
+
+      // Persist success log (fire-and-forget)
+      logEnvio({
+        telefone: phoneFormatted,
+        conteudo: mensagem,
+        status: "enviado",
+        campaign,
+        externalId,
+        payload: { campaign, priority, elapsed_ms: elapsed },
+      });
+
       return new Response(
         JSON.stringify({ 
           success: true, 
           status: "sent",
-          messageId: responseData?.key?.id || responseData?.id || null,
+          messageId: externalId,
           elapsed: `${elapsed}ms`
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -136,13 +182,23 @@ serve(async (req: Request): Promise<Response> => {
     
     if (lowerResponse.includes('"exists":false') || lowerResponse.includes('"exists": false')) {
       userMessage = "Número não encontrado no WhatsApp";
-    } else if (lowerResponse.includes("not connected") || lowerResponse.includes("disconnected")) {
-      userMessage = "WhatsApp não conectado. Escaneie o QR Code.";
+    } else if (lowerResponse.includes("not connected") || lowerResponse.includes("disconnected") || lowerResponse.includes("connection closed")) {
+      userMessage = "WhatsApp desconectado. Escaneie o QR Code em /admin/configuracoes/evolution.";
     } else if (evolutionResponse.status === 401) {
       userMessage = "Erro de autenticação com Evolution API";
     } else if (evolutionResponse.status === 404) {
       userMessage = "Instância do WhatsApp não encontrada";
     }
+
+    // Persist failure log (fire-and-forget)
+    logEnvio({
+      telefone: phoneFormatted,
+      conteudo: mensagem,
+      status: "erro",
+      campaign,
+      errorMessage: `[${evolutionResponse.status}] ${userMessage} · ${responseText.substring(0, 300)}`,
+      payload: { campaign, priority, http_status: evolutionResponse.status, elapsed_ms: elapsed, raw: responseText.substring(0, 500) },
+    });
 
     return new Response(
       JSON.stringify({ 
