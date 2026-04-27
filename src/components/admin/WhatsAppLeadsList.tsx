@@ -18,6 +18,7 @@ interface WhatsAppLeadsListProps {
   selectedLeadId: string | null;
   onSelectLead: (lead: LeadComMensagens) => void;
   onLeadsUpdate?: (leads: LeadComMensagens[]) => void;
+  onLeadCreated?: (agendamentoId: string) => void;
 }
 
 const sandboxOpcoes: { value: SandboxFiltro; label: string }[] = [
