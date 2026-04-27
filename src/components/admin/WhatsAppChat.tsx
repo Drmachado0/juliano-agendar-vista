@@ -36,6 +36,7 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
   const [generatingHermes, setGeneratingHermes] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [agendamentoCompleto, setAgendamentoCompleto] = useState<any>(null);
+  const [ultimaIntencao, setUltimaIntencao] = useState<ConversationIntent | null>(null);
   // Hermes draft tracking
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [draftSugestao, setDraftSugestao] = useState<string | null>(null);
