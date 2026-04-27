@@ -689,11 +689,16 @@ export type Database = {
           ambiguous_count: number
           available_slots: Json | null
           awaiting: string | null
+          convenio: string | null
           created_at: string
+          data_nascimento: string | null
           id: string
           last_intent: string | null
           last_options: Json | null
           lead_id: string | null
+          nome_completo: string | null
+          payment_type: string | null
+          pending_confirmation: boolean
           phone: string
           sandbox: boolean
           selected_data: string | null
@@ -705,11 +710,16 @@ export type Database = {
           ambiguous_count?: number
           available_slots?: Json | null
           awaiting?: string | null
+          convenio?: string | null
           created_at?: string
+          data_nascimento?: string | null
           id?: string
           last_intent?: string | null
           last_options?: Json | null
           lead_id?: string | null
+          nome_completo?: string | null
+          payment_type?: string | null
+          pending_confirmation?: boolean
           phone: string
           sandbox?: boolean
           selected_data?: string | null
@@ -721,11 +731,16 @@ export type Database = {
           ambiguous_count?: number
           available_slots?: Json | null
           awaiting?: string | null
+          convenio?: string | null
           created_at?: string
+          data_nascimento?: string | null
           id?: string
           last_intent?: string | null
           last_options?: Json | null
           lead_id?: string | null
+          nome_completo?: string | null
+          payment_type?: string | null
+          pending_confirmation?: boolean
           phone?: string
           sandbox?: boolean
           selected_data?: string | null
