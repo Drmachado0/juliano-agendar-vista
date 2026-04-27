@@ -26,6 +26,7 @@ const INTENCOES = [
 ] as const;
 
 const INTENCOES_BOT = new Set(["agendar", "remarcar"]);
+const INTENCOES_SENSIVEIS = new Set(["cancelar", "urgencia"]);
 
 interface ReqBody {
   telefone: string;
@@ -248,6 +249,68 @@ function fmtDataBR(iso: string) {
   return `${dias[dt.getDay()]} ${d}/${m}`;
 }
 
+// Move/cria lead na fila "Precisa de humano"
+async function escalarParaHumano(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    telefone: string;
+    agendamentoId: string | null;
+    agendamento: any;
+    motivo: string;
+    intencao: string;
+    detalhes?: Record<string, unknown>;
+  },
+): Promise<string | null> {
+  const { telefone, agendamentoId, agendamento, motivo, intencao, detalhes } = params;
+  let id = agendamentoId;
+  const obs = `[BOT] Escalado para humano · motivo: ${motivo} · intenção: ${intencao}`;
+
+  if (id) {
+    // Não rebaixar se já está em coluna avançada
+    const statusAtual = agendamento?.status_crm;
+    const protegidos = new Set(["CLINICOR", "HGP", "BELÉM", "ATENDIDO"]);
+    if (!protegidos.has(statusAtual)) {
+      await supabase
+        .from("agendamentos")
+        .update({
+          status_crm: "AGUARDANDO HUMANO",
+          status_funil: "aguardando_humano",
+          bot_ultima_acao_at: new Date().toISOString(),
+          observacoes_internas: obs,
+        })
+        .eq("id", id);
+    }
+  } else {
+    const { data: novo } = await supabase
+      .from("agendamentos")
+      .insert({
+        nome_completo: agendamento?.nome_completo || "Lead WhatsApp",
+        telefone_whatsapp: telefone,
+        tipo_atendimento: "Consulta",
+        local_atendimento: "A definir",
+        convenio: "Particular",
+        origem: "bot_whatsapp",
+        status_crm: "AGUARDANDO HUMANO",
+        status_funil: "aguardando_humano",
+        bot_ultima_acao_at: new Date().toISOString(),
+        observacoes_internas: obs,
+      })
+      .select("id")
+      .single();
+    id = novo?.id ?? null;
+  }
+
+  await supabase.rpc("registrar_bot_log", {
+    p_telefone: telefone,
+    p_acao: "escalou_humano",
+    p_agendamento_id: id,
+    p_intencao: intencao,
+    p_detalhes: { motivo, ...(detalhes ?? {}) },
+  });
+
+  return id;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   const t0 = Date.now();
@@ -339,14 +402,44 @@ serve(async (req) => {
       p_latencia_ms: Date.now() - t0,
     });
 
-    // 2) Decidir se bot age
-    if (!botAtivo || !INTENCOES_BOT.has(intencao.intencao) || intencao.confianca < 0.6) {
+    // 2) Decidir se bot age — escalar p/ humano em casos sensíveis ou de baixa confiança
+    if (botAtivo && INTENCOES_SENSIVEIS.has(intencao.intencao)) {
+      await escalarParaHumano(supabase, {
+        telefone: body.telefone,
+        agendamentoId: body.agendamento_id ?? null,
+        agendamento,
+        motivo: "intencao_sensivel",
+        intencao: intencao.intencao,
+        detalhes: { confianca: intencao.confianca, resumo: intencao.resumo },
+      });
+      return new Response(
+        JSON.stringify({ ok: true, intencao, agiu: false, escalado: "intencao_sensivel" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    if (botAtivo && (intencao.intencao === "outros" || intencao.confianca < 0.6)) {
+      await escalarParaHumano(supabase, {
+        telefone: body.telefone,
+        agendamentoId: body.agendamento_id ?? null,
+        agendamento,
+        motivo: "bot_nao_entendeu",
+        intencao: intencao.intencao,
+        detalhes: { confianca: intencao.confianca, resumo: intencao.resumo },
+      });
+      return new Response(
+        JSON.stringify({ ok: true, intencao, agiu: false, escalado: "bot_nao_entendeu" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    if (!botAtivo || !INTENCOES_BOT.has(intencao.intencao)) {
       await supabase.rpc("registrar_bot_log", {
         p_telefone: body.telefone,
         p_acao: "ignorou",
         p_agendamento_id: body.agendamento_id ?? null,
         p_intencao: intencao.intencao,
-        p_detalhes: { motivo: !botAtivo ? "bot_desligado" : "intencao_ou_confianca" },
+        p_detalhes: { motivo: !botAtivo ? "bot_desligado" : "intencao_fora_escopo" },
       });
       return new Response(
         JSON.stringify({ ok: true, intencao, agiu: false }),
@@ -362,15 +455,15 @@ serve(async (req) => {
       const fallback =
         "Olá! Recebi sua solicitação de agendamento 😊\nNo momento não consegui localizar horários livres por aqui — nossa equipe vai te responder em instantes para encontrar a melhor data.";
       await sendWhatsappText(body.telefone, fallback);
-      await supabase.rpc("registrar_bot_log", {
-        p_telefone: body.telefone,
-        p_acao: "enviou_horarios",
-        p_agendamento_id: body.agendamento_id ?? null,
-        p_intencao: intencao.intencao,
-        p_detalhes: { fallback: true },
+      const idEscalado = await escalarParaHumano(supabase, {
+        telefone: body.telefone,
+        agendamentoId: body.agendamento_id ?? null,
+        agendamento,
+        motivo: "sem_slots",
+        intencao: intencao.intencao,
       });
       return new Response(
-        JSON.stringify({ ok: true, intencao, agiu: true, fallback: true }),
+        JSON.stringify({ ok: true, intencao, agiu: true, fallback: true, escalado: "sem_slots", agendamentoId: idEscalado }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
