@@ -288,12 +288,12 @@ const ConfiguracoesEvolution = () => {
                   </p>
                   <Button variant="link" className="px-0 h-auto" asChild>
                     <a 
-                      href="https://drmachado-evolution.cloudfy.live" 
+                      href="https://secretaria-evolution.cloudfy.live" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="flex items-center gap-1"
                     >
-                      drmachado-evolution.cloudfy.live
+                      secretaria-evolution.cloudfy.live
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   </Button>

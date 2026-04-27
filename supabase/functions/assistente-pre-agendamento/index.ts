@@ -46,7 +46,7 @@ function normalizePhoneBR(raw: string): string {
 
 async function sendWhatsappText(phone: string, text: string) {
   const baseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
-  const instance = Deno.env.get("EVOLUTION_API_INSTANCE") || "Agente ia";
+  const instance = Deno.env.get("EVOLUTION_API_INSTANCE");
   const token = Deno.env.get("EVOLUTION_API_TOKEN");
   if (!baseUrl || !token) return { success: false, error: "Evolution API não configurada" };
 

@@ -13,7 +13,7 @@ serve(async (req: Request) => {
   try {
     const baseUrl = Deno.env.get("EVOLUTION_API_BASE_URL")?.replace(/\/$/, "");
     const token = Deno.env.get("EVOLUTION_API_TOKEN");
-    const instance = Deno.env.get("EVOLUTION_API_INSTANCE") || "Agente ia";
+    const instance = Deno.env.get("EVOLUTION_API_INSTANCE");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
 
     if (!baseUrl || !token || !supabaseUrl) {

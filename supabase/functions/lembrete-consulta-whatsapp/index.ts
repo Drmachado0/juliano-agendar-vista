@@ -42,7 +42,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const evolutionApiUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
     const evolutionApiToken = Deno.env.get("EVOLUTION_API_TOKEN");
-    const evolutionInstance = Deno.env.get("EVOLUTION_API_INSTANCE") || "Agente ia";
+    const evolutionInstance = Deno.env.get("EVOLUTION_API_INSTANCE");
 
     if (!evolutionApiUrl || !evolutionApiToken) {
       console.error("[lembrete-consulta] Configuração da Evolution API ausente");
