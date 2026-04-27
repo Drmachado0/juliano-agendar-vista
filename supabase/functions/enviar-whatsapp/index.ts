@@ -13,6 +13,8 @@ const corsHeaders = {
 const whatsAppRequestSchema = z.object({
   telefone: z.string().min(10).max(15).regex(/^[\d\s\-\(\)\+]+$/),
   mensagem: z.string().min(1).max(4096),
+  agendamento_id: z.string().uuid().optional().nullable(),
+  tipo_mensagem: z.string().optional(),
 });
 
 type WhatsAppRequest = z.infer<typeof whatsAppRequestSchema>;
