@@ -838,6 +838,48 @@ export type Database = {
         }
         Relationships: []
       }
+      system_logs: {
+        Row: {
+          agendamento_id: string | null
+          category: string
+          created_at: string
+          details: Json | null
+          id: string
+          level: string
+          message: string
+          request_id: string | null
+          source: string
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          agendamento_id?: string | null
+          category: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          level: string
+          message: string
+          request_id?: string | null
+          source: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          agendamento_id?: string | null
+          category?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          level?: string
+          message?: string
+          request_id?: string | null
+          source?: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       templates_whatsapp: {
         Row: {
           ativo: boolean | null
@@ -1115,6 +1157,31 @@ export type Database = {
           local: string
         }[]
       }
+      listar_system_logs: {
+        Args: {
+          p_category?: string
+          p_data_fim?: string
+          p_data_inicio?: string
+          p_level?: string
+          p_limit?: number
+          p_search?: string
+          p_source?: string
+          p_user_id?: string
+        }
+        Returns: {
+          agendamento_id: string
+          category: string
+          created_at: string
+          details: Json
+          id: string
+          level: string
+          message: string
+          request_id: string
+          source: string
+          user_email: string
+          user_id: string
+        }[]
+      }
       normalizar_telefone: { Args: { p_telefone: string }; Returns: string }
       registrar_crm_audit: {
         Args: {
@@ -1138,6 +1205,18 @@ export type Database = {
           p_tipo_mensagem?: string
         }
         Returns: undefined
+      }
+      registrar_system_log: {
+        Args: {
+          p_agendamento_id?: string
+          p_category: string
+          p_details?: Json
+          p_level: string
+          p_message: string
+          p_request_id?: string
+          p_source: string
+        }
+        Returns: string
       }
       setup_totp: {
         Args: { p_backup_codes: string; p_secret: string; p_user_id: string }
