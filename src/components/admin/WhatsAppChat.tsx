@@ -17,6 +17,7 @@ import {
   buscarAgendamentoParaChat,
 } from "@/services/mensagens";
 import { enviarMensagemWhatsApp, gerarMensagemConfirmacaoIA, sugerirRespostaHermes } from "@/services/integracoes";
+import { marcarHermesDraftStatus } from "@/services/hermesDrafts";
 import WhatsAppMessageBubble from "./WhatsAppMessageBubble";
 
 interface WhatsAppChatProps {
@@ -35,6 +36,9 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
   const [generatingHermes, setGeneratingHermes] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [agendamentoCompleto, setAgendamentoCompleto] = useState<any>(null);
+  // Hermes draft tracking
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
+  const [draftSugestao, setDraftSugestao] = useState<string | null>(null);
 
   // Scroll to bottom
   const scrollToBottom = () => {
@@ -145,8 +149,15 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
   const handleHermes = async () => {
     if (!lead) return;
 
+    // Se já havia draft pendente não usado, marca como descartado
+    if (activeDraftId) {
+      marcarHermesDraftStatus({ draft_id: activeDraftId, status: "discarded" }).catch(() => {});
+    }
+
     setGeneratingHermes(true);
-    const { sugestao, error } = await sugerirRespostaHermes({
+    const { sugestao, draft_id, error } = await sugerirRespostaHermes({
+      agendamento_id: lead.agendamento_id,
+      telefone: lead.telefone_whatsapp,
       agendamento: {
         ...(agendamentoCompleto || {}),
         nome_completo: lead.nome_completo,
@@ -166,8 +177,12 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
         description: error || "Tente novamente em instantes.",
         variant: "destructive",
       });
+      setActiveDraftId(null);
+      setDraftSugestao(null);
     } else {
       setNewMessage(sugestao);
+      setActiveDraftId(draft_id);
+      setDraftSugestao(sugestao);
       toast({
         title: "Sugestão pronta ✨",
         description: "Revise antes de enviar.",
@@ -202,6 +217,19 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
 
       if (savedMessage) {
         setMessages((prev) => [...prev, savedMessage]);
+      }
+
+      // Marca o draft Hermes (se houver) como sent ou edited
+      if (activeDraftId) {
+        const status = draftSugestao && draftSugestao.trim() === messageContent ? "sent" : "edited";
+        marcarHermesDraftStatus({
+          draft_id: activeDraftId,
+          status,
+          conteudo_final: messageContent,
+          mensagem_id: savedMessage?.id ?? null,
+        }).catch(() => {});
+        setActiveDraftId(null);
+        setDraftSugestao(null);
       }
 
       setNewMessage("");
