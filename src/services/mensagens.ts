@@ -281,7 +281,3 @@ export const criarLeadManualWhatsApp = async (params: {
     return { id: null, error: error as Error };
   }
 };
-    console.error("Erro ao buscar agendamento:", error);
-    return { data: null, error: error as Error };
-  }
-};
