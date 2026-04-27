@@ -426,6 +426,7 @@ const handler = async (req: Request): Promise<Response> => {
         telefone: telefoneParaSalvar,
         direcao: "IN",
         conteudo: conteudo,
+        tipo_mensagem: "recebida",
         status_envio: null, // null for incoming messages
         mensagem_externa_id: mensagemExternaId,
         lida: false,
