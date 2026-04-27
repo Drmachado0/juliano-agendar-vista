@@ -89,6 +89,40 @@ async function restartInstance(
   }
 }
 
+// Logout instance (disconnect WhatsApp session without deleting instance)
+async function logoutInstance(
+  baseUrl: string,
+  instanceName: string,
+  apiKey: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    console.log(`[gerenciar-conexao] Desconectando instância ${instanceName}...`);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const response = await fetch(`${baseUrl}/instance/logout/${instanceName}`, {
+      method: "DELETE",
+      headers: { "apikey": apiKey },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    const text = await response.text();
+    console.log(`[gerenciar-conexao] Logout response (${response.status}):`, text);
+
+    if (!response.ok) {
+      return { success: false, error: text };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("[gerenciar-conexao] Erro ao desconectar:", err.message);
+    return { success: false, error: err.message };
+  }
+}
+
 // Connect instance (generate QR or reconnect)
 async function connectInstance(
   baseUrl: string,
