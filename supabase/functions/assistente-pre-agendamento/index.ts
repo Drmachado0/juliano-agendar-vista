@@ -249,6 +249,68 @@ function fmtDataBR(iso: string) {
   return `${dias[dt.getDay()]} ${d}/${m}`;
 }
 
+// Move/cria lead na fila "Precisa de humano"
+async function escalarParaHumano(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    telefone: string;
+    agendamentoId: string | null;
+    agendamento: any;
+    motivo: string;
+    intencao: string;
+    detalhes?: Record<string, unknown>;
+  },
+): Promise<string | null> {
+  const { telefone, agendamentoId, agendamento, motivo, intencao, detalhes } = params;
+  let id = agendamentoId;
+  const obs = `[BOT] Escalado para humano · motivo: ${motivo} · intenção: ${intencao}`;
+
+  if (id) {
+    // Não rebaixar se já está em coluna avançada
+    const statusAtual = agendamento?.status_crm;
+    const protegidos = new Set(["CLINICOR", "HGP", "BELÉM", "ATENDIDO"]);
+    if (!protegidos.has(statusAtual)) {
+      await supabase
+        .from("agendamentos")
+        .update({
+          status_crm: "AGUARDANDO HUMANO",
+          status_funil: "aguardando_humano",
+          bot_ultima_acao_at: new Date().toISOString(),
+          observacoes_internas: obs,
+        })
+        .eq("id", id);
+    }
+  } else {
+    const { data: novo } = await supabase
+      .from("agendamentos")
+      .insert({
+        nome_completo: agendamento?.nome_completo || "Lead WhatsApp",
+        telefone_whatsapp: telefone,
+        tipo_atendimento: "Consulta",
+        local_atendimento: "A definir",
+        convenio: "Particular",
+        origem: "bot_whatsapp",
+        status_crm: "AGUARDANDO HUMANO",
+        status_funil: "aguardando_humano",
+        bot_ultima_acao_at: new Date().toISOString(),
+        observacoes_internas: obs,
+      })
+      .select("id")
+      .single();
+    id = novo?.id ?? null;
+  }
+
+  await supabase.rpc("registrar_bot_log", {
+    p_telefone: telefone,
+    p_acao: "escalou_humano",
+    p_agendamento_id: id,
+    p_intencao: intencao,
+    p_detalhes: { motivo, ...(detalhes ?? {}) },
+  });
+
+  return id;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   const t0 = Date.now();
