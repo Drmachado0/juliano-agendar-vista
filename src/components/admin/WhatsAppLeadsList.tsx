@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, RefreshCw, MessageSquarePlus } from "lucide-react";
-import { LeadComMensagens, listarLeadsComMensagens } from "@/services/mensagens";
+import { LeadComMensagens, listarLeadsComMensagens, SandboxFiltro } from "@/services/mensagens";
 import WhatsAppLeadItem from "./WhatsAppLeadItem";
 import { Skeleton } from "@/components/ui/skeleton";
 import NovaMensagemWhatsAppModal from "./NovaMensagemWhatsAppModal";
@@ -20,6 +20,12 @@ interface WhatsAppLeadsListProps {
   onLeadsUpdate?: (leads: LeadComMensagens[]) => void;
 }
 
+const sandboxOpcoes: { value: SandboxFiltro; label: string }[] = [
+  { value: "reais", label: "Somente reais" },
+  { value: "todos", label: "Incluir testes" },
+  { value: "somente_testes", label: "Somente testes" },
+];
+
 const WhatsAppLeadsList = ({
   selectedLeadId,
   onSelectLead,
@@ -29,13 +35,15 @@ const WhatsAppLeadsList = ({
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("TODOS");
+  const [sandboxFilter, setSandboxFilter] = useState<SandboxFiltro>("reais");
   const [novaMensagemModalOpen, setNovaMensagemModalOpen] = useState(false);
 
   const fetchLeads = async () => {
     setLoading(true);
     const { data, error } = await listarLeadsComMensagens(
       statusFilter,
-      searchTerm || undefined
+      searchTerm || undefined,
+      sandboxFilter
     );
     
     if (!error && data) {
@@ -47,7 +55,7 @@ const WhatsAppLeadsList = ({
 
   useEffect(() => {
     fetchLeads();
-  }, [statusFilter]);
+  }, [statusFilter, sandboxFilter]);
 
   useEffect(() => {
     const debounce = setTimeout(() => {
@@ -130,6 +138,24 @@ const WhatsAppLeadsList = ({
             <SelectItem value="BELÉM">Belém</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Sandbox toggle */}
+        <div className="flex rounded-md border border-border overflow-hidden">
+          {sandboxOpcoes.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => setSandboxFilter(o.value)}
+              className={`flex-1 px-2 py-1.5 text-[11px] transition-colors ${
+                sandboxFilter === o.value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card hover:bg-muted text-muted-foreground"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Lead list */}

@@ -90,13 +90,21 @@ const WhatsAppLeadItem = ({ lead, isSelected, onClick }: WhatsAppLeadItemProps) 
           </span>
         </div>
         
-        <div className="flex items-center gap-2 mt-0.5">
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           <Badge
             variant="outline"
             className={cn("text-[10px] px-1.5 py-0", getStatusColor(lead.status_crm))}
           >
             {lead.status_crm}
           </Badge>
+          {lead.is_sandbox && (
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 bg-orange-500/10 text-orange-600 border-orange-500/30"
+            >
+              TESTE
+            </Badge>
+          )}
         </div>
 
         <p className="text-xs text-muted-foreground mt-1 truncate">

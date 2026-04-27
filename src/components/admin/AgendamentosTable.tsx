@@ -62,8 +62,21 @@ const AgendamentosTable = ({ agendamentos, onViewDetails, onSendWhatsApp, onEdit
           </TableHeader>
           <TableBody>
             {agendamentos.map((agendamento) => (
-              <TableRow key={agendamento.id} className="hover:bg-muted/30">
-                <TableCell className="font-medium">{agendamento.nome_completo}</TableCell>
+              <TableRow key={agendamento.id} className={cn("hover:bg-muted/30", agendamento.is_sandbox && "bg-orange-500/5")}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span>{agendamento.nome_completo}</span>
+                    {agendamento.is_sandbox && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0 bg-orange-500/10 text-orange-600 border-orange-500/30"
+                        title={agendamento.sandbox_reason || "Contato de teste/sandbox"}
+                      >
+                        TESTE
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
                     <Phone className="h-3 w-3 text-muted-foreground" />

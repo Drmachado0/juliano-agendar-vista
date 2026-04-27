@@ -30,7 +30,10 @@ export interface LeadComMensagens {
   ultima_mensagem: string | null;
   ultima_mensagem_data: string | null;
   mensagens_nao_lidas: number;
+  is_sandbox?: boolean;
 }
+
+export type SandboxFiltro = "reais" | "todos" | "somente_testes";
 
 // Helper to normalize phone numbers for comparison (get last 8 digits)
 const normalizePhone = (phone: string): string => {
@@ -85,19 +88,23 @@ export const listarMensagensPorAgendamento = async (
 // Listar leads com última mensagem e contagem de não lidas
 export const listarLeadsComMensagens = async (
   filtroStatus?: string,
-  termoBusca?: string
+  termoBusca?: string,
+  sandbox: SandboxFiltro = "reais"
 ): Promise<{ data: LeadComMensagens[]; error: Error | null }> => {
   try {
     // Buscar agendamentos com telefone preenchido
     let query = supabase
       .from("agendamentos")
-      .select("id, nome_completo, telefone_whatsapp, status_crm, local_atendimento")
+      .select("id, nome_completo, telefone_whatsapp, status_crm, local_atendimento, is_sandbox")
       .not("telefone_whatsapp", "is", null)
       .neq("telefone_whatsapp", "");
 
     if (filtroStatus && filtroStatus !== "TODOS") {
       query = query.eq("status_crm", filtroStatus);
     }
+
+    if (sandbox === "reais") query = query.eq("is_sandbox", false);
+    else if (sandbox === "somente_testes") query = query.eq("is_sandbox", true);
 
     if (termoBusca) {
       query = query.or(
@@ -125,7 +132,7 @@ export const listarLeadsComMensagens = async (
     if (mensagensError) throw mensagensError;
 
     // Mapear leads com suas mensagens
-    const leadsComMensagens: LeadComMensagens[] = agendamentos.map((agendamento) => {
+    const leadsComMensagens: LeadComMensagens[] = agendamentos.map((agendamento: any) => {
       const mensagensDoLead = (mensagens || []).filter(
         (m) => m.agendamento_id === agendamento.id
       );
@@ -141,6 +148,7 @@ export const listarLeadsComMensagens = async (
         telefone_whatsapp: agendamento.telefone_whatsapp,
         status_crm: agendamento.status_crm,
         local_atendimento: agendamento.local_atendimento,
+        is_sandbox: !!agendamento.is_sandbox,
         ultima_mensagem: ultimaMensagem?.conteudo || null,
         ultima_mensagem_data: ultimaMensagem?.created_at || null,
         mensagens_nao_lidas: mensagensNaoLidas,
