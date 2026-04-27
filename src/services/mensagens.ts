@@ -30,7 +30,10 @@ export interface LeadComMensagens {
   ultima_mensagem: string | null;
   ultima_mensagem_data: string | null;
   mensagens_nao_lidas: number;
+  is_sandbox?: boolean;
 }
+
+export type SandboxFiltro = "reais" | "todos" | "somente_testes";
 
 // Helper to normalize phone numbers for comparison (get last 8 digits)
 const normalizePhone = (phone: string): string => {
