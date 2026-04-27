@@ -43,7 +43,8 @@ const ConfiguracoesEvolution = () => {
     refresh,
     reiniciar,
     conectar,
-    reconectar
+    reconectar,
+    desconectar
   } = useEvolutionStatus(true, 30000);
   
   const [isRefreshing, setIsRefreshing] = useState(false);
