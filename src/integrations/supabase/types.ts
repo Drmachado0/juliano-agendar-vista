@@ -1536,6 +1536,20 @@ export type Database = {
         }
         Returns: string
       }
+      relatorio_diario: {
+        Args: { p_data_fim?: string; p_data_inicio?: string }
+        Returns: Json
+      }
+      relatorio_diario_serie: {
+        Args: { p_data_fim?: string; p_data_inicio?: string }
+        Returns: {
+          dia: string
+          drafts_gerados: number
+          leads_novos: number
+          msg_in: number
+          msg_out: number
+        }[]
+      }
       set_agendamento_sandbox: {
         Args: {
           p_agendamento_id: string
