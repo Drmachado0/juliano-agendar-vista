@@ -97,8 +97,14 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const { telefone, mensagem }: WhatsAppRequest = validationResult.data;
+    const { telefone, mensagem, agendamento_id, tipo_mensagem }: WhatsAppRequest = validationResult.data;
     const phoneFormatted = normalizePhone(telefone);
+
+    // Supabase admin client para registrar a mensagem (sucesso ou falha)
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
 
     // 2. Get Evolution API config
     let evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
