@@ -1058,6 +1058,40 @@ Deno.serve(async (req: Request) => {
     const state = (await loadState(supabase, phoneNorm)) ?? null;
     const txtLower = effectiveText.toLowerCase();
 
+    // Nova intenção clara de agendamento sempre reinicia o fluxo obrigatório.
+    // Isso evita reaproveitar last_options/awaiting/dados antigos de testes anteriores
+    // e impede oferta de datas antes de coletar nome, nascimento, pagamento e local.
+    if (isClearNewSchedulingIntent(effectiveText, intent)) {
+      await supabase
+        .from("agendamentos")
+        .update({ status_crm: "AGUARDANDO" })
+        .eq("id", lead.id);
+
+      await saveState(supabase, phoneNorm, {
+        lead_id: lead.id,
+        last_intent: "collecting_name",
+        ambiguous_count: 0,
+        awaiting: "collecting_name",
+        last_options: null,
+        selected_data: null,
+        selected_periodo: null,
+        selected_local: null,
+        available_slots: null,
+        payment_type: null,
+        convenio: null,
+        nome_completo: null,
+        data_nascimento: null,
+        pending_confirmation: false,
+        sandbox,
+      });
+
+      return replyAndLog(
+        "Claro, vou te ajudar com o agendamento 😊\n\nQual é o nome completo do paciente?",
+        "collecting_name",
+        { crm_status: "AGUARDANDO", awaiting: "collecting_name" },
+      );
+    }
+
     // 10. URGÊNCIA — prioridade máxima
     if (intent === "urgencia") {
       await supabase
