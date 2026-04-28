@@ -202,18 +202,20 @@ Deno.serve(async (req) => {
             console.log(`[boas-vindas] ✓ Confirmado (${statusEnvio}) ${normalizedPhone} (lead ${lead.id}) → AGUARDANDO`);
           }
 
-          await supabase.rpc('registrar_crm_audit_system', {
-            p_agendamento_id: lead.id,
-            p_acao: 'boas_vindas_confirmada',
-            p_status_anterior: 'NOVO LEAD',
-            p_status_novo: 'AGUARDANDO',
-            p_detalhes: {
+          await supabase.from('crm_audit_log').insert({
+            agendamento_id: lead.id,
+            user_email: 'system@boas-vindas',
+            user_name: 'Sistema (boas-vindas)',
+            acao: 'boas_vindas_confirmada',
+            status_anterior: 'NOVO LEAD',
+            status_novo: 'AGUARDANDO',
+            detalhes: {
               telefone_mascarado: '***' + normalizedPhone.slice(-4),
               status_envio: statusEnvio,
               evolution_status: resultado.evolutionStatus ?? null,
               mensagem_externa_id: resultado.messageId ?? null,
             },
-          }).then(() => {}, () => {/* RPC pode não existir; ignorar */});
+          }).then(() => {}, () => {});
 
           enviados++;
         } else if (statusEnvio === 'pendente') {
