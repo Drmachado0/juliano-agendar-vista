@@ -11,7 +11,7 @@
 // - Se atingir MAX_TENTATIVAS sem confirmação → marca PRECISA_DE_HUMANO.
 // - Card permanece em NOVO LEAD enquanto não houver confirmação confiável.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 import {
   sendWhatsappTextMessage,
   normalizePhoneNumber,
