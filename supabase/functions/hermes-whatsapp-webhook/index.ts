@@ -1064,7 +1064,6 @@ Deno.serve(async (req: Request) => {
     // 9. Classificar
     const intent = classifyIntent(effectiveText);
     const state = (await loadState(supabase, phoneNorm)) ?? null;
-    const txtLower = effectiveText.toLowerCase();
 
     // Nova intenção clara de agendamento sempre reinicia o fluxo obrigatório.
     // Isso evita reaproveitar last_options/awaiting/dados antigos de testes anteriores
