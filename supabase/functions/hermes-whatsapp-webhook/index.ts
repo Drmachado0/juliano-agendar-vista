@@ -1069,19 +1069,38 @@ Deno.serve(async (req: Request) => {
     ) => {
       await salvarOutbound(supabase, phoneNorm, lead.id, reply, intent);
 
-      // Após responder, se o lead ainda está em "NOVO LEAD" (não definimos um
-      // status específico nesta resposta), promove para "AGUARDANDO" — sinaliza
-      // no CRM Kanban que o paciente foi atendido pelo bot e estamos aguardando
-      // retorno dele. Não sobrescreve URGENTE/PRECISA_DE_HUMANO/CLINICOR/HGP.
+      // Promove NOVO LEAD → AGUARDANDO somente na PRIMEIRA resposta efetiva do bot.
+      // Condições:
+      //  - resposta atual não definiu status explícito (ex.: URGENTE, CLINICOR, HGP)
+      //  - lead ainda está em NOVO LEAD (cláusula WHERE garante atomicidade)
+      //  - não é uma resposta de criação de agendamento
+      // Em respostas subsequentes do mesmo fluxo o status já será AGUARDANDO (ou outro)
+      // e este bloco não executará novamente.
       const explicitStatus = extras.crm_status ?? null;
       const currentStatus = (lead.status_crm ?? "NOVO LEAD").toUpperCase();
       if (!explicitStatus && currentStatus === "NOVO LEAD" && !extras.appointment_created) {
-        await supabase
+        const { data: updated, error: upErr } = await supabase
           .from("agendamentos")
           .update({ status_crm: "AGUARDANDO" })
           .eq("id", lead.id)
-          .eq("status_crm", "NOVO LEAD");
-        lead.status_crm = "AGUARDANDO";
+          .eq("status_crm", "NOVO LEAD")
+          .select("id")
+          .maybeSingle();
+
+        if (!upErr && updated) {
+          lead.status_crm = "AGUARDANDO";
+          console.log("[hermes-webhook] crm_status_promoted", JSON.stringify({
+            event: "crm_status_promoted",
+            lead_id: lead.id,
+            from: "NOVO LEAD",
+            to: "AGUARDANDO",
+            intent,
+            timestamp: new Date().toISOString(),
+          }));
+        } else if (!upErr) {
+          // Outra requisição concorrente já promoveu — apenas sincroniza o cache local.
+          lead.status_crm = "AGUARDANDO";
+        }
       }
 
       await logHermes(supabase, lead.id, "reply", intent, {
