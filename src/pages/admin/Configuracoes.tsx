@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Building2, Stethoscope, Plus, Pencil, Clock, MapPin, Phone, Calendar, Link2, Unlink, Loader2, Shield, DollarSign, MessageSquare, Star, RefreshCw, CheckCircle2, XCircle, AlertCircle, ExternalLink, Zap, Settings as SettingsIcon } from "lucide-react";
+import { Building2, Stethoscope, Plus, Pencil, Clock, MapPin, Phone, Calendar, Link2, Unlink, Loader2, Shield, DollarSign, MessageSquare, Star, RefreshCw, CheckCircle2, XCircle, AlertCircle, ExternalLink, Zap, Settings as SettingsIcon, Bot } from "lucide-react";
+import BotConfigCard from "@/components/admin/BotConfigCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Clinica, 
