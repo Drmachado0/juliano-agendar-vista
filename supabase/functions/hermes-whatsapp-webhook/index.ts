@@ -1800,6 +1800,7 @@ Deno.serve(async (req: Request) => {
           {
             needs_human: true,
             appointment_created: false,
+            agenda_slot_occupied: false,
             error: motivoLog,
             crm_status: "PRECISA_DE_HUMANO",
           },
