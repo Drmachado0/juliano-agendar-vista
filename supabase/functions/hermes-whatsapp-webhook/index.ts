@@ -1391,43 +1391,85 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Confirmou. Em produção: trava humana. Em sandbox: cria agendamento.
+      // Confirmou. Persiste dados e horário no card; migra status para CLINICOR/HGP.
       const escolhida_data = state.selected_data!;
       const escolhida_local = state.selected_local!;
       const escolhida_periodo = state.selected_periodo!;
 
-      // Atualizar dados do lead com nome/nascimento/convenio/local
-      await supabase
-        .from("agendamentos")
-        .update({
-          nome_completo: state.nome_completo,
-          data_nascimento: state.data_nascimento,
-          local_atendimento: escolhida_local,
-          convenio:
-            state.payment_type === "particular"
-              ? "Particular"
-              : (state.convenio ?? "Particular"),
-        })
-        .eq("id", lead.id);
+      // Busca um horário concreto disponível dentro do período escolhido
+      const horariosFinal = await buscarHorariosDoPeriodo(
+        supabaseUrl,
+        serviceKey,
+        escolhida_data,
+        escolhida_local,
+        escolhida_periodo,
+      );
+
+      const horarioFinal = horariosFinal[0]?.slice(0, 5) ?? null;
+      const novoStatusFinal = crmStatusFromLocal(escolhida_local); // CLINICOR | HGP
+
+      // Atualiza o card com TODOS os dados confirmados — mesmo em produção
+      const updatePayload: Record<string, unknown> = {
+        nome_completo: state.nome_completo,
+        data_nascimento: state.data_nascimento,
+        local_atendimento: escolhida_local,
+        convenio:
+          state.payment_type === "particular"
+            ? "Particular"
+            : (state.convenio ?? "Particular"),
+        data_agendamento: escolhida_data,
+        status_crm: novoStatusFinal,
+        status_funil: "agendado",
+      };
+      if (horarioFinal) updatePayload.hora_agendamento = horarioFinal;
+
+      await supabase.from("agendamentos").update(updatePayload).eq("id", lead.id);
+
+      console.log("[hermes-webhook] booking_card_updated", JSON.stringify({
+        event: "booking_card_updated",
+        lead_id: lead.id,
+        status_crm: novoStatusFinal,
+        status_funil: "agendado",
+        local: escolhida_local,
+        data: escolhida_data,
+        hora: horarioFinal,
+        sandbox,
+      }));
 
       if (!sandbox) {
-        await supabase
-          .from("agendamentos")
-          .update({ status_crm: "PRECISA_DE_HUMANO" })
-          .eq("id", lead.id);
+        // Em produção, marca card como agendado em CLINICOR/HGP e aguarda equipe
+        // confirmar horário exato (caso não tenhamos pego um slot concreto agora).
         await saveState(supabase, phoneNorm, {
           lead_id: lead.id,
-          last_intent: "agendamento_pendente_humano",
+          last_intent: "agendado",
           ambiguous_count: 0,
           awaiting: null,
+          last_options: null,
+          available_slots: null,
           pending_confirmation: false,
           sandbox,
         });
-        return replyAndLog(
-          "Seu agendamento foi registrado para confirmação da equipe. Em instantes te confirmamos o horário exato por aqui 🙏",
-          "agendamento_pendente_humano",
-          { needs_human: true, crm_status: "PRECISA_DE_HUMANO" },
-        );
+
+        const linhasResumo = [
+          `Agendamento registrado ✅`,
+          ``,
+          `📍 ${escolhida_local.includes("Clinicor") ? "Clinicor – Paragominas" : "Hospital Geral de Paragominas"}`,
+          `📅 ${fmtDataBR(escolhida_data)}`,
+        ];
+        if (horarioFinal) linhasResumo.push(`🕒 ${horarioFinal}`);
+        linhasResumo.push(``, `Nossa equipe vai te confirmar o horário exato por aqui em instantes 🙏`);
+
+        return replyAndLog(linhasResumo.join("\n"), "agendamento_confirmado", {
+          action: "booking_confirmed",
+          needs_human: false,
+          appointment_created: true,
+          crm_status: novoStatusFinal,
+          appointment: {
+            date: escolhida_data,
+            time: horarioFinal,
+            location: escolhida_local,
+          },
+        });
       }
 
       // Sandbox: confere agenda real e cria agendamento
