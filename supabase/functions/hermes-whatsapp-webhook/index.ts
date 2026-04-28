@@ -128,6 +128,28 @@ function classifyIntent(text: string): string {
   return "ambiguo";
 }
 
+function normalizeIntentText(text: string): string {
+  return (text || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isClearNewSchedulingIntent(text: string, intent: string): boolean {
+  if (intent === "urgencia") return false;
+  const t = normalizeIntentText(text);
+  if (!t || /\b(link|online|site|url)\b/.test(t)) return false;
+  return [
+    /\b(quero|queria|gostaria|preciso|pode|posso)\s+(agendar|marcar)\b/,
+    /\b(agendar|marcar)\s+(uma\s+)?consulta\b/,
+    /\bquero\s+(uma\s+)?consulta\b/,
+    /\bconsulta\s+com\s+(o\s+)?dr\s+juliano\b/,
+  ].some((rule) => rule.test(t));
+}
+
 function detectarPaymentType(text: string): "particular" | "convenio" | null {
   const t = text.toLowerCase();
   if (/\bparticular\b|\bprivad/.test(t)) return "particular";
@@ -241,6 +263,14 @@ interface ConvState {
   pending_confirmation: boolean;
   updated_at: string;
 }
+
+const COLLECTING_STAGE_TO_AWAITING: Record<string, ConvState["awaiting"]> = {
+  collecting_name: "collecting_name",
+  collecting_birthdate: "collecting_birthdate",
+  collecting_payment: "collecting_payment",
+  collecting_convenio: "collecting_convenio",
+  collecting_location: "collecting_location",
+};
 
 const STATE_TTL_MIN = 30;
 
@@ -1034,7 +1064,40 @@ Deno.serve(async (req: Request) => {
     // 9. Classificar
     const intent = classifyIntent(effectiveText);
     const state = (await loadState(supabase, phoneNorm)) ?? null;
-    const txtLower = effectiveText.toLowerCase();
+
+    // Nova intenção clara de agendamento sempre reinicia o fluxo obrigatório.
+    // Isso evita reaproveitar last_options/awaiting/dados antigos de testes anteriores
+    // e impede oferta de datas antes de coletar nome, nascimento, pagamento e local.
+    if (isClearNewSchedulingIntent(effectiveText, intent)) {
+      await supabase
+        .from("agendamentos")
+        .update({ status_crm: "AGUARDANDO" })
+        .eq("id", lead.id);
+
+      await saveState(supabase, phoneNorm, {
+        lead_id: lead.id,
+        last_intent: "collecting_name",
+        ambiguous_count: 0,
+        awaiting: "collecting_name",
+        last_options: null,
+        selected_data: null,
+        selected_periodo: null,
+        selected_local: null,
+        available_slots: null,
+        payment_type: null,
+        convenio: null,
+        nome_completo: null,
+        data_nascimento: null,
+        pending_confirmation: false,
+        sandbox,
+      });
+
+      return replyAndLog(
+        "Claro, vou te ajudar com o agendamento 😊\n\nQual é o nome completo do paciente?",
+        "collecting_name",
+        { crm_status: "AGUARDANDO", awaiting: "collecting_name" },
+      );
+    }
 
     // 10. URGÊNCIA — prioridade máxima
     if (intent === "urgencia") {
@@ -1143,14 +1206,14 @@ Deno.serve(async (req: Request) => {
 
     // Opções numeradas — somente quando estamos no estágio correspondente,
     // para não conflitar com escolha de slot (escolha_periodo).
-    if (state?.awaiting === "payment_type" || state?.awaiting === "convenio_nome") {
+    if (state?.awaiting === "collecting_payment" || state?.awaiting === "collecting_convenio") {
       const op = opcaoPagamento(effectiveText);
       if (op) {
         payment_type = op.payment_type;
         if (op.convenio) convenio = op.convenio;
       }
     }
-    if (state?.awaiting === "local_pref") {
+    if (state?.awaiting === "collecting_location") {
       const ol = opcaoLocal(effectiveText);
       if (ol) local_pref = ol;
     }
@@ -1174,8 +1237,6 @@ Deno.serve(async (req: Request) => {
       state?.awaiting === "collecting_payment" ||
       state?.awaiting === "collecting_convenio" ||
       state?.awaiting === "collecting_location" ||
-      state?.awaiting === "payment_type" ||
-      state?.awaiting === "convenio_nome" ||
       state?.awaiting === "convenio_fallback_particular" ||
       state?.awaiting === "dados_paciente" ||
       state?.awaiting === "escolha_periodo" ||
@@ -1488,18 +1549,16 @@ Deno.serve(async (req: Request) => {
       // 17.2 Próxima pergunta na ordem estrita
       const prox = proximaPergunta(nome_completo, data_nascimento, payment_type, convenio, local_pref);
       if (prox) {
-        const stageToAwaiting: Record<string, ConvState["awaiting"]> = {
-          collecting_name: "collecting_name",
-          collecting_birthdate: "collecting_birthdate",
-          collecting_payment: "payment_type",
-          collecting_convenio: "convenio_nome",
-          collecting_location: "local_pref",
-        };
         await saveState(supabase, phoneNorm, {
           lead_id: lead.id,
           last_intent: prox.stage,
           ambiguous_count: 0,
-          awaiting: stageToAwaiting[prox.stage] ?? "dados_paciente",
+          awaiting: COLLECTING_STAGE_TO_AWAITING[prox.stage] ?? "dados_paciente",
+          last_options: null,
+          selected_data: null,
+          selected_periodo: null,
+          available_slots: null,
+          pending_confirmation: false,
           payment_type,
           convenio,
           nome_completo,
@@ -1509,7 +1568,7 @@ Deno.serve(async (req: Request) => {
         });
         return replyAndLog(prox.text, prox.stage, {
           crm_status: "AGUARDANDO",
-          awaiting: stageToAwaiting[prox.stage] ?? "dados_paciente",
+          awaiting: COLLECTING_STAGE_TO_AWAITING[prox.stage] ?? "dados_paciente",
         });
       }
 
