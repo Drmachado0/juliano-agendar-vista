@@ -12,6 +12,53 @@ export interface SendMessageResult {
   rawResponse?: unknown;
   errorMessage?: string;
   messageId?: string;
+  /** Status bruto retornado pela Evolution (ex.: PENDING, SERVER_ACK, DELIVERY_ACK, READ, ERROR) */
+  evolutionStatus?: string;
+  /** Status confiável e normalizado para persistir em mensagens_whatsapp.status_envio */
+  deliveryStatus?: 'enviado' | 'entregue' | 'lido' | 'pendente' | 'erro';
+  /** Indica se o envio é considerado "confirmado" para automações (true só para enviado/entregue/lido) */
+  confirmed?: boolean;
+  /** rawResponse já sanitizada (sem apikey/token/secret) */
+  sanitizedResponse?: unknown;
+}
+
+/**
+ * Remove campos sensíveis (apikey/token/secret/authorization) de qualquer objeto/payload
+ * antes de persistir em banco ou log.
+ */
+export function sanitizePayload(input: unknown, depth = 0): unknown {
+  if (depth > 6) return '[max-depth]';
+  if (input === null || input === undefined) return input;
+  if (Array.isArray(input)) return input.map((v) => sanitizePayload(v, depth + 1));
+  if (typeof input !== 'object') return input;
+
+  const SENSITIVE = /^(apikey|api_key|token|access_token|refresh_token|secret|authorization|auth|password|bearer)$/i;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+    if (SENSITIVE.test(k)) {
+      out[k] = '[REDACTED]';
+    } else {
+      out[k] = sanitizePayload(v, depth + 1);
+    }
+  }
+  return out;
+}
+
+/**
+ * Mapeia status bruto da Evolution para nosso status_envio confiável.
+ * Apenas DELIVERY_ACK/READ contam como "entrega confirmada"; SERVER_ACK = aceito pelo servidor;
+ * PENDING/sem status = pendente; ERROR = erro.
+ */
+export function mapEvolutionStatusToDelivery(
+  rawStatus?: string,
+): { deliveryStatus: 'enviado' | 'entregue' | 'lido' | 'pendente' | 'erro'; confirmed: boolean } {
+  const s = (rawStatus || '').toUpperCase();
+  if (s === 'READ' || s === 'PLAYED') return { deliveryStatus: 'lido', confirmed: true };
+  if (s === 'DELIVERY_ACK' || s === 'DELIVERED') return { deliveryStatus: 'entregue', confirmed: true };
+  if (s === 'SERVER_ACK' || s === 'SENT') return { deliveryStatus: 'enviado', confirmed: true };
+  if (s === 'ERROR' || s === 'FAILED') return { deliveryStatus: 'erro', confirmed: false };
+  // PENDING / vazio / desconhecido → pendente, NÃO confirmado
+  return { deliveryStatus: 'pendente', confirmed: false };
 }
 
 /**
