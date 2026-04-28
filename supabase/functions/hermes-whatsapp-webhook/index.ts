@@ -220,6 +220,12 @@ interface ConvState {
     | "dados_paciente"
     | "escolha_periodo"
     | "confirmacao_final"
+    | "collecting_name"
+    | "collecting_birthdate"
+    | "collecting_payment"
+    | "collecting_convenio"
+    | "collecting_location"
+    | "local_pref"
     | null;
   last_options: Array<{ n: number; data: string; periodo: string; local: string }> | null;
   selected_data: string | null;
