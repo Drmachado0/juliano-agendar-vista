@@ -321,7 +321,7 @@ async function findOrCreateLead(
   phone: string,
   sandbox: boolean,
   pushName: string | null,
-): Promise<{ id: string; created: boolean; status_crm: string | null; status_funil: string | null }> {
+): Promise<{ id: string; created: boolean; status_crm: string | null; status_funil: string | null; bot_ativo: boolean; bot_pausado_ate: string | null; bot_pausa_motivo: string | null }> {
   const norm = normalizePhone(phone);
   const l8 = last8(norm);
 
@@ -329,7 +329,7 @@ async function findOrCreateLead(
   // e status_crm não cancelado). Reutiliza o mais recente aberto.
   const { data: existingList } = await supabase
     .from("agendamentos")
-    .select("id, status_crm, status_funil, is_sandbox, data_agendamento, created_at, nome_completo")
+    .select("id, status_crm, status_funil, is_sandbox, data_agendamento, created_at, nome_completo, bot_ativo, bot_pausado_ate, bot_pausa_motivo")
     .filter("telefone_whatsapp", "ilike", `%${l8}`)
     .order("created_at", { ascending: false })
     .limit(10);
