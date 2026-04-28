@@ -355,6 +355,9 @@ async function findOrCreateLead(
       created: false,
       status_crm: (row.status_crm as string) ?? null,
       status_funil: (row.status_funil as string) ?? null,
+      bot_ativo: row.bot_ativo !== false,
+      bot_pausado_ate: (row.bot_pausado_ate as string) ?? null,
+      bot_pausa_motivo: (row.bot_pausa_motivo as string) ?? null,
     };
   }
 
