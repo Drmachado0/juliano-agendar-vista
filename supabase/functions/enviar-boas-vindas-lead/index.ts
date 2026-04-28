@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sendWhatsappTextMessage, normalizePhoneNumber } from "../_shared/evolutionApiClient.ts";
+import { sendWhatsappTextMessage, normalizePhoneNumber, sanitizePayload } from "../_shared/evolutionApiClient.ts";
 import { buscarTemplate, renderizarTemplate } from "../_shared/templateRenderer.ts";
 
 const corsHeaders = {
@@ -144,27 +144,125 @@ Deno.serve(async (req) => {
         const resultado = await sendWhatsappTextMessage(phoneClean, mensagem);
         const normalizedPhone = normalizePhoneNumber(phoneClean);
 
-        await supabase.from('mensagens_whatsapp').insert({
+        // Determina status_envio confiável a partir do resultado
+        // - confirmed=true (enviado/entregue/lido) → grava status correspondente
+        // - HTTP ok mas sem mensagem_externa_id ou status PENDING → 'pendente' (NÃO promove card)
+        // - HTTP error / exceção → 'erro' (move para PRECISA_DE_HUMANO)
+        let statusEnvio: 'enviado' | 'entregue' | 'lido' | 'pendente' | 'erro';
+        let confirmadoEntrega = false;
+
+        if (!resultado.success) {
+          statusEnvio = 'erro';
+          confirmadoEntrega = false;
+        } else if (resultado.confirmed && resultado.messageId) {
+          statusEnvio = resultado.deliveryStatus ?? 'enviado';
+          confirmadoEntrega = true;
+        } else {
+          // HTTP 2xx mas sem confirmação clara da Evolution (PENDING, sem messageId, etc.)
+          statusEnvio = 'pendente';
+          confirmadoEntrega = false;
+        }
+
+        // Persiste a mensagem OUT em mensagens_whatsapp (sempre, mesmo se erro/pendente)
+        const { error: insertMsgError } = await supabase.from('mensagens_whatsapp').insert({
           agendamento_id: lead.id,
           telefone: normalizedPhone,
           direcao: 'OUT',
           conteudo: mensagem,
-          status_envio: resultado.success ? 'enviado' : 'erro',
+          tipo_mensagem: 'boas_vindas',
+          status_envio: statusEnvio,
           mensagem_externa_id: resultado.messageId || null,
           error_message: resultado.errorMessage || null,
-          tipo_mensagem: 'boas_vindas',
+          payload: sanitizePayload({
+            evolution_status: resultado.evolutionStatus ?? null,
+            response: resultado.sanitizedResponse ?? null,
+          }) as any,
         });
 
-        if (resultado.success) {
-          await supabase.from('agendamentos').update({ 
-            status_crm: 'AGUARDANDO',
-            updated_at: new Date().toISOString()
-          }).eq('id', lead.id).eq('status_funil', 'lead');
+        if (insertMsgError) {
+          console.error(`[boas-vindas] Falha ao persistir mensagem do lead ${lead.id}:`, insertMsgError.message);
+        }
 
-          console.log(`[boas-vindas] ✓ Enviado para ${normalizedPhone} (lead ${lead.id}) → AGUARDANDO`);
+        if (confirmadoEntrega) {
+          // Só promove para AGUARDANDO + marca "Boas-vindas enviada" quando há
+          // confirmação clara de entrega ao paciente.
+          const { error: updErr } = await supabase
+            .from('agendamentos')
+            .update({
+              status_crm: 'AGUARDANDO',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', lead.id)
+            .eq('status_funil', 'lead')
+            .eq('status_crm', 'NOVO LEAD');
+
+          if (updErr) {
+            console.error(`[boas-vindas] Falha ao promover lead ${lead.id}:`, updErr.message);
+          } else {
+            console.log(`[boas-vindas] ✓ Confirmado (${statusEnvio}) ${normalizedPhone} (lead ${lead.id}) → AGUARDANDO`);
+          }
+
+          await supabase.from('crm_audit_log').insert({
+            agendamento_id: lead.id,
+            user_email: 'system@boas-vindas',
+            user_name: 'Sistema (boas-vindas)',
+            acao: 'boas_vindas_confirmada',
+            status_anterior: 'NOVO LEAD',
+            status_novo: 'AGUARDANDO',
+            detalhes: {
+              telefone_mascarado: '***' + normalizedPhone.slice(-4),
+              status_envio: statusEnvio,
+              evolution_status: resultado.evolutionStatus ?? null,
+              mensagem_externa_id: resultado.messageId ?? null,
+            },
+          }).then(() => {}, () => {});
+
           enviados++;
+        } else if (statusEnvio === 'pendente') {
+          // Sem confirmação clara → mantém NOVO LEAD; equipe verá "WhatsApp pendente"
+          console.warn(`[boas-vindas] ⏳ Pendente (sem ack) ${normalizedPhone} (lead ${lead.id}) — mantém NOVO LEAD`);
+          await supabase.from('system_logs').insert({
+            level: 'warn',
+            category: 'whatsapp',
+            source: 'enviar-boas-vindas-lead',
+            message: 'Boas-vindas enviada sem confirmação de entrega',
+            details: {
+              event: 'boas_vindas_pendente',
+              agendamento_id: lead.id,
+              telefone_mascarado: '***' + normalizedPhone.slice(-4),
+              evolution_status: resultado.evolutionStatus ?? null,
+              mensagem_externa_id: resultado.messageId ?? null,
+            },
+            agendamento_id: lead.id,
+          }).then(() => {}, () => {});
+          falhas++;
         } else {
-          console.error(`[boas-vindas] ✗ Falha para ${normalizedPhone}:`, resultado.errorMessage);
+          // Erro real → marca para humano
+          console.error(`[boas-vindas] ✗ Erro ${normalizedPhone} (lead ${lead.id}):`, resultado.errorMessage);
+          await supabase
+            .from('agendamentos')
+            .update({
+              status_crm: 'PRECISA_DE_HUMANO',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', lead.id)
+            .eq('status_funil', 'lead')
+            .eq('status_crm', 'NOVO LEAD');
+
+          await supabase.from('system_logs').insert({
+            level: 'error',
+            category: 'whatsapp',
+            source: 'enviar-boas-vindas-lead',
+            message: 'Falha no envio de boas-vindas',
+            details: {
+              event: 'boas_vindas_falhou',
+              agendamento_id: lead.id,
+              telefone_mascarado: '***' + normalizedPhone.slice(-4),
+              evolution_status: resultado.evolutionStatus ?? null,
+              error_message: resultado.errorMessage ?? null,
+            },
+            agendamento_id: lead.id,
+          }).then(() => {}, () => {});
           falhas++;
         }
       } catch (err) {
