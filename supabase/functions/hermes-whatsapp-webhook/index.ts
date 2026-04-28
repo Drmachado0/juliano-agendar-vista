@@ -88,6 +88,11 @@ interface StdResponse {
   intent?: string;
   needs_human?: boolean;
   appointment_created?: boolean;
+  agenda_slot_occupied?: boolean;
+  agendamento_id?: string | null;
+  data_agendamento?: string | null;
+  hora_agendamento?: string | null;
+  local_atendimento?: string | null;
   appointment?: { date: string; time: string; location: string } | null;
   awaiting?: string | null;
   error?: string;
@@ -1011,22 +1016,33 @@ function proximaPergunta(
   return null;
 }
 
-// Mapeia opção numérica de pagamento (1-5)
+// Mapeia opção numérica OU textual de pagamento
 function opcaoPagamento(text: string): { payment_type: "particular" | "convenio"; convenio: string | null } | null {
-  const t = text.trim();
-  if (/^1\b/.test(t)) return { payment_type: "particular", convenio: null };
-  if (/^2\b/.test(t)) return { payment_type: "convenio", convenio: "Bradesco Saúde" };
-  if (/^3\b/.test(t)) return { payment_type: "convenio", convenio: "Unimed" };
-  if (/^4\b/.test(t)) return { payment_type: "convenio", convenio: "Cassi" };
-  if (/^5\b/.test(t)) return { payment_type: "convenio", convenio: "SulAmérica" };
+  const raw = text.trim();
+  const t = raw.toLowerCase();
+  // Numéricas
+  if (/^1\b/.test(raw)) return { payment_type: "particular", convenio: null };
+  if (/^2\b/.test(raw)) return { payment_type: "convenio", convenio: "Bradesco Saúde" };
+  if (/^3\b/.test(raw)) return { payment_type: "convenio", convenio: "Unimed" };
+  if (/^4\b/.test(raw)) return { payment_type: "convenio", convenio: "Cassi" };
+  if (/^5\b/.test(raw)) return { payment_type: "convenio", convenio: "SulAmérica" };
+  // Textuais
+  if (/\bparticular\b|\bprivad/.test(t)) return { payment_type: "particular", convenio: null };
+  if (/\bbradesco\b/.test(t)) return { payment_type: "convenio", convenio: "Bradesco Saúde" };
+  if (/\bunimed\b/.test(t)) return { payment_type: "convenio", convenio: "Unimed" };
+  if (/\bcassi\b/.test(t)) return { payment_type: "convenio", convenio: "Cassi" };
+  if (/\bsul\s*am[eé]rica\b|\bsulam[eé]rica\b/.test(t)) return { payment_type: "convenio", convenio: "SulAmérica" };
   return null;
 }
 
-// Mapeia opção numérica de local (1-2)
+// Mapeia opção numérica OU textual de local
 function opcaoLocal(text: string): "Clinicor" | "HGP" | null {
-  const t = text.trim();
-  if (/^1\b/.test(t)) return "Clinicor";
-  if (/^2\b/.test(t)) return "HGP";
+  const raw = text.trim();
+  const t = raw.toLowerCase();
+  if (/^1\b/.test(raw)) return "Clinicor";
+  if (/^2\b/.test(raw)) return "HGP";
+  if (/\bclinicor\b/.test(t)) return "Clinicor";
+  if (/\bhgp\b|hospital geral/.test(t)) return "HGP";
   return null;
 }
 
@@ -1347,6 +1363,11 @@ Deno.serve(async (req: Request) => {
         needs_human: extras.needs_human ?? false,
         appointment_created: extras.appointment_created ?? false,
         appointment: extras.appointment ?? null,
+        agenda_slot_occupied: extras.agenda_slot_occupied ?? false,
+        agendamento_id: extras.agendamento_id ?? null,
+        data_agendamento: extras.data_agendamento ?? null,
+        hora_agendamento: extras.hora_agendamento ?? null,
+        local_atendimento: extras.local_atendimento ?? null,
         awaiting: extras.awaiting ?? null,
         sandbox,
         email_data: extras.email_data ?? null,
@@ -1789,6 +1810,7 @@ Deno.serve(async (req: Request) => {
           {
             needs_human: true,
             appointment_created: false,
+            agenda_slot_occupied: false,
             error: motivoLog,
             crm_status: "PRECISA_DE_HUMANO",
           },
@@ -1956,6 +1978,7 @@ Deno.serve(async (req: Request) => {
           action: "booking_confirmed",
           needs_human: false,
           appointment_created: true,
+          agenda_slot_occupied: true,
           agendamento_id: agendamentoFinal.id,
           data_agendamento: agendamentoFinal.data_agendamento,
           hora_agendamento: horarioFmt,
