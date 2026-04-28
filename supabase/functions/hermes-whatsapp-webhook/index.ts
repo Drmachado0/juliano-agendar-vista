@@ -259,6 +259,7 @@ interface ConvState {
     | "collecting_convenio"
     | "collecting_location"
     | "local_pref"
+    | "paused_for_question"
     | null;
   last_options: Array<{ n: number; data: string; periodo: string; local: string }> | null;
   selected_data: string | null;
@@ -272,6 +273,11 @@ interface ConvState {
   nome_completo: string | null;
   data_nascimento: string | null;
   pending_confirmation: boolean;
+  paused_question_state: {
+    awaiting: string | null;
+    topic?: string | null;
+    paused_at: string;
+  } | null;
   updated_at: string;
 }
 
