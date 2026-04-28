@@ -1518,6 +1518,122 @@ Deno.serve(async (req: Request) => {
     }
 
     // ============================================================
+    // 14.5 INTERRUPÇÃO POR DÚVIDA / RETOMADA APÓS DÚVIDA
+    // (avaliada ANTES do estado pendente do agendamento)
+    // ============================================================
+
+    // 14.5.a — Se já estamos pausados aguardando aceite para retomar,
+    // interpretar resposta do paciente.
+    if (state?.awaiting === "paused_for_question") {
+      const previousAwaiting = state.paused_question_state?.awaiting ?? null;
+
+      // Outra dúvida no meio? Responde de novo, mantém pausa.
+      const newTopic = detectPatientQuestion(effectiveText);
+      if (newTopic) {
+        const reply = answerForQuestion(newTopic, true);
+        await logHermes(supabase, lead.id, "patient_question_answered", "paused_for_question", {
+          topic: newTopic, previous_awaiting: previousAwaiting, still_paused: true,
+        });
+        return replyAndLog(reply, "patient_question_answered", { awaiting: "paused_for_question" });
+      }
+
+      if (RESUME_AFFIRMATIVE_RE.test(effectiveText.trim())) {
+        await saveState(supabase, phoneNorm, {
+          lead_id: lead.id,
+          last_intent: "scheduling_resumed_after_question",
+          ambiguous_count: 0,
+          awaiting: (previousAwaiting as ConvState["awaiting"]) ?? "collecting_name",
+          paused_question_state: null,
+          sandbox,
+        });
+        await logHermes(supabase, lead.id, "scheduling_resumed_after_question", intent ?? "resume", {
+          restored_awaiting: previousAwaiting,
+        });
+        return replyAndLog(
+          promptForAwaiting(previousAwaiting),
+          "scheduling_resumed",
+          { awaiting: previousAwaiting ?? "collecting_name" },
+        );
+      }
+
+      if (RESUME_NEGATIVE_RE.test(effectiveText.trim())) {
+        // Mantém pausa, apenas confirma
+        return replyAndLog(
+          "Sem problema 🙏 Quando quiser retomar, é só me chamar por aqui.",
+          "paused_keep",
+          { awaiting: "paused_for_question" },
+        );
+      }
+
+      // Não foi sim/não nem nova dúvida → trata como nova mensagem livre,
+      // segue para o fluxo abaixo (mas mantém possibilidade de retomada implícita
+      // quando o paciente já manda dado solicitado, ex.: a data de nascimento).
+      // Limpa a pausa para não bloquear o fluxo principal.
+      await saveState(supabase, phoneNorm, {
+        lead_id: lead.id,
+        awaiting: (previousAwaiting as ConvState["awaiting"]) ?? state.awaiting,
+        paused_question_state: null,
+        sandbox,
+      });
+      // NÃO retorna; deixa cair no fluxo de agendamento abaixo, com awaiting restaurado.
+      (state as ConvState).awaiting = (previousAwaiting as ConvState["awaiting"]) ?? state.awaiting;
+      (state as ConvState).paused_question_state = null;
+    }
+
+    // 14.5.b — Detecta dúvida/interrupção do paciente.
+    // Honra também routing_directive / patient_question_intent vindos do mc-monitor.
+    const inSchedulingFlow =
+      !!state?.awaiting &&
+      [
+        "collecting_name", "collecting_birthdate", "collecting_payment",
+        "collecting_convenio", "collecting_location", "convenio_fallback_particular",
+        "dados_paciente", "escolha_periodo", "confirmacao_final",
+      ].includes(state.awaiting as string);
+
+    const directiveQuestion =
+      p.routing_directive === "patient_question_before_scheduling_state" ||
+      !!p.patient_question_intent?.is_question_or_interruption;
+
+    let detectedTopic = detectPatientQuestion(effectiveText);
+    if (!detectedTopic && directiveQuestion) {
+      // mc-monitor afirma que é dúvida — usa topic se vier, senão genérica
+      const topicHint = (p.patient_question_intent?.topic ?? "").toLowerCase();
+      detectedTopic =
+        (["valor", "convenio", "local", "endereco", "horario", "como_funciona", "medica", "urgencia_med"]
+          .includes(topicHint) ? topicHint : "duvida_generica") as QuestionTopic;
+    }
+
+    // Só interrompe o fluxo se: estamos coletando algo E detectamos dúvida.
+    // Se não estiver no fluxo, deixa o restante do código tratar normalmente
+    // (assim mantemos comportamento atual para "olá", "quero agendar" etc.).
+    if (detectedTopic && inSchedulingFlow && state) {
+      const reply = answerForQuestion(detectedTopic, true);
+
+      // Salva snapshot do estado anterior, marca como pausado para dúvida.
+      await saveState(supabase, phoneNorm, {
+        lead_id: lead.id,
+        last_intent: "patient_question_detected",
+        ambiguous_count: 0,
+        awaiting: "paused_for_question",
+        paused_question_state: {
+          awaiting: state.awaiting as string,
+          topic: detectedTopic,
+          paused_at: new Date().toISOString(),
+        },
+        sandbox,
+      });
+
+      await logHermes(supabase, lead.id, "patient_question_detected", "scheduling_paused_for_question", {
+        topic: detectedTopic,
+        previous_awaiting: state.awaiting,
+        directive: p.routing_directive ?? null,
+        from_mc_monitor: directiveQuestion,
+      });
+
+      return replyAndLog(reply, "patient_question_answered", { awaiting: "paused_for_question" });
+    }
+
+    // ============================================================
     // FLUXO DE AGENDAMENTO (multi-etapas)
     // ============================================================
 
