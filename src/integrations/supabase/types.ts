@@ -19,6 +19,9 @@ export type Database = {
           aceita_contato_whatsapp_email: boolean | null
           aceita_primeiro_horario: boolean | null
           bot_ativo: boolean
+          bot_pausa_motivo: string | null
+          bot_pausado_ate: string | null
+          bot_pausado_por: string | null
           bot_ultima_acao_at: string | null
           clinica_id: string | null
           confirmacao_enviada: boolean | null
@@ -57,6 +60,9 @@ export type Database = {
           aceita_contato_whatsapp_email?: boolean | null
           aceita_primeiro_horario?: boolean | null
           bot_ativo?: boolean
+          bot_pausa_motivo?: string | null
+          bot_pausado_ate?: string | null
+          bot_pausado_por?: string | null
           bot_ultima_acao_at?: string | null
           clinica_id?: string | null
           confirmacao_enviada?: boolean | null
@@ -95,6 +101,9 @@ export type Database = {
           aceita_contato_whatsapp_email?: boolean | null
           aceita_primeiro_horario?: boolean | null
           bot_ativo?: boolean
+          bot_pausa_motivo?: string | null
+          bot_pausado_ate?: string | null
+          bot_pausado_por?: string | null
           bot_ultima_acao_at?: string | null
           clinica_id?: string | null
           confirmacao_enviada?: boolean | null
@@ -309,6 +318,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      bot_config: {
+        Row: {
+          id: boolean
+          pausa_automatica_ativa: boolean
+          pausa_automatica_minutos: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: boolean
+          pausa_automatica_ativa?: boolean
+          pausa_automatica_minutos?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: boolean
+          pausa_automatica_ativa?: boolean
+          pausa_automatica_minutos?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       clinicas: {
         Row: {
@@ -1540,7 +1573,19 @@ export type Database = {
       mask_nome: { Args: { p_nome: string }; Returns: string }
       mask_telefone: { Args: { p_tel: string }; Returns: string }
       normalizar_telefone: { Args: { p_telefone: string }; Returns: string }
+      pausar_bot_agendamento: {
+        Args: {
+          p_agendamento_id: string
+          p_minutos?: number
+          p_motivo?: string
+        }
+        Returns: string
+      }
       preview_dados_paciente: { Args: { p_telefone: string }; Returns: Json }
+      reativar_bot_agendamento: {
+        Args: { p_agendamento_id: string }
+        Returns: undefined
+      }
       registrar_bot_log: {
         Args: {
           p_acao: string
