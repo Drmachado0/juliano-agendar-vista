@@ -320,6 +320,145 @@ async function logHermes(
   } catch (_) { /* best-effort */ }
 }
 
+// ----- Sanitização de payload (remove secrets) -----
+const SECRET_KEYS_RE = /^(apikey|api_key|token|access_token|authorization|secret|password|x-api-key|hermes-secret|x-hermes-secret)$/i;
+function sanitizePayload(input: unknown, depth = 0): unknown {
+  if (depth > 8 || input == null) return input;
+  if (Array.isArray(input)) return input.map((v) => sanitizePayload(v, depth + 1));
+  if (typeof input === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+      if (SECRET_KEYS_RE.test(k)) {
+        out[k] = "[REDACTED]";
+      } else {
+        out[k] = sanitizePayload(v, depth + 1);
+      }
+    }
+    return out;
+  }
+  return input;
+}
+
+// ----- Transcrição de áudio (Lovable AI Gateway / Gemini) -----
+function findInObject(obj: unknown, keys: string[], depth = 0): unknown {
+  if (depth > 8 || obj == null || typeof obj !== "object") return undefined;
+  for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+    if (keys.includes(k) && (typeof v === "string" || typeof v === "number" || typeof v === "boolean")) {
+      return v;
+    }
+    if (v && typeof v === "object") {
+      const found = findInObject(v, keys, depth + 1);
+      if (found !== undefined) return found;
+    }
+  }
+  return undefined;
+}
+
+async function downloadAudioAsBase64(url: string): Promise<{ base64: string; mime: string } | null> {
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const ct = resp.headers.get("content-type") || "audio/ogg";
+    const buf = new Uint8Array(await resp.arrayBuffer());
+    // base64 encode
+    let bin = "";
+    for (let i = 0; i < buf.byteLength; i++) bin += String.fromCharCode(buf[i]);
+    const b64 = btoa(bin);
+    return { base64: b64, mime: ct.split(";")[0].trim() };
+  } catch (e) {
+    console.error("[hermes-webhook] downloadAudio falhou:", (e as Error).message);
+    return null;
+  }
+}
+
+interface TranscriptionResult {
+  ok: boolean;
+  text: string | null;
+  provider: string;
+  error?: string;
+}
+
+async function transcribeAudio(rawPayload: unknown): Promise<TranscriptionResult> {
+  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!lovableKey) {
+    return { ok: false, text: null, provider: "lovable-ai-gemini", error: "LOVABLE_API_KEY not configured" };
+  }
+
+  // 1. Tenta encontrar base64 no payload
+  let base64 = findInObject(rawPayload, ["base64", "audioBase64", "mediaBase64"]) as string | undefined;
+  let mime = (findInObject(rawPayload, ["mimetype", "mime_type", "mimeType"]) as string | undefined) || "audio/ogg";
+
+  // 2. Caso contrário, tenta URL direta
+  if (!base64) {
+    const url = findInObject(rawPayload, ["url", "directPath", "mediaUrl"]) as string | undefined;
+    if (url && /^https?:\/\//i.test(url)) {
+      const dl = await downloadAudioAsBase64(url);
+      if (dl) {
+        base64 = dl.base64;
+        mime = dl.mime || mime;
+      }
+    }
+  }
+
+  if (!base64) {
+    return { ok: false, text: null, provider: "lovable-ai-gemini", error: "no audio source (base64/url) in payload" };
+  }
+
+  // Normaliza mime aceito por Gemini
+  if (!/^audio\//.test(mime)) mime = "audio/ogg";
+
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Você é um transcritor de áudio em português brasileiro. Transcreva LITERALMENTE o que o usuário disse no áudio, sem comentários, sem aspas, sem prefixos. Se não houver fala compreensível, responda exatamente: [áudio inaudível].",
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Transcreva este áudio em português:" },
+              { type: "input_audio", input_audio: { data: base64, format: mime.replace(/^audio\//, "") } },
+            ],
+          },
+        ],
+        temperature: 0.1,
+      }),
+    });
+
+    if (!resp.ok) {
+      const errTxt = await resp.text().catch(() => "");
+      return {
+        ok: false,
+        text: null,
+        provider: "lovable-ai-gemini",
+        error: `gateway ${resp.status}: ${errTxt.slice(0, 300)}`,
+      };
+    }
+    const json = await resp.json().catch(() => ({}));
+    const text = json?.choices?.[0]?.message?.content?.toString().trim() || "";
+    if (!text || /^\[áudio inaud[íi]vel\]$/i.test(text)) {
+      return { ok: false, text: null, provider: "lovable-ai-gemini", error: "transcription empty/inaudible" };
+    }
+    return { ok: true, text, provider: "lovable-ai-gemini" };
+  } catch (e) {
+    return {
+      ok: false,
+      text: null,
+      provider: "lovable-ai-gemini",
+      error: (e as Error).message,
+    };
+  }
+}
+
 // ----- Persistência direta (bypass RPC para garantir gravação) -----
 async function persistirMensagem(
   supabase: SupabaseClient,
@@ -643,10 +782,9 @@ Deno.serve(async (req: Request) => {
     const isMedia = ["audio", "image", "video", "document", "sticker", "media"].includes(
       p.message_type,
     );
-    const effectiveText = (p.text || "").trim();
+    let effectiveText = (p.text || "").trim();
 
     // 7. Salvar IN — SEMPRE persistir, antes de qualquer processamento de IA/bot.
-    //    Mapeia message_type Evolution → tipo_mensagem aceito pela tabela.
     const mapTipoIN = (mt: string): string => {
       switch (mt) {
         case "text": return "recebida";
@@ -669,6 +807,14 @@ Deno.serve(async (req: Request) => {
         : p.message_type === "sticker" ? "[sticker recebido]"
         : `[${p.message_type}]`);
 
+    // Sanitiza payload antes de persistir (remove apikey/token/etc.)
+    const sanitizedRaw = (sanitizePayload(p.raw_payload) as Record<string, unknown> | null) ?? {
+      event: p.event,
+      instance: p.instance,
+      source: "hermes",
+      message_type: p.message_type,
+    };
+
     const persistResult = await persistirMensagem(supabase, {
       telefone: phoneNorm,
       agendamentoId: lead.id,
@@ -677,18 +823,80 @@ Deno.serve(async (req: Request) => {
       tipoMensagem: tipoMsg,
       statusEnvio: "entregue",
       mensagemExternaId: p.external_message_id ?? null,
-      payload:
-        (p.raw_payload as Record<string, unknown>) ?? {
-          event: p.event,
-          instance: p.instance,
-          source: "hermes",
-          message_type: p.message_type,
-        },
+      payload: sanitizedRaw,
     });
     if (!persistResult.ok) {
       console.error("[hermes-webhook] FALHA ao persistir IN:", persistResult.error);
     } else {
       console.log("[hermes-webhook] IN persistida:", persistResult.id, "tipo:", tipoMsg);
+    }
+
+    // 7.b TRANSCRIÇÃO DE ÁUDIO — usa raw_payload original (não sanitizado) para acessar mídia
+    if (p.message_type === "audio" && !effectiveText) {
+      const t0 = Date.now();
+      const tr = await transcribeAudio(p.raw_payload);
+      const elapsed = Date.now() - t0;
+
+      if (tr.ok && tr.text) {
+        const novoConteudo = `[Áudio transcrito] ${tr.text}`;
+        const novoPayload = {
+          ...sanitizedRaw,
+          transcription_status: "success",
+          transcription_text: tr.text,
+          transcription_provider: tr.provider,
+          transcription_at: new Date().toISOString(),
+          transcription_latency_ms: elapsed,
+        };
+        // Atualiza pela mensagem externa, ou pelo ID retornado
+        if (p.external_message_id) {
+          await supabase
+            .from("mensagens_whatsapp")
+            .update({ conteudo: novoConteudo, payload: novoPayload })
+            .eq("mensagem_externa_id", p.external_message_id);
+        } else if (persistResult.id) {
+          await supabase
+            .from("mensagens_whatsapp")
+            .update({ conteudo: novoConteudo, payload: novoPayload })
+            .eq("id", persistResult.id);
+        }
+        // Substitui texto efetivo pela transcrição → entra no fluxo normal
+        effectiveText = tr.text;
+        console.log("[hermes-webhook] áudio transcrito em", elapsed, "ms:", tr.text.slice(0, 80));
+      } else {
+        await supabase.from("system_logs").insert({
+          level: "error",
+          category: "whatsapp",
+          source: "hermes-webhook",
+          message: "audio_transcription_failed",
+          details: {
+            error: tr.error,
+            provider: tr.provider,
+            telefone: phoneNorm,
+            mensagem_externa_id: p.external_message_id ?? null,
+            latency_ms: elapsed,
+          },
+          agendamento_id: lead.id,
+        });
+        // marca falha no payload da mensagem
+        const failPayload = {
+          ...sanitizedRaw,
+          transcription_status: "failed",
+          transcription_provider: tr.provider,
+          transcription_error: tr.error,
+          transcription_at: new Date().toISOString(),
+        };
+        if (p.external_message_id) {
+          await supabase
+            .from("mensagens_whatsapp")
+            .update({ payload: failPayload })
+            .eq("mensagem_externa_id", p.external_message_id);
+        } else if (persistResult.id) {
+          await supabase
+            .from("mensagens_whatsapp")
+            .update({ payload: failPayload })
+            .eq("id", persistResult.id);
+        }
+      }
     }
 
     // Helper
@@ -721,7 +929,8 @@ Deno.serve(async (req: Request) => {
       });
     };
 
-    // 8. Mídia sem transcrição
+    // 8. Mídia sem transcrição (NÃO áudio: imagem, vídeo, doc, sticker)
+    //    Para áudio só cai aqui se a transcrição falhou e effectiveText continua vazio.
     if (isMedia && !effectiveText) {
       return replyAndLog(
         "Recebi seu áudio/imagem 🙏 Pode me escrever em texto o que você precisa? Assim consigo te ajudar mais rápido.",
