@@ -153,7 +153,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[converter-lead] Lead ${lead_id} convertido com sucesso`);
+    // Pós-validação: para Clinicor/HGP o agendamento DEVE ter clinica_id
+    // (a Agenda do admin filtra por clinica_id; sem isso o slot não aparece como ocupado).
+    if (clinicaSlug && !updated.clinica_id) {
+      console.error(`[converter-lead] Lead ${lead_id} atualizado mas sem clinica_id (slug=${clinicaSlug}). Agenda não vai exibir como ocupado.`);
+      return new Response(
+        JSON.stringify({
+          error: "Falha ao vincular clínica ao agendamento. Encaminhe para atendimento humano.",
+          code: "CLINICA_NOT_LINKED",
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`[converter-lead] Lead ${lead_id} convertido com sucesso (clinica_id=${updated.clinica_id ?? "(none)"})`);
 
     // Sync com Google Calendar (fire-and-forget, não bloqueia resposta)
     syncAgendamentoToCalendar(supabase, updated.id, "create")
@@ -161,7 +174,7 @@ Deno.serve(async (req) => {
       .catch((err: unknown) => console.error("[converter-lead] Google Calendar sync failed:", err));
 
     return new Response(
-      JSON.stringify({ success: true, id: updated.id }),
+      JSON.stringify({ success: true, id: updated.id, clinica_id: updated.clinica_id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
