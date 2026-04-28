@@ -782,10 +782,9 @@ Deno.serve(async (req: Request) => {
     const isMedia = ["audio", "image", "video", "document", "sticker", "media"].includes(
       p.message_type,
     );
-    const effectiveText = (p.text || "").trim();
+    let effectiveText = (p.text || "").trim();
 
     // 7. Salvar IN — SEMPRE persistir, antes de qualquer processamento de IA/bot.
-    //    Mapeia message_type Evolution → tipo_mensagem aceito pela tabela.
     const mapTipoIN = (mt: string): string => {
       switch (mt) {
         case "text": return "recebida";
@@ -808,6 +807,14 @@ Deno.serve(async (req: Request) => {
         : p.message_type === "sticker" ? "[sticker recebido]"
         : `[${p.message_type}]`);
 
+    // Sanitiza payload antes de persistir (remove apikey/token/etc.)
+    const sanitizedRaw = (sanitizePayload(p.raw_payload) as Record<string, unknown> | null) ?? {
+      event: p.event,
+      instance: p.instance,
+      source: "hermes",
+      message_type: p.message_type,
+    };
+
     const persistResult = await persistirMensagem(supabase, {
       telefone: phoneNorm,
       agendamentoId: lead.id,
@@ -816,18 +823,80 @@ Deno.serve(async (req: Request) => {
       tipoMensagem: tipoMsg,
       statusEnvio: "entregue",
       mensagemExternaId: p.external_message_id ?? null,
-      payload:
-        (p.raw_payload as Record<string, unknown>) ?? {
-          event: p.event,
-          instance: p.instance,
-          source: "hermes",
-          message_type: p.message_type,
-        },
+      payload: sanitizedRaw,
     });
     if (!persistResult.ok) {
       console.error("[hermes-webhook] FALHA ao persistir IN:", persistResult.error);
     } else {
       console.log("[hermes-webhook] IN persistida:", persistResult.id, "tipo:", tipoMsg);
+    }
+
+    // 7.b TRANSCRIÇÃO DE ÁUDIO — usa raw_payload original (não sanitizado) para acessar mídia
+    if (p.message_type === "audio" && !effectiveText) {
+      const t0 = Date.now();
+      const tr = await transcribeAudio(p.raw_payload);
+      const elapsed = Date.now() - t0;
+
+      if (tr.ok && tr.text) {
+        const novoConteudo = `[Áudio transcrito] ${tr.text}`;
+        const novoPayload = {
+          ...sanitizedRaw,
+          transcription_status: "success",
+          transcription_text: tr.text,
+          transcription_provider: tr.provider,
+          transcription_at: new Date().toISOString(),
+          transcription_latency_ms: elapsed,
+        };
+        // Atualiza pela mensagem externa, ou pelo ID retornado
+        if (p.external_message_id) {
+          await supabase
+            .from("mensagens_whatsapp")
+            .update({ conteudo: novoConteudo, payload: novoPayload })
+            .eq("mensagem_externa_id", p.external_message_id);
+        } else if (persistResult.id) {
+          await supabase
+            .from("mensagens_whatsapp")
+            .update({ conteudo: novoConteudo, payload: novoPayload })
+            .eq("id", persistResult.id);
+        }
+        // Substitui texto efetivo pela transcrição → entra no fluxo normal
+        effectiveText = tr.text;
+        console.log("[hermes-webhook] áudio transcrito em", elapsed, "ms:", tr.text.slice(0, 80));
+      } else {
+        await supabase.from("system_logs").insert({
+          level: "error",
+          category: "whatsapp",
+          source: "hermes-webhook",
+          message: "audio_transcription_failed",
+          details: {
+            error: tr.error,
+            provider: tr.provider,
+            telefone: phoneNorm,
+            mensagem_externa_id: p.external_message_id ?? null,
+            latency_ms: elapsed,
+          },
+          agendamento_id: lead.id,
+        });
+        // marca falha no payload da mensagem
+        const failPayload = {
+          ...sanitizedRaw,
+          transcription_status: "failed",
+          transcription_provider: tr.provider,
+          transcription_error: tr.error,
+          transcription_at: new Date().toISOString(),
+        };
+        if (p.external_message_id) {
+          await supabase
+            .from("mensagens_whatsapp")
+            .update({ payload: failPayload })
+            .eq("mensagem_externa_id", p.external_message_id);
+        } else if (persistResult.id) {
+          await supabase
+            .from("mensagens_whatsapp")
+            .update({ payload: failPayload })
+            .eq("id", persistResult.id);
+        }
+      }
     }
 
     // Helper
@@ -860,7 +929,8 @@ Deno.serve(async (req: Request) => {
       });
     };
 
-    // 8. Mídia sem transcrição
+    // 8. Mídia sem transcrição (NÃO áudio: imagem, vídeo, doc, sticker)
+    //    Para áudio só cai aqui se a transcrição falhou e effectiveText continua vazio.
     if (isMedia && !effectiveText) {
       return replyAndLog(
         "Recebi seu áudio/imagem 🙏 Pode me escrever em texto o que você precisa? Assim consigo te ajudar mais rápido.",
