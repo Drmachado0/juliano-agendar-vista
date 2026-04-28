@@ -139,6 +139,140 @@ function classifyIntent(text: string): string {
   return "ambiguo";
 }
 
+// ----- Detecção de dúvida/interrupção do paciente durante o fluxo -----
+type QuestionTopic =
+  | "valor"
+  | "convenio"
+  | "local"
+  | "endereco"
+  | "horario"
+  | "como_funciona"
+  | "duvida_generica"
+  | "medica"
+  | "urgencia_med";
+
+const FAQ_KEYWORDS: Array<{ topic: QuestionTopic; rules: RegExp[] }> = [
+  {
+    topic: "valor",
+    rules: [
+      /\bvalor(es)?\b/, /\bpre[çc]o\b/, /\bquanto\s+(custa|fica|é|sai)\b/,
+      /\bcusto\b/, /\bvalor\s+da\s+consulta\b/,
+    ],
+  },
+  {
+    topic: "convenio",
+    rules: [
+      /\bconv[eê]nio(s)?\b/, /\bplano(s)?\s+de\s+sa[uú]de\b/, /\baceita(m)?\s+plano\b/,
+      /\baceita(m)?\s+conv[eê]nio\b/,
+      /\b(bradesco|unimed|cassi|sul\s*am[eé]rica|sulam[eé]rica|amil|hapvida|notredame|geap)\b/,
+    ],
+  },
+  {
+    topic: "local",
+    rules: [
+      /\bonde\s+(fica|atende|é)\b/, /\bquais?\s+os?\s+locais?\b/,
+      /\batende\s+em\s+que\s+lugar\b/, /\blocal(is)?\s+de\s+atendimento\b/,
+    ],
+  },
+  {
+    topic: "endereco",
+    rules: [
+      /\bendere[cç]o\b/, /\bcomo\s+chegar\b/, /\blocaliza[çc][aã]o\b/, /\bmapa\b/,
+    ],
+  },
+  {
+    topic: "horario",
+    rules: [
+      /\bquais?\s+(os\s+)?hor[aá]rios?\b/, /\bhor[aá]rio\s+(de\s+)?atendimento\b/,
+      /\bque\s+horas?\s+atende\b/, /\bfunciona\s+que\s+horas?\b/,
+      /\bo\s+mais\s+r[aá]pido\b/, /\bmais\s+breve\b/, /\bo\s+quanto\s+antes\b/,
+      /\bdisponibilidade\b/,
+    ],
+  },
+  {
+    topic: "como_funciona",
+    rules: [
+      /\bcomo\s+funciona\b/, /\bcomo\s+(é|e)\s+o\s+atendimento\b/,
+      /\bcomo\s+(é|e)\s+a\s+consulta\b/, /\bcomo\s+marcar\b/,
+      /\bcomo\s+agendar\b/, /\bo\s+que\s+precisa\b/, /\bque\s+documento(s)?\b/,
+    ],
+  },
+];
+
+const MEDICAL_KEYWORDS_RE = new RegExp(
+  "\\b(diagn|doen[çc]a|rem[eé]dio|receita|prescri[çc]|interpret|cirurgia|operar|opera[çc]|miopia|astigmatismo|catarata|glaucoma)",
+  "i",
+);
+
+const DUVIDA_GENERICA_RE =
+  /^(tirar?\s+d[uú]vidas?|tenho\s+(uma\s+)?d[uú]vida|posso\s+(tirar|fazer)\s+(uma\s+)?d[uú]vida|uma\s+pergunta|posso\s+perguntar|d[uú]vida)\b/i;
+
+function detectPatientQuestion(text: string): QuestionTopic | null {
+  const t = (text || "").trim();
+  if (!t) return null;
+  const tl = t.toLowerCase();
+  if (URGENCY_KEYWORDS.some((k) => tl.includes(k))) return "urgencia_med";
+  if (DUVIDA_GENERICA_RE.test(t)) return "duvida_generica";
+  for (const f of FAQ_KEYWORDS) {
+    if (f.rules.some((re) => re.test(tl))) return f.topic;
+  }
+  if (MEDICAL_KEYWORDS_RE.test(t)) return "medica";
+  if (/\?\s*$/.test(t) && t.length <= 80) return "duvida_generica";
+  return null;
+}
+
+function answerForQuestion(topic: QuestionTopic, inSchedulingFlow: boolean): string {
+  const followUp = inSchedulingFlow
+    ? "\n\nSe quiser, posso continuar seu agendamento por aqui. 😊"
+    : "\n\nSe quiser, posso te ajudar a agendar uma consulta. 😊";
+
+  switch (topic) {
+    case "valor":
+      return `A consulta particular com o Dr. Juliano Machado é ${VALOR_PARTICULAR}.${followUp}`;
+    case "convenio":
+      return `Atendemos ${CONVENIOS_ACEITOS_TXT}. Também atendemos particular (${VALOR_PARTICULAR}).${followUp}`;
+    case "local":
+    case "endereco":
+      return `O Dr. Juliano atende em Paragominas:\n• *Clinicor* — Paragominas\n• *HGP* — Hospital Geral de Paragominas${followUp}`;
+    case "horario":
+      return `Os horários variam por local e por dia. Posso te mostrar as próximas opções disponíveis assim que tivermos seus dados básicos.${followUp}`;
+    case "como_funciona":
+      return `Funciona assim: eu coleto alguns dados (nome, data de nascimento, forma de pagamento e local), depois te mostro as próximas datas disponíveis. Você escolhe e nossa equipe confirma por aqui mesmo.${followUp}`;
+    case "duvida_generica":
+      return `Claro, posso te ajudar 🙏 Sua dúvida é sobre *valor*, *convênios*, *endereço/locais*, *horários* ou *como funciona o agendamento*? Pode me contar com suas palavras também.`;
+    case "medica":
+      return `Essa dúvida precisa ser avaliada diretamente pelo Dr. Juliano em consulta. Por aqui não consigo orientar sobre sintomas, exames ou tratamento.${followUp}`;
+    case "urgencia_med":
+      return `Se for uma urgência, procure atendimento médico imediatamente. Posso também te ajudar a agendar uma consulta com o Dr. Juliano.`;
+  }
+}
+
+const RESUME_AFFIRMATIVE_RE =
+  /^(sim|claro|pode|pode\s+ser|quero|continuar?|continua|segue|prossiga|prossegue|ok|okay|t[aá]\s+bom|beleza|vamos|por\s+favor|isso|isso\s+mesmo|👍|✅)\b/i;
+const RESUME_NEGATIVE_RE =
+  /^(n[ãa]o|nao|agora\s+n[ãa]o|depois|mais\s+tarde|outra\s+hora)\b/i;
+
+const PROMPT_BY_AWAITING: Record<string, string> = {
+  collecting_name: "Continuando de onde paramos: qual é o nome completo do paciente?",
+  collecting_birthdate:
+    "Continuando: qual é a data de nascimento do paciente? (formato dd/mm/aaaa)",
+  collecting_payment: "Continuando: o atendimento será *particular* ou por *convênio*?",
+  collecting_convenio: `Continuando: qual é o convênio? Atendemos ${CONVENIOS_ACEITOS_TXT}.`,
+  collecting_location: "Continuando: prefere atendimento na *Clinicor* ou no *HGP*?",
+  convenio_fallback_particular:
+    "Continuando: como esse convênio não está na lista, posso seguir como *particular* (R$ 300,00)?",
+  dados_paciente: "Continuando seu agendamento. Pode me confirmar os dados que faltam?",
+  escolha_periodo: "Continuando: qual das opções de horário você prefere?",
+  confirmacao_final: "Continuando: posso confirmar seu agendamento então?",
+};
+
+function promptForAwaiting(awaiting: string | null | undefined): string {
+  if (!awaiting) {
+    return "Tudo certo, posso te ajudar com o agendamento 😊\n\nQual é o nome completo do paciente?";
+  }
+  return PROMPT_BY_AWAITING[awaiting] ?? PROMPT_BY_AWAITING.dados_paciente;
+}
+
 function normalizeIntentText(text: string): string {
   return (text || "")
     .toLowerCase()
