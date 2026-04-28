@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle, CheckCircle2, UserPlus, Timer, Send, XCircle, Loader2, FlaskConical } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle, CheckCircle2, UserPlus, Timer, Send, XCircle, Loader2, FlaskConical, CheckCheck, Eye as EyeIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { BoasVindasInfo } from "@/hooks/useBoasVindasStatus";
@@ -120,57 +120,70 @@ const KanbanCard = ({
       </Tooltip>
 
       {/* Boas-vindas status */}
-      {boasVindas && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div
-              className={cn(
-                "flex items-center gap-2 text-xs font-medium px-2 py-1 rounded",
-                boasVindas.status === "enviada" &&
-                  "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300",
-                boasVindas.status === "falhou" &&
-                  "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300",
-                boasVindas.status === "tentativa" &&
-                  "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-              )}
-            >
-              {boasVindas.status === "enviada" && <Send className="h-3 w-3" />}
-              {boasVindas.status === "falhou" && <XCircle className="h-3 w-3" />}
-              {boasVindas.status === "tentativa" && <Loader2 className="h-3 w-3 animate-spin" />}
-              <span>
-                {boasVindas.status === "enviada" && "Boas-vindas enviada"}
-                {boasVindas.status === "falhou" && "Boas-vindas falhou"}
-                {boasVindas.status === "tentativa" && "Boas-vindas em tentativa"}
-              </span>
-              <span className="ml-auto opacity-70">
-                {format(new Date(boasVindas.data), "dd/MM HH:mm", { locale: ptBR })}
-              </span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs">
-            <div className="text-xs space-y-1">
-              <div><strong>Status:</strong> {boasVindas.status}</div>
-              <div>
-                <strong>Quando:</strong>{" "}
-                {format(new Date(boasVindas.data), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+      {boasVindas && (() => {
+        const s = boasVindas.status;
+        const labels: Record<string, string> = {
+          enviado: "Boas-vindas enviada",
+          entregue: "Boas-vindas entregue",
+          lido: "Boas-vindas lida",
+          pendente: "Boas-vindas pendente",
+          erro: "Boas-vindas com erro",
+        };
+        const colorClass =
+          s === "lido"
+            ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
+            : s === "entregue"
+            ? "bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300"
+            : s === "enviado"
+            ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+            : s === "pendente"
+            ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
+            : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300";
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className={cn("flex items-center gap-2 text-xs font-medium px-2 py-1 rounded", colorClass)}>
+                {s === "lido" && <EyeIcon className="h-3 w-3" />}
+                {s === "entregue" && <CheckCheck className="h-3 w-3" />}
+                {s === "enviado" && <Send className="h-3 w-3" />}
+                {s === "pendente" && <Loader2 className="h-3 w-3 animate-spin" />}
+                {s === "erro" && <XCircle className="h-3 w-3" />}
+                <span>{labels[s]}</span>
+                <span className="ml-auto opacity-70 font-normal">
+                  {format(new Date(boasVindas.data), "dd/MM HH:mm", { locale: ptBR })}
+                </span>
               </div>
-              <div className="opacity-80">
-                {formatDistanceToNow(new Date(boasVindas.data), { locale: ptBR, addSuffix: true })}
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <div className="text-xs space-y-1">
+                <div><strong>Status:</strong> {s}{boasVindas.statusRaw && boasVindas.statusRaw.toLowerCase() !== s ? ` (${boasVindas.statusRaw})` : ""}</div>
+                <div>
+                  <strong>Quando:</strong>{" "}
+                  {format(new Date(boasVindas.data), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+                </div>
+                <div className="opacity-80">
+                  {formatDistanceToNow(new Date(boasVindas.data), { locale: ptBR, addSuffix: true })}
+                </div>
+                {s === "erro" && boasVindas.motivoErro && (
+                  <div className="pt-1 mt-1 border-t border-border/50">
+                    <strong>Motivo:</strong> {boasVindas.motivoErro}
+                  </div>
+                )}
+                {s === "erro" && !boasVindas.motivoErro && (
+                  <div className="pt-1 mt-1 border-t border-border/50 opacity-80">
+                    Sem detalhe do erro registrado.
+                  </div>
+                )}
+                {s === "pendente" && (
+                  <div className="pt-1 mt-1 border-t border-border/50 opacity-80">
+                    Aguardando confirmação de entrega da Evolution API.
+                  </div>
+                )}
               </div>
-              {boasVindas.status === "falhou" && boasVindas.motivoErro && (
-                <div className="pt-1 mt-1 border-t border-border/50">
-                  <strong>Motivo:</strong> {boasVindas.motivoErro}
-                </div>
-              )}
-              {boasVindas.status === "falhou" && !boasVindas.motivoErro && (
-                <div className="pt-1 mt-1 border-t border-border/50 opacity-80">
-                  Sem detalhe do erro registrado.
-                </div>
-              )}
-            </div>
-          </TooltipContent>
-        </Tooltip>
-      )}
+            </TooltipContent>
+          </Tooltip>
+        );
+      })()}
 
       {/* Lead Indicator */}
       {isLead && (
