@@ -32,6 +32,9 @@ export interface LeadComMensagens {
   ultima_mensagem_data: string | null;
   mensagens_nao_lidas: number;
   is_sandbox?: boolean;
+  bot_ativo?: boolean;
+  bot_pausado_ate?: string | null;
+  bot_pausa_motivo?: string | null;
 }
 
 export type SandboxFiltro = "reais" | "todos" | "somente_testes";
