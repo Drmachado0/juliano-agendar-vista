@@ -99,7 +99,7 @@ export const listarLeadsComMensagens = async (
     // Buscar agendamentos com telefone preenchido
     let query = supabase
       .from("agendamentos")
-      .select("id, nome_completo, telefone_whatsapp, status_crm, local_atendimento, is_sandbox")
+      .select("id, nome_completo, telefone_whatsapp, status_crm, local_atendimento, is_sandbox, bot_ativo, bot_pausado_ate, bot_pausa_motivo")
       .not("telefone_whatsapp", "is", null)
       .neq("telefone_whatsapp", "");
 
