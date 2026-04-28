@@ -1126,6 +1126,15 @@ Deno.serve(async (req: Request) => {
     // Isso evita reaproveitar last_options/awaiting/dados antigos de testes anteriores
     // e impede oferta de datas antes de coletar nome, nascimento, pagamento e local.
     if (isClearNewSchedulingIntent(effectiveText, intent)) {
+      const stateBefore = {
+        awaiting: state?.awaiting ?? null,
+        last_options: state?.last_options ?? null,
+        selected_slot: (state as any)?.selected_slot ?? null,
+        selected_data: state?.selected_data ?? null,
+        selected_periodo: state?.selected_periodo ?? null,
+        pending_confirmation: state?.pending_confirmation ?? false,
+      };
+
       await supabase
         .from("agendamentos")
         .update({ status_crm: "AGUARDANDO" })
@@ -1148,6 +1157,40 @@ Deno.serve(async (req: Request) => {
         pending_confirmation: false,
         sandbox,
       });
+
+      const stateAfter = {
+        awaiting: "collecting_name",
+        last_options: null,
+        selected_slot: null,
+        selected_data: null,
+        selected_periodo: null,
+        pending_confirmation: false,
+      };
+
+      // Log estruturado (sem payload bruto, sem secrets, sem dados sensíveis do paciente)
+      const resetLog = {
+        event: "appointment_state_reset",
+        lead_id: lead.id,
+        phone_masked: "***" + phoneNorm.slice(-4),
+        intent,
+        before: stateBefore,
+        after: stateAfter,
+        timestamp: new Date().toISOString(),
+      };
+      console.log("[hermes-webhook] appointment_state_reset", JSON.stringify(resetLog));
+
+      try {
+        await supabase.from("system_logs").insert({
+          level: "info",
+          category: "hermes",
+          source: "hermes-whatsapp-webhook",
+          message: "appointment_state_reset",
+          details: resetLog,
+          agendamento_id: lead.id,
+        });
+      } catch (e) {
+        console.error("[hermes-webhook] falha ao salvar system_log reset:", (e as Error).message);
+      }
 
       return replyAndLog(
         "Claro, vou te ajudar com o agendamento 😊\n\nQual é o nome completo do paciente?",
