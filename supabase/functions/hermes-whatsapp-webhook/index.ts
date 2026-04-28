@@ -1207,14 +1207,14 @@ Deno.serve(async (req: Request) => {
 
     // Opções numeradas — somente quando estamos no estágio correspondente,
     // para não conflitar com escolha de slot (escolha_periodo).
-    if (state?.awaiting === "payment_type" || state?.awaiting === "convenio_nome") {
+    if (state?.awaiting === "collecting_payment" || state?.awaiting === "collecting_convenio") {
       const op = opcaoPagamento(effectiveText);
       if (op) {
         payment_type = op.payment_type;
         if (op.convenio) convenio = op.convenio;
       }
     }
-    if (state?.awaiting === "local_pref") {
+    if (state?.awaiting === "collecting_location") {
       const ol = opcaoLocal(effectiveText);
       if (ol) local_pref = ol;
     }
@@ -1238,8 +1238,6 @@ Deno.serve(async (req: Request) => {
       state?.awaiting === "collecting_payment" ||
       state?.awaiting === "collecting_convenio" ||
       state?.awaiting === "collecting_location" ||
-      state?.awaiting === "payment_type" ||
-      state?.awaiting === "convenio_nome" ||
       state?.awaiting === "convenio_fallback_particular" ||
       state?.awaiting === "dados_paciente" ||
       state?.awaiting === "escolha_periodo" ||
