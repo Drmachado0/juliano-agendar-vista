@@ -56,10 +56,22 @@ const payloadSchema = z.object({
 type Payload = z.infer<typeof payloadSchema>;
 
 // ----- Resposta padrão -----
+interface EmailData {
+  nome_completo: string;
+  telefone_whatsapp: string;
+  email: string | null;
+  data_nascimento: string;
+  tipo: string;
+  convenio: string;
+  valor: string | null;
+  data_agendamento: string;
+  hora_agendamento: string;
+  local_atendimento: string;
+}
 interface StdResponse {
   ok: boolean;
   lead_id?: string | null;
-  action: "reply" | "none";
+  action: "reply" | "none" | "booking_confirmed";
   reply_text: string | null;
   crm_status?: string | null;
   intent?: string;
@@ -70,6 +82,7 @@ interface StdResponse {
   error?: string;
   sandbox?: boolean;
   deduped?: boolean;
+  email_data?: EmailData | null;
 }
 function jsonResp(body: StdResponse, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -207,6 +220,12 @@ interface ConvState {
     | "dados_paciente"
     | "escolha_periodo"
     | "confirmacao_final"
+    | "collecting_name"
+    | "collecting_birthdate"
+    | "collecting_payment"
+    | "collecting_convenio"
+    | "collecting_location"
+    | "local_pref"
     | null;
   last_options: Array<{ n: number; data: string; periodo: string; local: string }> | null;
   selected_data: string | null;
@@ -648,25 +667,98 @@ function montarTextoOpcoes(
   ].join("\n");
 }
 
-// Texto para pedir os dados mínimos faltantes
-function textoPedirDados(
-  paymentType: "particular" | "convenio",
-  convenio: string | null,
+// Próxima pergunta na ordem obrigatória: nome → nascimento → pagamento → local
+type ProximaPergunta =
+  | { stage: "collecting_name"; text: string }
+  | { stage: "collecting_birthdate"; text: string }
+  | { stage: "collecting_payment"; text: string }
+  | { stage: "collecting_convenio"; text: string }
+  | { stage: "collecting_location"; text: string }
+  | null;
+
+function proximaPergunta(
   nome: string | null,
   nasc: string | null,
+  paymentType: "particular" | "convenio" | null,
+  convenio: string | null,
   local: "Clinicor" | "HGP" | null,
-): string | null {
-  const faltam: string[] = [];
-  if (!nome) faltam.push("• *nome completo*");
-  if (!nasc) faltam.push("• *data de nascimento* (dd/mm/aaaa)");
-  if (!local) faltam.push("• *local* de preferência: *Clinicor* ou *HGP*");
-  if (paymentType === "convenio" && !convenio) faltam.push("• nome do *convênio*");
-  if (faltam.length === 0) return null;
-  const intro =
-    paymentType === "particular"
-      ? `A consulta particular é ${VALOR_PARTICULAR}. Para seguir com o agendamento, me envie:`
-      : `Para seguir com o agendamento pelo convênio, me envie:`;
-  return [intro, "", ...faltam].join("\n");
+): ProximaPergunta {
+  if (!nome) {
+    return {
+      stage: "collecting_name",
+      text: "Claro, vou te ajudar com o agendamento 😊\n\nQual é o *nome completo* do paciente?",
+    };
+  }
+  if (!nasc) {
+    return {
+      stage: "collecting_birthdate",
+      text: "Obrigado! Qual é a *data de nascimento* do paciente? (dd/mm/aaaa)",
+    };
+  }
+  if (!paymentType) {
+    return {
+      stage: "collecting_payment",
+      text: [
+        "O atendimento será *particular* ou por *convênio*?",
+        "",
+        "1) Particular — R$ 300,00",
+        "2) Bradesco Saúde",
+        "3) Unimed",
+        "4) Cassi",
+        "5) SulAmérica",
+        "",
+        "Responda com o *número* da opção.",
+      ].join("\n"),
+    };
+  }
+  if (paymentType === "convenio" && !convenio) {
+    return {
+      stage: "collecting_convenio",
+      text: [
+        "Qual o seu convênio?",
+        "",
+        "2) Bradesco Saúde",
+        "3) Unimed",
+        "4) Cassi",
+        "5) SulAmérica",
+        "",
+        "Responda com o *número* da opção.",
+      ].join("\n"),
+    };
+  }
+  if (!local) {
+    return {
+      stage: "collecting_location",
+      text: [
+        "Qual *local* você prefere para o atendimento?",
+        "",
+        "1) Clinicor — Paragominas",
+        "2) HGP / Hospital Geral de Paragominas",
+        "",
+        "Responda com o *número* da opção.",
+      ].join("\n"),
+    };
+  }
+  return null;
+}
+
+// Mapeia opção numérica de pagamento (1-5)
+function opcaoPagamento(text: string): { payment_type: "particular" | "convenio"; convenio: string | null } | null {
+  const t = text.trim();
+  if (/^1\b/.test(t)) return { payment_type: "particular", convenio: null };
+  if (/^2\b/.test(t)) return { payment_type: "convenio", convenio: "Bradesco Saúde" };
+  if (/^3\b/.test(t)) return { payment_type: "convenio", convenio: "Unimed" };
+  if (/^4\b/.test(t)) return { payment_type: "convenio", convenio: "Cassi" };
+  if (/^5\b/.test(t)) return { payment_type: "convenio", convenio: "SulAmérica" };
+  return null;
+}
+
+// Mapeia opção numérica de local (1-2)
+function opcaoLocal(text: string): "Clinicor" | "HGP" | null {
+  const t = text.trim();
+  if (/^1\b/.test(t)) return "Clinicor";
+  if (/^2\b/.test(t)) return "HGP";
+  return null;
 }
 
 function textoConfirmacaoFinal(s: {
@@ -917,7 +1009,7 @@ Deno.serve(async (req: Request) => {
       return jsonResp({
         ok: true,
         lead_id: lead.id,
-        action: "reply",
+        action: extras.action ?? "reply",
         reply_text: reply,
         crm_status: extras.crm_status ?? lead.status_crm ?? "NOVO LEAD",
         intent,
@@ -926,6 +1018,7 @@ Deno.serve(async (req: Request) => {
         appointment: extras.appointment ?? null,
         awaiting: extras.awaiting ?? null,
         sandbox,
+        email_data: extras.email_data ?? null,
       });
     };
 
@@ -1048,12 +1141,39 @@ Deno.serve(async (req: Request) => {
     const nascDetect = detectarDataNascimento(effectiveText);
     if (nascDetect) data_nascimento = nascDetect;
 
+    // Opções numeradas — somente quando estamos no estágio correspondente,
+    // para não conflitar com escolha de slot (escolha_periodo).
+    if (state?.awaiting === "payment_type" || state?.awaiting === "convenio_nome") {
+      const op = opcaoPagamento(effectiveText);
+      if (op) {
+        payment_type = op.payment_type;
+        if (op.convenio) convenio = op.convenio;
+      }
+    }
+    if (state?.awaiting === "local_pref") {
+      const ol = opcaoLocal(effectiveText);
+      if (ol) local_pref = ol;
+    }
+
+    // Nome completo: só capturar se estamos coletando nome OU se ainda não temos nome
+    // e o texto NÃO é uma intenção/pedido conhecido (ex.: "quero agendar uma consulta").
     const nomeDetect = detectarNomeCompleto(effectiveText);
-    if (nomeDetect && !nome_completo) nome_completo = nomeDetect;
+    const isPedidoAgendar = intent === "agendar_consulta" || intent === "saudacao";
+    if (nomeDetect && !nome_completo && (state?.awaiting === "collecting_name" || !isPedidoAgendar)) {
+      // Evita capturar "Quero Agendar Uma Consulta" como nome
+      if (!/agendar|consulta|marcar|atendimento|particular|conv[eê]nio/i.test(nomeDetect)) {
+        nome_completo = nomeDetect;
+      }
+    }
 
     const wantsAgendar =
       intent === "agendar_consulta" ||
       intent === "saudacao" ||
+      state?.awaiting === "collecting_name" ||
+      state?.awaiting === "collecting_birthdate" ||
+      state?.awaiting === "collecting_payment" ||
+      state?.awaiting === "collecting_convenio" ||
+      state?.awaiting === "collecting_location" ||
       state?.awaiting === "payment_type" ||
       state?.awaiting === "convenio_nome" ||
       state?.awaiting === "convenio_fallback_particular" ||
@@ -1203,17 +1323,46 @@ Deno.serve(async (req: Request) => {
         sandbox,
       });
 
+      // Buscar e-mail do lead (se já existir)
+      const { data: leadFull } = await supabase
+        .from("agendamentos")
+        .select("email")
+        .eq("id", lead.id)
+        .maybeSingle();
+
+      const localFullStr = escolhida_local.includes("Clinicor")
+        ? "Clinicor – Paragominas"
+        : "Hospital Geral de Paragominas";
+
+      const emailData: EmailData = {
+        nome_completo: state.nome_completo!,
+        telefone_whatsapp: phoneNorm,
+        email: (leadFull?.email as string | null) ?? null,
+        data_nascimento: state.data_nascimento!,
+        tipo: "Consulta oftalmológica",
+        convenio: state.payment_type === "particular" ? "Particular" : (state.convenio ?? "Particular"),
+        valor: state.payment_type === "particular" ? VALOR_PARTICULAR : null,
+        data_agendamento: escolhida_data,
+        hora_agendamento: horarioEscolhido,
+        local_atendimento: localFullStr,
+      };
+
       return replyAndLog(
         [
-          `✅ Pronto! Sua consulta está agendada:`,
+          `Agendamento confirmado ✅`,
           ``,
-          `📅 ${fmtDataBR(escolhida_data)} às ${horarioEscolhido}`,
-          `📍 ${escolhida_local}`,
+          `Dr. Juliano Machado`,
+          `CRM-PA 15253`,
           ``,
-          `Recomendamos chegar com antecedência. Qualquer coisa, é só me chamar 🙏`,
+          `📍 ${localFullStr}`,
+          `📅 ${fmtDataBR(escolhida_data)}`,
+          `🕒 ${horarioEscolhido}`,
+          ``,
+          `Se precisar alterar, é só avisar por aqui. 🙏`,
         ].join("\n"),
         "confirmar_agendamento",
         {
+          action: "booking_confirmed",
           needs_human: false,
           appointment_created: true,
           crm_status: novoStatus,
@@ -1222,6 +1371,7 @@ Deno.serve(async (req: Request) => {
             time: horarioEscolhido,
             location: escolhida_local,
           },
+          email_data: emailData,
         },
       );
     }
@@ -1275,7 +1425,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 17. Início ou continuação do fluxo de agendamento
+    // 17. Início ou continuação do fluxo de agendamento — ORDEM ESTRITA
+    //     nome → data_nascimento → particular/convênio → local → datas
     if (wantsAgendar) {
       // Atualizar status para AGUARDANDO no primeiro contato
       if (intent === "agendar_consulta" || intent === "saudacao") {
@@ -1285,73 +1436,9 @@ Deno.serve(async (req: Request) => {
           .eq("id", lead.id);
       }
 
-      // 17.1 Sem payment_type ainda → perguntar
-      if (!payment_type) {
-        await saveState(supabase, phoneNorm, {
-          lead_id: lead.id,
-          last_intent: "agendar_consulta",
-          ambiguous_count: 0,
-          awaiting: "payment_type",
-          payment_type: null,
-          convenio: null,
-          nome_completo,
-          data_nascimento,
-          sandbox,
-        });
-        const greet =
-          intent === "saudacao"
-            ? "Olá! Sou a assistente do Dr. Juliano Machado, oftalmologista 👋\n\n"
-            : "";
-        return replyAndLog(
-          `${greet}Claro, posso te ajudar com o agendamento. O atendimento será *particular* ou por *convênio*?`,
-          "perguntar_payment_type",
-          { crm_status: "AGUARDANDO", awaiting: "payment_type" },
-        );
-      }
-
-      // 17.2 Convênio: ainda não sabemos qual ou não foi aceito
-      if (payment_type === "convenio" && !convenio) {
-        // Se o usuário acabou de mandar um convênio NÃO aceito
-        const conv2 = detectarConvenio(effectiveText);
-        if (conv2.nome && !conv2.aceito) {
-          await saveState(supabase, phoneNorm, {
-            lead_id: lead.id,
-            last_intent: "convenio_nao_aceito",
-            ambiguous_count: 0,
-            awaiting: "convenio_fallback_particular",
-            payment_type: "convenio",
-            convenio: null,
-            nome_completo,
-            data_nascimento,
-            sandbox,
-          });
-          return replyAndLog(
-            `No momento atendemos por convênio: *${CONVENIOS_ACEITOS_TXT}*. Deseja seguir como *particular* (${VALOR_PARTICULAR})?`,
-            "convenio_nao_aceito",
-            { awaiting: "convenio_fallback_particular" },
-          );
-        }
-        await saveState(supabase, phoneNorm, {
-          lead_id: lead.id,
-          last_intent: "perguntar_convenio",
-          ambiguous_count: 0,
-          awaiting: "convenio_nome",
-          payment_type: "convenio",
-          convenio: null,
-          nome_completo,
-          data_nascimento,
-          sandbox,
-        });
-        return replyAndLog(
-          `Perfeito! Qual o seu *convênio*? Atendemos: ${CONVENIOS_ACEITOS_TXT}.`,
-          "perguntar_convenio",
-          { awaiting: "convenio_nome" },
-        );
-      }
-
-      // 17.3 Fallback: usuário responde sim/não para "seguir particular"
+      // 17.0 Fallback antigo: usuário responde sim/não para "seguir particular"
       if (state?.awaiting === "convenio_fallback_particular") {
-        if (/^(sim|ok|pode|claro|quero)\b/i.test(effectiveText)) {
+        if (/^(sim|ok|pode|claro|quero|1\b)/i.test(effectiveText)) {
           payment_type = "particular";
           convenio = null;
         } else if (/^(n[ãa]o|nao)\b/i.test(effectiveText)) {
@@ -1375,14 +1462,44 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // 17.4 Pedir dados mínimos
-      const pedido = textoPedirDados(payment_type!, convenio, nome_completo, data_nascimento, local_pref);
-      if (pedido) {
+      // 17.1 Convênio mencionado mas não aceito
+      if (payment_type === "convenio" && !convenio) {
+        const conv2 = detectarConvenio(effectiveText);
+        if (conv2.nome && !conv2.aceito) {
+          await saveState(supabase, phoneNorm, {
+            lead_id: lead.id,
+            last_intent: "convenio_nao_aceito",
+            ambiguous_count: 0,
+            awaiting: "convenio_fallback_particular",
+            payment_type: "convenio",
+            convenio: null,
+            nome_completo,
+            data_nascimento,
+            sandbox,
+          });
+          return replyAndLog(
+            `No momento atendemos por convênio: *${CONVENIOS_ACEITOS_TXT}*. Deseja seguir como *particular* (${VALOR_PARTICULAR})?`,
+            "convenio_nao_aceito",
+            { awaiting: "convenio_fallback_particular" },
+          );
+        }
+      }
+
+      // 17.2 Próxima pergunta na ordem estrita
+      const prox = proximaPergunta(nome_completo, data_nascimento, payment_type, convenio, local_pref);
+      if (prox) {
+        const stageToAwaiting: Record<string, ConvState["awaiting"]> = {
+          collecting_name: "collecting_name",
+          collecting_birthdate: "collecting_birthdate",
+          collecting_payment: "payment_type",
+          collecting_convenio: "convenio_nome",
+          collecting_location: "local_pref",
+        };
         await saveState(supabase, phoneNorm, {
           lead_id: lead.id,
-          last_intent: "coletar_dados",
+          last_intent: prox.stage,
           ambiguous_count: 0,
-          awaiting: "dados_paciente",
+          awaiting: stageToAwaiting[prox.stage] ?? "dados_paciente",
           payment_type,
           convenio,
           nome_completo,
@@ -1390,10 +1507,13 @@ Deno.serve(async (req: Request) => {
           selected_local: local_pref ? localFull(local_pref) : null,
           sandbox,
         });
-        return replyAndLog(pedido, "coletar_dados", { awaiting: "dados_paciente" });
+        return replyAndLog(prox.text, prox.stage, {
+          crm_status: "AGUARDANDO",
+          awaiting: stageToAwaiting[prox.stage] ?? "dados_paciente",
+        });
       }
 
-      // 17.5 Tudo coletado — buscar opções de data reais
+      // 17.3 Tudo coletado — buscar opções de data reais
       const opcoes = await buscarOpcoesAgrupadas(supabaseUrl, serviceKey, local_pref);
       await saveState(supabase, phoneNorm, {
         lead_id: lead.id,
