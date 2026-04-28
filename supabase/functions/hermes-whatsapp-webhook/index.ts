@@ -320,6 +320,65 @@ async function logHermes(
   } catch (_) { /* best-effort */ }
 }
 
+// ----- Persistência direta (bypass RPC para garantir gravação) -----
+async function persistirMensagem(
+  supabase: SupabaseClient,
+  args: {
+    telefone: string;
+    agendamentoId: string | null;
+    direcao: "IN" | "OUT";
+    conteudo: string;
+    tipoMensagem: string;
+    statusEnvio: string;
+    mensagemExternaId?: string | null;
+    payload?: Record<string, unknown> | null;
+  },
+): Promise<{ ok: boolean; id: string | null; error: string | null }> {
+  try {
+    const tiposValidos = new Set([
+      "manual", "confirmacao", "confirmacao_automatica", "lembrete_24h", "boas_vindas",
+      "bot_pre_agendamento", "avaliacao", "lembrete_anual", "sistema",
+      "recebida", "imagem", "audio", "video", "documento", "sticker", "reacao",
+      "resposta_automatica",
+    ]);
+    const tipo = tiposValidos.has(args.tipoMensagem) ? args.tipoMensagem : "sistema";
+
+    const { data, error } = await supabase
+      .from("mensagens_whatsapp")
+      .insert({
+        agendamento_id: args.agendamentoId,
+        telefone: args.telefone,
+        direcao: args.direcao,
+        conteudo: args.conteudo,
+        tipo_mensagem: tipo,
+        status_envio: args.statusEnvio,
+        mensagem_externa_id: args.mensagemExternaId ?? null,
+        payload: args.payload ?? null,
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("[hermes-webhook] persistirMensagem ERRO:", error.message, error.details);
+      try {
+        await supabase.from("system_logs").insert({
+          level: "error",
+          category: "whatsapp",
+          source: "hermes-webhook",
+          message: `persist_${args.direcao}_falhou`,
+          details: { error: error.message, code: error.code, details: error.details, telefone: args.telefone, mensagem_externa_id: args.mensagemExternaId ?? null },
+        });
+      } catch (_) { /* ignore */ }
+      return { ok: false, id: null, error: error.message };
+    }
+    return { ok: true, id: (data?.id as string) ?? null, error: null };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[hermes-webhook] persistirMensagem exceção:", msg);
+    return { ok: false, id: null, error: msg };
+  }
+}
+
 // ----- Salvar OUT -----
 async function salvarOutbound(
   supabase: SupabaseClient,
@@ -328,13 +387,13 @@ async function salvarOutbound(
   texto: string,
   intent: string,
 ) {
-  await registrarMensagemWhatsapp(supabase, {
+  await persistirMensagem(supabase, {
     telefone: phoneNorm,
+    agendamentoId,
     direcao: "OUT",
-    tipo_mensagem: "sistema",
     conteudo: texto,
-    agendamento_id: agendamentoId,
-    status_envio: "enviado",
+    tipoMensagem: "sistema",
+    statusEnvio: "enviado",
     payload: { source: "hermes-webhook", intent, status_envio_real: "preparado_hermes" },
   });
 }
