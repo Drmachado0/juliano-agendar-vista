@@ -730,6 +730,7 @@ export type Database = {
           last_options: Json | null
           lead_id: string | null
           nome_completo: string | null
+          paused_question_state: Json | null
           payment_type: string | null
           pending_confirmation: boolean
           phone: string
@@ -751,6 +752,7 @@ export type Database = {
           last_options?: Json | null
           lead_id?: string | null
           nome_completo?: string | null
+          paused_question_state?: Json | null
           payment_type?: string | null
           pending_confirmation?: boolean
           phone: string
@@ -772,6 +774,7 @@ export type Database = {
           last_options?: Json | null
           lead_id?: string | null
           nome_completo?: string | null
+          paused_question_state?: Json | null
           payment_type?: string | null
           pending_confirmation?: boolean
           phone?: string
