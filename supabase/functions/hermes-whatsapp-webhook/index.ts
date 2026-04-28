@@ -88,6 +88,11 @@ interface StdResponse {
   intent?: string;
   needs_human?: boolean;
   appointment_created?: boolean;
+  agenda_slot_occupied?: boolean;
+  agendamento_id?: string | null;
+  data_agendamento?: string | null;
+  hora_agendamento?: string | null;
+  local_atendimento?: string | null;
   appointment?: { date: string; time: string; location: string } | null;
   awaiting?: string | null;
   error?: string;
