@@ -645,35 +645,51 @@ Deno.serve(async (req: Request) => {
     );
     const effectiveText = (p.text || "").trim();
 
-    // 7. Salvar IN
-    const tipoMsg =
-      p.message_type === "text"
-        ? "recebida"
-        : (["audio", "image", "video", "document", "sticker", "reaction"] as const).includes(
-            p.message_type as any,
-          )
-        ? (p.message_type as any === "document"
-            ? "documento"
-            : p.message_type as any === "reaction"
-            ? "reacao"
-            : (p.message_type as any))
-        : "recebida";
+    // 7. Salvar IN — SEMPRE persistir, antes de qualquer processamento de IA/bot.
+    //    Mapeia message_type Evolution → tipo_mensagem aceito pela tabela.
+    const mapTipoIN = (mt: string): string => {
+      switch (mt) {
+        case "text": return "recebida";
+        case "audio": return "audio";
+        case "image": return "imagem";
+        case "video": return "video";
+        case "document": return "documento";
+        case "sticker": return "sticker";
+        case "reaction": return "reacao";
+        case "media": return "imagem";
+        default: return "recebida";
+      }
+    };
+    const tipoMsg = mapTipoIN(p.message_type);
+    const conteudoIN = effectiveText
+      || (p.message_type === "audio" ? "[áudio recebido sem transcrição]"
+        : p.message_type === "image" ? "[imagem recebida]"
+        : p.message_type === "video" ? "[vídeo recebido]"
+        : p.message_type === "document" ? "[documento recebido]"
+        : p.message_type === "sticker" ? "[sticker recebido]"
+        : `[${p.message_type}]`);
 
-    await registrarMensagemWhatsapp(supabase, {
+    const persistResult = await persistirMensagem(supabase, {
       telefone: phoneNorm,
+      agendamentoId: lead.id,
       direcao: "IN",
-      conteudo: effectiveText || `[${p.message_type}]`,
-      tipo_mensagem: tipoMsg,
-      agendamento_id: lead.id,
-      status_envio: "entregue",
-      mensagem_externa_id: p.external_message_id ?? null,
+      conteudo: conteudoIN,
+      tipoMensagem: tipoMsg,
+      statusEnvio: "entregue",
+      mensagemExternaId: p.external_message_id ?? null,
       payload:
         (p.raw_payload as Record<string, unknown>) ?? {
           event: p.event,
           instance: p.instance,
           source: "hermes",
+          message_type: p.message_type,
         },
     });
+    if (!persistResult.ok) {
+      console.error("[hermes-webhook] FALHA ao persistir IN:", persistResult.error);
+    } else {
+      console.log("[hermes-webhook] IN persistida:", persistResult.id, "tipo:", tipoMsg);
+    }
 
     // Helper
     const replyAndLog = async (
