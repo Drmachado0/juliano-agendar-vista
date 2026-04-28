@@ -46,7 +46,8 @@ export function sanitizePayload(input: unknown, depth = 0): unknown {
 
 /**
  * Mapeia status bruto da Evolution para nosso status_envio confiável.
- * Apenas DELIVERY_ACK/READ contam como "entrega confirmada"; SERVER_ACK = aceito pelo servidor;
+ * Apenas DELIVERY_ACK/READ contam como "entrega confirmada".
+ * SERVER_ACK = apenas aceito pelo servidor WhatsApp, sem confirmação de entrega ao destinatário → pendente.
  * PENDING/sem status = pendente; ERROR = erro.
  */
 export function mapEvolutionStatusToDelivery(
@@ -55,7 +56,8 @@ export function mapEvolutionStatusToDelivery(
   const s = (rawStatus || '').toUpperCase();
   if (s === 'READ' || s === 'PLAYED') return { deliveryStatus: 'lido', confirmed: true };
   if (s === 'DELIVERY_ACK' || s === 'DELIVERED') return { deliveryStatus: 'entregue', confirmed: true };
-  if (s === 'SERVER_ACK' || s === 'SENT') return { deliveryStatus: 'enviado', confirmed: true };
+  // SERVER_ACK / SENT: aceito pelo servidor, mas NÃO confirma entrega → pendente, aguarda DELIVERY_ACK
+  if (s === 'SERVER_ACK' || s === 'SENT') return { deliveryStatus: 'enviado', confirmed: false };
   if (s === 'ERROR' || s === 'FAILED') return { deliveryStatus: 'erro', confirmed: false };
   // PENDING / vazio / desconhecido → pendente, NÃO confirmado
   return { deliveryStatus: 'pendente', confirmed: false };
