@@ -52,6 +52,17 @@ const payloadSchema = z.object({
   timestamp: z.string().optional(),
   raw_payload: z.record(z.any()).optional().nullable(),
   sandbox: z.boolean().optional(),
+  // mc-monitor pode enviar pré-classificação:
+  routing_directive: z.string().optional().nullable(),
+  patient_question_intent: z
+    .object({
+      is_question_or_interruption: z.boolean().optional(),
+      topic: z.string().optional(),
+    })
+    .partial()
+    .passthrough()
+    .optional()
+    .nullable(),
 });
 type Payload = z.infer<typeof payloadSchema>;
 
