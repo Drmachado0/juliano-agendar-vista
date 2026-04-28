@@ -321,7 +321,7 @@ async function findOrCreateLead(
   phone: string,
   sandbox: boolean,
   pushName: string | null,
-): Promise<{ id: string; created: boolean; status_crm: string | null; status_funil: string | null }> {
+): Promise<{ id: string; created: boolean; status_crm: string | null; status_funil: string | null; bot_ativo: boolean; bot_pausado_ate: string | null; bot_pausa_motivo: string | null }> {
   const norm = normalizePhone(phone);
   const l8 = last8(norm);
 
@@ -329,7 +329,7 @@ async function findOrCreateLead(
   // e status_crm não cancelado). Reutiliza o mais recente aberto.
   const { data: existingList } = await supabase
     .from("agendamentos")
-    .select("id, status_crm, status_funil, is_sandbox, data_agendamento, created_at, nome_completo")
+    .select("id, status_crm, status_funil, is_sandbox, data_agendamento, created_at, nome_completo, bot_ativo, bot_pausado_ate, bot_pausa_motivo")
     .filter("telefone_whatsapp", "ilike", `%${l8}`)
     .order("created_at", { ascending: false })
     .limit(10);
@@ -355,6 +355,9 @@ async function findOrCreateLead(
       created: false,
       status_crm: (row.status_crm as string) ?? null,
       status_funil: (row.status_funil as string) ?? null,
+      bot_ativo: row.bot_ativo !== false,
+      bot_pausado_ate: (row.bot_pausado_ate as string) ?? null,
+      bot_pausa_motivo: (row.bot_pausa_motivo as string) ?? null,
     };
   }
 
@@ -393,7 +396,45 @@ async function findOrCreateLead(
     created: true,
     status_crm: created.status_crm as string,
     status_funil: (created as any).status_funil as string,
+    bot_ativo: true,
+    bot_pausado_ate: null,
+    bot_pausa_motivo: null,
   };
+}
+
+// Verifica/atualiza estado de pausa do bot. Retorna true se o bot deve ficar SILENCIOSO.
+async function verificarPausaBot(
+  supabase: SupabaseClient,
+  lead: { id: string; bot_ativo: boolean; bot_pausado_ate: string | null; bot_pausa_motivo: string | null },
+): Promise<{ pausado: boolean; volta_em_segundos: number | null }> {
+  const agora = Date.now();
+  const ate = lead.bot_pausado_ate ? new Date(lead.bot_pausado_ate).getTime() : null;
+
+  // Pausa automática expirada → reativa silenciosamente
+  if (ate !== null && ate <= agora && lead.bot_pausa_motivo === "humano_respondeu") {
+    await supabase
+      .from("agendamentos")
+      .update({
+        bot_ativo: true,
+        bot_pausado_ate: null,
+        bot_pausa_motivo: null,
+        bot_pausado_por: null,
+      })
+      .eq("id", lead.id);
+    return { pausado: false, volta_em_segundos: null };
+  }
+
+  // Pausa ativa (qualquer motivo) → silencia
+  if (ate !== null && ate > agora) {
+    return { pausado: true, volta_em_segundos: Math.ceil((ate - agora) / 1000) };
+  }
+
+  // bot_ativo = false sem janela de pausa (ex.: URGENTE / PRECISA_DE_HUMANO) → silencia
+  if (lead.bot_ativo === false) {
+    return { pausado: true, volta_em_segundos: null };
+  }
+
+  return { pausado: false, volta_em_segundos: null };
 }
 
 // ----- Auditoria -----
@@ -999,6 +1040,31 @@ Deno.serve(async (req: Request) => {
       console.error("[hermes-webhook] FALHA ao persistir IN:", persistResult.error);
     } else {
       console.log("[hermes-webhook] IN persistida:", persistResult.id, "tipo:", tipoMsg);
+    }
+
+    // 7.a GATE DE PAUSA DO BOT — silencia respostas automáticas quando humano assumiu.
+    const pausa = await verificarPausaBot(supabase, lead);
+    if (pausa.pausado) {
+      try {
+        await supabase.from("bot_assistente_log").insert({
+          telefone: phoneNorm,
+          agendamento_id: lead.id,
+          mensagem_id: persistResult.id ?? null,
+          acao: "bot_pausado_skip",
+          intencao: lead.bot_pausa_motivo ?? "manual",
+          detalhes: {
+            volta_em_segundos: pausa.volta_em_segundos,
+            bot_pausado_ate: lead.bot_pausado_ate,
+            motivo: lead.bot_pausa_motivo,
+          },
+        });
+      } catch (_) { /* best-effort */ }
+      console.log("[hermes-webhook] bot pausado — skip resposta", JSON.stringify({
+        agendamento_id: lead.id,
+        volta_em_s: pausa.volta_em_segundos,
+        motivo: lead.bot_pausa_motivo,
+      }));
+      return jsonResp({ ok: true, action: "none", reply_text: null });
     }
 
     // 7.b TRANSCRIÇÃO DE ÁUDIO — usa raw_payload original (não sanitizado) para acessar mídia

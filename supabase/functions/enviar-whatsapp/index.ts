@@ -176,6 +176,43 @@ serve(async (req: Request): Promise<Response> => {
         payload: data ?? null,
       });
 
+      // Pausa automática do bot quando humano (admin) envia mensagem manual.
+      const tipoNormalizado = ((tipo_mensagem as string) ?? "manual").toLowerCase();
+      const ehManual = !tipoNormalizado || tipoNormalizado === "manual";
+      if (ehManual && agendamento_id) {
+        try {
+          const { data: cfg } = await supabase
+            .from("bot_config")
+            .select("pausa_automatica_ativa, pausa_automatica_minutos")
+            .eq("id", true)
+            .maybeSingle();
+
+          const ativa = cfg?.pausa_automatica_ativa ?? true;
+          const minutos = Math.max(1, Math.min(cfg?.pausa_automatica_minutos ?? 30, 1440));
+
+          if (ativa) {
+            const pausadoAte = new Date(Date.now() + minutos * 60_000).toISOString();
+            await supabase
+              .from("agendamentos")
+              .update({
+                bot_ativo: false,
+                bot_pausado_ate: pausadoAte,
+                bot_pausa_motivo: "humano_respondeu",
+              })
+              .eq("id", agendamento_id);
+
+            await supabase.from("crm_audit_log").insert({
+              agendamento_id,
+              acao: "bot_pausado_auto",
+              detalhes: { minutos, pausado_ate: pausadoAte, motivo: "humano_respondeu" },
+            });
+            console.log("[enviar-whatsapp] bot pausado automaticamente por", minutos, "min");
+          }
+        } catch (e: any) {
+          console.warn("[enviar-whatsapp] falha ao pausar bot (não bloqueia envio):", e?.message);
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: true,

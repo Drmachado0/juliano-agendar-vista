@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Building2, Stethoscope, Plus, Pencil, Clock, MapPin, Phone, Calendar, Link2, Unlink, Loader2, Shield, DollarSign, MessageSquare, Star, RefreshCw, CheckCircle2, XCircle, AlertCircle, ExternalLink, Zap, Settings as SettingsIcon } from "lucide-react";
+import { Building2, Stethoscope, Plus, Pencil, Clock, MapPin, Phone, Calendar, Link2, Unlink, Loader2, Shield, DollarSign, MessageSquare, Star, RefreshCw, CheckCircle2, XCircle, AlertCircle, ExternalLink, Zap, Settings as SettingsIcon, Bot } from "lucide-react";
+import BotConfigCard from "@/components/admin/BotConfigCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Clinica, 
@@ -534,7 +535,7 @@ export default function Configuracoes() {
         </div>
 
         <Tabs defaultValue="clinicas" className="w-full">
-          <TabsList className="grid w-full max-w-3xl grid-cols-6">
+          <TabsList className="grid w-full max-w-3xl grid-cols-7">
             <TabsTrigger value="clinicas" className="gap-2 text-xs sm:text-sm">
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Clínicas</span>
@@ -559,7 +560,16 @@ export default function Configuracoes() {
               <Link2 className="h-4 w-4" />
               <span className="hidden sm:inline">Integrações</span>
             </TabsTrigger>
+            <TabsTrigger value="bot" className="gap-2 text-xs sm:text-sm">
+              <Bot className="h-4 w-4" />
+              <span className="hidden sm:inline">Bot</span>
+            </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="bot" className="mt-6">
+            <BotConfigCard />
+          </TabsContent>
+
 
           {/* Tab Clínicas */}
           <TabsContent value="clinicas" className="mt-6">

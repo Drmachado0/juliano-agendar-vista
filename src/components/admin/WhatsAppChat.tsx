@@ -25,6 +25,7 @@ import {
   ConversationIntent,
 } from "@/services/conversationIntents";
 import WhatsAppMessageBubble from "./WhatsAppMessageBubble";
+import BotStatusBadge from "./BotStatusBadge";
 
 interface WhatsAppChatProps {
   lead: LeadComMensagens | null;
@@ -314,6 +315,7 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
         
         <div className="hidden sm:flex flex-col items-end gap-1">
           <Badge variant="outline">{lead.status_crm}</Badge>
+          <BotStatusBadge agendamentoId={lead.agendamento_id} />
           {ultimaIntencao && (
             <Badge
               variant={INTENCAO_VARIANT[ultimaIntencao.intencao] || "secondary"}
