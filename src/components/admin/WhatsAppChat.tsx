@@ -25,6 +25,7 @@ import {
   ConversationIntent,
 } from "@/services/conversationIntents";
 import WhatsAppMessageBubble from "./WhatsAppMessageBubble";
+import BotStatusBadge from "./BotStatusBadge";
 
 interface WhatsAppChatProps {
   lead: LeadComMensagens | null;
