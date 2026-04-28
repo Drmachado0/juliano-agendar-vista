@@ -73,30 +73,58 @@ Deno.serve(async (req) => {
 
     // 2. Determine status_crm based on location
     let statusCrm = "NOVO LEAD";
+    let clinicaSlug: string | null = null;
     const locationLower = local_atendimento.toLowerCase();
     if (locationLower.includes("clinicor")) {
       statusCrm = "CLINICOR";
+      clinicaSlug = "clinicor";
     } else if (locationLower.includes("hgp") || locationLower.includes("hospital geral")) {
       statusCrm = "HGP";
+      clinicaSlug = "hgp";
     } else if (locationLower.includes("belém") || locationLower.includes("belem") || locationLower.includes("iob") || locationLower.includes("vitria")) {
       statusCrm = "BELÉM";
+      // Belém pode ter múltiplas clínicas (IOB/Vitria); deixamos clinica_id em branco
+    }
+
+    // 2.1 Resolve clinica_id a partir do slug para que a Agenda do admin
+    // (que filtra por clinica_id) consiga exibir o horário como ocupado.
+    let clinicaIdResolved: string | null = null;
+    if (clinicaSlug) {
+      const { data: clinicaRow, error: clinicaErr } = await supabase
+        .from("clinicas")
+        .select("id")
+        .eq("slug", clinicaSlug)
+        .eq("ativo", true)
+        .maybeSingle();
+      if (clinicaErr) {
+        console.error(`[converter-lead] Erro ao buscar clinica slug=${clinicaSlug}:`, clinicaErr);
+      }
+      clinicaIdResolved = clinicaRow?.id ?? null;
+      if (!clinicaIdResolved) {
+        console.warn(`[converter-lead] Clínica não encontrada para slug=${clinicaSlug} — agendamento ficará sem clinica_id e NÃO aparecerá em /admin/agenda filtrada por clínica.`);
+      }
     }
 
     // 3. Update the lead record with appointment data
-    console.log(`[converter-lead] Convertendo lead ${lead_id} → status_crm=${statusCrm}`);
+    console.log(`[converter-lead] Convertendo lead ${lead_id} → status_crm=${statusCrm} clinica_id=${clinicaIdResolved ?? "(none)"}`);
+    const updatePayload: Record<string, unknown> = {
+      data_agendamento,
+      hora_agendamento,
+      aceita_primeiro_horario: aceita_primeiro_horario ?? false,
+      aceita_contato_whatsapp_email: aceita_contato_whatsapp_email ?? false,
+      status_funil: "agendado",
+      status_crm: statusCrm,
+      updated_at: new Date().toISOString(),
+    };
+    if (clinicaIdResolved) {
+      updatePayload.clinica_id = clinicaIdResolved;
+    }
+
     const { data: updated, error: updateError } = await supabase
       .from("agendamentos")
-      .update({
-        data_agendamento,
-        hora_agendamento,
-        aceita_primeiro_horario: aceita_primeiro_horario ?? false,
-        aceita_contato_whatsapp_email: aceita_contato_whatsapp_email ?? false,
-        status_funil: "agendado",
-        status_crm: statusCrm,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", lead_id)
-      .select("id")
+      .select("id, clinica_id")
       .single();
 
     if (updateError) {
