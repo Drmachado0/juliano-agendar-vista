@@ -45,11 +45,11 @@ export async function obterStatusBot(agendamentoId: string): Promise<BotStatusAg
   return data as any;
 }
 
-export async function pausarBot(agendamentoId: string, minutos?: number): Promise<{ error: string | null; ate: string | null }> {
+export async function pausarBot(agendamentoId: string, minutos?: number, motivo: string = "manual"): Promise<{ error: string | null; ate: string | null }> {
   const { data, error } = await (supabase as any).rpc("pausar_bot_agendamento", {
     p_agendamento_id: agendamentoId,
     p_minutos: minutos ?? null,
-    p_motivo: "manual",
+    p_motivo: motivo,
   });
   return { error: error?.message ?? null, ate: (data as string) ?? null };
 }

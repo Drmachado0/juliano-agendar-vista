@@ -32,6 +32,9 @@ export interface LeadComMensagens {
   ultima_mensagem_data: string | null;
   mensagens_nao_lidas: number;
   is_sandbox?: boolean;
+  bot_ativo?: boolean;
+  bot_pausado_ate?: string | null;
+  bot_pausa_motivo?: string | null;
 }
 
 export type SandboxFiltro = "reais" | "todos" | "somente_testes";
@@ -96,7 +99,7 @@ export const listarLeadsComMensagens = async (
     // Buscar agendamentos com telefone preenchido
     let query = supabase
       .from("agendamentos")
-      .select("id, nome_completo, telefone_whatsapp, status_crm, local_atendimento, is_sandbox")
+      .select("id, nome_completo, telefone_whatsapp, status_crm, local_atendimento, is_sandbox, bot_ativo, bot_pausado_ate, bot_pausa_motivo")
       .not("telefone_whatsapp", "is", null)
       .neq("telefone_whatsapp", "");
 
@@ -150,6 +153,9 @@ export const listarLeadsComMensagens = async (
         status_crm: agendamento.status_crm,
         local_atendimento: agendamento.local_atendimento,
         is_sandbox: !!agendamento.is_sandbox,
+        bot_ativo: agendamento.bot_ativo !== false,
+        bot_pausado_ate: agendamento.bot_pausado_ate ?? null,
+        bot_pausa_motivo: agendamento.bot_pausa_motivo ?? null,
         ultima_mensagem: ultimaMensagem?.conteudo || null,
         ultima_mensagem_data: ultimaMensagem?.created_at || null,
         mensagens_nao_lidas: mensagensNaoLidas,

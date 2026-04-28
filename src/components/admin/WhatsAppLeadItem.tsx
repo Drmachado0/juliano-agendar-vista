@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LeadComMensagens } from "@/services/mensagens";
+import BotStatusToggle from "./BotStatusToggle";
 
 interface WhatsAppLeadItemProps {
   lead: LeadComMensagens;
@@ -85,9 +86,16 @@ const WhatsAppLeadItem = ({ lead, isSelected, onClick }: WhatsAppLeadItemProps) 
           <span className="font-medium text-sm text-foreground truncate">
             {lead.nome_completo}
           </span>
-          <span className="text-[10px] text-muted-foreground flex-shrink-0">
-            {formatMessageTime(lead.ultima_mensagem_data)}
-          </span>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <BotStatusToggle
+              agendamentoId={lead.agendamento_id}
+              botAtivo={lead.bot_ativo !== false}
+              botPausadoAte={lead.bot_pausado_ate ?? null}
+            />
+            <span className="text-[10px] text-muted-foreground">
+              {formatMessageTime(lead.ultima_mensagem_data)}
+            </span>
+          </div>
         </div>
         
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
