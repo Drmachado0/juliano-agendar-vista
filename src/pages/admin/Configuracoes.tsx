@@ -535,7 +535,7 @@ export default function Configuracoes() {
         </div>
 
         <Tabs defaultValue="clinicas" className="w-full">
-          <TabsList className="grid w-full max-w-3xl grid-cols-6">
+          <TabsList className="grid w-full max-w-3xl grid-cols-7">
             <TabsTrigger value="clinicas" className="gap-2 text-xs sm:text-sm">
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Clínicas</span>
@@ -560,7 +560,16 @@ export default function Configuracoes() {
               <Link2 className="h-4 w-4" />
               <span className="hidden sm:inline">Integrações</span>
             </TabsTrigger>
+            <TabsTrigger value="bot" className="gap-2 text-xs sm:text-sm">
+              <Bot className="h-4 w-4" />
+              <span className="hidden sm:inline">Bot</span>
+            </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="bot" className="mt-6">
+            <BotConfigCard />
+          </TabsContent>
+
 
           {/* Tab Clínicas */}
           <TabsContent value="clinicas" className="mt-6">
