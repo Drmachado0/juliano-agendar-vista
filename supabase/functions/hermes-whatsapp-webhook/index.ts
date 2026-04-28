@@ -320,6 +320,145 @@ async function logHermes(
   } catch (_) { /* best-effort */ }
 }
 
+// ----- Sanitização de payload (remove secrets) -----
+const SECRET_KEYS_RE = /^(apikey|api_key|token|access_token|authorization|secret|password|x-api-key|hermes-secret|x-hermes-secret)$/i;
+function sanitizePayload(input: unknown, depth = 0): unknown {
+  if (depth > 8 || input == null) return input;
+  if (Array.isArray(input)) return input.map((v) => sanitizePayload(v, depth + 1));
+  if (typeof input === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+      if (SECRET_KEYS_RE.test(k)) {
+        out[k] = "[REDACTED]";
+      } else {
+        out[k] = sanitizePayload(v, depth + 1);
+      }
+    }
+    return out;
+  }
+  return input;
+}
+
+// ----- Transcrição de áudio (Lovable AI Gateway / Gemini) -----
+function findInObject(obj: unknown, keys: string[], depth = 0): unknown {
+  if (depth > 8 || obj == null || typeof obj !== "object") return undefined;
+  for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+    if (keys.includes(k) && (typeof v === "string" || typeof v === "number" || typeof v === "boolean")) {
+      return v;
+    }
+    if (v && typeof v === "object") {
+      const found = findInObject(v, keys, depth + 1);
+      if (found !== undefined) return found;
+    }
+  }
+  return undefined;
+}
+
+async function downloadAudioAsBase64(url: string): Promise<{ base64: string; mime: string } | null> {
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const ct = resp.headers.get("content-type") || "audio/ogg";
+    const buf = new Uint8Array(await resp.arrayBuffer());
+    // base64 encode
+    let bin = "";
+    for (let i = 0; i < buf.byteLength; i++) bin += String.fromCharCode(buf[i]);
+    const b64 = btoa(bin);
+    return { base64: b64, mime: ct.split(";")[0].trim() };
+  } catch (e) {
+    console.error("[hermes-webhook] downloadAudio falhou:", (e as Error).message);
+    return null;
+  }
+}
+
+interface TranscriptionResult {
+  ok: boolean;
+  text: string | null;
+  provider: string;
+  error?: string;
+}
+
+async function transcribeAudio(rawPayload: unknown): Promise<TranscriptionResult> {
+  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!lovableKey) {
+    return { ok: false, text: null, provider: "lovable-ai-gemini", error: "LOVABLE_API_KEY not configured" };
+  }
+
+  // 1. Tenta encontrar base64 no payload
+  let base64 = findInObject(rawPayload, ["base64", "audioBase64", "mediaBase64"]) as string | undefined;
+  let mime = (findInObject(rawPayload, ["mimetype", "mime_type", "mimeType"]) as string | undefined) || "audio/ogg";
+
+  // 2. Caso contrário, tenta URL direta
+  if (!base64) {
+    const url = findInObject(rawPayload, ["url", "directPath", "mediaUrl"]) as string | undefined;
+    if (url && /^https?:\/\//i.test(url)) {
+      const dl = await downloadAudioAsBase64(url);
+      if (dl) {
+        base64 = dl.base64;
+        mime = dl.mime || mime;
+      }
+    }
+  }
+
+  if (!base64) {
+    return { ok: false, text: null, provider: "lovable-ai-gemini", error: "no audio source (base64/url) in payload" };
+  }
+
+  // Normaliza mime aceito por Gemini
+  if (!/^audio\//.test(mime)) mime = "audio/ogg";
+
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Você é um transcritor de áudio em português brasileiro. Transcreva LITERALMENTE o que o usuário disse no áudio, sem comentários, sem aspas, sem prefixos. Se não houver fala compreensível, responda exatamente: [áudio inaudível].",
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Transcreva este áudio em português:" },
+              { type: "input_audio", input_audio: { data: base64, format: mime.replace(/^audio\//, "") } },
+            ],
+          },
+        ],
+        temperature: 0.1,
+      }),
+    });
+
+    if (!resp.ok) {
+      const errTxt = await resp.text().catch(() => "");
+      return {
+        ok: false,
+        text: null,
+        provider: "lovable-ai-gemini",
+        error: `gateway ${resp.status}: ${errTxt.slice(0, 300)}`,
+      };
+    }
+    const json = await resp.json().catch(() => ({}));
+    const text = json?.choices?.[0]?.message?.content?.toString().trim() || "";
+    if (!text || /^\[áudio inaud[íi]vel\]$/i.test(text)) {
+      return { ok: false, text: null, provider: "lovable-ai-gemini", error: "transcription empty/inaudible" };
+    }
+    return { ok: true, text, provider: "lovable-ai-gemini" };
+  } catch (e) {
+    return {
+      ok: false,
+      text: null,
+      provider: "lovable-ai-gemini",
+      error: (e as Error).message,
+    };
+  }
+}
+
 // ----- Persistência direta (bypass RPC para garantir gravação) -----
 async function persistirMensagem(
   supabase: SupabaseClient,
