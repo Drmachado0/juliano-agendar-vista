@@ -1472,15 +1472,8 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      // Sandbox: confere agenda real e cria agendamento
-      const horarios = await buscarHorariosDoPeriodo(
-        supabaseUrl,
-        serviceKey,
-        escolhida_data,
-        escolhida_local,
-        escolhida_periodo,
-      );
-      if (horarios.length === 0) {
+      // Sandbox: confere agenda real e cria agendamento (reaproveita horariosFinal)
+      if (!horarioFinal) {
         await saveState(supabase, phoneNorm, {
           lead_id: lead.id,
           last_intent: "sem_horarios",
@@ -1495,7 +1488,7 @@ Deno.serve(async (req: Request) => {
           { needs_human: true, crm_status: "PRECISA_DE_HUMANO" },
         );
       }
-      const horarioEscolhido = horarios[0].slice(0, 5);
+      const horarioEscolhido = horarioFinal;
 
       const convResp = await fetch(
         `${supabaseUrl}/functions/v1/converter-lead-agendamento`,
