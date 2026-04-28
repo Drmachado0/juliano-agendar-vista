@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LeadComMensagens } from "@/services/mensagens";
+import BotStatusToggle from "./BotStatusToggle";
 
 interface WhatsAppLeadItemProps {
   lead: LeadComMensagens;
