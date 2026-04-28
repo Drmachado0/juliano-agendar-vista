@@ -396,7 +396,45 @@ async function findOrCreateLead(
     created: true,
     status_crm: created.status_crm as string,
     status_funil: (created as any).status_funil as string,
+    bot_ativo: true,
+    bot_pausado_ate: null,
+    bot_pausa_motivo: null,
   };
+}
+
+// Verifica/atualiza estado de pausa do bot. Retorna true se o bot deve ficar SILENCIOSO.
+async function verificarPausaBot(
+  supabase: SupabaseClient,
+  lead: { id: string; bot_ativo: boolean; bot_pausado_ate: string | null; bot_pausa_motivo: string | null },
+): Promise<{ pausado: boolean; volta_em_segundos: number | null }> {
+  const agora = Date.now();
+  const ate = lead.bot_pausado_ate ? new Date(lead.bot_pausado_ate).getTime() : null;
+
+  // Pausa automática expirada → reativa silenciosamente
+  if (ate !== null && ate <= agora && lead.bot_pausa_motivo === "humano_respondeu") {
+    await supabase
+      .from("agendamentos")
+      .update({
+        bot_ativo: true,
+        bot_pausado_ate: null,
+        bot_pausa_motivo: null,
+        bot_pausado_por: null,
+      })
+      .eq("id", lead.id);
+    return { pausado: false, volta_em_segundos: null };
+  }
+
+  // Pausa ativa (qualquer motivo) → silencia
+  if (ate !== null && ate > agora) {
+    return { pausado: true, volta_em_segundos: Math.ceil((ate - agora) / 1000) };
+  }
+
+  // bot_ativo = false sem janela de pausa (ex.: URGENTE / PRECISA_DE_HUMANO) → silencia
+  if (lead.bot_ativo === false) {
+    return { pausado: true, volta_em_segundos: null };
+  }
+
+  return { pausado: false, volta_em_segundos: null };
 }
 
 // ----- Auditoria -----
