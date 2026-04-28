@@ -936,8 +936,9 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // 5. Lead
-    const lead = await findOrCreateLead(supabase, phoneNorm, sandbox);
+    // 5. Lead — extrai pushName da Evolution para nomear o card desde o início
+    const pushName = extractPushName(p.raw_payload);
+    const lead = await findOrCreateLead(supabase, phoneNorm, sandbox, pushName);
 
     // 6. Texto efetivo
     const isMedia = ["audio", "image", "video", "document", "sticker", "media"].includes(
