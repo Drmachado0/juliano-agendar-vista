@@ -1919,6 +1919,73 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      // 4.1) Valida que o slot está, de fato, ocupado na agenda visível ao admin/site.
+      //      Usa a mesma fonte de verdade (horarios_ocupados) consumida pelo /admin/agenda.
+      const horaAgendaFmt = String(agendamentoFinal.hora_agendamento).slice(0, 8);
+      let agendaSlotOccupied = false;
+      let slotCheckError: string | null = null;
+      try {
+        const { data: ocupados, error: ocupErr } = await supabase.rpc("horarios_ocupados", {
+          p_data_inicio: agendamentoFinal.data_agendamento,
+          p_data_fim: agendamentoFinal.data_agendamento,
+          p_clinica_ids: agendamentoFinal.clinica_id ? [agendamentoFinal.clinica_id] : null,
+        });
+        if (ocupErr) {
+          slotCheckError = ocupErr.message;
+        } else if (Array.isArray(ocupados)) {
+          agendaSlotOccupied = ocupados.some((row: any) => {
+            const sameDate = String(row.data_agendamento) === String(agendamentoFinal.data_agendamento);
+            const rowHora = String(row.hora_agendamento).slice(0, 8);
+            const sameHora = rowHora === horaAgendaFmt;
+            const sameClinica = agendamentoFinal.clinica_id
+              ? row.clinica_id === agendamentoFinal.clinica_id
+              : true;
+            return sameDate && sameHora && sameClinica;
+          });
+        }
+      } catch (err) {
+        slotCheckError = err instanceof Error ? err.message : String(err);
+      }
+
+      if (!agendaSlotOccupied) {
+        console.error("[hermes-webhook] agenda_slot_not_occupied", JSON.stringify({
+          event: "agenda_slot_not_occupied",
+          lead_id: lead.id,
+          appointment_created: true,
+          agenda_slot_occupied: false,
+          data: agendamentoFinal.data_agendamento,
+          hora: horaAgendaFmt,
+          clinica_id: agendamentoFinal.clinica_id,
+          slot_check_error: slotCheckError,
+          sandbox,
+        }));
+
+        await saveState(supabase, phoneNorm, {
+          lead_id: lead.id,
+          last_intent: "agenda_slot_inconsistente",
+          ambiguous_count: 0,
+          awaiting: null,
+          pending_confirmation: false,
+          sandbox,
+        });
+
+        return replyAndLog(
+          "Quase tudo certo! Só preciso da nossa secretaria validar a sua vaga na agenda. Ela vai te confirmar o horário por aqui em instantes. 🙏",
+          "agenda_slot_inconsistente",
+          {
+            needs_human: true,
+            appointment_created: true,
+            agenda_slot_occupied: false,
+            agendamento_id: agendamentoFinal.id,
+            data_agendamento: agendamentoFinal.data_agendamento,
+            hora_agendamento: horaAgendaFmt.slice(0, 5),
+            local_atendimento: agendamentoFinal.local_atendimento,
+            crm_status: "PRECISA_DE_HUMANO",
+            error: slotCheckError ?? "agenda_slot_not_occupied",
+          },
+        );
+      }
+
       console.log("[hermes-webhook] booking_card_updated", JSON.stringify({
         event: "booking_card_updated",
         lead_id: lead.id,
@@ -1928,6 +1995,7 @@ Deno.serve(async (req: Request) => {
         data: agendamentoFinal.data_agendamento,
         hora: String(agendamentoFinal.hora_agendamento).slice(0, 5),
         clinica_id: agendamentoFinal.clinica_id,
+        agenda_slot_occupied: true,
         sandbox,
       }));
 
