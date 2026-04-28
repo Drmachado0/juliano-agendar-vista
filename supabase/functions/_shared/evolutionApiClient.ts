@@ -161,39 +161,60 @@ export async function sendWhatsappTextMessage(
       responseData = { raw: responseText };
     }
 
+    const sanitized = sanitizePayload(responseData);
+
     if (!response.ok) {
-      console.error(`[Evolution API] Erro HTTP ${response.status}:`, responseData);
+      console.error(`[Evolution API] Erro HTTP ${response.status}`);
       return {
         success: false,
         rawResponse: responseData,
-        errorMessage: `HTTP ${response.status}: ${JSON.stringify(responseData)}`,
+        sanitizedResponse: sanitized,
+        errorMessage: `HTTP ${response.status}`,
+        evolutionStatus: 'ERROR',
+        deliveryStatus: 'erro',
+        confirmed: false,
       };
     }
 
-    console.log('[Evolution API] Mensagem enviada com sucesso:', responseData);
-    
-    // Tentar extrair o ID da mensagem da resposta
+    console.log('[Evolution API] Mensagem aceita pelo servidor');
+
+    // Tentar extrair o ID e o status da mensagem da resposta
     let messageId: string | undefined;
+    let evolutionStatus: string | undefined;
     if (responseData && typeof responseData === 'object') {
       const data = responseData as Record<string, unknown>;
       if (data.key && typeof data.key === 'object') {
         const keyData = data.key as Record<string, unknown>;
         messageId = keyData.id as string | undefined;
       }
+      if (typeof data.status === 'string') {
+        evolutionStatus = data.status;
+      } else if (typeof data.messageStatus === 'string') {
+        evolutionStatus = data.messageStatus;
+      }
     }
-    
+
+    const { deliveryStatus, confirmed } = mapEvolutionStatusToDelivery(evolutionStatus);
+
     return {
       success: true,
       rawResponse: responseData,
+      sanitizedResponse: sanitized,
       messageId,
+      evolutionStatus,
+      deliveryStatus,
+      confirmed,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     console.error('[Evolution API] Exceção:', errorMessage);
-    
+
     return {
       success: false,
       errorMessage,
+      evolutionStatus: 'ERROR',
+      deliveryStatus: 'erro',
+      confirmed: false,
     };
   }
 }
