@@ -1135,12 +1135,39 @@ Deno.serve(async (req: Request) => {
     const nascDetect = detectarDataNascimento(effectiveText);
     if (nascDetect) data_nascimento = nascDetect;
 
+    // Opções numeradas — somente quando estamos no estágio correspondente,
+    // para não conflitar com escolha de slot (escolha_periodo).
+    if (state?.awaiting === "payment_type" || state?.awaiting === "convenio_nome") {
+      const op = opcaoPagamento(effectiveText);
+      if (op) {
+        payment_type = op.payment_type;
+        if (op.convenio) convenio = op.convenio;
+      }
+    }
+    if (state?.awaiting === "local_pref") {
+      const ol = opcaoLocal(effectiveText);
+      if (ol) local_pref = ol;
+    }
+
+    // Nome completo: só capturar se estamos coletando nome OU se ainda não temos nome
+    // e o texto NÃO é uma intenção/pedido conhecido (ex.: "quero agendar uma consulta").
     const nomeDetect = detectarNomeCompleto(effectiveText);
-    if (nomeDetect && !nome_completo) nome_completo = nomeDetect;
+    const isPedidoAgendar = intent === "agendar_consulta" || intent === "saudacao";
+    if (nomeDetect && !nome_completo && (state?.awaiting === "collecting_name" || !isPedidoAgendar)) {
+      // Evita capturar "Quero Agendar Uma Consulta" como nome
+      if (!/agendar|consulta|marcar|atendimento|particular|conv[eê]nio/i.test(nomeDetect)) {
+        nome_completo = nomeDetect;
+      }
+    }
 
     const wantsAgendar =
       intent === "agendar_consulta" ||
       intent === "saudacao" ||
+      state?.awaiting === "collecting_name" ||
+      state?.awaiting === "collecting_birthdate" ||
+      state?.awaiting === "collecting_payment" ||
+      state?.awaiting === "collecting_convenio" ||
+      state?.awaiting === "collecting_location" ||
       state?.awaiting === "payment_type" ||
       state?.awaiting === "convenio_nome" ||
       state?.awaiting === "convenio_fallback_particular" ||
