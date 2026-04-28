@@ -316,6 +316,9 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
         <div className="hidden sm:flex flex-col items-end gap-1">
           <Badge variant="outline">{lead.status_crm}</Badge>
           <BotStatusBadge agendamentoId={lead.agendamento_id} />
+          <span className="text-[10px] text-muted-foreground italic">
+            controle só desta conversa
+          </span>
           {ultimaIntencao && (
             <Badge
               variant={INTENCAO_VARIANT[ultimaIntencao.intencao] || "secondary"}
