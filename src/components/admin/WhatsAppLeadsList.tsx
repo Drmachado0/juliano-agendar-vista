@@ -13,6 +13,7 @@ import { LeadComMensagens, listarLeadsComMensagens, SandboxFiltro } from "@/serv
 import WhatsAppLeadItem from "./WhatsAppLeadItem";
 import { Skeleton } from "@/components/ui/skeleton";
 import NovaMensagemWhatsAppModal from "./NovaMensagemWhatsAppModal";
+import { supabase } from "@/integrations/supabase/client";
 
 interface WhatsAppLeadsListProps {
   selectedLeadId: string | null;
