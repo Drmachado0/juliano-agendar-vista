@@ -56,10 +56,22 @@ const payloadSchema = z.object({
 type Payload = z.infer<typeof payloadSchema>;
 
 // ----- Resposta padrão -----
+interface EmailData {
+  nome_completo: string;
+  telefone_whatsapp: string;
+  email: string | null;
+  data_nascimento: string;
+  tipo: string;
+  convenio: string;
+  valor: string | null;
+  data_agendamento: string;
+  hora_agendamento: string;
+  local_atendimento: string;
+}
 interface StdResponse {
   ok: boolean;
   lead_id?: string | null;
-  action: "reply" | "none";
+  action: "reply" | "none" | "booking_confirmed";
   reply_text: string | null;
   crm_status?: string | null;
   intent?: string;
@@ -70,6 +82,7 @@ interface StdResponse {
   error?: string;
   sandbox?: boolean;
   deduped?: boolean;
+  email_data?: EmailData | null;
 }
 function jsonResp(body: StdResponse, status = 200) {
   return new Response(JSON.stringify(body), {
