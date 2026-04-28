@@ -374,12 +374,20 @@ async function findOrCreateLead(
       sandbox_reason: sandbox
         ? "Hermes webhook (telefone teste 0174 ou sandbox=true)"
         : null,
-      observacoes_internas: "Contato iniciado pelo paciente via WhatsApp (Hermes).",
     })
     .select("id, status_crm, status_funil")
     .single();
 
-  if (error) throw new Error(`Falha ao criar lead: ${error.message}`);
+  if (error) {
+    console.error("[hermes-webhook] lead_create_failed", JSON.stringify({
+      event: "lead_create_failed",
+      phone_masked: "***" + norm.slice(-4),
+      stage: "findOrCreateLead.insert",
+      error_message: error.message,
+      error_code: (error as any).code ?? null,
+    }));
+    throw new Error(`Falha ao criar lead: ${error.message}`);
+  }
   return {
     id: created.id as string,
     created: true,
