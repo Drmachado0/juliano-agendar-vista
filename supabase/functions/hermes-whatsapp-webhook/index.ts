@@ -661,25 +661,98 @@ function montarTextoOpcoes(
   ].join("\n");
 }
 
-// Texto para pedir os dados mínimos faltantes
-function textoPedirDados(
-  paymentType: "particular" | "convenio",
-  convenio: string | null,
+// Próxima pergunta na ordem obrigatória: nome → nascimento → pagamento → local
+type ProximaPergunta =
+  | { stage: "collecting_name"; text: string }
+  | { stage: "collecting_birthdate"; text: string }
+  | { stage: "collecting_payment"; text: string }
+  | { stage: "collecting_convenio"; text: string }
+  | { stage: "collecting_location"; text: string }
+  | null;
+
+function proximaPergunta(
   nome: string | null,
   nasc: string | null,
+  paymentType: "particular" | "convenio" | null,
+  convenio: string | null,
   local: "Clinicor" | "HGP" | null,
-): string | null {
-  const faltam: string[] = [];
-  if (!nome) faltam.push("• *nome completo*");
-  if (!nasc) faltam.push("• *data de nascimento* (dd/mm/aaaa)");
-  if (!local) faltam.push("• *local* de preferência: *Clinicor* ou *HGP*");
-  if (paymentType === "convenio" && !convenio) faltam.push("• nome do *convênio*");
-  if (faltam.length === 0) return null;
-  const intro =
-    paymentType === "particular"
-      ? `A consulta particular é ${VALOR_PARTICULAR}. Para seguir com o agendamento, me envie:`
-      : `Para seguir com o agendamento pelo convênio, me envie:`;
-  return [intro, "", ...faltam].join("\n");
+): ProximaPergunta {
+  if (!nome) {
+    return {
+      stage: "collecting_name",
+      text: "Claro, vou te ajudar com o agendamento 😊\n\nQual é o *nome completo* do paciente?",
+    };
+  }
+  if (!nasc) {
+    return {
+      stage: "collecting_birthdate",
+      text: "Obrigado! Qual é a *data de nascimento* do paciente? (dd/mm/aaaa)",
+    };
+  }
+  if (!paymentType) {
+    return {
+      stage: "collecting_payment",
+      text: [
+        "O atendimento será *particular* ou por *convênio*?",
+        "",
+        "1) Particular — R$ 300,00",
+        "2) Bradesco Saúde",
+        "3) Unimed",
+        "4) Cassi",
+        "5) SulAmérica",
+        "",
+        "Responda com o *número* da opção.",
+      ].join("\n"),
+    };
+  }
+  if (paymentType === "convenio" && !convenio) {
+    return {
+      stage: "collecting_convenio",
+      text: [
+        "Qual o seu convênio?",
+        "",
+        "2) Bradesco Saúde",
+        "3) Unimed",
+        "4) Cassi",
+        "5) SulAmérica",
+        "",
+        "Responda com o *número* da opção.",
+      ].join("\n"),
+    };
+  }
+  if (!local) {
+    return {
+      stage: "collecting_location",
+      text: [
+        "Qual *local* você prefere para o atendimento?",
+        "",
+        "1) Clinicor — Paragominas",
+        "2) HGP / Hospital Geral de Paragominas",
+        "",
+        "Responda com o *número* da opção.",
+      ].join("\n"),
+    };
+  }
+  return null;
+}
+
+// Mapeia opção numérica de pagamento (1-5)
+function opcaoPagamento(text: string): { payment_type: "particular" | "convenio"; convenio: string | null } | null {
+  const t = text.trim();
+  if (/^1\b/.test(t)) return { payment_type: "particular", convenio: null };
+  if (/^2\b/.test(t)) return { payment_type: "convenio", convenio: "Bradesco Saúde" };
+  if (/^3\b/.test(t)) return { payment_type: "convenio", convenio: "Unimed" };
+  if (/^4\b/.test(t)) return { payment_type: "convenio", convenio: "Cassi" };
+  if (/^5\b/.test(t)) return { payment_type: "convenio", convenio: "SulAmérica" };
+  return null;
+}
+
+// Mapeia opção numérica de local (1-2)
+function opcaoLocal(text: string): "Clinicor" | "HGP" | null {
+  const t = text.trim();
+  if (/^1\b/.test(t)) return "Clinicor";
+  if (/^2\b/.test(t)) return "HGP";
+  return null;
 }
 
 function textoConfirmacaoFinal(s: {
