@@ -303,50 +303,89 @@ async function saveState(
 }
 
 // ----- Lead lookup / creation -----
+// Extrai pushName/notifyName do payload bruto da Evolution (best-effort).
+function extractPushName(rawPayload: unknown): string | null {
+  if (!rawPayload || typeof rawPayload !== "object") return null;
+  const candidate =
+    findInObject(rawPayload, ["pushName", "pushname", "notifyName", "verifiedName", "senderName"]);
+  if (typeof candidate !== "string") return null;
+  const trimmed = candidate.trim();
+  if (!trimmed || trimmed.length > 120) return null;
+  // evita usar números/JIDs como nome
+  if (/^\d+$/.test(trimmed)) return null;
+  return trimmed;
+}
+
 async function findOrCreateLead(
   supabase: SupabaseClient,
   phone: string,
   sandbox: boolean,
-): Promise<{ id: string; created: boolean; status_crm: string | null }> {
+  pushName: string | null,
+): Promise<{ id: string; created: boolean; status_crm: string | null; status_funil: string | null }> {
   const norm = normalizePhone(phone);
   const l8 = last8(norm);
 
-  const { data: existing } = await supabase
+  // Procura cards do mesmo telefone, prioriza ABERTOS (status_funil != 'atendido'
+  // e status_crm não cancelado). Reutiliza o mais recente aberto.
+  const { data: existingList } = await supabase
     .from("agendamentos")
-    .select("id, status_crm, status_funil, is_sandbox, data_agendamento, created_at")
+    .select("id, status_crm, status_funil, is_sandbox, data_agendamento, created_at, nome_completo")
     .filter("telefone_whatsapp", "ilike", `%${l8}`)
     .order("created_at", { ascending: false })
-    .limit(1);
+    .limit(10);
 
-  if (existing && existing.length > 0) {
+  const existing = (existingList ?? []).filter((r: any) => {
+    const sf = (r.status_funil ?? "").toLowerCase();
+    const sc = (r.status_crm ?? "").toUpperCase();
+    // aberto = não atendido e não cancelado
+    return sf !== "atendido" && sc !== "CANCELADO";
+  });
+
+  if (existing.length > 0) {
+    const row: any = existing[0];
+    // Se já temos pushName e o card ainda está com nome placeholder, atualiza
+    if (pushName && (!row.nome_completo || /^lead whatsapp$/i.test(row.nome_completo))) {
+      await supabase
+        .from("agendamentos")
+        .update({ nome_completo: pushName })
+        .eq("id", row.id);
+    }
     return {
-      id: existing[0].id as string,
+      id: row.id as string,
       created: false,
-      status_crm: (existing[0].status_crm as string) ?? null,
+      status_crm: (row.status_crm as string) ?? null,
+      status_funil: (row.status_funil as string) ?? null,
     };
   }
 
+  const nomeInicial = pushName && pushName.length >= 2 ? pushName : "Lead WhatsApp";
   const { data: created, error } = await supabase
     .from("agendamentos")
     .insert({
-      nome_completo: "Lead WhatsApp",
+      nome_completo: nomeInicial,
       telefone_whatsapp: norm,
       tipo_atendimento: "Consulta",
       local_atendimento: "A definir",
       convenio: "Particular",
-      origem: "whatsapp_hermes",
+      origem: "whatsapp",
       status_crm: "NOVO LEAD",
       status_funil: "lead",
       is_sandbox: sandbox,
       sandbox_reason: sandbox
         ? "Hermes webhook (telefone teste 0174 ou sandbox=true)"
         : null,
+      observacoes_internas: "Contato iniciado pelo paciente via WhatsApp (Hermes).",
     })
-    .select("id, status_crm")
+    .select("id, status_crm, status_funil")
     .single();
 
   if (error) throw new Error(`Falha ao criar lead: ${error.message}`);
-  return { id: created.id as string, created: true, status_crm: created.status_crm as string };
+  return {
+    id: created.id as string,
+    created: true,
+    status_crm: created.status_crm as string,
+    status_funil: (created as any).status_funil as string,
+  };
 }
 
 // ----- Auditoria -----
@@ -897,8 +936,9 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // 5. Lead
-    const lead = await findOrCreateLead(supabase, phoneNorm, sandbox);
+    // 5. Lead — extrai pushName da Evolution para nomear o card desde o início
+    const pushName = extractPushName(p.raw_payload);
+    const lead = await findOrCreateLead(supabase, phoneNorm, sandbox, pushName);
 
     // 6. Texto efetivo
     const isMedia = ["audio", "image", "video", "document", "sticker", "media"].includes(
@@ -1028,20 +1068,37 @@ Deno.serve(async (req: Request) => {
       extras: Partial<StdResponse> = {},
     ) => {
       await salvarOutbound(supabase, phoneNorm, lead.id, reply, intent);
+
+      // Após responder, se o lead ainda está em "NOVO LEAD" (não definimos um
+      // status específico nesta resposta), promove para "AGUARDANDO" — sinaliza
+      // no CRM Kanban que o paciente foi atendido pelo bot e estamos aguardando
+      // retorno dele. Não sobrescreve URGENTE/PRECISA_DE_HUMANO/CLINICOR/HGP.
+      const explicitStatus = extras.crm_status ?? null;
+      const currentStatus = (lead.status_crm ?? "NOVO LEAD").toUpperCase();
+      if (!explicitStatus && currentStatus === "NOVO LEAD" && !extras.appointment_created) {
+        await supabase
+          .from("agendamentos")
+          .update({ status_crm: "AGUARDANDO" })
+          .eq("id", lead.id)
+          .eq("status_crm", "NOVO LEAD");
+        lead.status_crm = "AGUARDANDO";
+      }
+
       await logHermes(supabase, lead.id, "reply", intent, {
         sandbox,
         external_message_id: p.external_message_id ?? null,
         needs_human: extras.needs_human ?? false,
         appointment_created: extras.appointment_created ?? false,
-        crm_status: extras.crm_status ?? null,
+        crm_status: extras.crm_status ?? lead.status_crm ?? null,
         awaiting: extras.awaiting ?? null,
+        lead_created: lead.created,
       });
       return jsonResp({
         ok: true,
         lead_id: lead.id,
         action: extras.action ?? "reply",
         reply_text: reply,
-        crm_status: extras.crm_status ?? lead.status_crm ?? "NOVO LEAD",
+        crm_status: extras.crm_status ?? lead.status_crm ?? "AGUARDANDO",
         intent,
         needs_human: extras.needs_human ?? false,
         appointment_created: extras.appointment_created ?? false,
