@@ -1068,20 +1068,37 @@ Deno.serve(async (req: Request) => {
       extras: Partial<StdResponse> = {},
     ) => {
       await salvarOutbound(supabase, phoneNorm, lead.id, reply, intent);
+
+      // Após responder, se o lead ainda está em "NOVO LEAD" (não definimos um
+      // status específico nesta resposta), promove para "AGUARDANDO" — sinaliza
+      // no CRM Kanban que o paciente foi atendido pelo bot e estamos aguardando
+      // retorno dele. Não sobrescreve URGENTE/PRECISA_DE_HUMANO/CLINICOR/HGP.
+      const explicitStatus = extras.crm_status ?? null;
+      const currentStatus = (lead.status_crm ?? "NOVO LEAD").toUpperCase();
+      if (!explicitStatus && currentStatus === "NOVO LEAD" && !extras.appointment_created) {
+        await supabase
+          .from("agendamentos")
+          .update({ status_crm: "AGUARDANDO" })
+          .eq("id", lead.id)
+          .eq("status_crm", "NOVO LEAD");
+        lead.status_crm = "AGUARDANDO";
+      }
+
       await logHermes(supabase, lead.id, "reply", intent, {
         sandbox,
         external_message_id: p.external_message_id ?? null,
         needs_human: extras.needs_human ?? false,
         appointment_created: extras.appointment_created ?? false,
-        crm_status: extras.crm_status ?? null,
+        crm_status: extras.crm_status ?? lead.status_crm ?? null,
         awaiting: extras.awaiting ?? null,
+        lead_created: lead.created,
       });
       return jsonResp({
         ok: true,
         lead_id: lead.id,
         action: extras.action ?? "reply",
         reply_text: reply,
-        crm_status: extras.crm_status ?? lead.status_crm ?? "NOVO LEAD",
+        crm_status: extras.crm_status ?? lead.status_crm ?? "AGUARDANDO",
         intent,
         needs_human: extras.needs_human ?? false,
         appointment_created: extras.appointment_created ?? false,
