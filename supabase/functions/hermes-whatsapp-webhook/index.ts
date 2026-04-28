@@ -1395,7 +1395,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 17. Início ou continuação do fluxo de agendamento
+    // 17. Início ou continuação do fluxo de agendamento — ORDEM ESTRITA
+    //     nome → data_nascimento → particular/convênio → local → datas
     if (wantsAgendar) {
       // Atualizar status para AGUARDANDO no primeiro contato
       if (intent === "agendar_consulta" || intent === "saudacao") {
@@ -1405,73 +1406,9 @@ Deno.serve(async (req: Request) => {
           .eq("id", lead.id);
       }
 
-      // 17.1 Sem payment_type ainda → perguntar
-      if (!payment_type) {
-        await saveState(supabase, phoneNorm, {
-          lead_id: lead.id,
-          last_intent: "agendar_consulta",
-          ambiguous_count: 0,
-          awaiting: "payment_type",
-          payment_type: null,
-          convenio: null,
-          nome_completo,
-          data_nascimento,
-          sandbox,
-        });
-        const greet =
-          intent === "saudacao"
-            ? "Olá! Sou a assistente do Dr. Juliano Machado, oftalmologista 👋\n\n"
-            : "";
-        return replyAndLog(
-          `${greet}Claro, posso te ajudar com o agendamento. O atendimento será *particular* ou por *convênio*?`,
-          "perguntar_payment_type",
-          { crm_status: "AGUARDANDO", awaiting: "payment_type" },
-        );
-      }
-
-      // 17.2 Convênio: ainda não sabemos qual ou não foi aceito
-      if (payment_type === "convenio" && !convenio) {
-        // Se o usuário acabou de mandar um convênio NÃO aceito
-        const conv2 = detectarConvenio(effectiveText);
-        if (conv2.nome && !conv2.aceito) {
-          await saveState(supabase, phoneNorm, {
-            lead_id: lead.id,
-            last_intent: "convenio_nao_aceito",
-            ambiguous_count: 0,
-            awaiting: "convenio_fallback_particular",
-            payment_type: "convenio",
-            convenio: null,
-            nome_completo,
-            data_nascimento,
-            sandbox,
-          });
-          return replyAndLog(
-            `No momento atendemos por convênio: *${CONVENIOS_ACEITOS_TXT}*. Deseja seguir como *particular* (${VALOR_PARTICULAR})?`,
-            "convenio_nao_aceito",
-            { awaiting: "convenio_fallback_particular" },
-          );
-        }
-        await saveState(supabase, phoneNorm, {
-          lead_id: lead.id,
-          last_intent: "perguntar_convenio",
-          ambiguous_count: 0,
-          awaiting: "convenio_nome",
-          payment_type: "convenio",
-          convenio: null,
-          nome_completo,
-          data_nascimento,
-          sandbox,
-        });
-        return replyAndLog(
-          `Perfeito! Qual o seu *convênio*? Atendemos: ${CONVENIOS_ACEITOS_TXT}.`,
-          "perguntar_convenio",
-          { awaiting: "convenio_nome" },
-        );
-      }
-
-      // 17.3 Fallback: usuário responde sim/não para "seguir particular"
+      // 17.0 Fallback antigo: usuário responde sim/não para "seguir particular"
       if (state?.awaiting === "convenio_fallback_particular") {
-        if (/^(sim|ok|pode|claro|quero)\b/i.test(effectiveText)) {
+        if (/^(sim|ok|pode|claro|quero|1\b)/i.test(effectiveText)) {
           payment_type = "particular";
           convenio = null;
         } else if (/^(n[ãa]o|nao)\b/i.test(effectiveText)) {
@@ -1495,14 +1432,44 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // 17.4 Pedir dados mínimos
-      const pedido = textoPedirDados(payment_type!, convenio, nome_completo, data_nascimento, local_pref);
-      if (pedido) {
+      // 17.1 Convênio mencionado mas não aceito
+      if (payment_type === "convenio" && !convenio) {
+        const conv2 = detectarConvenio(effectiveText);
+        if (conv2.nome && !conv2.aceito) {
+          await saveState(supabase, phoneNorm, {
+            lead_id: lead.id,
+            last_intent: "convenio_nao_aceito",
+            ambiguous_count: 0,
+            awaiting: "convenio_fallback_particular",
+            payment_type: "convenio",
+            convenio: null,
+            nome_completo,
+            data_nascimento,
+            sandbox,
+          });
+          return replyAndLog(
+            `No momento atendemos por convênio: *${CONVENIOS_ACEITOS_TXT}*. Deseja seguir como *particular* (${VALOR_PARTICULAR})?`,
+            "convenio_nao_aceito",
+            { awaiting: "convenio_fallback_particular" },
+          );
+        }
+      }
+
+      // 17.2 Próxima pergunta na ordem estrita
+      const prox = proximaPergunta(nome_completo, data_nascimento, payment_type, convenio, local_pref);
+      if (prox) {
+        const stageToAwaiting: Record<string, ConvState["awaiting"]> = {
+          collecting_name: "collecting_name",
+          collecting_birthdate: "collecting_birthdate",
+          collecting_payment: "payment_type",
+          collecting_convenio: "convenio_nome",
+          collecting_location: "local_pref",
+        };
         await saveState(supabase, phoneNorm, {
           lead_id: lead.id,
-          last_intent: "coletar_dados",
+          last_intent: prox.stage,
           ambiguous_count: 0,
-          awaiting: "dados_paciente",
+          awaiting: stageToAwaiting[prox.stage] ?? "dados_paciente",
           payment_type,
           convenio,
           nome_completo,
@@ -1510,10 +1477,13 @@ Deno.serve(async (req: Request) => {
           selected_local: local_pref ? localFull(local_pref) : null,
           sandbox,
         });
-        return replyAndLog(pedido, "coletar_dados", { awaiting: "dados_paciente" });
+        return replyAndLog(prox.text, prox.stage, {
+          crm_status: "AGUARDANDO",
+          awaiting: stageToAwaiting[prox.stage] ?? "dados_paciente",
+        });
       }
 
-      // 17.5 Tudo coletado — buscar opções de data reais
+      // 17.3 Tudo coletado — buscar opções de data reais
       const opcoes = await buscarOpcoesAgrupadas(supabaseUrl, serviceKey, local_pref);
       await saveState(supabase, phoneNorm, {
         lead_id: lead.id,
