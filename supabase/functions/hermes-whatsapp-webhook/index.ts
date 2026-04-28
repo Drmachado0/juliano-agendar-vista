@@ -1042,6 +1042,31 @@ Deno.serve(async (req: Request) => {
       console.log("[hermes-webhook] IN persistida:", persistResult.id, "tipo:", tipoMsg);
     }
 
+    // 7.a GATE DE PAUSA DO BOT — silencia respostas automáticas quando humano assumiu.
+    const pausa = await verificarPausaBot(supabase, lead);
+    if (pausa.pausado) {
+      try {
+        await supabase.from("bot_assistente_log").insert({
+          telefone: phoneNorm,
+          agendamento_id: lead.id,
+          mensagem_id: persistResult.id ?? null,
+          acao: "bot_pausado_skip",
+          intencao: lead.bot_pausa_motivo ?? "manual",
+          detalhes: {
+            volta_em_segundos: pausa.volta_em_segundos,
+            bot_pausado_ate: lead.bot_pausado_ate,
+            motivo: lead.bot_pausa_motivo,
+          },
+        });
+      } catch (_) { /* best-effort */ }
+      console.log("[hermes-webhook] bot pausado — skip resposta", JSON.stringify({
+        agendamento_id: lead.id,
+        volta_em_s: pausa.volta_em_segundos,
+        motivo: lead.bot_pausa_motivo,
+      }));
+      return jsonResp({ ok: true, action: "none", reply_text: null });
+    }
+
     // 7.b TRANSCRIÇÃO DE ÁUDIO — usa raw_payload original (não sanitizado) para acessar mídia
     if (p.message_type === "audio" && !effectiveText) {
       const t0 = Date.now();
