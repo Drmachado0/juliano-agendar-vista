@@ -1968,6 +1968,7 @@ Deno.serve(async (req: Request) => {
           action: "booking_confirmed",
           needs_human: false,
           appointment_created: true,
+          agenda_slot_occupied: true,
           agendamento_id: agendamentoFinal.id,
           data_agendamento: agendamentoFinal.data_agendamento,
           hora_agendamento: horarioFmt,
