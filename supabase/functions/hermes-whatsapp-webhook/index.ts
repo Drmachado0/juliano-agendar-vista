@@ -1323,17 +1323,46 @@ Deno.serve(async (req: Request) => {
         sandbox,
       });
 
+      // Buscar e-mail do lead (se já existir)
+      const { data: leadFull } = await supabase
+        .from("agendamentos")
+        .select("email")
+        .eq("id", lead.id)
+        .maybeSingle();
+
+      const localFullStr = escolhida_local.includes("Clinicor")
+        ? "Clinicor – Paragominas"
+        : "Hospital Geral de Paragominas";
+
+      const emailData: EmailData = {
+        nome_completo: state.nome_completo!,
+        telefone_whatsapp: phoneNorm,
+        email: (leadFull?.email as string | null) ?? null,
+        data_nascimento: state.data_nascimento!,
+        tipo: "Consulta oftalmológica",
+        convenio: state.payment_type === "particular" ? "Particular" : (state.convenio ?? "Particular"),
+        valor: state.payment_type === "particular" ? VALOR_PARTICULAR : null,
+        data_agendamento: escolhida_data,
+        hora_agendamento: horarioEscolhido,
+        local_atendimento: localFullStr,
+      };
+
       return replyAndLog(
         [
-          `✅ Pronto! Sua consulta está agendada:`,
+          `Agendamento confirmado ✅`,
           ``,
-          `📅 ${fmtDataBR(escolhida_data)} às ${horarioEscolhido}`,
-          `📍 ${escolhida_local}`,
+          `Dr. Juliano Machado`,
+          `CRM-PA 15253`,
           ``,
-          `Recomendamos chegar com antecedência. Qualquer coisa, é só me chamar 🙏`,
+          `📍 ${localFullStr}`,
+          `📅 ${fmtDataBR(escolhida_data)}`,
+          `🕒 ${horarioEscolhido}`,
+          ``,
+          `Se precisar alterar, é só avisar por aqui. 🙏`,
         ].join("\n"),
         "confirmar_agendamento",
         {
+          action: "booking_confirmed",
           needs_human: false,
           appointment_created: true,
           crm_status: novoStatus,
@@ -1342,6 +1371,7 @@ Deno.serve(async (req: Request) => {
             time: horarioEscolhido,
             location: escolhida_local,
           },
+          email_data: emailData,
         },
       );
     }
