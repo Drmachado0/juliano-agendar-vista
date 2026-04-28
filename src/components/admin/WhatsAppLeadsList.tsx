@@ -67,6 +67,36 @@ const WhatsAppLeadsList = ({
     return () => clearTimeout(debounce);
   }, [searchTerm]);
 
+  // Realtime: keep bot status in sync per lead
+  useEffect(() => {
+    const channel = supabase
+      .channel("leads_bot_status")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "agendamentos" },
+        (payload) => {
+          const r = payload.new as any;
+          setLeads((prev) =>
+            prev.map((l) =>
+              l.agendamento_id === r.id
+                ? {
+                    ...l,
+                    bot_ativo: r.bot_ativo !== false,
+                    bot_pausado_ate: r.bot_pausado_ate ?? null,
+                    bot_pausa_motivo: r.bot_pausa_motivo ?? null,
+                    status_crm: r.status_crm ?? l.status_crm,
+                  }
+                : l
+            )
+          );
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   // Função para atualizar leads externamente (para realtime)
   const updateLeadWithNewMessage = (agendamentoId: string, mensagem: string, data: string) => {
     setLeads((prev) => {
