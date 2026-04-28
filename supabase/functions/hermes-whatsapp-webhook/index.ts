@@ -1003,7 +1003,7 @@ Deno.serve(async (req: Request) => {
       return jsonResp({
         ok: true,
         lead_id: lead.id,
-        action: "reply",
+        action: extras.action ?? "reply",
         reply_text: reply,
         crm_status: extras.crm_status ?? lead.status_crm ?? "NOVO LEAD",
         intent,
@@ -1012,6 +1012,7 @@ Deno.serve(async (req: Request) => {
         appointment: extras.appointment ?? null,
         awaiting: extras.awaiting ?? null,
         sandbox,
+        email_data: extras.email_data ?? null,
       });
     };
 
