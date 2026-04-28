@@ -264,6 +264,14 @@ interface ConvState {
   updated_at: string;
 }
 
+const COLLECTING_STAGE_TO_AWAITING: Record<string, ConvState["awaiting"]> = {
+  collecting_name: "collecting_name",
+  collecting_birthdate: "collecting_birthdate",
+  collecting_payment: "collecting_payment",
+  collecting_convenio: "collecting_convenio",
+  collecting_location: "collecting_location",
+};
+
 const STATE_TTL_MIN = 30;
 
 async function loadState(supabase: SupabaseClient, phone: string): Promise<ConvState | null> {
