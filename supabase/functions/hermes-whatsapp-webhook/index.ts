@@ -128,6 +128,28 @@ function classifyIntent(text: string): string {
   return "ambiguo";
 }
 
+function normalizeIntentText(text: string): string {
+  return (text || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isClearNewSchedulingIntent(text: string, intent: string): boolean {
+  if (intent === "urgencia") return false;
+  const t = normalizeIntentText(text);
+  if (!t || /\b(link|online|site|url)\b/.test(t)) return false;
+  return [
+    /\b(quero|queria|gostaria|preciso|pode|posso)\s+(agendar|marcar)\b/,
+    /\b(agendar|marcar)\s+(uma\s+)?consulta\b/,
+    /\bquero\s+(uma\s+)?consulta\b/,
+    /\bconsulta\s+com\s+(o\s+)?dr\s+juliano\b/,
+  ].some((rule) => rule.test(t));
+}
+
 function detectarPaymentType(text: string): "particular" | "convenio" | null {
   const t = text.toLowerCase();
   if (/\bparticular\b|\bprivad/.test(t)) return "particular";
