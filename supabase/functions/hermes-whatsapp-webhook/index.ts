@@ -1399,12 +1399,71 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Confirmou. Persiste dados e horário no card; migra status para CLINICOR/HGP.
+      // Confirmou. Persiste dados e horário no card real (tabela agendamentos)
+      // antes de responder "Agendamento confirmado". O registro precisa ficar
+      // visível em /admin/agenda como horário ocupado — caso contrário, retorna
+      // erro estruturado e pede para o paciente aguardar.
       const escolhida_data = state.selected_data!;
       const escolhida_local = state.selected_local!;
       const escolhida_periodo = state.selected_periodo!;
+      const novoStatusFinal = crmStatusFromLocal(escolhida_local); // CLINICOR | HGP
 
-      // Busca um horário concreto disponível dentro do período escolhido
+      // Resolve clinica_id correspondente ao local — necessário para a agenda
+      // do admin enxergar o slot como ocupado.
+      let clinicaIdFinal: string | null = null;
+      try {
+        const slugAlvo = escolhida_local.toLowerCase().includes("clinicor") ? "clinicor" : "hgp";
+        const { data: clinicaRow } = await supabase
+          .from("clinicas")
+          .select("id")
+          .eq("slug", slugAlvo)
+          .eq("ativo", true)
+          .maybeSingle();
+        clinicaIdFinal = (clinicaRow?.id as string | undefined) ?? null;
+      } catch (_err) {
+        clinicaIdFinal = null;
+      }
+
+      // Helper para responder "estou finalizando" quando o agendamento real
+      // não pôde ser gravado/atualizado.
+      const responderFinalizando = async (
+        motivoLog: string,
+        intencaoLog: string,
+        detalhes: Record<string, unknown> = {},
+      ) => {
+        console.error("[hermes-webhook] booking_persist_failed", JSON.stringify({
+          event: "booking_persist_failed",
+          lead_id: lead.id,
+          phone_masked: "***" + phoneNorm.slice(-4),
+          motivo: motivoLog,
+          local: escolhida_local,
+          data: escolhida_data,
+          periodo: escolhida_periodo,
+          sandbox,
+          ...detalhes,
+        }));
+        await saveState(supabase, phoneNorm, {
+          lead_id: lead.id,
+          last_intent: intencaoLog,
+          ambiguous_count: 0,
+          awaiting: null,
+          pending_confirmation: false,
+          sandbox,
+        });
+        return replyAndLog(
+          "Estou finalizando seu agendamento com a equipe. Só um instante, por favor. 🙏",
+          intencaoLog,
+          {
+            needs_human: true,
+            appointment_created: false,
+            error: motivoLog,
+            crm_status: "PRECISA_DE_HUMANO",
+          },
+        );
+      };
+
+      // 1) Busca um horário concreto disponível dentro do período escolhido.
+      //    Sem horário concreto não conseguimos marcar o slot como ocupado.
       const horariosFinal = await buscarHorariosDoPeriodo(
         supabaseUrl,
         serviceKey,
@@ -1412,128 +1471,110 @@ Deno.serve(async (req: Request) => {
         escolhida_local,
         escolhida_periodo,
       );
+      const horarioEscolhido = horariosFinal[0]?.slice(0, 5) ?? null;
 
-      const horarioFinal = horariosFinal[0]?.slice(0, 5) ?? null;
-      const novoStatusFinal = crmStatusFromLocal(escolhida_local); // CLINICOR | HGP
+      if (!horarioEscolhido) {
+        return await responderFinalizando("sem_horario_concreto_no_periodo", "sem_horarios");
+      }
 
-      // Atualiza o card com TODOS os dados confirmados — mesmo em produção
+      // 2) Tenta converter o lead em agendamento (valida disponibilidade,
+      //    atualiza data/hora/local/status_funil/status_crm de forma atômica).
+      let conversionOk = false;
+      let conversionErrorMsg: string | null = null;
+      try {
+        const convResp = await fetch(
+          `${supabaseUrl}/functions/v1/converter-lead-agendamento`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${serviceKey}`,
+            },
+            body: JSON.stringify({
+              lead_id: lead.id,
+              data_agendamento: escolhida_data,
+              hora_agendamento: horarioEscolhido,
+              local_atendimento: escolhida_local,
+              aceita_primeiro_horario: true,
+              aceita_contato_whatsapp_email: true,
+            }),
+          },
+        );
+        const convText = await convResp.text();
+        let convJson: any = {};
+        try { convJson = JSON.parse(convText); } catch { /* */ }
+        if (convResp.ok && !convJson?.error) {
+          conversionOk = true;
+        } else {
+          conversionErrorMsg = convJson?.error || `HTTP ${convResp.status}`;
+          console.error("[hermes-webhook] converter-lead falhou:", convResp.status, convText);
+        }
+      } catch (err) {
+        conversionErrorMsg = err instanceof Error ? err.message : String(err);
+        console.error("[hermes-webhook] converter-lead exception:", conversionErrorMsg);
+      }
+
+      if (!conversionOk) {
+        return await responderFinalizando(
+          "converter_lead_falhou",
+          "agendamento_falhou",
+          { conversion_error: conversionErrorMsg },
+        );
+      }
+
+      // 3) Complementa o card com dados do paciente (nome, nascimento, convênio,
+      //    clinica_id). converter-lead-agendamento já gravou data/hora/status.
       const updatePayload: Record<string, unknown> = {
         nome_completo: state.nome_completo,
         data_nascimento: state.data_nascimento,
-        local_atendimento: escolhida_local,
         convenio:
           state.payment_type === "particular"
             ? "Particular"
             : (state.convenio ?? "Particular"),
-        data_agendamento: escolhida_data,
-        status_crm: novoStatusFinal,
-        status_funil: "agendado",
       };
-      if (horarioFinal) updatePayload.hora_agendamento = horarioFinal;
+      if (clinicaIdFinal) updatePayload.clinica_id = clinicaIdFinal;
 
-      await supabase.from("agendamentos").update(updatePayload).eq("id", lead.id);
+      const { error: complementError } = await supabase
+        .from("agendamentos")
+        .update(updatePayload)
+        .eq("id", lead.id);
+
+      if (complementError) {
+        console.error("[hermes-webhook] complemento de dados falhou:", complementError.message);
+        // Não invalida o agendamento — dados básicos já estão gravados.
+      }
+
+      // 4) Confere persistência final lendo de volta o registro.
+      const { data: agendamentoFinal, error: readBackError } = await supabase
+        .from("agendamentos")
+        .select("id, data_agendamento, hora_agendamento, local_atendimento, status_funil, status_crm, clinica_id, email")
+        .eq("id", lead.id)
+        .maybeSingle();
+
+      if (
+        readBackError ||
+        !agendamentoFinal ||
+        !agendamentoFinal.data_agendamento ||
+        !agendamentoFinal.hora_agendamento
+      ) {
+        return await responderFinalizando(
+          "readback_sem_data_hora",
+          "agendamento_falhou",
+          { read_back_error: readBackError?.message ?? null },
+        );
+      }
 
       console.log("[hermes-webhook] booking_card_updated", JSON.stringify({
         event: "booking_card_updated",
         lead_id: lead.id,
-        status_crm: novoStatusFinal,
-        status_funil: "agendado",
-        local: escolhida_local,
-        data: escolhida_data,
-        hora: horarioFinal,
+        status_crm: agendamentoFinal.status_crm,
+        status_funil: agendamentoFinal.status_funil,
+        local: agendamentoFinal.local_atendimento,
+        data: agendamentoFinal.data_agendamento,
+        hora: String(agendamentoFinal.hora_agendamento).slice(0, 5),
+        clinica_id: agendamentoFinal.clinica_id,
         sandbox,
       }));
-
-      if (!sandbox) {
-        // Em produção, marca card como agendado em CLINICOR/HGP e aguarda equipe
-        // confirmar horário exato (caso não tenhamos pego um slot concreto agora).
-        await saveState(supabase, phoneNorm, {
-          lead_id: lead.id,
-          last_intent: "agendado",
-          ambiguous_count: 0,
-          awaiting: null,
-          last_options: null,
-          available_slots: null,
-          pending_confirmation: false,
-          sandbox,
-        });
-
-        const linhasResumo = [
-          `Agendamento registrado ✅`,
-          ``,
-          `📍 ${escolhida_local.includes("Clinicor") ? "Clinicor – Paragominas" : "Hospital Geral de Paragominas"}`,
-          `📅 ${fmtDataBR(escolhida_data)}`,
-        ];
-        if (horarioFinal) linhasResumo.push(`🕒 ${horarioFinal}`);
-        linhasResumo.push(``, `Nossa equipe vai te confirmar o horário exato por aqui em instantes 🙏`);
-
-        return replyAndLog(linhasResumo.join("\n"), "agendamento_confirmado", {
-          action: "booking_confirmed",
-          needs_human: false,
-          appointment_created: true,
-          crm_status: novoStatusFinal,
-          appointment: {
-            date: escolhida_data,
-            time: horarioFinal,
-            location: escolhida_local,
-          },
-        });
-      }
-
-      // Sandbox: confere agenda real e cria agendamento (reaproveita horariosFinal)
-      if (!horarioFinal) {
-        await saveState(supabase, phoneNorm, {
-          lead_id: lead.id,
-          last_intent: "sem_horarios",
-          ambiguous_count: 0,
-          awaiting: null,
-          pending_confirmation: false,
-          sandbox,
-        });
-        return replyAndLog(
-          "Esse período acabou de ficar sem vagas 😕 Vou registrar para nossa equipe te oferecer outras datas.",
-          "sem_horarios",
-          { needs_human: true, crm_status: "PRECISA_DE_HUMANO" },
-        );
-      }
-      const horarioEscolhido = horarioFinal;
-
-      const convResp = await fetch(
-        `${supabaseUrl}/functions/v1/converter-lead-agendamento`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${serviceKey}`,
-          },
-          body: JSON.stringify({
-            lead_id: lead.id,
-            data_agendamento: escolhida_data,
-            hora_agendamento: horarioEscolhido,
-            local_atendimento: escolhida_local,
-            aceita_primeiro_horario: true,
-            aceita_contato_whatsapp_email: true,
-          }),
-        },
-      );
-      const convText = await convResp.text();
-      let convJson: any = {};
-      try { convJson = JSON.parse(convText); } catch { /* */ }
-
-      if (!convResp.ok || convJson?.error) {
-        console.error("[hermes-webhook] converter-lead falhou:", convResp.status, convText);
-        return replyAndLog(
-          `Tive um probleminha técnico para confirmar esse horário 😕 Você pode tentar pelo nosso site: ${LINK_AGENDAMENTO}\n\nNossa equipe também já foi avisada e vai te ajudar.`,
-          "agendamento_falhou",
-          { needs_human: true, crm_status: "PRECISA_DE_HUMANO" },
-        );
-      }
-
-      const novoStatus = crmStatusFromLocal(escolhida_local);
-      await supabase
-        .from("agendamentos")
-        .update({ status_crm: novoStatus, status_funil: "agendado" })
-        .eq("id", lead.id);
 
       await saveState(supabase, phoneNorm, {
         lead_id: lead.id,
@@ -1546,13 +1587,7 @@ Deno.serve(async (req: Request) => {
         sandbox,
       });
 
-      // Buscar e-mail do lead (se já existir)
-      const { data: leadFull } = await supabase
-        .from("agendamentos")
-        .select("email")
-        .eq("id", lead.id)
-        .maybeSingle();
-
+      const horarioFmt = String(agendamentoFinal.hora_agendamento).slice(0, 5);
       const localFullStr = escolhida_local.includes("Clinicor")
         ? "Clinicor – Paragominas"
         : "Hospital Geral de Paragominas";
@@ -1560,13 +1595,13 @@ Deno.serve(async (req: Request) => {
       const emailData: EmailData = {
         nome_completo: state.nome_completo!,
         telefone_whatsapp: phoneNorm,
-        email: (leadFull?.email as string | null) ?? null,
+        email: (agendamentoFinal.email as string | null) ?? null,
         data_nascimento: state.data_nascimento!,
         tipo: "Consulta oftalmológica",
         convenio: state.payment_type === "particular" ? "Particular" : (state.convenio ?? "Particular"),
         valor: state.payment_type === "particular" ? VALOR_PARTICULAR : null,
-        data_agendamento: escolhida_data,
-        hora_agendamento: horarioEscolhido,
+        data_agendamento: agendamentoFinal.data_agendamento as string,
+        hora_agendamento: horarioFmt,
         local_atendimento: localFullStr,
       };
 
@@ -1578,8 +1613,8 @@ Deno.serve(async (req: Request) => {
           `CRM-PA 15253`,
           ``,
           `📍 ${localFullStr}`,
-          `📅 ${fmtDataBR(escolhida_data)}`,
-          `🕒 ${horarioEscolhido}`,
+          `📅 ${fmtDataBR(agendamentoFinal.data_agendamento as string)}`,
+          `🕒 ${horarioFmt}`,
           ``,
           `Se precisar alterar, é só avisar por aqui. 🙏`,
         ].join("\n"),
@@ -1588,11 +1623,17 @@ Deno.serve(async (req: Request) => {
           action: "booking_confirmed",
           needs_human: false,
           appointment_created: true,
-          crm_status: novoStatus,
+          agendamento_id: agendamentoFinal.id,
+          data_agendamento: agendamentoFinal.data_agendamento,
+          hora_agendamento: horarioFmt,
+          local_atendimento: agendamentoFinal.local_atendimento,
+          status_funil: agendamentoFinal.status_funil,
+          status_crm: agendamentoFinal.status_crm,
+          crm_status: agendamentoFinal.status_crm,
           appointment: {
-            date: escolhida_data,
-            time: horarioEscolhido,
-            location: escolhida_local,
+            date: agendamentoFinal.data_agendamento,
+            time: horarioFmt,
+            location: agendamentoFinal.local_atendimento,
           },
           email_data: emailData,
         },
