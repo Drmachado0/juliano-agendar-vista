@@ -1550,18 +1550,16 @@ Deno.serve(async (req: Request) => {
       // 17.2 Próxima pergunta na ordem estrita
       const prox = proximaPergunta(nome_completo, data_nascimento, payment_type, convenio, local_pref);
       if (prox) {
-        const stageToAwaiting: Record<string, ConvState["awaiting"]> = {
-          collecting_name: "collecting_name",
-          collecting_birthdate: "collecting_birthdate",
-          collecting_payment: "payment_type",
-          collecting_convenio: "convenio_nome",
-          collecting_location: "local_pref",
-        };
         await saveState(supabase, phoneNorm, {
           lead_id: lead.id,
           last_intent: prox.stage,
           ambiguous_count: 0,
-          awaiting: stageToAwaiting[prox.stage] ?? "dados_paciente",
+          awaiting: COLLECTING_STAGE_TO_AWAITING[prox.stage] ?? "dados_paciente",
+          last_options: null,
+          selected_data: null,
+          selected_periodo: null,
+          available_slots: null,
+          pending_confirmation: false,
           payment_type,
           convenio,
           nome_completo,
@@ -1571,7 +1569,7 @@ Deno.serve(async (req: Request) => {
         });
         return replyAndLog(prox.text, prox.stage, {
           crm_status: "AGUARDANDO",
-          awaiting: stageToAwaiting[prox.stage] ?? "dados_paciente",
+          awaiting: COLLECTING_STAGE_TO_AWAITING[prox.stage] ?? "dados_paciente",
         });
       }
 
