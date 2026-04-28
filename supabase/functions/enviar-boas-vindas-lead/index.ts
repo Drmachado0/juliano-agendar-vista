@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sendWhatsappTextMessage, normalizePhoneNumber } from "../_shared/evolutionApiClient.ts";
+import { sendWhatsappTextMessage, normalizePhoneNumber, sanitizePayload } from "../_shared/evolutionApiClient.ts";
 import { buscarTemplate, renderizarTemplate } from "../_shared/templateRenderer.ts";
 
 const corsHeaders = {
