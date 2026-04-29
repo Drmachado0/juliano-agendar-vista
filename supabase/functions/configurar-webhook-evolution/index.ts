@@ -26,6 +26,9 @@ serve(async (req: Request) => {
     const body = await req.json();
     const action = body.action || "status";
 
+    const extractWebhookUrl = (data: any): string | null =>
+      data?.url || data?.webhook?.url || data?.webhook?.webhook?.url || null;
+
     if (action === "status") {
       // Check current webhook configuration
       const response = await fetch(`${baseUrl}/webhook/find/${instance}`, {
@@ -45,7 +48,7 @@ serve(async (req: Request) => {
       const data = await response.json();
       console.log("[Webhook] Status atual:", JSON.stringify(data));
 
-      const webhookUrl = data?.url || data?.webhook?.url || null;
+      const webhookUrl = extractWebhookUrl(data);
       const expectedUrl = `${supabaseUrl}/functions/v1/receber-whatsapp`;
       const isConfigured = webhookUrl && webhookUrl.includes("receber-whatsapp");
 
@@ -67,19 +70,24 @@ serve(async (req: Request) => {
 
       console.log(`[Webhook] Configurando webhook: ${webhookUrl}`);
 
+      const webhookConfig = {
+        enabled: true,
+        url: webhookUrl,
+        webhook_by_events: false,
+        webhook_base64: false,
+        events: [
+          "MESSAGES_UPSERT",
+          "MESSAGES_UPDATE",
+          "SEND_MESSAGE",
+          "CONNECTION_UPDATE",
+        ],
+        ...(webhookSecret ? { secret: webhookSecret } : {}),
+      };
+
       const response = await fetch(`${baseUrl}/webhook/set/${instance}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", apikey: token },
-        body: JSON.stringify({
-          enabled: true,
-          url: webhookUrl,
-          webhook_by_events: false,
-          webhook_base64: false,
-          events: [
-            "MESSAGES_UPSERT",
-          ],
-          ...(webhookSecret ? { secret: webhookSecret } : {}),
-        }),
+        body: JSON.stringify({ webhook: webhookConfig }),
       });
 
       const responseText = await response.text();
