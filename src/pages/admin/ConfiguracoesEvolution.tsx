@@ -265,6 +265,142 @@ const ConfiguracoesEvolution = () => {
           </p>
         </div>
 
+        {/* Configuração da Instância (novo card) */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <ServerCog className="h-5 w-5" />
+                  Configuração da Instância
+                </CardTitle>
+                <CardDescription>
+                  Veja e confira as credenciais atualmente em uso pelo backend
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={fetchConfig} disabled={loadingConfig}>
+                  <RefreshCw className={cn("h-4 w-4 mr-2", loadingConfig && "animate-spin")} />
+                  Recarregar
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleTestCreds}
+                  disabled={testingCreds || !config?.configured}
+                >
+                  <TestTube2 className={cn("h-4 w-4 mr-2", testingCreds && "animate-spin")} />
+                  Testar credenciais
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Base URL */}
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                Base URL
+              </Label>
+              <div className="flex gap-2">
+                <Input readOnly value={config?.baseUrl || ""} placeholder="—" className="font-mono text-sm" />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleCopy(config?.baseUrl || "", "Base URL")}
+                  disabled={!config?.baseUrl}
+                  title="Copiar"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Instância */}
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                Instância
+              </Label>
+              <div className="flex gap-2">
+                <Input readOnly value={config?.instance || ""} placeholder="—" className="font-mono text-sm" />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleCopy(config?.instance || "", "Nome da instância")}
+                  disabled={!config?.instance}
+                  title="Copiar"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* API Key (mascarada) */}
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                <KeyRound className="h-3.5 w-3.5" />
+                API Key
+                {config?.tokenLength ? (
+                  <Badge variant="secondary" className="text-[10px]">
+                    {config.tokenLength} chars
+                  </Badge>
+                ) : null}
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  type={showToken ? "text" : "password"}
+                  value={
+                    showToken
+                      ? config?.tokenMasked || ""
+                      : "•".repeat(Math.min(config?.tokenLength || 0, 32))
+                  }
+                  placeholder="—"
+                  className="font-mono text-sm"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowToken((v) => !v)}
+                  disabled={!config?.tokenMasked}
+                  title={showToken ? "Ocultar" : "Mostrar (mascarado)"}
+                >
+                  {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Por segurança a key nunca é exibida completa — apenas os 4 primeiros e 4 últimos caracteres.
+              </p>
+            </div>
+
+            {/* Resultado do teste */}
+            {testResult && (
+              <Alert variant={testResult.ok ? "default" : "destructive"}>
+                {testResult.ok ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <XCircle className="h-4 w-4" />
+                )}
+                <AlertTitle>{testResult.ok ? "Credenciais OK" : "Credenciais com problema"}</AlertTitle>
+                <AlertDescription>{testResult.msg}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Como atualizar */}
+            <Alert>
+              <KeyRound className="h-4 w-4" />
+              <AlertTitle>Como atualizar instância ou API key</AlertTitle>
+              <AlertDescription className="text-sm">
+                Os valores ficam armazenados como <strong>secrets</strong> do backend. Para alterar,
+                acesse <strong>Lovable Cloud → Backend → Secrets</strong> e edite{" "}
+                <code className="text-xs bg-muted px-1 py-0.5 rounded">EVOLUTION_API_INSTANCE</code>{" "}
+                ou{" "}
+                <code className="text-xs bg-muted px-1 py-0.5 rounded">EVOLUTION_API_TOKEN</code>.
+                As mudanças passam a valer imediatamente em todas as 11 edge functions.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+
         {/* Status Card */}
         <Card>
           <CardHeader>
