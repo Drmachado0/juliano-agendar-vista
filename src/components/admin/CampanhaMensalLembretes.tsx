@@ -32,7 +32,13 @@ import {
   Loader2,
   RefreshCw,
   Trash2,
+  Plus,
+  Minus,
+  Wand2,
+  RotateCcw,
+  CheckCheck,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { marcarLembreteEnviado, type LembreteAnual } from "@/services/lembretesAnuais";
 import { enviarMensagemWhatsApp } from "@/services/integracoes";
