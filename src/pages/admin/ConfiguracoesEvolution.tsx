@@ -275,7 +275,7 @@ const ConfiguracoesEvolution = () => {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Desconectar WhatsApp?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      A instância ficará offline e o bot Hermes parará de receber e enviar mensagens
+                      A instância ficará offline e o WhatsApp parará de receber e enviar mensagens
                       até você reconectar. Para voltar a usar, clique em "Forçar Conexão" e escaneie
                       um novo QR Code. A instância <strong>não será excluída</strong>.
                     </AlertDialogDescription>

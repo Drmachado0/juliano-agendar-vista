@@ -308,52 +308,6 @@ async function escalarParaHumano(
     p_detalhes: { motivo, ...(detalhes ?? {}) },
   });
 
-  // Dispara Hermes Copiloto para gerar sugestão (fire-and-forget)
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    // Carrega histórico recente e dados do agendamento para contexto
-    const last8 = telefone.replace(/\D/g, "").slice(-8);
-    const { data: msgs } = await supabase
-      .from("mensagens_whatsapp")
-      .select("direcao, conteudo, created_at")
-      .ilike("telefone", `%${last8}`)
-      .order("created_at", { ascending: false })
-      .limit(20);
-    const mensagens = ((msgs as any[]) || [])
-      .reverse()
-      .map((m) => ({ direcao: m.direcao, conteudo: m.conteudo, created_at: m.created_at }));
-
-    let agendamentoCtx = agendamento;
-    if (!agendamentoCtx && id) {
-      const { data } = await supabase
-        .from("agendamentos")
-        .select("nome_completo, tipo_atendimento, local_atendimento, data_agendamento, hora_agendamento, convenio, status_crm, status_funil, is_sandbox")
-        .eq("id", id)
-        .maybeSingle();
-      agendamentoCtx = data;
-    }
-
-    fetch(`${supabaseUrl}/functions/v1/hermes-sugerir-resposta`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${serviceKey}`,
-      },
-      body: JSON.stringify({
-        agendamento_id: id,
-        agendamento: agendamentoCtx,
-        telefone,
-        mensagens,
-        instrucao: `Bot escalou para humano · motivo: ${motivo}`,
-        tipo_origem: "auto_escalacao",
-      }),
-    }).catch((e) => console.error("[hermes auto] falha:", e));
-  } catch (e) {
-    console.error("[hermes auto] erro preparando contexto:", e);
-  }
-
   return id;
 }
 

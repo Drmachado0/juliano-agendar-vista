@@ -137,7 +137,7 @@ const BotStatusBadge = ({ agendamentoId }: Props) => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>Controle do bot Hermes</DropdownMenuLabel>
+        <DropdownMenuLabel>Controle do bot</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {(pausaAtiva || desligado) && (
           <DropdownMenuItem onClick={handleResume}>

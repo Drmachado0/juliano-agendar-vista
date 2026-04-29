@@ -37,10 +37,10 @@ const BotConfigCard = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Bot className="h-5 w-5 text-primary" />
-          Bot Hermes — Pausa automática
+          Bot — Pausa automática
         </CardTitle>
         <CardDescription>
-          Quando alguém da equipe responde uma conversa pelo painel, o bot Hermes fica em silêncio
+          Quando alguém da equipe responde uma conversa pelo painel, o bot fica em silêncio
           por um período. Mensagens automáticas do sistema (lembretes, confirmações) não disparam pausa.
         </CardDescription>
       </CardHeader>

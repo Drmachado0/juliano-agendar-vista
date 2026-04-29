@@ -17,7 +17,7 @@ interface Relatorio {
   whatsapp: { mensagens_in: number; mensagens_out: number; total: number; por_tipo: Record<string, number> };
   crm: { leads_novos: number; conversoes: number; funil_atual: Record<string, number> };
   bot: { acoes_total: number; escalacoes: number; top_intencoes: Record<string, number> };
-  hermes: { drafts_gerados: number; drafts_aceitos: number; drafts_editados: number; drafts_descartados: number; taxa_aceitacao: number };
+  
 }
 
 interface SerieDia {
@@ -121,7 +121,7 @@ export default function Relatorios() {
               <StatCard icon={MessageCircle} label="Mensagens (total)" value={relatorio.whatsapp.total} sub={`${relatorio.whatsapp.mensagens_in} IN · ${relatorio.whatsapp.mensagens_out} OUT`} />
               <StatCard icon={Users} label="Novos leads" value={relatorio.crm.leads_novos} sub={`${relatorio.crm.conversoes} conversões`} />
               <StatCard icon={Bot} label="Ações do bot" value={relatorio.bot.acoes_total} sub={`${relatorio.bot.escalacoes} escalações p/ humano`} />
-              <StatCard icon={Sparkles} label="Hermes" value={relatorio.hermes.drafts_gerados} sub={`${relatorio.hermes.taxa_aceitacao}% aceitos`} />
+              
             </div>
 
             <Card>
