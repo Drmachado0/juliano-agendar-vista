@@ -22,6 +22,17 @@ const AdminWhatsApp = () => {
   const [tab, setTab] = useState<"conversas" | "contatos">("conversas");
   const { globalAtivo: botGlobalAtivo } = useBotGlobalStatus();
 
+  // Quando o lead selecionado some da lista (filtro/busca mudou), limpa seleção
+  // para evitar enviar mensagem para o paciente errado.
+  useEffect(() => {
+    if (!selectedLead) return;
+    const ainda = leads.some((l) => l.agendamento_id === selectedLead.agendamento_id);
+    if (!ainda) {
+      setSelectedLead(null);
+      setMobileView("list");
+    }
+  }, [leads, selectedLead]);
+
   // Handle realtime messages - match by agendamento_id OR phone number
   const handleNewMessage = useCallback(
     (message: MensagemWhatsApp) => {
