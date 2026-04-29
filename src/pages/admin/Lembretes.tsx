@@ -877,7 +877,7 @@ const Lembretes = () => {
             </div>
 
             {/* Monthly Chart */}
-            <Card>
+            <Card className="border-border/60 bg-gradient-to-br from-card to-card/40 shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -886,36 +886,73 @@ const Lembretes = () => {
                   </CardTitle>
                   <CardDescription>Lembretes por mês de vencimento</CardDescription>
                 </div>
-                <Button variant="outline" size="sm" onClick={carregarDashboard} disabled={loadingDashboard}>
-                  <RefreshCw className={cn("h-4 w-4", loadingDashboard && "animate-spin")} />
-                </Button>
+                <div className="flex items-center gap-4">
+                  <div className="hidden sm:flex items-center gap-3 text-xs">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.6)]" />
+                      <span className="text-muted-foreground">Pendentes</span>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full bg-accent shadow-[0_0_8px_hsl(var(--accent)/0.6)]" />
+                      <span className="text-muted-foreground">Enviados</span>
+                    </span>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={carregarDashboard} disabled={loadingDashboard}>
+                    <RefreshCw className={cn("h-4 w-4", loadingDashboard && "animate-spin")} />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {loadingDashboard ? (
-                  <div className="h-[300px] flex items-center justify-center">
+                  <div className="h-[320px] flex items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
                 ) : estatisticasMensais.length === 0 ? (
-                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                  <div className="h-[320px] flex items-center justify-center text-muted-foreground">
                     Nenhum dado disponível
                   </div>
                 ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={estatisticasMensais} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="mesFormatado" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <RechartsTooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))', 
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
-                        }}
-                        labelStyle={{ color: 'hsl(var(--foreground))' }}
+                  <ResponsiveContainer width="100%" height={320}>
+                    <BarChart data={estatisticasMensais} margin={{ top: 20, right: 16, left: 0, bottom: 8 }} barGap={6}>
+                      <defs>
+                        <linearGradient id="gradPendentes" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={1} />
+                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.55} />
+                        </linearGradient>
+                        <linearGradient id="gradEnviados" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity={1} />
+                          <stop offset="100%" stopColor="hsl(var(--accent))" stopOpacity={0.55} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 6" stroke="hsl(var(--border))" strokeOpacity={0.4} vertical={false} />
+                      <XAxis
+                        dataKey="mesFormatado"
+                        stroke="hsl(var(--muted-foreground))"
+                        tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                        tickLine={false}
+                        axisLine={{ stroke: 'hsl(var(--border))', strokeOpacity: 0.5 }}
                       />
-                      <Legend />
-                      <Bar dataKey="pendentes" name="Pendentes" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="enviados" name="Enviados" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                      <YAxis
+                        stroke="hsl(var(--muted-foreground))"
+                        tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={36}
+                      />
+                      <RechartsTooltip
+                        cursor={{ fill: 'hsl(var(--primary) / 0.08)', radius: 6 }}
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--popover))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '10px',
+                          boxShadow: '0 10px 30px -10px hsl(var(--primary) / 0.25)',
+                          padding: '10px 12px',
+                        }}
+                        labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600, marginBottom: 4 }}
+                        itemStyle={{ color: 'hsl(var(--foreground))', fontSize: 12 }}
+                      />
+                      <Bar dataKey="pendentes" name="Pendentes" fill="url(#gradPendentes)" radius={[6, 6, 0, 0]} maxBarSize={42} />
+                      <Bar dataKey="enviados" name="Enviados" fill="url(#gradEnviados)" radius={[6, 6, 0, 0]} maxBarSize={42} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
