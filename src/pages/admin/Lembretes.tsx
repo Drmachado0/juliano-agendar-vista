@@ -490,10 +490,12 @@ const Lembretes = () => {
       const lembrete = lembretesParaEnviar[i];
       const primeiroNome = lembrete.primeiro_nome || lembrete.nome.split(' ')[0];
 
-      // Generate message — sempre usa o template configurado.
-      // Quando a variação está ativa, apenas a saudação é trocada.
+      // Generate message
+      // - Variação ATIVA: monta mensagem única (saudação + corpo + CTA + emojis),
+      //   mantendo link e assinatura fixos. Template salvo é ignorado.
+      // - Variação INATIVA: usa o template configurado em /admin/whatsapp puro.
       const mensagem = variacaoTextoAtiva
-        ? aplicarVariacaoSeguraNoTemplate(template, primeiroNome, ultimaMensagem)
+        ? gerarMensagemVariadaLembrete(primeiroNome, ultimaMensagem)
         : renderizarTemplate(primeiroNome);
       ultimaMensagem = mensagem;
 
