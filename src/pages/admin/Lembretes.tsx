@@ -262,6 +262,10 @@ const Lembretes = () => {
       .maybeSingle();
     if (!error && data?.conteudo) {
       setTemplate(data.conteudo);
+      // Atualiza o preview para refletir o template salvo
+      setMensagemPreviewVariada(
+        aplicarVariacaoSeguraNoTemplate(data.conteudo, "Maria"),
+      );
     }
   };
 
