@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import WhatsAppLeadsList from "@/components/admin/WhatsAppLeadsList";
 import WhatsAppChat from "@/components/admin/WhatsAppChat";
@@ -6,9 +6,13 @@ import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
 import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
 import { LeadComMensagens, MensagemWhatsApp, buscarAgendamentoPorTelefone } from "@/services/mensagens";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
+import { useBotGlobalStatus } from "@/hooks/useBotGlobalStatus";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { AlertTriangle, Bot, PowerOff } from "lucide-react";
 import { toast } from "sonner";
 
 const AdminWhatsApp = () => {
@@ -16,6 +20,7 @@ const AdminWhatsApp = () => {
   const [leads, setLeads] = useState<LeadComMensagens[]>([]);
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [tab, setTab] = useState<"conversas" | "contatos">("conversas");
+  const { globalAtivo: botGlobalAtivo } = useBotGlobalStatus();
 
   // Handle realtime messages - match by agendamento_id OR phone number
   const handleNewMessage = useCallback(
