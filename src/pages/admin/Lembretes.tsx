@@ -1231,6 +1231,19 @@ const Lembretes = () => {
                     <CardDescription>Pacientes que completam 1 ano da última consulta</CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button
+                      data-testid="lembretes-btn-atualizar-pendentes"
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        await Promise.all([carregarLembretesPendentes(), carregarDashboard()]);
+                        toast({ title: "Lista atualizada", description: "Lembretes pendentes recarregados." });
+                      }}
+                      disabled={loadingLembretes || loadingDashboard}
+                    >
+                      <RefreshCw className={cn("h-4 w-4 mr-2", (loadingLembretes || loadingDashboard) && "animate-spin")} />
+                      Atualizar
+                    </Button>
                     <Filter className="h-4 w-4 text-muted-foreground" />
                     <select
                       value={filtroLembrete}
