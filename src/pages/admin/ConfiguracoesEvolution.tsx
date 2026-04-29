@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   RefreshCw,
   ExternalLink,
@@ -17,9 +19,16 @@ import {
   RotateCcw,
   Plug,
   Zap,
-  PowerOff
+  PowerOff,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Copy,
+  ServerCog,
+  TestTube2,
 } from "lucide-react";
 import { useEvolutionStatus } from "@/hooks/useEvolutionStatus";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
