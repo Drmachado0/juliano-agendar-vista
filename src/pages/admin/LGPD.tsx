@@ -22,7 +22,7 @@ interface Preview {
   telefone_mascarado: string;
   agendamentos: number;
   mensagens: number;
-  hermes_drafts: number;
+  
   intents: number;
   audit_logs: number;
 }
@@ -123,10 +123,9 @@ export default function LGPD() {
                 <div className="text-sm">
                   Telefone: <span className="font-mono">{preview.telefone_mascarado}</span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-center">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
                   <Stat label="Agendamentos" value={preview.agendamentos} />
                   <Stat label="Mensagens" value={preview.mensagens} />
-                  <Stat label="Drafts Hermes" value={preview.hermes_drafts} />
                   <Stat label="Intents" value={preview.intents} />
                   <Stat label="Audit Logs" value={preview.audit_logs} />
                 </div>
@@ -156,7 +155,7 @@ export default function LGPD() {
                             <ul className="list-disc list-inside text-sm">
                               <li>{preview.agendamentos} agendamento(s)</li>
                               <li>{preview.mensagens} mensagem(ns) WhatsApp</li>
-                              <li>{preview.hermes_drafts} draft(s) Hermes</li>
+                              
                               <li>{preview.intents} intent(s) de conversa</li>
                             </ul>
                             <p className="text-xs text-muted-foreground pt-2">
