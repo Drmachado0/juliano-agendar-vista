@@ -39,6 +39,10 @@ export function installDataLayerDebug() {
   if (typeof window === 'undefined') return;
   if (window.__dlDebugInstalled) return;
 
+  // LGPD: não instalar debug em rotas privadas (admin/auth)
+  const p = window.location.pathname || '';
+  if (p === '/auth' || p.startsWith('/auth/') || p.startsWith('/admin')) return;
+
   const params = new URLSearchParams(window.location.search);
   if (params.get('debug_dl') !== '1') return;
 
