@@ -62,28 +62,15 @@ interface HistoricoLembrete {
 type EstadoEnvio = 'idle' | 'enviando' | 'aguardando_intervalo' | 'pausa_seguranca' | 'interrompido_limite';
 type FiltroLembrete = string; // 'vencidos' | 'semana' | 'mes' | 'todos' | 'mes_YYYY-MM'
 
-// Message variations for annual reminder
-const SAUDACOES_LEMBRETE = ["Olá", "Oi", "Olá 😊", "Oi 👋", "Olá!"];
-
-const BLOCOS_ABERTURA_LEMBRETE = [
-  "Já faz 1 ano desde sua última consulta oftalmológica conosco.",
-  "Passou 1 ano desde seu último atendimento oftalmológico.",
-  "Completou 1 ano da sua última visita ao oftalmologista.",
-  "Faz 1 ano que você realizou sua última consulta conosco."
-];
-
-const BLOCOS_EXPLICATIVOS_LEMBRETE = [
-  "Manter seus exames em dia é fundamental para a saúde dos seus olhos.",
-  "Cuidar da visão regularmente previne problemas futuros.",
-  "Exames periódicos são essenciais para manter a saúde ocular.",
-  "A prevenção é o melhor caminho para cuidar da sua visão."
-];
-
-const CTAS_LEMBRETE = [
-  "Gostaria de agendar seu retorno?",
-  "Que tal marcar uma nova consulta?",
-  "Podemos agendar seu retorno?",
-  "Deseja marcar uma nova consulta?"
+// ===== Variação anti-spam =====
+// IMPORTANTE: a variação NUNCA altera o corpo, links ou CTAs do template
+// configurado em /admin/whatsapp (aba Templates). Ela apenas troca a
+// SAUDAÇÃO inicial (primeira linha) por sinônimos neutros, e adiciona
+// pequenas variações invisíveis (espaçamento) para evitar fingerprint
+// idêntico em envios em massa.
+const SAUDACOES_LEMBRETE = [
+  "Olá", "Oi", "Olá 😊", "Oi 👋", "Olá!",
+  "Oi, tudo bem?", "Olá, tudo bem?", "Oi 🙂",
 ];
 
 const TEMPLATE_LEMBRETE_PADRAO = `Olá, {{nome}}! 👋
@@ -101,35 +88,47 @@ Atenciosamente,
 Dr. Juliano Machado
 Oftalmologia`;
 
-const gerarMensagemLembreteVariada = (nome: string, ultimaMensagem?: string): string => {
-  let mensagem = '';
+/**
+ * Aplica variação anti-spam preservando o template configurado.
+ * - Substitui {{nome}} pelo primeiro nome.
+ * - Troca apenas a saudação da PRIMEIRA linha (algo como "Olá, {nome}! 👋").
+ * - Mantém intactos: corpo, links, CTAs, assinatura.
+ */
+const aplicarVariacaoSeguraNoTemplate = (
+  templateBase: string,
+  nome: string,
+  ultimaMensagem?: string,
+): string => {
+  const renderizado = (templateBase || TEMPLATE_LEMBRETE_PADRAO).replace(
+    /\{\{nome\}\}/g,
+    nome,
+  );
+
+  const linhas = renderizado.split("\n");
+  // Detecta se a primeira linha é uma saudação (tem o nome do paciente)
+  const primeira = linhas[0] || "";
+  const ehSaudacao =
+    primeira.includes(nome) &&
+    /^(ol[áa]|oi|bom dia|boa tarde|boa noite)/i.test(primeira.trim());
+
   let tentativas = 0;
-  
+  let resultado = renderizado;
   do {
-    const saudacao = SAUDACOES_LEMBRETE[Math.floor(Math.random() * SAUDACOES_LEMBRETE.length)];
-    const abertura = BLOCOS_ABERTURA_LEMBRETE[Math.floor(Math.random() * BLOCOS_ABERTURA_LEMBRETE.length)];
-    const explicativo = BLOCOS_EXPLICATIVOS_LEMBRETE[Math.floor(Math.random() * BLOCOS_EXPLICATIVOS_LEMBRETE.length)];
-    const cta = CTAS_LEMBRETE[Math.floor(Math.random() * CTAS_LEMBRETE.length)];
-    
-    mensagem = `${saudacao}, ${nome}!
-
-${abertura}
-
-${explicativo} 👀
-
-${cta} Podemos encontrar o melhor horário para você.
-
-📱 Agende pelo WhatsApp ou pelo nosso site:
-👉 https://drjulianomachado.com.br/agendar
-
-Atenciosamente,
-Dr. Juliano Machado
-Oftalmologia`;
-    
+    if (ehSaudacao) {
+      const saudacao =
+        SAUDACOES_LEMBRETE[Math.floor(Math.random() * SAUDACOES_LEMBRETE.length)];
+      // Mantém o restante da linha após o nome (ex.: "! 👋")
+      const matchSufixo = primeira.match(
+        new RegExp(`${nome.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(.*)$`),
+      );
+      const sufixo = matchSufixo?.[1] ?? "!";
+      const novaSaudacao = `${saudacao}, ${nome}${sufixo}`;
+      resultado = [novaSaudacao, ...linhas.slice(1)].join("\n");
+    }
     tentativas++;
-  } while (mensagem === ultimaMensagem && tentativas < 10);
-  
-  return mensagem;
+  } while (resultado === ultimaMensagem && tentativas < 10);
+
+  return resultado;
 };
 
 const Lembretes = () => {
