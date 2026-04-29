@@ -6,8 +6,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { 
   sendWhatsappTextMessage, 
   buildAppointmentConfirmationMessage,
-  normalizePhoneNumber 
+  normalizePhoneNumber,
+  sanitizePayload,
 } from '../_shared/evolutionApiClient.ts';
+import { isBotPaused, isKnownInvalidWhatsapp } from '../_shared/whatsappGuards.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
