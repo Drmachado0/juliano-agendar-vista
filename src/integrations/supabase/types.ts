@@ -789,6 +789,191 @@ export type Database = {
         }
         Relationships: []
       }
+      lembretes_campanha_pacientes: {
+        Row: {
+          campanha_id: string
+          created_at: string
+          data_ultima_consulta: string | null
+          id: string
+          inconsistente_data: boolean
+          lembrete_id: string
+          motivo_falha: string | null
+          motivo_ignorado: string | null
+          nome: string
+          numero_remessa: number
+          primeiro_nome: string | null
+          remessa_id: string
+          status: string
+          telefone: string
+          ultimo_envio_em: string | null
+          updated_at: string
+        }
+        Insert: {
+          campanha_id: string
+          created_at?: string
+          data_ultima_consulta?: string | null
+          id?: string
+          inconsistente_data?: boolean
+          lembrete_id: string
+          motivo_falha?: string | null
+          motivo_ignorado?: string | null
+          nome: string
+          numero_remessa: number
+          primeiro_nome?: string | null
+          remessa_id: string
+          status?: string
+          telefone: string
+          ultimo_envio_em?: string | null
+          updated_at?: string
+        }
+        Update: {
+          campanha_id?: string
+          created_at?: string
+          data_ultima_consulta?: string | null
+          id?: string
+          inconsistente_data?: boolean
+          lembrete_id?: string
+          motivo_falha?: string | null
+          motivo_ignorado?: string | null
+          nome?: string
+          numero_remessa?: number
+          primeiro_nome?: string | null
+          remessa_id?: string
+          status?: string
+          telefone?: string
+          ultimo_envio_em?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lembretes_campanha_pacientes_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "lembretes_campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lembretes_campanha_pacientes_remessa_id_fkey"
+            columns: ["remessa_id"]
+            isOneToOne: false
+            referencedRelation: "lembretes_campanha_remessas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lembretes_campanha_remessas: {
+        Row: {
+          campanha_id: string
+          created_at: string
+          data_programada: string
+          enviados: number
+          falhas: number
+          fim_em: string | null
+          id: string
+          ignorados: number
+          inicio_em: string | null
+          motivo_bloqueio: string | null
+          numero_remessa: number
+          processados: number
+          quantidade_planejada: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          campanha_id: string
+          created_at?: string
+          data_programada: string
+          enviados?: number
+          falhas?: number
+          fim_em?: string | null
+          id?: string
+          ignorados?: number
+          inicio_em?: string | null
+          motivo_bloqueio?: string | null
+          numero_remessa: number
+          processados?: number
+          quantidade_planejada?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          campanha_id?: string
+          created_at?: string
+          data_programada?: string
+          enviados?: number
+          falhas?: number
+          fim_em?: string | null
+          id?: string
+          ignorados?: number
+          inicio_em?: string | null
+          motivo_bloqueio?: string | null
+          numero_remessa?: number
+          processados?: number
+          quantidade_planejada?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lembretes_campanha_remessas_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "lembretes_campanhas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lembretes_campanhas: {
+        Row: {
+          ano_referencia: number
+          concluida_em: string | null
+          created_at: string
+          created_by: string | null
+          gerada_em: string
+          id: string
+          inconsistencias: number
+          mes_referencia: number
+          status: string
+          total_elegivel: number
+          total_enviados: number
+          total_falhas: number
+          total_ignorados: number
+          updated_at: string
+        }
+        Insert: {
+          ano_referencia: number
+          concluida_em?: string | null
+          created_at?: string
+          created_by?: string | null
+          gerada_em?: string
+          id?: string
+          inconsistencias?: number
+          mes_referencia: number
+          status?: string
+          total_elegivel?: number
+          total_enviados?: number
+          total_falhas?: number
+          total_ignorados?: number
+          updated_at?: string
+        }
+        Update: {
+          ano_referencia?: number
+          concluida_em?: string | null
+          created_at?: string
+          created_by?: string | null
+          gerada_em?: string
+          id?: string
+          inconsistencias?: number
+          mes_referencia?: number
+          status?: string
+          total_elegivel?: number
+          total_enviados?: number
+          total_falhas?: number
+          total_ignorados?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lgpd_rate_limit: {
         Row: {
           acao: string
