@@ -2,16 +2,20 @@ import { useState, useCallback } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import WhatsAppLeadsList from "@/components/admin/WhatsAppLeadsList";
 import WhatsAppChat from "@/components/admin/WhatsAppChat";
+import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
 import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
-import { LeadComMensagens, MensagemWhatsApp } from "@/services/mensagens";
+import { LeadComMensagens, MensagemWhatsApp, buscarAgendamentoPorTelefone } from "@/services/mensagens";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 const AdminWhatsApp = () => {
   const [selectedLead, setSelectedLead] = useState<LeadComMensagens | null>(null);
   const [leads, setLeads] = useState<LeadComMensagens[]>([]);
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
+  const [tab, setTab] = useState<"conversas" | "contatos">("conversas");
 
   // Handle realtime messages - match by agendamento_id OR phone number
   const handleNewMessage = useCallback(
@@ -79,63 +83,94 @@ const AdminWhatsApp = () => {
     setMobileView("list");
   };
 
+  const abrirChatPorTelefone = async (telefone: string) => {
+    const { data } = await buscarAgendamentoPorTelefone(telefone);
+    if (!data) {
+      toast.error("Nenhuma conversa encontrada para este número");
+      return;
+    }
+    setTab("conversas");
+    const lead: LeadComMensagens = {
+      agendamento_id: data.id,
+      nome_completo: data.nome_completo,
+      telefone_whatsapp: data.telefone_whatsapp,
+      status_crm: data.status_crm,
+      local_atendimento: data.local_atendimento || "",
+      is_sandbox: data.is_sandbox,
+      ultima_mensagem: null,
+      ultima_mensagem_data: null,
+      mensagens_nao_lidas: 0,
+    };
+    handleSelectLead(lead);
+  };
+
   return (
     <TooltipProvider>
       <AdminLayout>
         <div className="h-[calc(100vh-8rem)] lg:h-[calc(100vh-4rem)] flex flex-col">
           {/* Header */}
-          <div className="mb-4 flex items-start justify-between">
+          <div className="mb-4 flex items-start justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-2xl font-bold text-foreground">WhatsApp</h1>
               <p className="text-sm text-muted-foreground">
-                Acompanhe e gerencie conversas com leads em tempo real
+                Acompanhe conversas em tempo real e gerencie seus contatos
               </p>
             </div>
             <EvolutionStatusBadge />
           </div>
 
-        {/* Main content */}
-        <div className="flex-1 bg-card rounded-xl border border-border overflow-hidden">
-          <div className="flex h-full">
-            {/* Leads list - hidden on mobile when chat is open */}
-            <div
-              className={cn(
-                "w-full lg:w-80 xl:w-96 border-r border-border flex-shrink-0",
-                mobileView === "chat" ? "hidden lg:flex lg:flex-col" : "flex flex-col"
-              )}
-            >
-              <WhatsAppLeadsList
-                selectedLeadId={selectedLead?.agendamento_id || null}
-                onSelectLead={handleSelectLead}
-                onLeadsUpdate={setLeads}
-                onLeadCreated={(agendamentoId) => {
-                  // Após fetchLeads(), encontra o lead recém-criado e abre o chat
-                  setLeads((prev) => {
-                    const novo = prev.find((l) => l.agendamento_id === agendamentoId);
-                    if (novo) handleSelectLead(novo);
-                    return prev;
-                  });
-                }}
-              />
-            </div>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="flex-1 flex flex-col min-h-0">
+            <TabsList className="self-start mb-3">
+              <TabsTrigger value="conversas">Conversas</TabsTrigger>
+              <TabsTrigger value="contatos">Contatos</TabsTrigger>
+            </TabsList>
 
-            {/* Chat area - hidden on mobile when list is shown */}
-            <div
-              className={cn(
-                "flex-1 flex flex-col",
-                mobileView === "list" ? "hidden lg:flex" : "flex"
-              )}
-            >
-              <WhatsAppChat
-                lead={selectedLead}
-                onBack={handleBack}
-                showBackButton={mobileView === "chat"}
-              />
-            </div>
-          </div>
+            <TabsContent value="conversas" className="flex-1 mt-0 min-h-0">
+              <div className="h-full bg-card rounded-xl border border-border overflow-hidden">
+                <div className="flex h-full">
+                  <div
+                    className={cn(
+                      "w-full lg:w-80 xl:w-96 border-r border-border flex-shrink-0",
+                      mobileView === "chat" ? "hidden lg:flex lg:flex-col" : "flex flex-col"
+                    )}
+                  >
+                    <WhatsAppLeadsList
+                      selectedLeadId={selectedLead?.agendamento_id || null}
+                      onSelectLead={handleSelectLead}
+                      onLeadsUpdate={setLeads}
+                      onLeadCreated={(agendamentoId) => {
+                        setLeads((prev) => {
+                          const novo = prev.find((l) => l.agendamento_id === agendamentoId);
+                          if (novo) handleSelectLead(novo);
+                          return prev;
+                        });
+                      }}
+                    />
+                  </div>
+                  <div
+                    className={cn(
+                      "flex-1 flex flex-col",
+                      mobileView === "list" ? "hidden lg:flex" : "flex"
+                    )}
+                  >
+                    <WhatsAppChat
+                      lead={selectedLead}
+                      onBack={handleBack}
+                      showBackButton={mobileView === "chat"}
+                    />
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="contatos" className="flex-1 mt-0 min-h-0">
+              <div className="h-full bg-card rounded-xl border border-border overflow-hidden">
+                <WhatsAppContatos onAbrirChat={abrirChatPorTelefone} />
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
-      </div>
-    </AdminLayout>
+      </AdminLayout>
     </TooltipProvider>
   );
 };
