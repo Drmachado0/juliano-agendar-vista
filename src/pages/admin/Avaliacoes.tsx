@@ -28,6 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
+import imagemPadraoAvaliacao from "@/assets/avaliacao-default.png";
 import { useEvolutionStatus } from "@/hooks/useEvolutionStatus";
 import { useEnvioLoteConfig, LIMITE_SESSAO, LIMITE_DIARIO } from "@/hooks/useEnvioLoteConfig";
 
@@ -1143,6 +1144,31 @@ const Avaliacoes = () => {
       fileInputRef.current.value = "";
     }
   };
+
+  // Carrega imagem padrão fixa no mount (admin pode remover/trocar antes de enviar)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(imagemPadraoAvaliacao);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (cancelled) return;
+          const base64 = reader.result as string;
+          setImagemBase64(base64);
+          setImagemPreview(imagemPadraoAvaliacao);
+          setImagemNome("Imagem padrão Dr. Juliano");
+        };
+        reader.readAsDataURL(blob);
+      } catch (err) {
+        console.error("[Avaliacoes] Falha ao carregar imagem padrão:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const enviarAvaliacaoSequencial = async (
     telefone: string,
