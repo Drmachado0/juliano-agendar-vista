@@ -236,7 +236,7 @@ export async function atualizarTotaisCampanha(campanhaId: string) {
     .select("status")
     .eq("campanha_id", campanhaId);
   if (error) throw error;
-  const rows = (data || []) as Array<{ status: StatusPaciente }>;
+  const rows = (data || []) as unknown as Array<{ status: StatusPaciente }>;
   const enviados = rows.filter((r) => r.status === "enviado").length;
   const falhas = rows.filter((r) => r.status === "falha").length;
   const ignorados = rows.filter((r) => r.status === "ignorado").length;
