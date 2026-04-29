@@ -1,9 +1,16 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,75 +31,30 @@ import {
   CheckCircle2,
   Loader2,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  marcarLembreteEnviado,
-  type LembreteAnual,
-} from "@/services/lembretesAnuais";
+import { marcarLembreteEnviado, type LembreteAnual } from "@/services/lembretesAnuais";
 import { enviarMensagemWhatsApp } from "@/services/integracoes";
 import { useEnvioLoteConfig } from "@/hooks/useEnvioLoteConfig";
+import {
+  buscarCampanha,
+  buscarRemessasComPacientes,
+  criarPlanoCampanha,
+  excluirCampanha,
+  atualizarStatusRemessa,
+  atualizarPacienteCampanha,
+  atualizarTotaisCampanha,
+  contarEnviosHoje,
+  type CampanhaRow,
+  type RemessaRow,
+  type PacienteCampanhaRow,
+  type StatusRemessa,
+  type StatusPaciente,
+} from "@/services/campanhasLembretes";
 
-// ============================================================
-// Configuração da campanha
-// ============================================================
 const NUMERO_REMESSAS = 4;
-const DIAS_REMESSAS = [1, 2, 15, 16] as const; // dia do mês para cada remessa (índice = remessa - 1)
-
-type StatusRemessa =
-  | "agendada"
-  | "disponivel"
-  | "em_andamento"
-  | "concluida"
-  | "concluida_com_falhas"
-  | "cancelada";
-
-interface RemessaPlano {
-  numero: number; // 1..4
-  dataProgramada: Date;
-  pacientes: LembreteAnual[];
-  status: StatusRemessa;
-}
-
-interface RelatorioRemessa {
-  numeroRemessa: number;
-  dataProgramada: string;
-  quantidadePlanejada: number;
-  processados: number;
-  enviados: number;
-  falhas: number;
-  ignorados: number;
-  inicio: string | null;
-  fim: string | null;
-  falhasDetalhe: Array<{ id: string; nome: string; motivo: string }>;
-}
-
-// ============================================================
-// Helpers
-// ============================================================
-
-/** Divide total em N remessas balanceadas, distribuindo o resto nas primeiras. */
-function dividirEmRemessas(total: number, n = NUMERO_REMESSAS): number[] {
-  const base = Math.floor(total / n);
-  const resto = total % n;
-  return Array.from({ length: n }, (_, i) => base + (i < resto ? 1 : 0));
-}
-
-/** Mascara telefone: mantém DDI/DDD e últimos 2 dígitos. */
-function mascararTelefone(tel: string): string {
-  const d = tel.replace(/\D/g, "");
-  if (d.length < 6) return "***";
-  const inicio = d.slice(0, 4);
-  const fim = d.slice(-2);
-  return `${inicio}${"*".repeat(Math.max(d.length - 6, 2))}${fim}`;
-}
-
-/** Mascara nome: mantém primeiro nome + iniciais do resto. */
-function mascararNome(nome: string): string {
-  const partes = nome.trim().split(/\s+/);
-  if (partes.length === 1) return partes[0];
-  return `${partes[0]} ${partes.slice(1).map((p) => `${p[0]}.`).join(" ")}`;
-}
+const DIAS_REMESSAS = [1, 2, 15, 16] as const;
 
 const MESES_PT = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -102,49 +64,106 @@ const MESES_PT = [
 function formatarMesAno(ano: number, mes0: number) {
   return `${MESES_PT[mes0]}/${ano}`;
 }
-
-function formatarData(d: Date) {
-  return d.toLocaleDateString("pt-BR");
+function formatarData(d: Date | string) {
+  const dt = typeof d === "string" ? new Date(d + "T00:00:00") : d;
+  return dt.toLocaleDateString("pt-BR");
+}
+function mascararTelefone(tel: string): string {
+  const d = (tel || "").replace(/\D/g, "");
+  if (d.length < 6) return "***";
+  return `${d.slice(0, 4)}${"*".repeat(Math.max(d.length - 6, 2))}${d.slice(-2)}`;
+}
+function mascararNome(nome: string): string {
+  const partes = (nome || "").trim().split(/\s+/);
+  if (partes.length === 1) return partes[0] || "";
+  return `${partes[0]} ${partes.slice(1).map((p) => `${p[0]}.`).join(" ")}`;
+}
+function dividirEmRemessas(total: number, n = NUMERO_REMESSAS): number[] {
+  const base = Math.floor(total / n);
+  const resto = total % n;
+  return Array.from({ length: n }, (_, i) => base + (i < resto ? 1 : 0));
 }
 
-// ============================================================
-// Componente
-// ============================================================
+const STATUS_LABEL: Record<StatusRemessa, string> = {
+  agendada: "Agendada",
+  disponivel: "Disponível",
+  em_andamento: "Em andamento",
+  concluida: "Concluída",
+  concluida_com_falhas: "Concluída c/ falhas",
+  cancelada: "Cancelada",
+  bloqueada_por_limite: "Bloqueada por limite",
+  pendente: "Pendente",
+};
+
+function corStatus(s: StatusRemessa): string {
+  switch (s) {
+    case "concluida":
+      return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30";
+    case "concluida_com_falhas":
+      return "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30";
+    case "em_andamento":
+      return "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30";
+    case "disponivel":
+      return "bg-primary/15 text-primary border-primary/30";
+    case "cancelada":
+      return "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30";
+    case "bloqueada_por_limite":
+      return "bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30";
+    case "pendente":
+      return "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30";
+    default:
+      return "bg-muted text-muted-foreground border-border";
+  }
+}
+
 interface Props {
-  /** Recarrega listas externas (pendentes, dashboard) após envios. */
   onAfterEnvio?: () => void;
 }
 
 const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
-  // Mês de vencimento selecionado (default: mês atual)
   const hoje = new Date();
   const [anoRef, setAnoRef] = useState(hoje.getFullYear());
   const [mesRef, setMesRef] = useState(hoje.getMonth()); // 0..11
 
   const [carregando, setCarregando] = useState(false);
-  const [pacientesElegiveis, setPacientesElegiveis] = useState<LembreteAnual[]>([]);
-  const [planoGerado, setPlanoGerado] = useState(false);
+  const [campanha, setCampanha] = useState<CampanhaRow | null>(null);
+  const [remessas, setRemessas] = useState<RemessaRow[]>([]);
+  const [pacientes, setPacientes] = useState<PacienteCampanhaRow[]>([]);
 
-  // Remessa selecionada para envio
+  // Para gerar plano (antes de criar)
+  const [previewElegiveis, setPreviewElegiveis] = useState<
+    Array<LembreteAnual & { inconsistente_data?: boolean }>
+  >([]);
+  const [previewCarregado, setPreviewCarregado] = useState(false);
+
   const [remessaSelecionada, setRemessaSelecionada] = useState<number | null>(null);
   const [confirmarOpen, setConfirmarOpen] = useState(false);
+  const [reenvioFalhasOpen, setReenvioFalhasOpen] = useState(false);
   const [visualizarOpen, setVisualizarOpen] = useState(false);
   const [visualizandoRemessa, setVisualizandoRemessa] = useState<number | null>(null);
+  const [confirmarExcluirOpen, setConfirmarExcluirOpen] = useState(false);
 
-  // Estado de envio
+  // Envio
   const [enviando, setEnviando] = useState(false);
   const [pausado, setPausado] = useState(false);
   const pausadoRef = useRef(false);
   const canceladoRef = useRef(false);
-  const [progresso, setProgresso] = useState({ atual: 0, total: 0, sucesso: 0, falha: 0 });
-  const [relatorios, setRelatorios] = useState<Record<number, RelatorioRemessa>>({});
-  const [statusRemessas, setStatusRemessas] = useState<Record<number, StatusRemessa>>({});
+  const [progresso, setProgresso] = useState({
+    atual: 0,
+    total: 0,
+    sucesso: 0,
+    falha: 0,
+    ignorado: 0,
+  });
+  const enviosSessaoRef = useRef(0);
+  const [enviosHoje, setEnviosHoje] = useState(0);
 
-  // Modo manual: override de quantidades por remessa
+  // Modo manual
   const [modoManual, setModoManual] = useState(false);
   const [qtdManual, setQtdManual] = useState<number[]>([0, 0, 0, 0]);
+  const [confirmaParcial, setConfirmaParcial] = useState(false);
 
-  // Config de envio (reaproveita as mesmas regras de segurança)
+  // Config
   const {
     intervaloMin,
     intervaloMax,
@@ -155,11 +174,10 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
     validarLimitesEnvio,
   } = useEnvioLoteConfig();
 
-  // Template do banco (lembrete_anual) — reflete edits feitas em /admin/whatsapp
+  // Template
   const [template, setTemplate] = useState<string>("");
-
   useEffect(() => {
-    const carregar = async () => {
+    (async () => {
       const { data } = await supabase
         .from("templates_whatsapp")
         .select("conteudo")
@@ -167,128 +185,188 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
         .eq("ativo", true)
         .maybeSingle();
       if (data?.conteudo) setTemplate(data.conteudo);
-    };
-    carregar();
+    })();
   }, []);
 
-  // ====== Carregar pacientes elegíveis para o mês selecionado ======
-  // Estratégia (versão simplificada permitida pelo spec):
-  // - usa a tabela existente lembretes_anuais
-  // - elegível = data_proximo_lembrete dentro do mês/ano selecionado E lembrete_enviado = false
-  const carregarElegiveis = async () => {
+  // Carrega contagem de envios de hoje (limites realistas)
+  useEffect(() => {
+    contarEnviosHoje().then(setEnviosHoje);
+  }, []);
+
+  // ====== Carregar campanha existente ao mudar mês ======
+  const carregarCampanhaExistente = useCallback(
+    async (ano: number, mes0: number) => {
+      setCarregando(true);
+      try {
+        const camp = await buscarCampanha(ano, mes0 + 1);
+        if (camp) {
+          const { remessas: rs, pacientes: ps } = await buscarRemessasComPacientes(camp.id);
+          setCampanha(camp);
+          setRemessas(rs);
+          setPacientes(ps);
+          setPreviewCarregado(false);
+          setPreviewElegiveis([]);
+        } else {
+          setCampanha(null);
+          setRemessas([]);
+          setPacientes([]);
+        }
+      } catch (e: any) {
+        toast({ title: "Erro ao carregar campanha", description: e.message, variant: "destructive" });
+      }
+      setCarregando(false);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    carregarCampanhaExistente(anoRef, mesRef);
+  }, [anoRef, mesRef, carregarCampanhaExistente]);
+
+  // ====== Buscar elegíveis (preview antes de gerar) ======
+  const carregarPreviewElegiveis = async () => {
     setCarregando(true);
-    setPlanoGerado(false);
-    setRelatorios({});
-    setStatusRemessas({});
-    setRemessaSelecionada(null);
+    try {
+      const inicio = new Date(anoRef, mesRef, 1).toISOString().split("T")[0];
+      const ultimoDia = new Date(anoRef, mesRef + 1, 0).getDate();
+      const fim = new Date(anoRef, mesRef, ultimoDia).toISOString().split("T")[0];
 
-    const inicio = new Date(anoRef, mesRef, 1).toISOString().split("T")[0];
-    const ultimoDia = new Date(anoRef, mesRef + 1, 0).getDate();
-    const fim = new Date(anoRef, mesRef, ultimoDia).toISOString().split("T")[0];
+      const { data, error } = await supabase
+        .from("lembretes_anuais")
+        .select("*")
+        .eq("lembrete_enviado", false)
+        .gte("data_proximo_lembrete", inicio)
+        .lte("data_proximo_lembrete", fim)
+        .order("data_ultima_consulta", { ascending: true })
+        .order("nome", { ascending: true })
+        .order("id", { ascending: true });
+      if (error) throw error;
 
-    const { data, error } = await supabase
-      .from("lembretes_anuais")
-      .select("*")
-      .eq("lembrete_enviado", false)
-      .gte("data_proximo_lembrete", inicio)
-      .lte("data_proximo_lembrete", fim)
-      // ordenação estável: data_ultima_consulta, nome, id
-      .order("data_ultima_consulta", { ascending: true })
-      .order("nome", { ascending: true })
-      .order("id", { ascending: true });
+      // Base esperada: data_ultima_consulta no mesmo mês do ano anterior
+      const inicioBase = new Date(anoRef - 1, mesRef, 1).toISOString().split("T")[0];
+      const ultimoBase = new Date(anoRef - 1, mesRef + 1, 0).getDate();
+      const fimBase = new Date(anoRef - 1, mesRef, ultimoBase).toISOString().split("T")[0];
 
-    if (error) {
-      toast({ title: "Erro ao carregar pacientes", description: error.message, variant: "destructive" });
-      setPacientesElegiveis([]);
-    } else {
-      // Filtros adicionais de elegibilidade
-      const validos = (data || []).filter((l: any) => {
-        const tel = (l.telefone || "").replace(/\D/g, "");
-        if (tel.length < 10) return false;
-        return true;
-      }) as LembreteAnual[];
-      setPacientesElegiveis(validos);
-      setPlanoGerado(true);
-      const sizes = dividirEmRemessas(validos.length);
-      setQtdManual(sizes);
-      setStatusRemessas(
-        Object.fromEntries(
-          DIAS_REMESSAS.map((dia, i) => {
-            const dataProg = new Date(anoRef, mesRef, dia);
-            const ehHoje = dataProg.toDateString() === new Date().toDateString();
-            const passou = dataProg < new Date(new Date().toDateString());
-            const status: StatusRemessa = ehHoje
-              ? "disponivel"
-              : passou
-              ? "disponivel"
-              : "agendada";
-            return [i + 1, status];
-          }),
-        ) as Record<number, StatusRemessa>,
-      );
+      const validos = (data || [])
+        .filter((l: any) => (l.telefone || "").replace(/\D/g, "").length >= 10)
+        .map((l: any) => ({
+          ...l,
+          inconsistente_data: !(
+            l.data_ultima_consulta &&
+            l.data_ultima_consulta >= inicioBase &&
+            l.data_ultima_consulta <= fimBase
+          ),
+        })) as Array<LembreteAnual & { inconsistente_data?: boolean }>;
+
+      setPreviewElegiveis(validos);
+      setPreviewCarregado(true);
+      setQtdManual(dividirEmRemessas(validos.length));
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
     }
     setCarregando(false);
   };
 
-  // ====== Plano de remessas (memo) ======
-  const remessas = useMemo<RemessaPlano[]>(() => {
-    if (!planoGerado) return [];
-    const tamanhos = modoManual ? qtdManual : dividirEmRemessas(pacientesElegiveis.length);
-    let cursor = 0;
-    return DIAS_REMESSAS.map((dia, i) => {
-      const qtd = Math.max(0, Math.min(tamanhos[i] || 0, pacientesElegiveis.length - cursor));
-      const slice = pacientesElegiveis.slice(cursor, cursor + qtd);
-      cursor += qtd;
-      return {
-        numero: i + 1,
-        dataProgramada: new Date(anoRef, mesRef, dia),
-        pacientes: slice,
-        status: statusRemessas[i + 1] || "agendada",
-      };
-    });
-  }, [planoGerado, pacientesElegiveis, modoManual, qtdManual, anoRef, mesRef, statusRemessas]);
+  // ====== Validação modo manual ======
+  const totalManual = qtdManual.reduce((a, b) => a + b, 0);
+  const totalElegivel = campanha?.total_elegivel ?? previewElegiveis.length;
+  const manualExcede = modoManual && totalManual > totalElegivel;
+  const manualParcial = modoManual && totalManual < totalElegivel;
+  const podeGerar =
+    previewCarregado &&
+    !campanha &&
+    totalElegivel > 0 &&
+    (!modoManual || (!manualExcede && (!manualParcial || confirmaParcial)));
 
-  const totalEnviados = useMemo(
-    () => Object.values(relatorios).reduce((a, r) => a + r.enviados, 0),
-    [relatorios],
-  );
-  const totalFalhas = useMemo(
-    () => Object.values(relatorios).reduce((a, r) => a + r.falhas, 0),
-    [relatorios],
-  );
-  const restantes = pacientesElegiveis.length - totalEnviados - totalFalhas;
+  // ====== Gerar plano (congela) ======
+  const gerarPlano = async () => {
+    if (!previewCarregado) {
+      await carregarPreviewElegiveis();
+      return;
+    }
+    if (!podeGerar) {
+      if (manualExcede) {
+        toast({
+          title: "Soma excede o total",
+          description: "A soma das remessas excede o total elegível. Ajuste antes de gerar.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+    setCarregando(true);
+    try {
+      await criarPlanoCampanha({
+        ano: anoRef,
+        mes1a12: mesRef + 1,
+        pacientes: previewElegiveis,
+        quantidades: modoManual ? qtdManual : undefined,
+      });
+      toast({ title: "Plano gerado e congelado", description: `${totalElegivel} paciente(s).` });
+      await carregarCampanhaExistente(anoRef, mesRef);
+    } catch (e: any) {
+      toast({ title: "Erro ao gerar plano", description: e.message, variant: "destructive" });
+    }
+    setCarregando(false);
+  };
+
+  // ====== Excluir campanha ======
+  const onExcluirCampanha = async () => {
+    if (!campanha) return;
+    setConfirmarExcluirOpen(false);
+    setCarregando(true);
+    try {
+      await excluirCampanha(campanha.id);
+      toast({ title: "Campanha excluída" });
+      setCampanha(null);
+      setRemessas([]);
+      setPacientes([]);
+      setRemessaSelecionada(null);
+    } catch (e: any) {
+      toast({ title: "Erro ao excluir", description: e.message, variant: "destructive" });
+    }
+    setCarregando(false);
+  };
+
+  // ====== Helpers ======
+  const remessaPorNumero = (n: number) => remessas.find((r) => r.numero_remessa === n);
+  const pacientesDaRemessa = (remessaId: string) =>
+    pacientes.filter((p) => p.remessa_id === remessaId);
+
+  const proximaRemessa = useMemo(() => {
+    return [...remessas]
+      .sort((a, b) => a.numero_remessa - b.numero_remessa)
+      .find((r) =>
+        ["disponivel", "agendada", "pendente", "bloqueada_por_limite"].includes(r.status),
+      );
+  }, [remessas]);
 
   // ====== Selecionar remessa de hoje ======
   const selecionarRemessaHoje = () => {
-    const diaHoje = new Date().getDate();
-    const idx = DIAS_REMESSAS.indexOf(diaHoje as 1 | 2 | 15 | 16);
+    const dia = new Date().getDate();
+    const idx = DIAS_REMESSAS.indexOf(dia as any);
     if (idx === -1) {
       toast({
         title: "Sem remessa hoje",
-        description:
-          "Hoje não há remessa programada para este mês. Você pode selecionar uma remessa manualmente, se necessário.",
+        description: "Hoje não há remessa programada. Você pode selecionar manualmente.",
       });
       return;
     }
     setRemessaSelecionada(idx + 1);
-    toast({ title: `Remessa ${idx + 1} selecionada`, description: `Data: ${formatarData(new Date())}` });
   };
 
-  // ====== Iniciar envio ======
+  // ====== Iniciar envio (regular) ======
   const abrirConfirmacao = () => {
     if (!remessaSelecionada) {
       toast({ title: "Selecione uma remessa", variant: "destructive" });
       return;
     }
-    const remessa = remessas[remessaSelecionada - 1];
-    if (!remessa || remessa.pacientes.length === 0) {
-      toast({ title: "Remessa vazia", description: "Não há pacientes nesta remessa.", variant: "destructive" });
-      return;
-    }
-    if (remessa.status === "concluida" || remessa.status === "concluida_com_falhas") {
+    const rem = remessaPorNumero(remessaSelecionada);
+    if (!rem) return;
+    if (rem.status === "concluida" || rem.status === "concluida_com_falhas") {
       toast({
         title: "Remessa já concluída",
-        description: "Esta remessa já foi processada. Reenvio de falhas é uma ação separada.",
+        description: "Use o botão de reenvio de falhas se necessário.",
         variant: "destructive",
       });
       return;
@@ -304,62 +382,88 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
     setConfirmarOpen(true);
   };
 
-  const confirmarEIniciar = async () => {
+  const executarEnvio = async (remessa: RemessaRow, somenteFalhas = false) => {
     setConfirmarOpen(false);
-    if (!remessaSelecionada) return;
-    const remessa = remessas[remessaSelecionada - 1];
-    if (!remessa) return;
+    setReenvioFalhasOpen(false);
+
+    const lista = pacientesDaRemessa(remessa.id).filter((p) =>
+      somenteFalhas ? p.status === "falha" : p.status === "pendente",
+    );
+    if (lista.length === 0) {
+      toast({ title: "Nada a enviar", description: "Nenhum paciente elegível nesta remessa." });
+      return;
+    }
 
     canceladoRef.current = false;
     pausadoRef.current = false;
     setPausado(false);
     setEnviando(true);
-    setStatusRemessas((prev) => ({ ...prev, [remessa.numero]: "em_andamento" }));
-    setProgresso({ atual: 0, total: remessa.pacientes.length, sucesso: 0, falha: 0 });
+    enviosSessaoRef.current = 0;
+    let enviosHojeLocal = enviosHoje;
 
-    const inicio = new Date().toISOString();
+    setProgresso({ atual: 0, total: lista.length, sucesso: 0, falha: 0, ignorado: 0 });
+    await atualizarStatusRemessa(remessa.id, {
+      status: "em_andamento",
+      inicio_em: new Date().toISOString(),
+      motivo_bloqueio: null,
+    });
+
     let sucesso = 0;
     let falha = 0;
-    let ignorados = 0;
-    const falhasDetalhe: Array<{ id: string; nome: string; motivo: string }> = [];
+    let ignorado = 0;
+    let bloqueado = false;
+    let motivoBloqueio: string | null = null;
 
-    for (let i = 0; i < remessa.pacientes.length; i++) {
+    for (let i = 0; i < lista.length; i++) {
       if (canceladoRef.current) break;
       while (pausadoRef.current && !canceladoRef.current) {
         await new Promise((r) => setTimeout(r, 500));
       }
       if (canceladoRef.current) break;
 
-      // Validação de limites
-      const lim = validarLimitesEnvio(0, 0);
+      // Limites reais
+      const lim = validarLimitesEnvio(enviosSessaoRef.current, enviosHojeLocal);
       if (!lim.permitido) {
-        toast({ title: "Limite atingido", description: lim.motivo, variant: "destructive" });
+        bloqueado = true;
+        motivoBloqueio = lim.motivo || "Limite atingido";
+        toast({ title: "Limite atingido", description: motivoBloqueio, variant: "destructive" });
         break;
       }
 
-      const p = remessa.pacientes[i];
+      const p = lista[i];
 
-      // Re-validar elegibilidade no banco (não enviado ainda)
+      // Re-validar elegibilidade
       const { data: atual } = await supabase
         .from("lembretes_anuais")
         .select("lembrete_enviado")
-        .eq("id", p.id)
+        .eq("id", p.lembrete_id)
         .maybeSingle();
 
       if (!atual || atual.lembrete_enviado) {
-        ignorados++;
-        setProgresso((prev) => ({ ...prev, atual: i + 1 }));
+        ignorado++;
+        await atualizarPacienteCampanha(p.id, {
+          status: "ignorado",
+          motivo_ignorado: "já enviado",
+        });
+        setProgresso((prev) => ({ ...prev, atual: i + 1, ignorado }));
         continue;
       }
 
-      const primeiroNome = p.primeiro_nome || p.nome.split(" ")[0];
+      const primeiroNome = p.primeiro_nome || (p.nome || "").split(" ")[0];
       const mensagem = (template || `Olá, {{nome}}! 👋`).replace(/\{\{nome\}\}/g, primeiroNome);
 
       try {
         const r = await enviarMensagemWhatsApp(p.telefone, mensagem);
         if (r.success) {
           sucesso++;
-          await marcarLembreteEnviado(p.id);
+          enviosSessaoRef.current += 1;
+          enviosHojeLocal += 1;
+          await marcarLembreteEnviado(p.lembrete_id);
+          await atualizarPacienteCampanha(p.id, {
+            status: "enviado",
+            ultimo_envio_em: new Date().toISOString(),
+            motivo_falha: null,
+          });
           await supabase.from("mensagens_whatsapp").insert({
             telefone: p.telefone,
             conteudo: mensagem,
@@ -369,17 +473,27 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
           });
         } else {
           falha++;
-          falhasDetalhe.push({ id: p.id, nome: mascararNome(p.nome), motivo: r.error || "Erro desconhecido" });
+          await atualizarPacienteCampanha(p.id, {
+            status: "falha",
+            motivo_falha: r.error || "Erro desconhecido",
+          });
         }
       } catch (e: any) {
         falha++;
-        falhasDetalhe.push({ id: p.id, nome: mascararNome(p.nome), motivo: e?.message || "Erro" });
+        await atualizarPacienteCampanha(p.id, {
+          status: "falha",
+          motivo_falha: e?.message || "Erro",
+        });
       }
 
-      setProgresso({ atual: i + 1, total: remessa.pacientes.length, sucesso, falha });
+      setProgresso({ atual: i + 1, total: lista.length, sucesso, falha, ignorado });
 
       // Pausa estratégica
-      if ((i + 1) % pausarAposEnvios === 0 && i < remessa.pacientes.length - 1) {
+      if (
+        enviosSessaoRef.current > 0 &&
+        enviosSessaoRef.current % pausarAposEnvios === 0 &&
+        i < lista.length - 1
+      ) {
         const pausaMs =
           (Math.floor(Math.random() * (pausaMaxMin - pausaMinMin + 1)) + pausaMinMin) * 60 * 1000;
         let restante = pausaMs;
@@ -390,7 +504,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
       }
 
       // Delay aleatório entre mensagens
-      if (i < remessa.pacientes.length - 1 && !canceladoRef.current) {
+      if (i < lista.length - 1 && !canceladoRef.current) {
         const delay = Math.floor(Math.random() * (intervaloMax - intervaloMin + 1)) + intervaloMin;
         let restante = delay * 1000;
         while (restante > 0 && !canceladoRef.current && !pausadoRef.current) {
@@ -400,40 +514,41 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
       }
     }
 
-    const fim = new Date().toISOString();
-    const statusFinal: StatusRemessa = canceladoRef.current
-      ? "cancelada"
-      : falha > 0
-      ? "concluida_com_falhas"
-      : "concluida";
+    // Status final
+    let statusFinal: StatusRemessa;
+    if (bloqueado) statusFinal = "bloqueada_por_limite";
+    else if (canceladoRef.current) statusFinal = "cancelada";
+    else if (falha > 0) statusFinal = "concluida_com_falhas";
+    else statusFinal = "concluida";
 
-    setStatusRemessas((prev) => ({ ...prev, [remessa.numero]: statusFinal }));
-    setRelatorios((prev) => ({
-      ...prev,
-      [remessa.numero]: {
-        numeroRemessa: remessa.numero,
-        dataProgramada: formatarData(remessa.dataProgramada),
-        quantidadePlanejada: remessa.pacientes.length,
-        processados: sucesso + falha + ignorados,
-        enviados: sucesso,
-        falhas: falha,
-        ignorados,
-        inicio,
-        fim,
-        falhasDetalhe,
-      },
-    }));
+    await atualizarStatusRemessa(remessa.id, {
+      status: statusFinal,
+      fim_em: new Date().toISOString(),
+      processados: (remessa.processados || 0) + sucesso + falha + ignorado,
+      enviados: (remessa.enviados || 0) + sucesso,
+      falhas: somenteFalhas ? falha : (remessa.falhas || 0) + falha,
+      ignorados: (remessa.ignorados || 0) + ignorado,
+      motivo_bloqueio: motivoBloqueio,
+    });
+    if (campanha) await atualizarTotaisCampanha(campanha.id);
 
     setEnviando(false);
     setPausado(false);
     pausadoRef.current = false;
     canceladoRef.current = false;
+    setEnviosHoje(enviosHojeLocal);
 
     toast({
-      title: statusFinal === "cancelada" ? "Envio cancelado" : "Remessa finalizada",
-      description: `${sucesso} enviado(s), ${falha} falha(s), ${ignorados} ignorado(s).`,
+      title:
+        statusFinal === "cancelada"
+          ? "Envio cancelado"
+          : statusFinal === "bloqueada_por_limite"
+          ? "Bloqueada por limite"
+          : "Remessa finalizada",
+      description: `${sucesso} enviado(s), ${falha} falha(s), ${ignorado} ignorado(s).`,
     });
 
+    await carregarCampanhaExistente(anoRef, mesRef);
     onAfterEnvio?.();
   };
 
@@ -441,19 +556,18 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
     pausadoRef.current = !pausadoRef.current;
     setPausado(pausadoRef.current);
   };
-
   const cancelarEnvio = () => {
     canceladoRef.current = true;
     pausadoRef.current = false;
     setPausado(false);
   };
 
-  // ====== Exportar CSV ======
+  // ====== CSV ======
   const exportarCSV = () => {
-    if (!planoGerado) return;
+    if (!campanha) return;
     const linhas: string[] = [
       [
-        "id",
+        "lembrete_id",
         "nome_mascarado",
         "telefone_mascarado",
         "mes_vencimento",
@@ -461,37 +575,29 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
         "data_programada",
         "status_envio",
         "motivo_falha",
+        "motivo_ignorado",
         "data_envio",
+        "inconsistente_data",
       ].join(","),
     ];
-
-    remessas.forEach((rem) => {
-      rem.pacientes.forEach((p) => {
-        const rel = relatorios[rem.numero];
-        const falha = rel?.falhasDetalhe.find((f) => f.id === p.id);
-        const status = falha
-          ? "falha"
-          : rel
-          ? "enviado"
-          : statusRemessas[rem.numero] === "em_andamento"
-          ? "enviando"
-          : "pendente";
-        linhas.push(
-          [
-            p.id,
-            `"${mascararNome(p.nome)}"`,
-            mascararTelefone(p.telefone),
-            formatarMesAno(anoRef, mesRef),
-            rem.numero,
-            formatarData(rem.dataProgramada),
-            status,
-            falha ? `"${falha.motivo.replace(/"/g, "'")}"` : "",
-            rel?.fim || "",
-          ].join(","),
-        );
-      });
+    pacientes.forEach((p) => {
+      const rem = remessaPorNumero(p.numero_remessa);
+      linhas.push(
+        [
+          p.lembrete_id,
+          `"${mascararNome(p.nome)}"`,
+          mascararTelefone(p.telefone),
+          formatarMesAno(anoRef, mesRef),
+          p.numero_remessa,
+          rem ? formatarData(rem.data_programada) : "",
+          p.status,
+          p.motivo_falha ? `"${p.motivo_falha.replace(/"/g, "'")}"` : "",
+          p.motivo_ignorado ? `"${p.motivo_ignorado.replace(/"/g, "'")}"` : "",
+          p.ultimo_envio_em || "",
+          p.inconsistente_data ? "sim" : "nao",
+        ].join(","),
+      );
     });
-
     const blob = new Blob([linhas.join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -501,39 +607,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
     URL.revokeObjectURL(url);
   };
 
-  // ====== UI helpers ======
-  const corStatus = (s: StatusRemessa) => {
-    switch (s) {
-      case "concluida":
-        return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30";
-      case "concluida_com_falhas":
-        return "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30";
-      case "em_andamento":
-        return "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30";
-      case "disponivel":
-        return "bg-primary/15 text-primary border-primary/30";
-      case "cancelada":
-        return "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30";
-      default:
-        return "bg-muted text-muted-foreground border-border";
-    }
-  };
-
-  const labelStatus = (s: StatusRemessa) =>
-    ({
-      agendada: "Agendada",
-      disponivel: "Disponível",
-      em_andamento: "Em andamento",
-      concluida: "Concluída",
-      concluida_com_falhas: "Concluída c/ falhas",
-      cancelada: "Cancelada",
-    }[s]);
-
-  const proximaRemessa = remessas.find(
-    (r) => r.status === "disponivel" || r.status === "agendada",
-  );
-
-  // Opções de mês de vencimento (próximos 12 meses + 2 atrás)
+  // Opções de mês
   const opcoesMes = useMemo(() => {
     const arr: Array<{ ano: number; mes: number; label: string }> = [];
     for (let i = -2; i <= 12; i++) {
@@ -549,13 +623,35 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
   }, []);
 
   const baseLabel = `Pacientes que consultaram em ${MESES_PT[mesRef]}/${anoRef - 1}`;
+  const inconsistencias =
+    campanha?.inconsistencias ??
+    previewElegiveis.filter((p) => p.inconsistente_data).length;
+
+  const totalEnviados = campanha?.total_enviados ?? 0;
+  const totalFalhas = campanha?.total_falhas ?? 0;
+  const totalIgnorados = campanha?.total_ignorados ?? 0;
+  const restantes =
+    (campanha?.total_elegivel ?? 0) - totalEnviados - totalFalhas - totalIgnorados;
   const campanhaConcluida =
-    planoGerado &&
+    !!campanha &&
     remessas.length > 0 &&
     remessas.every((r) => r.status === "concluida" || r.status === "concluida_com_falhas");
 
+  const remessaSelecionadaObj = remessaSelecionada ? remessaPorNumero(remessaSelecionada) : null;
+  const pacientesRemessaSelecionada = remessaSelecionadaObj
+    ? pacientesDaRemessa(remessaSelecionadaObj.id)
+    : [];
+  const pendentesNaRemessa = pacientesRemessaSelecionada.filter((p) => p.status === "pendente").length;
+  const inconsistentesNaRemessa = pacientesRemessaSelecionada.filter(
+    (p) => p.inconsistente_data,
+  ).length;
+  const falhasNaRemessa = pacientesRemessaSelecionada.filter((p) => p.status === "falha").length;
+
   return (
-    <Card className="border-primary/30 bg-gradient-to-br from-card to-primary/5 shadow-md" data-testid="lembretes-campanha-mensal">
+    <Card
+      className="border-primary/30 bg-gradient-to-br from-card to-primary/5 shadow-md"
+      data-testid="lembretes-campanha-mensal"
+    >
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -564,7 +660,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
               Campanha mensal de lembretes
             </CardTitle>
             <CardDescription>
-              Envio parcelado em 4 remessas (dias {DIAS_REMESSAS.join(", ")}) — automático e seguro
+              Envio parcelado em 4 remessas (dias {DIAS_REMESSAS.join(", ")}) — plano persistido e auditável
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -575,13 +671,12 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                 const [a, m] = e.target.value.split("-").map(Number);
                 setAnoRef(a);
                 setMesRef(m);
-                setPlanoGerado(false);
-                setPacientesElegiveis([]);
-                setRelatorios({});
-                setStatusRemessas({});
                 setRemessaSelecionada(null);
+                setPreviewCarregado(false);
+                setPreviewElegiveis([]);
               }}
               className="text-sm border rounded-md px-2 py-1 bg-background min-w-[160px]"
+              disabled={enviando}
             >
               {opcoesMes.map((o) => (
                 <option key={`${o.ano}-${o.mes}`} value={`${o.ano}-${o.mes}`}>
@@ -589,31 +684,134 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                 </option>
               ))}
             </select>
-            <Button
-              data-testid="lembretes-gerar-plano"
-              size="sm"
-              onClick={carregarElegiveis}
-              disabled={carregando || enviando}
-            >
-              {carregando ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-              Gerar plano do mês
-            </Button>
+            {!campanha && (
+              <Button
+                data-testid="lembretes-gerar-plano"
+                size="sm"
+                onClick={previewCarregado ? gerarPlano : carregarPreviewElegiveis}
+                disabled={carregando || enviando || (previewCarregado && !podeGerar)}
+              >
+                {carregando ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-2" />
+                )}
+                {previewCarregado ? "Confirmar e congelar plano" : "Pré-visualizar elegíveis"}
+              </Button>
+            )}
+            {campanha && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConfirmarExcluirOpen(true)}
+                disabled={enviando}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir plano
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {!planoGerado && !carregando && (
+        {/* Sem campanha + sem preview */}
+        {!campanha && !previewCarregado && !carregando && (
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              Selecione o mês de vencimento e clique em <strong>Gerar plano do mês</strong> para visualizar
-              as 4 remessas.
+              Nenhum plano para <strong>{formatarMesAno(anoRef, mesRef)}</strong>. Clique em{" "}
+              <strong>Pré-visualizar elegíveis</strong> para ver os pacientes antes de congelar o plano.
+              <br />
+              <span className="text-xs text-muted-foreground">
+                Critério técnico: <code>data_proximo_lembrete</code> dentro de{" "}
+                {formatarMesAno(anoRef, mesRef)} · Base esperada: consultas de{" "}
+                {MESES_PT[mesRef]}/{anoRef - 1}
+              </span>
             </AlertDescription>
           </Alert>
         )}
 
-        {planoGerado && (
+        {/* Preview antes de congelar */}
+        {!campanha && previewCarregado && (
+          <div className="space-y-3">
+            <Alert>
+              <AlertDescription className="text-sm">
+                <strong>{previewElegiveis.length}</strong> paciente(s) elegível(is) para{" "}
+                {formatarMesAno(anoRef, mesRef)}.
+                {inconsistencias > 0 && (
+                  <span className="block text-amber-600 mt-1">
+                    ⚠ {inconsistencias} paciente(s) com <code>data_ultima_consulta</code> fora de{" "}
+                    {MESES_PT[mesRef]}/{anoRef - 1}. Revise antes de gerar.
+                  </span>
+                )}
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                id="modo-manual-preview"
+                checked={modoManual}
+                onChange={(e) => setModoManual(e.target.checked)}
+              />
+              <Label htmlFor="modo-manual-preview" className="cursor-pointer">
+                Modo manual (definir quantidade por remessa)
+              </Label>
+            </div>
+            {modoManual && (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {qtdManual.map((q, i) => (
+                    <div key={i}>
+                      <Label className="text-xs">Remessa {i + 1}</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={previewElegiveis.length}
+                        value={q}
+                        onChange={(e) => {
+                          const n = parseInt(e.target.value || "0", 10);
+                          const novo = [...qtdManual];
+                          novo[i] = isNaN(n) ? 0 : Math.max(0, n);
+                          setQtdManual(novo);
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Soma das remessas: <strong>{totalManual}</strong> / Total elegível:{" "}
+                  <strong>{previewElegiveis.length}</strong>
+                </p>
+                {manualExcede && (
+                  <Alert variant="destructive">
+                    <AlertDescription className="text-xs">
+                      A soma das remessas excede o total elegível. Ajuste antes de gerar.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {manualParcial && !manualExcede && (
+                  <div className="flex items-start gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      id="confirma-parcial"
+                      checked={confirmaParcial}
+                      onChange={(e) => setConfirmaParcial(e.target.checked)}
+                    />
+                    <Label htmlFor="confirma-parcial" className="cursor-pointer">
+                      Confirmo que quero deixar {previewElegiveis.length - totalManual} paciente(s) fora
+                      desta campanha.
+                    </Label>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Campanha congelada */}
+        {campanha && (
           <>
             {/* Resumo */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -622,13 +820,21 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                 <p className="font-semibold">{formatarMesAno(anoRef, mesRef)}</p>
               </div>
               <div className="p-3 rounded-lg border bg-card md:col-span-2">
-                <p className="text-xs text-muted-foreground">Base de pacientes</p>
+                <p className="text-xs text-muted-foreground">Base esperada</p>
                 <p className="font-semibold text-sm">{baseLabel}</p>
+                {inconsistencias > 0 && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    ⚠ {inconsistencias} fora da base esperada
+                  </p>
+                )}
               </div>
               <div className="p-3 rounded-lg border bg-card">
                 <p className="text-xs text-muted-foreground">Total elegível</p>
-                <p className="font-semibold text-2xl text-primary" data-testid="lembretes-total-elegivel">
-                  {pacientesElegiveis.length}
+                <p
+                  className="font-semibold text-2xl text-primary"
+                  data-testid="lembretes-total-elegivel"
+                >
+                  {campanha.total_elegivel}
                 </p>
               </div>
               <div className="p-3 rounded-lg border bg-card">
@@ -641,84 +847,57 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
 
             {/* Plano de remessas */}
             <div className="space-y-2" data-testid="lembretes-plano-remessas">
-              {remessas.map((r) => (
-                <div
-                  key={r.numero}
-                  data-testid={`lembretes-remessa-${r.numero}`}
-                  className={cn(
-                    "flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg border transition-colors cursor-pointer",
-                    remessaSelecionada === r.numero
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:bg-muted/40",
-                  )}
-                  onClick={() => !enviando && setRemessaSelecionada(r.numero)}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-primary/15 text-primary font-bold flex items-center justify-center">
-                      {r.numero}
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">
-                        Remessa {r.numero} — {formatarData(r.dataProgramada)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{r.pacientes.length} paciente(s)</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={cn("text-xs", corStatus(r.status))}>
-                      {labelStatus(r.status)}
-                    </Badge>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      data-testid="lembretes-btn-visualizar-remessas"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setVisualizandoRemessa(r.numero);
-                        setVisualizarOpen(true);
-                      }}
+              {[...remessas]
+                .sort((a, b) => a.numero_remessa - b.numero_remessa)
+                .map((r) => {
+                  const ps = pacientesDaRemessa(r.id);
+                  return (
+                    <div
+                      key={r.id}
+                      data-testid={`lembretes-remessa-${r.numero_remessa}`}
+                      className={cn(
+                        "flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg border transition-colors cursor-pointer",
+                        remessaSelecionada === r.numero_remessa
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:bg-muted/40",
+                      )}
+                      onClick={() => !enviando && setRemessaSelecionada(r.numero_remessa)}
                     >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/15 text-primary font-bold flex items-center justify-center">
+                          {r.numero_remessa}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">
+                            Remessa {r.numero_remessa} — {formatarData(r.data_programada)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {ps.length} paciente(s) · ✅ {r.enviados} · ❌ {r.falhas} · ⚪{" "}
+                            {r.ignorados}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={cn("text-xs", corStatus(r.status))}>
+                          {STATUS_LABEL[r.status]}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          data-testid="lembretes-btn-visualizar-remessas"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setVisualizandoRemessa(r.numero_remessa);
+                            setVisualizarOpen(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
-
-            {/* Modo manual */}
-            <div className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                id="modo-manual"
-                checked={modoManual}
-                onChange={(e) => setModoManual(e.target.checked)}
-                disabled={enviando}
-              />
-              <Label htmlFor="modo-manual" className="cursor-pointer">
-                Modo manual (definir quantidade por remessa)
-              </Label>
-            </div>
-            {modoManual && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {qtdManual.map((q, i) => (
-                  <div key={i}>
-                    <Label className="text-xs">Remessa {i + 1}</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={pacientesElegiveis.length}
-                      value={q}
-                      onChange={(e) => {
-                        const n = parseInt(e.target.value || "0", 10);
-                        const novo = [...qtdManual];
-                        novo[i] = isNaN(n) ? 0 : n;
-                        setQtdManual(novo);
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
 
             {/* Ações */}
             <div className="flex flex-wrap gap-2">
@@ -732,15 +911,25 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                 Selecionar remessa de hoje
               </Button>
               <Button
-                data-testid="lembretes-btn-selecionar-remessa-manual"
+                data-testid="lembretes-btn-selecionar-proxima"
                 variant="outline"
-                onClick={() => {
-                  if (proximaRemessa) setRemessaSelecionada(proximaRemessa.numero);
-                }}
+                onClick={() => proximaRemessa && setRemessaSelecionada(proximaRemessa.numero_remessa)}
                 disabled={enviando || !proximaRemessa}
               >
                 <ListChecks className="h-4 w-4 mr-2" />
                 Selecionar próxima
+              </Button>
+              <Button
+                data-testid="lembretes-btn-selecionar-remessa-manual"
+                variant="ghost"
+                disabled={enviando || remessas.length === 0}
+                onClick={() => {
+                  if (!remessaSelecionada && remessas[0]) {
+                    setRemessaSelecionada(remessas[0].numero_remessa);
+                  }
+                }}
+              >
+                Selecionar manualmente
               </Button>
               <Button
                 data-testid="lembretes-btn-iniciar-remessa"
@@ -752,6 +941,17 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                 <Play className="h-4 w-4 mr-2" />
                 Iniciar envio da remessa{remessaSelecionada ? ` ${remessaSelecionada}` : ""}
               </Button>
+              {remessaSelecionadaObj && falhasNaRemessa > 0 && !enviando && (
+                <Button
+                  data-testid="lembretes-btn-reenviar-falhas"
+                  variant="outline"
+                  className="border-amber-500/50 text-amber-700 dark:text-amber-300"
+                  onClick={() => setReenvioFalhasOpen(true)}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Reenviar apenas falhas ({falhasNaRemessa})
+                </Button>
+              )}
               {enviando && (
                 <>
                   <Button variant="outline" onClick={togglePausa}>
@@ -770,9 +970,12 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
               </Button>
             </div>
 
-            {/* Progresso de envio */}
+            {/* Progresso */}
             {enviando && (
-              <div className="space-y-2 p-3 rounded-lg border bg-muted/30" data-testid="lembretes-progresso-envio">
+              <div
+                className="space-y-2 p-3 rounded-lg border bg-muted/30"
+                data-testid="lembretes-progresso-envio"
+              >
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium" data-testid="lembretes-status-envio">
                     {pausado ? "Pausado" : "Enviando..."}
@@ -782,55 +985,94 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                   </span>
                 </div>
                 <Progress value={(progresso.atual / Math.max(progresso.total, 1)) * 100} />
-                <div className="flex gap-4 text-xs text-muted-foreground">
-                  <span data-testid="lembretes-sucessos">✅ {progresso.sucesso}</span>
-                  <span data-testid="lembretes-falhas">❌ {progresso.falha}</span>
+                <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                  <span data-testid="lembretes-sucessos" className="text-emerald-600">
+                    ✅ {progresso.sucesso}
+                  </span>
+                  <span data-testid="lembretes-falhas" className="text-red-600">
+                    ❌ {progresso.falha}
+                  </span>
+                  <span data-testid="lembretes-ignorados">⚪ {progresso.ignorado}</span>
+                  <span data-testid="lembretes-pendentes-remessa">
+                    Pendentes: {Math.max(progresso.total - progresso.atual, 0)}
+                  </span>
                 </div>
               </div>
             )}
 
-            {/* Relatórios das remessas */}
-            {Object.values(relatorios).length > 0 && (
+            {/* Relatórios por remessa */}
+            {remessas.some(
+              (r) => r.processados > 0 || r.status === "bloqueada_por_limite" || r.status === "cancelada",
+            ) && (
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                  Relatórios
+                  Relatórios das remessas
                 </h4>
-                {Object.values(relatorios)
-                  .sort((a, b) => a.numeroRemessa - b.numeroRemessa)
-                  .map((rel) => (
-                    <div
-                      key={rel.numeroRemessa}
-                      data-testid="lembretes-relatorio-remessa"
-                      className="p-3 rounded-lg border bg-card text-sm space-y-1"
-                    >
-                      <p className="font-medium">
-                        Remessa {rel.numeroRemessa} — {rel.dataProgramada}
-                      </p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                        <span>Planejada: {rel.quantidadePlanejada}</span>
-                        <span className="text-emerald-600">Enviados: {rel.enviados}</span>
-                        <span className="text-red-600">Falhas: {rel.falhas}</span>
-                        <span className="text-muted-foreground">
-                          <span data-testid="lembretes-ignorados">Ignorados: {rel.ignorados}</span>
-                        </span>
+                {[...remessas]
+                  .sort((a, b) => a.numero_remessa - b.numero_remessa)
+                  .filter((r) => r.processados > 0 || r.status === "bloqueada_por_limite")
+                  .map((rel) => {
+                    const ignList = pacientesDaRemessa(rel.id).filter(
+                      (p) => p.status === "ignorado",
+                    );
+                    const falhaList = pacientesDaRemessa(rel.id).filter((p) => p.status === "falha");
+                    return (
+                      <div
+                        key={rel.id}
+                        data-testid="lembretes-relatorio-remessa"
+                        className="p-3 rounded-lg border bg-card text-sm space-y-1"
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium">
+                            Remessa {rel.numero_remessa} — {formatarData(rel.data_programada)}
+                          </p>
+                          <Badge variant="outline" className={cn("text-xs", corStatus(rel.status))}>
+                            {STATUS_LABEL[rel.status]}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                          <span>Planejada: {rel.quantidade_planejada}</span>
+                          <span className="text-emerald-600">Enviados: {rel.enviados}</span>
+                          <span className="text-red-600">Falhas: {rel.falhas}</span>
+                          <span className="text-muted-foreground">Ignorados: {rel.ignorados}</span>
+                        </div>
+                        {rel.motivo_bloqueio && (
+                          <p className="text-xs text-orange-600">
+                            Motivo: {rel.motivo_bloqueio}
+                          </p>
+                        )}
+                        {falhaList.length > 0 && (
+                          <details className="mt-2">
+                            <summary className="cursor-pointer text-xs text-muted-foreground">
+                              Ver falhas ({falhaList.length})
+                            </summary>
+                            <ul className="mt-1 space-y-0.5 text-xs">
+                              {falhaList.map((f) => (
+                                <li key={f.id} className="text-red-600">
+                                  • {mascararNome(f.nome)}: {f.motivo_falha || "—"}
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
+                        {ignList.length > 0 && (
+                          <details className="mt-1">
+                            <summary className="cursor-pointer text-xs text-muted-foreground">
+                              Ver ignorados ({ignList.length})
+                            </summary>
+                            <ul className="mt-1 space-y-0.5 text-xs">
+                              {ignList.map((f) => (
+                                <li key={f.id} className="text-muted-foreground">
+                                  • {mascararNome(f.nome)}: {f.motivo_ignorado || "—"}
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
                       </div>
-                      {rel.falhasDetalhe.length > 0 && (
-                        <details className="mt-2">
-                          <summary className="cursor-pointer text-xs text-muted-foreground">
-                            Ver falhas ({rel.falhasDetalhe.length})
-                          </summary>
-                          <ul className="mt-1 space-y-0.5 text-xs">
-                            {rel.falhasDetalhe.map((f, i) => (
-                              <li key={i} className="text-red-600">
-                                • {f.nome}: {f.motivo}
-                              </li>
-                            ))}
-                          </ul>
-                        </details>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             )}
 
@@ -842,12 +1084,13 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
               >
                 <p className="font-semibold flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary" />
-                  Relatório final da campanha — {formatarMesAno(anoRef, mesRef)}
+                  Relatório final — {formatarMesAno(anoRef, mesRef)}
                 </p>
-                <p className="text-sm">Total elegível inicial: {pacientesElegiveis.length}</p>
-                <p className="text-sm text-emerald-600">Enviados com sucesso: {totalEnviados}</p>
+                <p className="text-sm">Total elegível inicial: {campanha.total_elegivel}</p>
+                <p className="text-sm text-emerald-600">Enviados: {totalEnviados}</p>
                 <p className="text-sm text-red-600">Falhas: {totalFalhas}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground">Ignorados: {totalIgnorados}</p>
+                <p className="text-sm">
                   Status: {totalFalhas > 0 ? "Concluída com falhas" : "Concluída"}
                 </p>
               </div>
@@ -856,40 +1099,56 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
         )}
       </CardContent>
 
-      {/* Dialog de confirmação */}
+      {/* Confirmação envio */}
       <Dialog open={confirmarOpen} onOpenChange={setConfirmarOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmar envio da remessa</DialogTitle>
             <DialogDescription>Revise antes de iniciar.</DialogDescription>
           </DialogHeader>
-          {remessaSelecionada && remessas[remessaSelecionada - 1] && (
+          {remessaSelecionadaObj && (
             <div className="space-y-2 text-sm">
               <p>
                 <strong>Mês:</strong> {formatarMesAno(anoRef, mesRef)}
               </p>
               <p>
-                <strong>Remessa:</strong> {remessaSelecionada} de {NUMERO_REMESSAS}
+                <strong>Base esperada:</strong> Consultas de {MESES_PT[mesRef]}/{anoRef - 1}
               </p>
               <p>
-                <strong>Data programada:</strong>{" "}
-                {formatarData(remessas[remessaSelecionada - 1].dataProgramada)}
+                <strong>Critério técnico:</strong> data_proximo_lembrete em{" "}
+                {formatarMesAno(anoRef, mesRef)}
               </p>
               <p>
-                <strong>Quantidade planejada:</strong>{" "}
-                {remessas[remessaSelecionada - 1].pacientes.length}
+                <strong>Remessa:</strong> {remessaSelecionadaObj.numero_remessa} de {NUMERO_REMESSAS}
+              </p>
+              <p>
+                <strong>Data programada:</strong> {formatarData(remessaSelecionadaObj.data_programada)}
+              </p>
+              <p>
+                <strong>Quantidade planejada:</strong> {remessaSelecionadaObj.quantidade_planejada}
+              </p>
+              <p>
+                <strong>Pendentes nesta remessa:</strong> {pendentesNaRemessa}
+              </p>
+              <p>
+                <strong>Alertas de inconsistência:</strong> {inconsistentesNaRemessa}
               </p>
               <p>
                 <strong>Restantes após esta remessa:</strong>{" "}
-                {restantes - remessas[remessaSelecionada - 1].pacientes.length}
+                {Math.max(restantes - pendentesNaRemessa, 0)}
               </p>
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription className="text-xs">
-                  O envio respeita os limites de segurança (intervalo, pausa, horário). Pacientes que ficaram
-                  inelegíveis serão ignorados automaticamente.
-                </AlertDescription>
-              </Alert>
+              <p className="text-xs text-muted-foreground">
+                Envios hoje (geral): {enviosHoje} · Sessão: {enviosSessaoRef.current}
+              </p>
+              {inconsistentesNaRemessa > 0 && (
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Existem pacientes com data_ultima_consulta fora de {MESES_PT[mesRef]}/{anoRef - 1}.
+                    Revise antes de enviar.
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
           )}
           <DialogFooter>
@@ -898,7 +1157,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
             </Button>
             <Button
               data-testid="lembretes-btn-confirmar-iniciar-envio"
-              onClick={confirmarEIniciar}
+              onClick={() => remessaSelecionadaObj && executarEnvio(remessaSelecionadaObj, false)}
               className="bg-emerald-600 hover:bg-emerald-700"
             >
               Confirmar e iniciar envio
@@ -907,30 +1166,105 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de visualização */}
+      {/* Confirmação reenvio falhas */}
+      <Dialog open={reenvioFalhasOpen} onOpenChange={setReenvioFalhasOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reenviar apenas falhas</DialogTitle>
+            <DialogDescription>
+              Esta ação reenvia somente os pacientes com status <code>falha</code> desta remessa.
+              Pacientes já enviados não são reenviados.
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm">
+            Falhas a reenviar: <strong>{falhasNaRemessa}</strong>
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReenvioFalhasOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                if (!remessaSelecionadaObj) return;
+                // marca falhas como pendentes para o ciclo
+                Promise.all(
+                  pacientesDaRemessa(remessaSelecionadaObj.id)
+                    .filter((p) => p.status === "falha")
+                    .map((p) => atualizarPacienteCampanha(p.id, { status: "pendente", motivo_falha: null })),
+                ).then(async () => {
+                  await carregarCampanhaExistente(anoRef, mesRef);
+                  const refreshed = await buscarRemessasComPacientes(campanha!.id);
+                  const rem = refreshed.remessas.find(
+                    (r) => r.numero_remessa === remessaSelecionadaObj.numero_remessa,
+                  );
+                  if (rem) executarEnvio(rem, true);
+                });
+              }}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              Confirmar reenvio
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Excluir campanha */}
+      <Dialog open={confirmarExcluirOpen} onOpenChange={setConfirmarExcluirOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir plano da campanha?</DialogTitle>
+            <DialogDescription>
+              Esta ação remove o plano congelado e todos os relatórios desta campanha. Os envios já
+              feitos não são desfeitos.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmarExcluirOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={onExcluirCampanha}>
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Visualizar pacientes */}
       <Dialog open={visualizarOpen} onOpenChange={setVisualizarOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
-              Pacientes da remessa {visualizandoRemessa}
-            </DialogTitle>
+            <DialogTitle>Pacientes da remessa {visualizandoRemessa}</DialogTitle>
             <DialogDescription>
               Dados mascarados para proteção. Total:{" "}
-              {visualizandoRemessa ? remessas[visualizandoRemessa - 1]?.pacientes.length : 0}
+              {visualizandoRemessa
+                ? pacientesDaRemessa(remessaPorNumero(visualizandoRemessa)?.id || "").length
+                : 0}
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="h-[400px]">
             <div className="space-y-1">
               {visualizandoRemessa &&
-                remessas[visualizandoRemessa - 1]?.pacientes.map((p) => (
+                pacientesDaRemessa(remessaPorNumero(visualizandoRemessa)?.id || "").map((p) => (
                   <div
                     key={p.id}
                     className="flex items-center justify-between p-2 rounded border text-sm"
                   >
-                    <span>{mascararNome(p.nome)}</span>
-                    <span className="text-xs text-muted-foreground font-mono">
-                      {mascararTelefone(p.telefone)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span>{mascararNome(p.nome)}</span>
+                      {p.inconsistente_data && (
+                        <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-600">
+                          fora da base
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px]">
+                        {p.status}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground font-mono">
+                        {mascararTelefone(p.telefone)}
+                      </span>
+                    </div>
                   </div>
                 ))}
             </div>
