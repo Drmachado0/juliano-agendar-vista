@@ -1,19 +1,18 @@
+import { isTrackingAllowed, safeDataLayerPush } from '@/lib/trackingGuard';
+
 declare global {
   interface Window {
     dataLayer: Record<string, any>[];
   }
 }
 
-window.dataLayer = window.dataLayer || [];
-
-const isAdminContext = () =>
-  typeof window !== 'undefined' && window.location?.pathname?.startsWith('/admin');
+// Não inicializar dataLayer em rotas privadas (LGPD)
+if (typeof window !== 'undefined' && isTrackingAllowed()) {
+  window.dataLayer = window.dataLayer || [];
+}
 
 const pushToDataLayer = (data: Record<string, any>) => {
-  if (typeof window === 'undefined') return;
-  if (isAdminContext()) return; // Não rastrear ações dentro do painel admin
-  window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push(data);
+  safeDataLayerPush(data);
 };
 
 export const useGoogleTag = () => {
