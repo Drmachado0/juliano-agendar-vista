@@ -321,6 +321,7 @@ export type Database = {
       }
       bot_config: {
         Row: {
+          bot_global_ativo: boolean
           id: boolean
           pausa_automatica_ativa: boolean
           pausa_automatica_minutos: number
@@ -328,6 +329,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          bot_global_ativo?: boolean
           id?: boolean
           pausa_automatica_ativa?: boolean
           pausa_automatica_minutos?: number
@@ -335,6 +337,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          bot_global_ativo?: boolean
           id?: boolean
           pausa_automatica_ativa?: boolean
           pausa_automatica_minutos?: number

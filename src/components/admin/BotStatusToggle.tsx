@@ -1,8 +1,9 @@
 import { useEffect, useState, MouseEvent } from "react";
-import { Bot, BotOff, Pause, Loader2 } from "lucide-react";
+import { Bot, BotOff, Pause, Loader2, PowerOff } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { pausarBot, reativarBot } from "@/services/botPausa";
+import { useBotGlobalStatus } from "@/hooks/useBotGlobalStatus";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -30,6 +31,7 @@ const BotStatusToggle = ({
   pausaMinutosPadrao = 30,
 }: Props) => {
   const { toast } = useToast();
+  const { globalAtivo } = useBotGlobalStatus();
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
 
@@ -65,7 +67,11 @@ const BotStatusToggle = ({
   let label = "Bot ativo · clique para pausar";
   let className = "text-emerald-600 hover:bg-emerald-500/10";
 
-  if (pausaAtiva) {
+  if (!globalAtivo) {
+    icon = <PowerOff className="h-3.5 w-3.5" />;
+    label = "Automação global desligada · este controle só terá efeito quando ela for reativada";
+    className = "text-destructive opacity-70";
+  } else if (pausaAtiva) {
     icon = <Pause className="h-3.5 w-3.5" />;
     label = `Bot pausado · volta em ${formatRestante(ateMs! - now)} · clique para reativar`;
     className = "text-amber-600 hover:bg-amber-500/10";
@@ -82,13 +88,14 @@ const BotStatusToggle = ({
           <button
             type="button"
             onClick={handleClick}
-            disabled={busy}
+            disabled={busy || !globalAtivo}
             aria-label={label}
             className={cn(
               "flex items-center justify-center h-6 w-6 rounded-md transition-colors",
               "border border-transparent hover:border-current/20",
               className,
-              busy && "opacity-60 cursor-wait"
+              busy && "opacity-60 cursor-wait",
+              !globalAtivo && "cursor-not-allowed"
             )}
           >
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : icon}

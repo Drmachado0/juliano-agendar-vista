@@ -5,8 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Send, Sparkles, ArrowLeft, Phone, MapPin, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatAppointmentDate } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import {
   MensagemWhatsApp,
@@ -275,7 +274,7 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
           <div className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
             <span>
-              {format(new Date(agendamentoCompleto.data_agendamento), "dd/MM/yyyy", { locale: ptBR })} às {agendamentoCompleto.hora_agendamento?.slice(0, 5)}
+              {formatAppointmentDate(agendamentoCompleto.data_agendamento, agendamentoCompleto.hora_agendamento, "Aguardando agendamento")}
             </span>
           </div>
           <div className="flex items-center gap-1">

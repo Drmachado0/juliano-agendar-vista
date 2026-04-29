@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import WhatsAppLeadsList from "@/components/admin/WhatsAppLeadsList";
 import WhatsAppChat from "@/components/admin/WhatsAppChat";
@@ -6,9 +6,13 @@ import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
 import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
 import { LeadComMensagens, MensagemWhatsApp, buscarAgendamentoPorTelefone } from "@/services/mensagens";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
+import { useBotGlobalStatus } from "@/hooks/useBotGlobalStatus";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { AlertTriangle, Bot, PowerOff } from "lucide-react";
 import { toast } from "sonner";
 
 const AdminWhatsApp = () => {
@@ -16,6 +20,18 @@ const AdminWhatsApp = () => {
   const [leads, setLeads] = useState<LeadComMensagens[]>([]);
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [tab, setTab] = useState<"conversas" | "contatos">("conversas");
+  const { globalAtivo: botGlobalAtivo } = useBotGlobalStatus();
+
+  // Quando o lead selecionado some da lista (filtro/busca mudou), limpa seleção
+  // para evitar enviar mensagem para o paciente errado.
+  useEffect(() => {
+    if (!selectedLead) return;
+    const ainda = leads.some((l) => l.agendamento_id === selectedLead.agendamento_id);
+    if (!ainda) {
+      setSelectedLead(null);
+      setMobileView("list");
+    }
+  }, [leads, selectedLead]);
 
   // Handle realtime messages - match by agendamento_id OR phone number
   const handleNewMessage = useCallback(
@@ -116,8 +132,33 @@ const AdminWhatsApp = () => {
                 Acompanhe conversas em tempo real e gerencie seus contatos
               </p>
             </div>
-            <EvolutionStatusBadge />
+            <div className="flex items-center gap-2 flex-wrap">
+              <EvolutionStatusBadge />
+              {botGlobalAtivo ? (
+                <Badge className="gap-1 bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40">
+                  <Bot className="h-3 w-3" />
+                  Automação ativa
+                </Badge>
+              ) : (
+                <Badge variant="destructive" className="gap-1">
+                  <PowerOff className="h-3 w-3" />
+                  Automação desligada
+                </Badge>
+              )}
+            </div>
           </div>
+
+          {!botGlobalAtivo && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Automação global desligada</AlertTitle>
+              <AlertDescription>
+                Nenhum paciente está recebendo respostas automáticas. Os controles individuais por
+                conversa só voltam a ter efeito quando a automação global for reativada em
+                Configurações.
+              </AlertDescription>
+            </Alert>
+          )}
 
           <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="flex-1 flex flex-col min-h-0">
             <TabsList className="self-start mb-3">
