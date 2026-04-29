@@ -57,10 +57,18 @@ const WhatsAppLeadItem = ({ lead, isSelected, onClick }: WhatsAppLeadItemProps) 
     .toUpperCase();
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       className={cn(
-        "w-full flex items-start gap-3 p-3 rounded-lg transition-colors text-left",
+        "w-full flex items-start gap-3 p-3 rounded-lg transition-colors text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
         isSelected
           ? "bg-primary/10 border border-primary/20"
           : "hover:bg-muted/50 border border-transparent"
@@ -119,7 +127,7 @@ const WhatsAppLeadItem = ({ lead, isSelected, onClick }: WhatsAppLeadItemProps) 
           {truncateMessage(lead.ultima_mensagem)}
         </p>
       </div>
-    </button>
+    </div>
   );
 };
 
