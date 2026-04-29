@@ -151,8 +151,38 @@ Deno.serve(async (req) => {
         });
 
         const phoneClean = lead.telefone_whatsapp.replace(/\D/g, '');
-        const resultado = await sendWhatsappTextMessage(phoneClean, mensagem);
         const normalizedPhone = normalizePhoneNumber(phoneClean);
+
+        // GUARD #1: cache de verificações WhatsApp — se sabemos que o número
+        // não tem WhatsApp, não tenta enviar (evita HTTP 400 da Evolution).
+        const numeroInvalido = await isKnownInvalidWhatsapp(supabase, phoneClean);
+        if (numeroInvalido) {
+          console.warn(`[boas-vindas] ⛔ ${normalizedPhone} sem WhatsApp (cache) — lead ${lead.id} → PRECISA_DE_HUMANO`);
+          await supabase
+            .from('agendamentos')
+            .update({
+              status_crm: 'PRECISA_DE_HUMANO',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', lead.id)
+            .eq('status_funil', 'lead')
+            .eq('status_crm', 'NOVO LEAD');
+
+          await supabase.from('mensagens_whatsapp').insert({
+            agendamento_id: lead.id,
+            telefone: normalizedPhone,
+            direcao: 'OUT',
+            conteudo: mensagem,
+            tipo_mensagem: 'boas_vindas',
+            status_envio: 'erro',
+            error_message: 'Numero sem WhatsApp (cache verificacoes_whatsapp)',
+          });
+          falhas++;
+          continue;
+        }
+
+        const resultado = await sendWhatsappTextMessage(phoneClean, mensagem);
+
 
         // Determina status_envio confiável a partir do resultado
         // - confirmed=true (enviado/entregue/lido) → grava status correspondente
