@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
+import CampanhaMensalLembretes from "@/components/admin/CampanhaMensalLembretes";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1175,7 +1176,15 @@ const Lembretes = () => {
           </TabsContent>
 
           {/* Pending Reminders Tab */}
-          <TabsContent value="pendentes" className="space-y-4">
+          <TabsContent value="pendentes" className="space-y-4" data-testid="lembretes-tab-pendentes">
+            {/* Campanha mensal parcelada (4 remessas) */}
+            <CampanhaMensalLembretes
+              onAfterEnvio={() => {
+                carregarLembretesPendentes();
+                carregarDashboard();
+              }}
+            />
+
             <Card>
               <CardHeader>
                 <div className="flex flex-wrap items-center justify-between gap-3">
