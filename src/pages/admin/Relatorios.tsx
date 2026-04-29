@@ -11,6 +11,7 @@ import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
   BarChart, Bar,
 } from "recharts";
+import MensagensTabela from "@/components/admin/MensagensTabela";
 
 interface Relatorio {
   periodo: { inicio: string; fim: string };
@@ -191,6 +192,8 @@ export default function Relatorios() {
                 </div>
               </CardContent>
             </Card>
+
+            <MensagensTabela dataInicio={inicio} dataFim={fim} />
           </>
         )}
       </div>
