@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
+import CampanhaMensalLembretes from "@/components/admin/CampanhaMensalLembretes";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
