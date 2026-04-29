@@ -184,18 +184,7 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
         setMessages((prev) => [...prev, savedMessage]);
       }
 
-      // Marca o draft Hermes (se houver) como sent ou edited
-      if (activeDraftId) {
-        const status = draftSugestao && draftSugestao.trim() === messageContent ? "sent" : "edited";
-        marcarHermesDraftStatus({
-          draft_id: activeDraftId,
-          status,
-          conteudo_final: messageContent,
-          mensagem_id: savedMessage?.id ?? null,
-        }).catch(() => {});
-        setActiveDraftId(null);
-        setDraftSugestao(null);
-      }
+
 
       setNewMessage("");
       
@@ -338,17 +327,6 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
             {generatingAI ? "Gerando..." : "Gerar com IA"}
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleHermes}
-            disabled={generatingHermes}
-            className="gap-2 border-primary/40 text-primary hover:bg-primary/10"
-            title="Hermes sugere uma resposta com base no histórico da conversa"
-          >
-            <Wand2 className={`h-4 w-4 ${generatingHermes ? "animate-pulse" : ""}`} />
-            {generatingHermes ? "Hermes pensando..." : "Hermes sugerir resposta"}
-          </Button>
         </div>
         
         <div className="flex gap-2">
