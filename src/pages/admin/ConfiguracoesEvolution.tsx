@@ -58,6 +58,73 @@ const ConfiguracoesEvolution = () => {
   
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Configuração da instância (somente leitura, mascarada)
+  type EvoConfig = {
+    baseUrl: string;
+    instance: string;
+    tokenMasked: string;
+    tokenLength: number;
+    configured: boolean;
+  };
+  const [config, setConfig] = useState<EvoConfig | null>(null);
+  const [loadingConfig, setLoadingConfig] = useState(false);
+  const [showToken, setShowToken] = useState(false);
+  const [testingCreds, setTestingCreds] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const fetchConfig = async () => {
+    setLoadingConfig(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("evolution-config", {
+        body: { action: "read" },
+      });
+      if (error) throw error;
+      setConfig(data as EvoConfig);
+    } catch (err: any) {
+      toast.error("Erro ao carregar configuração: " + (err.message || "desconhecido"));
+    } finally {
+      setLoadingConfig(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConfig();
+  }, []);
+
+  const handleTestCreds = async () => {
+    setTestingCreds(true);
+    setTestResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("evolution-config", {
+        body: { action: "test" },
+      });
+      if (error) throw error;
+      const r = data as { ok: boolean; state?: string; connected?: boolean; error?: string };
+      if (r.ok) {
+        setTestResult({
+          ok: true,
+          msg: r.connected
+            ? `Credenciais válidas — instância conectada (state: ${r.state}).`
+            : `Credenciais válidas, mas instância está "${r.state}". Use "Forçar Conexão" para escanear o QR Code.`,
+        });
+        toast.success("Credenciais válidas!");
+      } else {
+        setTestResult({ ok: false, msg: r.error || "Falha no teste" });
+        toast.error("Credenciais inválidas: " + (r.error || ""));
+      }
+    } catch (err: any) {
+      setTestResult({ ok: false, msg: err.message || "Erro" });
+      toast.error("Erro ao testar credenciais");
+    } finally {
+      setTestingCreds(false);
+    }
+  };
+
+  const handleCopy = (value: string, label: string) => {
+    navigator.clipboard.writeText(value);
+    toast.success(`${label} copiado!`);
+  };
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await refresh();
