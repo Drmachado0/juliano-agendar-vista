@@ -1,71 +1,123 @@
-# Pacote de correções `/admin/whatsapp` + Relatórios + Tracking
+## Objetivo
 
-Vou implementar **uma correção por vez**. Cada item abaixo vira um commit lógico. As correções 8 e 9 do pacote original foram adaptadas: não existe backend `mc-monitor` nesta arquitetura (usamos Evolution API direta + `bot_config`) e o Monitor de Envios já foi removido na sessão anterior.
+Resolver 3 problemas no editor de **Templates de Mensagens WhatsApp** (`/admin/whatsapp` → aba Templates):
 
-## 1. Status real da automação (vs. "Bot ativo")
+1. **Preview ilegível**: a bolha verde do preview está com texto branco sobre fundo verde claro — o usuário não consegue ler.
+2. **Falta o template "Lembrete Anual"**: o template usado em `/admin/lembretes` (mensagem de retorno após 1 ano) não aparece no editor.
+3. **Não há como testar**: usuário precisa enviar a mensagem renderizada para um número real para validar.
 
-- Reaproveitar `bot_config.pausa_automatica_ativa` + criar **flag global única** `bot_global_ativo` (boolean) na tabela `bot_config` via migration.
-- `BotConfigCard` e o header de `/admin/whatsapp` mostram, lado a lado:
-  - Conexão Evolution (verde/vermelho) — já existe
-  - Automação global (verde/vermelho/amarelo) — novo
-- Quando `bot_global_ativo=false`: alerta no topo "Automação global desligada — controles individuais ficam inativos" e `BotStatusBadge` mostra "Bot pausado globalmente" com tooltip explicativo, em vermelho.
+---
 
-## 2. Filtro/busca limpa seleção quando lead some
+## Mudanças
 
-Em `WhatsApp.tsx`: `useEffect` que observa `leads` + `selectedLead`. Se o lead selecionado não está mais em `leads`, chama `setSelectedLead(null)` e volta `mobileView` para `list`.
+### 1. Corrigir o Preview da Mensagem
 
-## 3. Seleção de conversa robusta
+Arquivo: `src/components/admin/TemplatesWhatsAppTab.tsx`
 
-`WhatsAppLeadItem` já usa `onClick={onClick}` no card; vou auditar e garantir `e.stopPropagation()` nos botões internos (pausa bot, etc.) para não disparar seleção acidental. Loading skeleton no painel direito já existe — manter.
+Atualmente o `<pre>` usa `text-foreground`, que no tema escuro vira branco — invisível sobre o fundo verde claro `#e7ffd8`. Vamos forçar cores fixas estilo WhatsApp para o balão (independente do tema):
 
-## 4. Aba Contatos funcional
+- Fundo: `#e7ffd8` (claro) / `#005c4b` (escuro)
+- Texto: `#111` (claro) / `#e9edef` (escuro)
+- Hora: cinza neutro fixo
+- Renderizar **markdown leve do WhatsApp**: `*negrito*` vira `<strong>`, quebras de linha preservadas, e `https://...` vira link clicável. Isso deixa o preview muito mais próximo do que o paciente realmente verá.
+- Adicionar mini header da bolha (nome do contato simulado: "Paciente") para dar contexto.
 
-Já está estruturada com `Tabs`. Vou validar que `WhatsAppContatos` renderiza dados (lista, busca, abrir conversa). Ajustes pontuais se houver.
+### 2. Adicionar template "Lembrete Anual"
 
-## 5. Data 01/01/1970
+Hoje a página `/admin/lembretes` usa um template fixo no código (`TEMPLATE_LEMBRETE_PADRAO`). Vamos:
 
-Criar helper `formatAppointmentDate(data, hora)` em `src/lib/utils.ts` retornando "Sem data definida" para falsy/`<=1971`. Aplicar em `WhatsAppChat`, `WhatsAppLeadItem` e qualquer outro lugar com data de agendamento.
+**a) Migration** — inserir o registro na tabela `templates_whatsapp`:
 
-## 6. Histórico vazio — fallback por telefone
+- `tipo`: `lembrete_anual`
+- `nome`: "Lembrete Anual de Retorno"
+- `descricao`: "Mensagem enviada a pacientes 1 ano após a última consulta"
+- `variaveis_disponiveis`: `['{{nome}}']`
+- `conteudo`: o texto atual usado em `Lembretes.tsx` (com `{{nome}}`)
+- `ativo`: true
 
-`listarMensagensPorAgendamento` já aceita telefone. Vou auditar `listarLeadsComMensagens` (preview da última mensagem) — se buscar só por `agendamento_id`, adicionar fallback por últimos 8 dígitos do telefone. Filtro extra "Com mensagens / Sem mensagens" no `WhatsAppLeadsList`.
+**b) Atualizar `src/services/templatesWhatsApp.ts`**:
+- Incluir `lembrete_anual` em `templatesPadrao` (fallback)
+- Incluir `lembrete_anual: '🔔'` em `tipoIcones`
 
-## 7. ErrorBoundary + `/admin/relatorios` defensivo
+**c) Atualizar `src/pages/admin/Lembretes.tsx`**:
+- Carregar o template do banco via `buscarTemplatePorTipo('lembrete_anual')` no mount
+- Usar o template do banco como valor inicial de `template`, mantendo o `TEMPLATE_LEMBRETE_PADRAO` apenas como fallback se a busca falhar
+- Assim, qualquer edição feita no editor de templates passa a refletir automaticamente nos lembretes anuais
 
-- Criar `src/components/admin/AdminErrorBoundary.tsx`. Envolver `Relatorios` (e demais rotas admin no `App.tsx` se simples).
-- Em `Relatorios.tsx`: `safeNumber`/`safeArray`, fallback se `relatorio.crm.funil_atual` for null, render do layout base mesmo sem dados. Card de erro com botão "Tentar novamente" se a RPC falhar.
+**d) Atualizar `supabase/functions/_shared/templateRenderer.ts`**:
+- Adicionar `lembrete_anual` em `templatesPadrao` para que edge functions futuras também possam usar.
 
-## 8. Tracking bloqueado em `/admin/*`
+### 3. Card de Envio de Teste
 
-- `index.html`: adicionar `<script>` antes do GTM checando `location.pathname.startsWith('/admin')` e pulando o init.
-- `RouteChangeTracker`: não pushar `virtualPageview` em rotas `/admin/*`.
-- `useGoogleTag` e `useMetaPixel`: guardar contra `/admin/*`.
+Novo bloco abaixo do "Preview da Mensagem" em `TemplatesWhatsAppTab.tsx`:
 
-## 9. Labels e CTA (rápido)
+**Componentes UI:**
+- Título: "Enviar Teste"
+- `Select` para escolher qual template enviar (lista todos os templates ativos, default = template atualmente selecionado)
+- `Input` para o número de telefone (com placeholder "Ex: 5591999999999" e validação básica de 10–13 dígitos)
+- `Button` "Enviar Teste" com ícone `Send`
+- Toast de sucesso/erro
+- Aviso pequeno: "A mensagem será enviada com dados de exemplo (mesmo do preview)."
 
-- `Nova` → `Nova conversa`
-- Empty state do chat: copy melhorado e botão "Nova conversa" disparando o modal.
-- `BotStatusBadge`/labels CRM exibidos em formato humano onde for trivial (sem renomear constantes do banco).
+**Lógica:**
+- Renderiza o `editedContent` (não o salvo) com `dadosExemplo`, para o usuário poder testar mudanças antes de salvar
+- Sanitiza o telefone: remove tudo que não é dígito, garante que comece com `55` (DDI Brasil) se tiver 10–11 dígitos
+- Chama `enviarMensagemWhatsApp(telefone, mensagemRenderizada, { campaign: 'teste_template', priority: 'high' })` do `services/integracoes.ts` (que já passa pela edge function `enviar-whatsapp-queue`)
+- Estado de loading no botão durante o envio
+- Persiste o último número testado em `localStorage` (`templates_teste_telefone`) para conveniência
 
-## (Pulado) Correção 9 do pacote original — Monitor Envios
+**Permissão:** o componente já vive dentro do admin protegido — basta usar a função existente.
 
-Já removido. Os erros HTTP 400 detalhados podem ser vistos hoje na coluna `error_message` da `MensagensTabela` em `Relatorios`. Se quiser tooltip mais rico depois, é fácil adicionar.
+---
 
-## Detalhes técnicos chave
+## Detalhes Técnicos
 
-- Migration: `ALTER TABLE bot_config ADD COLUMN bot_global_ativo boolean NOT NULL DEFAULT true;`
-- Hook novo `useBotGlobalStatus` lendo `bot_config` + realtime, consumido por `BotConfigCard`, header WhatsApp e `BotStatusBadge`.
-- `formatAppointmentDate` em `src/lib/utils.ts`.
-- ErrorBoundary class component padrão React, renderiza fallback com `Tentar novamente`.
-- Guards de tracking: única função `isAdminRoute()` exportada de `src/lib/utils.ts`.
+### Renderização markdown WhatsApp (helper inline)
 
-## Ordem de execução (1-by-1)
+```tsx
+function renderWhatsAppMarkdown(text: string) {
+  // *bold*, _italic_, ~strike~, links http(s)://
+  const escaped = text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*(.+?)\*/g, '<strong>$1</strong>')
+    .replace(/_(.+?)_/g, '<em>$1</em>')
+    .replace(/~(.+?)~/g, '<s>$1</s>')
+    .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" class="underline">$1</a>');
+  return { __html: escaped };
+}
+```
 
-1. Migration `bot_global_ativo` + hook + UI de status global
-2. Limpeza de seleção quando filtro muda
-3. Auditoria de clique/stopPropagation
-4. Helper de data + substituir 01/01/1970
-5. Fallback de histórico por telefone + filtro com/sem mensagens
-6. ErrorBoundary + Relatorios defensivo
-7. Bloqueio de tracking em `/admin/*`
-8. Labels e CTA finais
+Bolha do preview:
+```tsx
+<div className="rounded-lg p-3 max-w-md shadow-sm bg-[#e7ffd8] dark:bg-[#005c4b]">
+  <div
+    className="whitespace-pre-wrap text-sm font-sans leading-relaxed text-[#111] dark:text-[#e9edef]"
+    dangerouslySetInnerHTML={renderWhatsAppMarkdown(previewMensagem)}
+  />
+  <div className="text-right mt-1">
+    <span className="text-[10px] text-[#667781] dark:text-[#8696a0]">09:00 ✓✓</span>
+  </div>
+</div>
+```
+
+### Sanitização de telefone para teste
+
+```ts
+function normalizarTelefoneTeste(raw: string): string | null {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length < 10 || digits.length > 13) return null;
+  if (digits.startsWith('55')) return digits;
+  if (digits.length === 10 || digits.length === 11) return `55${digits}`;
+  return digits;
+}
+```
+
+### Arquivos modificados
+
+- `src/components/admin/TemplatesWhatsAppTab.tsx` (preview + card de teste)
+- `src/services/templatesWhatsApp.ts` (fallback + ícone do `lembrete_anual`)
+- `src/pages/admin/Lembretes.tsx` (carrega template do banco)
+- `supabase/functions/_shared/templateRenderer.ts` (fallback `lembrete_anual`)
+- Nova migration: insert do template `lembrete_anual` em `templates_whatsapp`
+
+Sem mudanças em RLS — a tabela `templates_whatsapp` já é gerenciável via admin existente, e o envio usa a edge function já protegida.
