@@ -32,7 +32,13 @@ import {
   Loader2,
   RefreshCw,
   Trash2,
+  Plus,
+  Minus,
+  Wand2,
+  RotateCcw,
+  CheckCheck,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { marcarLembreteEnviado, type LembreteAnual } from "@/services/lembretesAnuais";
 import { enviarMensagemWhatsApp } from "@/services/integracoes";
@@ -748,64 +754,279 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
               </AlertDescription>
             </Alert>
 
-            <div className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
+            {/* Toggle Modo Manual */}
+            <div className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-card">
+              <div className="flex flex-col">
+                <Label htmlFor="modo-manual-preview" className="cursor-pointer text-sm font-medium">
+                  Modo manual
+                </Label>
+                <span className="text-xs text-muted-foreground">
+                  Definir manualmente quantos pacientes vão em cada remessa.
+                  {!modoManual && " (Padrão: divide igualmente)"}
+                </span>
+              </div>
+              <Switch
                 id="modo-manual-preview"
                 checked={modoManual}
-                onChange={(e) => setModoManual(e.target.checked)}
+                onCheckedChange={(v) => {
+                  setModoManual(v);
+                  setConfirmaParcial(false);
+                  if (v) setQtdManual(dividirEmRemessas(previewElegiveis.length));
+                }}
               />
-              <Label htmlFor="modo-manual-preview" className="cursor-pointer">
-                Modo manual (definir quantidade por remessa)
-              </Label>
             </div>
+
             {modoManual && (
-              <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {qtdManual.map((q, i) => (
-                    <div key={i}>
-                      <Label className="text-xs">Remessa {i + 1}</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={previewElegiveis.length}
-                        value={q}
-                        onChange={(e) => {
-                          const n = parseInt(e.target.value || "0", 10);
-                          const novo = [...qtdManual];
-                          novo[i] = isNaN(n) ? 0 : Math.max(0, n);
-                          setQtdManual(novo);
-                        }}
-                      />
-                    </div>
-                  ))}
+              <div className="space-y-3 p-3 rounded-lg border bg-muted/20">
+                {/* Cabeçalho com totais e ações rápidas */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs text-muted-foreground">
+                    Distribua os <strong>{previewElegiveis.length}</strong> pacientes elegíveis
+                    entre as 4 remessas.
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => {
+                        setQtdManual(dividirEmRemessas(previewElegiveis.length));
+                        setConfirmaParcial(false);
+                      }}
+                    >
+                      <Wand2 className="h-3 w-3 mr-1" />
+                      Distribuir igualmente
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => {
+                        // Atribui o restante à última remessa não-vazia (ou à 4)
+                        const soma = qtdManual.reduce((a, b) => a + b, 0);
+                        const diff = previewElegiveis.length - soma;
+                        if (diff === 0) return;
+                        const novo = [...qtdManual];
+                        if (diff > 0) {
+                          novo[3] = (novo[3] || 0) + diff;
+                        } else {
+                          // remove o excesso da última que tem valor
+                          let restante = -diff;
+                          for (let i = 3; i >= 0 && restante > 0; i--) {
+                            const tirar = Math.min(novo[i], restante);
+                            novo[i] -= tirar;
+                            restante -= tirar;
+                          }
+                        }
+                        setQtdManual(novo);
+                        setConfirmaParcial(false);
+                      }}
+                    >
+                      <CheckCheck className="h-3 w-3 mr-1" />
+                      Ajustar para o total
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs"
+                      onClick={() => {
+                        setQtdManual([0, 0, 0, 0]);
+                        setConfirmaParcial(false);
+                      }}
+                    >
+                      <RotateCcw className="h-3 w-3 mr-1" />
+                      Zerar
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Soma das remessas: <strong>{totalManual}</strong> / Total elegível:{" "}
-                  <strong>{previewElegiveis.length}</strong>
-                </p>
+
+                {/* Cartões por remessa */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  {qtdManual.map((q, i) => {
+                    const dataProg = new Date(anoRef, mesRef, DIAS_REMESSAS[i]);
+                    const restanteAtual = previewElegiveis.length - totalManual;
+                    const maxPermitido = q + Math.max(restanteAtual, 0);
+                    return (
+                      <div
+                        key={i}
+                        className={cn(
+                          "p-3 rounded-lg border bg-card space-y-2 transition-colors",
+                          q > 0 ? "border-primary/40" : "border-border",
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold">Remessa {i + 1}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {formatarData(dataProg)}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-[10px]">
+                            {q} pac.
+                          </Badge>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8 shrink-0"
+                            disabled={q <= 0}
+                            aria-label={`Diminuir remessa ${i + 1}`}
+                            onClick={() => {
+                              const novo = [...qtdManual];
+                              novo[i] = Math.max(0, novo[i] - 1);
+                              setQtdManual(novo);
+                              setConfirmaParcial(false);
+                            }}
+                          >
+                            <Minus className="h-3.5 w-3.5" />
+                          </Button>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            max={maxPermitido}
+                            value={q}
+                            aria-label={`Quantidade da remessa ${i + 1}`}
+                            className="h-8 text-center"
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              if (raw === "") {
+                                const novo = [...qtdManual];
+                                novo[i] = 0;
+                                setQtdManual(novo);
+                                return;
+                              }
+                              const n = parseInt(raw, 10);
+                              if (isNaN(n)) return;
+                              const novo = [...qtdManual];
+                              // não trava no máx, deixa o usuário ver o aviso de excesso
+                              novo[i] = Math.max(0, n);
+                              setQtdManual(novo);
+                              setConfirmaParcial(false);
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8 shrink-0"
+                            disabled={restanteAtual <= 0}
+                            aria-label={`Aumentar remessa ${i + 1}`}
+                            onClick={() => {
+                              const novo = [...qtdManual];
+                              novo[i] = novo[i] + 1;
+                              setQtdManual(novo);
+                              setConfirmaParcial(false);
+                            }}
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Barra de distribuição visual */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Distribuição</span>
+                    <span
+                      className={cn(
+                        "font-medium tabular-nums",
+                        manualExcede
+                          ? "text-destructive"
+                          : totalManual === previewElegiveis.length
+                          ? "text-emerald-600"
+                          : "text-amber-600",
+                      )}
+                    >
+                      {totalManual} / {previewElegiveis.length}
+                    </span>
+                  </div>
+                  <div className="flex h-2 w-full overflow-hidden rounded-full bg-muted">
+                    {qtdManual.map((q, i) => {
+                      const pct = previewElegiveis.length
+                        ? (Math.min(q, previewElegiveis.length) / previewElegiveis.length) * 100
+                        : 0;
+                      const cores = [
+                        "bg-primary",
+                        "bg-blue-500",
+                        "bg-emerald-500",
+                        "bg-amber-500",
+                      ];
+                      return (
+                        <div
+                          key={i}
+                          style={{ width: `${pct}%` }}
+                          className={cn("h-full transition-all", cores[i])}
+                          title={`Remessa ${i + 1}: ${q}`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Status / validação */}
                 {manualExcede && (
                   <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
                     <AlertDescription className="text-xs">
-                      A soma das remessas excede o total elegível. Ajuste antes de gerar.
+                      A soma das remessas é <strong>{totalManual}</strong>, mas há apenas{" "}
+                      <strong>{previewElegiveis.length}</strong> pacientes elegíveis. Reduza{" "}
+                      <strong>{totalManual - previewElegiveis.length}</strong> antes de gerar o plano.
                     </AlertDescription>
                   </Alert>
                 )}
-                {manualParcial && !manualExcede && (
-                  <div className="flex items-start gap-2 text-xs">
-                    <input
-                      type="checkbox"
-                      id="confirma-parcial"
-                      checked={confirmaParcial}
-                      onChange={(e) => setConfirmaParcial(e.target.checked)}
-                    />
-                    <Label htmlFor="confirma-parcial" className="cursor-pointer">
-                      Confirmo que quero deixar {previewElegiveis.length - totalManual} paciente(s) fora
-                      desta campanha.
-                    </Label>
-                  </div>
+
+                {!manualExcede && manualParcial && (
+                  <Alert className="border-amber-500/40 bg-amber-500/5">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-xs space-y-2">
+                      <div>
+                        Faltam <strong>{previewElegiveis.length - totalManual}</strong> paciente(s)
+                        para completar a campanha. Eles ficarão de fora.
+                      </div>
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={confirmaParcial}
+                          onChange={(e) => setConfirmaParcial(e.target.checked)}
+                        />
+                        <span>
+                          Confirmo que quero deixar{" "}
+                          <strong>{previewElegiveis.length - totalManual}</strong> paciente(s) fora
+                          desta campanha.
+                        </span>
+                      </label>
+                    </AlertDescription>
+                  </Alert>
                 )}
-              </>
+
+                {!manualExcede && !manualParcial && totalManual > 0 && (
+                  <Alert className="border-emerald-500/40 bg-emerald-500/5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <AlertDescription className="text-xs">
+                      Distribuição válida: todos os {previewElegiveis.length} pacientes estão
+                      atribuídos.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {totalManual === 0 && (
+                  <p className="text-xs text-muted-foreground italic">
+                    Defina pelo menos uma quantidade ou clique em{" "}
+                    <strong>Distribuir igualmente</strong>.
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}
