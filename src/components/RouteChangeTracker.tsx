@@ -1,15 +1,12 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-
-const isAdminPath = (pathname: string) => pathname.startsWith('/admin');
+import { safeDataLayerPush } from '@/lib/trackingGuard';
 
 const RouteChangeTracker = () => {
   const location = useLocation();
 
   useEffect(() => {
-    if (isAdminPath(location.pathname)) return;
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({
+    safeDataLayerPush({
       event: 'virtualPageview',
       page_path: location.pathname,
       page_title: document.title,
@@ -20,4 +17,3 @@ const RouteChangeTracker = () => {
 };
 
 export default RouteChangeTracker;
-
