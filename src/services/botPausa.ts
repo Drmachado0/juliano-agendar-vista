@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface BotConfig {
   pausa_automatica_ativa: boolean;
   pausa_automatica_minutos: number;
+  bot_global_ativo: boolean;
 }
 
 export interface BotStatusAgendamento {
@@ -14,23 +15,25 @@ export interface BotStatusAgendamento {
 export async function obterBotConfig(): Promise<BotConfig> {
   const { data } = await supabase
     .from("bot_config" as any)
-    .select("pausa_automatica_ativa, pausa_automatica_minutos")
+    .select("pausa_automatica_ativa, pausa_automatica_minutos, bot_global_ativo")
     .eq("id", true)
     .maybeSingle();
   return {
     pausa_automatica_ativa: (data as any)?.pausa_automatica_ativa ?? true,
     pausa_automatica_minutos: (data as any)?.pausa_automatica_minutos ?? 30,
+    bot_global_ativo: (data as any)?.bot_global_ativo ?? true,
   };
 }
 
-export async function atualizarBotConfig(cfg: BotConfig): Promise<{ error: string | null }> {
+export async function atualizarBotConfig(cfg: Partial<BotConfig>): Promise<{ error: string | null }> {
+  const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (cfg.pausa_automatica_ativa !== undefined) payload.pausa_automatica_ativa = cfg.pausa_automatica_ativa;
+  if (cfg.pausa_automatica_minutos !== undefined) payload.pausa_automatica_minutos = cfg.pausa_automatica_minutos;
+  if (cfg.bot_global_ativo !== undefined) payload.bot_global_ativo = cfg.bot_global_ativo;
+
   const { error } = await supabase
     .from("bot_config" as any)
-    .update({
-      pausa_automatica_ativa: cfg.pausa_automatica_ativa,
-      pausa_automatica_minutos: cfg.pausa_automatica_minutos,
-      updated_at: new Date().toISOString(),
-    })
+    .update(payload)
     .eq("id", true);
   return { error: error?.message ?? null };
 }
