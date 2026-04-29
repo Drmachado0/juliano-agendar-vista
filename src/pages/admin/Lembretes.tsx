@@ -204,6 +204,23 @@ const Lembretes = () => {
   const [historico, setHistorico] = useState<HistoricoLembrete[]>([]);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
 
+  // Aba ativa (controlada + sincronizada com a URL ?tab=)
+  const getInitialTab = () => {
+    if (typeof window === "undefined") return "dashboard";
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    return tab === "importar" || tab === "pendentes" ? tab : "dashboard";
+  };
+  const [abaAtiva, setAbaAtiva] = useState<string>(getInitialTab);
+
+  const handleAbaChange = (value: string) => {
+    setAbaAtiva(value);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", value);
+      window.history.replaceState({}, "", url.toString());
+    }
+  };
+
   // Tracking
   const [estadoEnvio, setEstadoEnvio] = useState<EstadoEnvio>('idle');
   const [enviosSessao, setEnviosSessao] = useState(0);
@@ -791,17 +808,29 @@ const Lembretes = () => {
           </div>
         </TooltipProvider>
 
-        <Tabs defaultValue="dashboard" className="space-y-4">
+        <Tabs value={abaAtiva} onValueChange={handleAbaChange} className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="dashboard" className="flex items-center gap-2">
+            <TabsTrigger
+              value="dashboard"
+              data-testid="lembretes-tab-dashboard"
+              className="flex items-center gap-2"
+            >
               <BarChart3 className="h-4 w-4" />
               Dashboard
             </TabsTrigger>
-            <TabsTrigger value="importar" className="flex items-center gap-2">
+            <TabsTrigger
+              value="importar"
+              data-testid="lembretes-tab-importar"
+              className="flex items-center gap-2"
+            >
               <Users className="h-4 w-4" />
               Importar Pacientes
             </TabsTrigger>
-            <TabsTrigger value="pendentes" className="flex items-center gap-2">
+            <TabsTrigger
+              value="pendentes"
+              data-testid="lembretes-tab-pendentes"
+              className="flex items-center gap-2"
+            >
               <CalendarIconLucide className="h-4 w-4" />
               Lembretes Pendentes ({lembretesPendentes.length})
             </TabsTrigger>
@@ -1182,7 +1211,7 @@ const Lembretes = () => {
           </TabsContent>
 
           {/* Pending Reminders Tab */}
-          <TabsContent value="pendentes" className="space-y-4" data-testid="lembretes-tab-pendentes">
+          <TabsContent value="pendentes" className="space-y-4" data-testid="lembretes-tabpanel-pendentes">
             {/* Campanha mensal parcelada (4 remessas) */}
             <CampanhaMensalLembretes
               onAfterEnvio={() => {
