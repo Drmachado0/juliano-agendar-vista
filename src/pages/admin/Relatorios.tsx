@@ -12,12 +12,34 @@ import {
   BarChart, Bar,
 } from "recharts";
 import MensagensTabela from "@/components/admin/MensagensTabela";
+import AdminErrorBoundary from "@/components/admin/AdminErrorBoundary";
 
 interface Relatorio {
   periodo: { inicio: string; fim: string };
   whatsapp: { mensagens_in: number; mensagens_out: number; total: number; por_tipo: Record<string, number> };
   crm: { leads_novos: number; conversoes: number; funil_atual: Record<string, number> };
 }
+
+const safeNumber = (v: any, fallback = 0): number =>
+  typeof v === "number" && Number.isFinite(v) ? v : fallback;
+
+const safeRecord = (v: any): Record<string, number> =>
+  v && typeof v === "object" && !Array.isArray(v) ? v : {};
+
+const normalizeRelatorio = (raw: any): Relatorio => ({
+  periodo: { inicio: raw?.periodo?.inicio ?? "", fim: raw?.periodo?.fim ?? "" },
+  whatsapp: {
+    mensagens_in: safeNumber(raw?.whatsapp?.mensagens_in),
+    mensagens_out: safeNumber(raw?.whatsapp?.mensagens_out),
+    total: safeNumber(raw?.whatsapp?.total),
+    por_tipo: safeRecord(raw?.whatsapp?.por_tipo),
+  },
+  crm: {
+    leads_novos: safeNumber(raw?.crm?.leads_novos),
+    conversoes: safeNumber(raw?.crm?.conversoes),
+    funil_atual: safeRecord(raw?.crm?.funil_atual),
+  },
+});
 
 interface SerieDia {
   dia: string;
