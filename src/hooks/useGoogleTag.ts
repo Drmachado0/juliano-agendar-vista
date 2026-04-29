@@ -6,11 +6,14 @@ declare global {
 
 window.dataLayer = window.dataLayer || [];
 
+const isAdminContext = () =>
+  typeof window !== 'undefined' && window.location?.pathname?.startsWith('/admin');
+
 const pushToDataLayer = (data: Record<string, any>) => {
-  if (typeof window !== 'undefined') {
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push(data);
-  }
+  if (typeof window === 'undefined') return;
+  if (isAdminContext()) return; // Não rastrear ações dentro do painel admin
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push(data);
 };
 
 export const useGoogleTag = () => {

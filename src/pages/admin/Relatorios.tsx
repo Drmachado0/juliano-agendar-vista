@@ -12,12 +12,34 @@ import {
   BarChart, Bar,
 } from "recharts";
 import MensagensTabela from "@/components/admin/MensagensTabela";
+import AdminErrorBoundary from "@/components/admin/AdminErrorBoundary";
 
 interface Relatorio {
   periodo: { inicio: string; fim: string };
   whatsapp: { mensagens_in: number; mensagens_out: number; total: number; por_tipo: Record<string, number> };
   crm: { leads_novos: number; conversoes: number; funil_atual: Record<string, number> };
 }
+
+const safeNumber = (v: any, fallback = 0): number =>
+  typeof v === "number" && Number.isFinite(v) ? v : fallback;
+
+const safeRecord = (v: any): Record<string, number> =>
+  v && typeof v === "object" && !Array.isArray(v) ? v : {};
+
+const normalizeRelatorio = (raw: any): Relatorio => ({
+  periodo: { inicio: raw?.periodo?.inicio ?? "", fim: raw?.periodo?.fim ?? "" },
+  whatsapp: {
+    mensagens_in: safeNumber(raw?.whatsapp?.mensagens_in),
+    mensagens_out: safeNumber(raw?.whatsapp?.mensagens_out),
+    total: safeNumber(raw?.whatsapp?.total),
+    por_tipo: safeRecord(raw?.whatsapp?.por_tipo),
+  },
+  crm: {
+    leads_novos: safeNumber(raw?.crm?.leads_novos),
+    conversoes: safeNumber(raw?.crm?.conversoes),
+    funil_atual: safeRecord(raw?.crm?.funil_atual),
+  },
+});
 
 interface SerieDia {
   dia: string;
@@ -43,15 +65,22 @@ export default function Relatorios() {
 
   const carregar = async () => {
     setLoading(true);
-    const [r1, r2] = await Promise.all([
-      supabase.rpc("relatorio_diario", { p_data_inicio: inicio, p_data_fim: fim }),
-      supabase.rpc("relatorio_diario_serie", { p_data_inicio: inicio, p_data_fim: fim }),
-    ]);
-    setLoading(false);
-    if (r1.error) { toast.error(r1.error.message); return; }
-    if (r2.error) { toast.error(r2.error.message); return; }
-    setRelatorio(r1.data as unknown as Relatorio);
-    setSerie((r2.data || []) as SerieDia[]);
+    try {
+      const [r1, r2] = await Promise.all([
+        supabase.rpc("relatorio_diario", { p_data_inicio: inicio, p_data_fim: fim }),
+        supabase.rpc("relatorio_diario_serie", { p_data_inicio: inicio, p_data_fim: fim }),
+      ]);
+      if (r1.error) { toast.error(r1.error.message); }
+      if (r2.error) { toast.error(r2.error.message); }
+      setRelatorio(normalizeRelatorio(r1.data));
+      setSerie(Array.isArray(r2.data) ? (r2.data as SerieDia[]) : []);
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao carregar relatórios");
+      setRelatorio(normalizeRelatorio({}));
+      setSerie([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { carregar(); /* eslint-disable-next-line */ }, []);
@@ -114,88 +143,108 @@ export default function Relatorios() {
           </CardContent>
         </Card>
 
-        {relatorio && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <StatCard
-                icon={MessageCircle}
-                label="Mensagens (total)"
-                value={relatorio.whatsapp.total}
-                sub={`${relatorio.whatsapp.mensagens_in} recebidas · ${relatorio.whatsapp.mensagens_out} enviadas`}
-              />
-              <StatCard
-                icon={Users}
-                label="Novos leads"
-                value={relatorio.crm.leads_novos}
-                sub={`${relatorio.crm.conversoes} convertidos em agendamento`}
-              />
-              <StatCard
-                icon={TrendingUp}
-                label="Taxa de conversão"
-                value={taxaConversao}
-                sub={`${taxaConversao}% dos leads viraram agendamento`}
-              />
-            </div>
+        <AdminErrorBoundary fallbackTitle="Não foi possível carregar os relatórios">
+          {relatorio && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <StatCard
+                  icon={MessageCircle}
+                  label="Mensagens (total)"
+                  value={relatorio.whatsapp.total}
+                  sub={`${relatorio.whatsapp.mensagens_in} recebidas · ${relatorio.whatsapp.mensagens_out} enviadas`}
+                />
+                <StatCard
+                  icon={Users}
+                  label="Novos leads"
+                  value={relatorio.crm.leads_novos}
+                  sub={`${relatorio.crm.conversoes} convertidos em agendamento`}
+                />
+                <StatCard
+                  icon={TrendingUp}
+                  label="Taxa de conversão"
+                  value={taxaConversao}
+                  sub={`${taxaConversao}% dos leads viraram agendamento`}
+                />
+              </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Série diária</CardTitle>
-                <CardDescription>Mensagens recebidas/enviadas e novos leads por dia</CardDescription>
-              </CardHeader>
-              <CardContent style={{ height: 320 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={serie}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="dia" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="msg_in" stroke="hsl(var(--primary))" name="Msg recebidas" />
-                    <Line type="monotone" dataKey="msg_out" stroke="hsl(var(--accent))" name="Msg enviadas" />
-                    <Line type="monotone" dataKey="leads_novos" stroke="#10b981" name="Novos leads" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Mensagens por tipo</CardTitle>
-                <CardDescription>Distribuição entre confirmações, lembretes, manuais, etc.</CardDescription>
-              </CardHeader>
-              <CardContent style={{ height: 320 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={tipoMensagens}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="tipo" tick={{ fontSize: 11 }} angle={-25} textAnchor="end" height={70} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip />
-                    <Bar dataKey="qtd" fill="hsl(var(--primary))" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Funil CRM (estado atual)</CardTitle>
-                <CardDescription>Distribuição de todos os agendamentos pelo status do funil</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {Object.entries(relatorio.crm.funil_atual).map(([s, q]) => (
-                    <div key={s} className="border rounded p-3 text-center bg-muted/30">
-                      <div className="text-2xl font-bold">{q}</div>
-                      <div className="text-xs text-muted-foreground capitalize">{s}</div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Série diária</CardTitle>
+                  <CardDescription>Mensagens recebidas/enviadas e novos leads por dia</CardDescription>
+                </CardHeader>
+                <CardContent style={{ height: 320 }}>
+                  {serie.length === 0 ? (
+                    <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                      Sem dados no período selecionado
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={serie}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="dia" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="msg_in" stroke="hsl(var(--primary))" name="Msg recebidas" />
+                        <Line type="monotone" dataKey="msg_out" stroke="hsl(var(--accent))" name="Msg enviadas" />
+                        <Line type="monotone" dataKey="leads_novos" stroke="#10b981" name="Novos leads" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
 
-            <MensagensTabela dataInicio={inicio} dataFim={fim} />
-          </>
-        )}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Mensagens por tipo</CardTitle>
+                  <CardDescription>Distribuição entre confirmações, lembretes, manuais, etc.</CardDescription>
+                </CardHeader>
+                <CardContent style={{ height: 320 }}>
+                  {tipoMensagens.length === 0 ? (
+                    <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                      Nenhuma mensagem no período
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={tipoMensagens}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="tipo" tick={{ fontSize: 11 }} angle={-25} textAnchor="end" height={70} />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <Tooltip />
+                        <Bar dataKey="qtd" fill="hsl(var(--primary))" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Funil CRM (estado atual)</CardTitle>
+                  <CardDescription>Distribuição de todos os agendamentos pelo status do funil</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {Object.keys(relatorio.crm.funil_atual).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Sem dados de funil disponíveis.</p>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {Object.entries(relatorio.crm.funil_atual).map(([s, q]) => (
+                        <div key={s} className="border rounded p-3 text-center bg-muted/30">
+                          <div className="text-2xl font-bold">{safeNumber(q)}</div>
+                          <div className="text-xs text-muted-foreground capitalize">{s}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <AdminErrorBoundary fallbackTitle="Não foi possível carregar a tabela de mensagens">
+                <MensagensTabela dataInicio={inicio} dataFim={fim} />
+              </AdminErrorBoundary>
+            </>
+          )}
+        </AdminErrorBoundary>
       </div>
     </AdminLayout>
   );

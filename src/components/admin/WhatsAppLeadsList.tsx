@@ -139,7 +139,7 @@ const WhatsAppLeadsList = ({
               className="gap-1.5"
             >
               <MessageSquarePlus className="h-4 w-4" />
-              Nova
+              Nova conversa
             </Button>
             <Button variant="ghost" size="icon" onClick={fetchLeads} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />

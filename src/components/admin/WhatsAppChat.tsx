@@ -217,9 +217,10 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
         <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
           <Send className="h-10 w-10 text-muted-foreground" />
         </div>
-        <h3 className="font-medium text-foreground mb-2">Selecione uma conversa</h3>
+        <h3 className="font-medium text-foreground mb-2">Nenhuma conversa selecionada</h3>
         <p className="text-sm text-muted-foreground max-w-sm">
-          Escolha um lead na lista ao lado para visualizar e enviar mensagens via WhatsApp.
+          Escolha um lead na lista ao lado para visualizar o histórico e responder via WhatsApp,
+          ou clique em <span className="font-medium text-foreground">"Nova conversa"</span> para iniciar um contato.
         </p>
       </div>
     );
