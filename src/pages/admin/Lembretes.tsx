@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from "recharts";
 import { useEnvioLoteConfig, LIMITE_SESSAO, LIMITE_DIARIO } from "@/hooks/useEnvioLoteConfig";
+import { gerarMensagemVariadaLembrete } from "@/lib/variacaoMensagensLembrete";
 
 interface LogEnvio {
   timestamp: Date;
@@ -63,15 +64,13 @@ type EstadoEnvio = 'idle' | 'enviando' | 'aguardando_intervalo' | 'pausa_seguran
 type FiltroLembrete = string; // 'vencidos' | 'semana' | 'mes' | 'todos' | 'mes_YYYY-MM'
 
 // ===== Variação anti-spam =====
-// IMPORTANTE: a variação NUNCA altera o corpo, links ou CTAs do template
-// configurado em /admin/whatsapp (aba Templates). Ela apenas troca a
-// SAUDAÇÃO inicial (primeira linha) por sinônimos neutros, e adiciona
-// pequenas variações invisíveis (espaçamento) para evitar fingerprint
-// idêntico em envios em massa.
-const SAUDACOES_LEMBRETE = [
-  "Olá", "Oi", "Olá 😊", "Oi 👋", "Olá!",
-  "Oi, tudo bem?", "Olá, tudo bem?", "Oi 🙂",
-];
+// Quando o toggle "Variação Automática" está LIGADO, geramos a mensagem
+// inteira por composição (saudação + abertura + importância + CTA + emojis)
+// via gerarMensagemVariadaLembrete (src/lib/variacaoMensagensLembrete.ts).
+// O LINK e a ASSINATURA permanecem fixos.
+//
+// Quando DESLIGADO, usamos o template configurado em /admin/whatsapp puro,
+// apenas substituindo {{nome}}.
 
 const TEMPLATE_LEMBRETE_PADRAO = `Olá, {{nome}}! 👋
 
@@ -87,49 +86,6 @@ Gostaria de agendar seu retorno? Podemos encontrar o melhor horário para você.
 Atenciosamente,
 Dr. Juliano Machado
 Oftalmologia`;
-
-/**
- * Aplica variação anti-spam preservando o template configurado.
- * - Substitui {{nome}} pelo primeiro nome.
- * - Troca apenas a saudação da PRIMEIRA linha (algo como "Olá, {nome}! 👋").
- * - Mantém intactos: corpo, links, CTAs, assinatura.
- */
-const aplicarVariacaoSeguraNoTemplate = (
-  templateBase: string,
-  nome: string,
-  ultimaMensagem?: string,
-): string => {
-  const renderizado = (templateBase || TEMPLATE_LEMBRETE_PADRAO).replace(
-    /\{\{nome\}\}/g,
-    nome,
-  );
-
-  const linhas = renderizado.split("\n");
-  // Detecta se a primeira linha é uma saudação (tem o nome do paciente)
-  const primeira = linhas[0] || "";
-  const ehSaudacao =
-    primeira.includes(nome) &&
-    /^(ol[áa]|oi|bom dia|boa tarde|boa noite)/i.test(primeira.trim());
-
-  let tentativas = 0;
-  let resultado = renderizado;
-  do {
-    if (ehSaudacao) {
-      const saudacao =
-        SAUDACOES_LEMBRETE[Math.floor(Math.random() * SAUDACOES_LEMBRETE.length)];
-      // Mantém o restante da linha após o nome (ex.: "! 👋")
-      const matchSufixo = primeira.match(
-        new RegExp(`${nome.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(.*)$`),
-      );
-      const sufixo = matchSufixo?.[1] ?? "!";
-      const novaSaudacao = `${saudacao}, ${nome}${sufixo}`;
-      resultado = [novaSaudacao, ...linhas.slice(1)].join("\n");
-    }
-    tentativas++;
-  } while (resultado === ultimaMensagem && tentativas < 10);
-
-  return resultado;
-};
 
 const Lembretes = () => {
   // Import patients state - now with date range
@@ -197,7 +153,7 @@ const Lembretes = () => {
   const [imagemNome, setImagemNome] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mensagemPreviewVariada, setMensagemPreviewVariada] = useState(() =>
-    aplicarVariacaoSeguraNoTemplate(TEMPLATE_LEMBRETE_PADRAO, "Maria"),
+    gerarMensagemVariadaLembrete("Maria"),
   );
 
   // History from database
@@ -279,10 +235,8 @@ const Lembretes = () => {
       .maybeSingle();
     if (!error && data?.conteudo) {
       setTemplate(data.conteudo);
-      // Atualiza o preview para refletir o template salvo
-      setMensagemPreviewVariada(
-        aplicarVariacaoSeguraNoTemplate(data.conteudo, "Maria"),
-      );
+      // Preview da variação independe do template (usa composição própria)
+      setMensagemPreviewVariada(gerarMensagemVariadaLembrete("Maria"));
     }
   };
 
@@ -364,7 +318,7 @@ const Lembretes = () => {
 
   const gerarNovaMensagemPreview = () => {
     setMensagemPreviewVariada(
-      aplicarVariacaoSeguraNoTemplate(template, "Maria", mensagemPreviewVariada),
+      gerarMensagemVariadaLembrete("Maria", mensagemPreviewVariada),
     );
   };
 
@@ -536,10 +490,12 @@ const Lembretes = () => {
       const lembrete = lembretesParaEnviar[i];
       const primeiroNome = lembrete.primeiro_nome || lembrete.nome.split(' ')[0];
 
-      // Generate message — sempre usa o template configurado.
-      // Quando a variação está ativa, apenas a saudação é trocada.
+      // Generate message
+      // - Variação ATIVA: monta mensagem única (saudação + corpo + CTA + emojis),
+      //   mantendo link e assinatura fixos. Template salvo é ignorado.
+      // - Variação INATIVA: usa o template configurado em /admin/whatsapp puro.
       const mensagem = variacaoTextoAtiva
-        ? aplicarVariacaoSeguraNoTemplate(template, primeiroNome, ultimaMensagem)
+        ? gerarMensagemVariadaLembrete(primeiroNome, ultimaMensagem)
         : renderizarTemplate(primeiroNome);
       ultimaMensagem = mensagem;
 
@@ -1515,12 +1471,17 @@ const Lembretes = () => {
                       {/* Variação de Texto */}
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <div>
+                          <div className="flex-1 pr-3">
                             <h4 className="text-sm font-medium flex items-center gap-2">
                               <Shuffle className="h-4 w-4 text-muted-foreground" />
-                              Variação Automática de Texto
+                              Variação Automática de Mensagens
+                              <Badge variant={variacaoTextoAtiva ? "default" : "secondary"} className="text-xs">
+                                {variacaoTextoAtiva ? "Ativa" : "Inativa"}
+                              </Badge>
                             </h4>
-                            <p className="text-xs text-muted-foreground">Gera mensagens únicas para evitar detecção de spam</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Gera mensagens únicas combinando diferentes saudações, textos e emojis. Nenhuma mensagem será igual à anterior. O link de agendamento e a assinatura permanecem fixos.
+                            </p>
                           </div>
                           <Switch checked={variacaoTextoAtiva} onCheckedChange={setVariacaoTextoAtiva} />
                         </div>
