@@ -1,14 +1,9 @@
 // Meta Pixel events agora são disparados 100% via GTM.
 // Este hook apenas envia eventos ao dataLayer; o GTM lê e dispara o fbq().
-
-const isAdminContext = () =>
-  typeof window !== 'undefined' && window.location?.pathname?.startsWith('/admin');
+import { safeDataLayerPush } from '@/lib/trackingGuard';
 
 const pushToDataLayer = (data: Record<string, any>) => {
-  if (typeof window === 'undefined') return;
-  if (isAdminContext()) return; // Não rastrear ações dentro do painel admin
-  window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push(data);
+  safeDataLayerPush(data);
 };
 
 export const useMetaPixel = () => {
