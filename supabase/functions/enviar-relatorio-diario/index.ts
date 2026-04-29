@@ -18,25 +18,23 @@ interface Body {
 function fmt(n: number) { return n.toLocaleString("pt-BR"); }
 
 function montarMensagem(r: any): string {
-  const w = r.whatsapp; const c = r.crm; const b = r.bot;
+  const w = r.whatsapp; const c = r.crm;
   const periodo = r.periodo.inicio === r.periodo.fim
     ? r.periodo.inicio
     : `${r.periodo.inicio} a ${r.periodo.fim}`;
-  const escTaxa = b.acoes_total > 0 ? Math.round((b.escalacoes / b.acoes_total) * 100) : 0;
+  const taxaConv = c.leads_novos > 0
+    ? Math.round((c.conversoes / c.leads_novos) * 100)
+    : 0;
 
   return [
     `📊 *Relatório · ${periodo}*`,
     ``,
     `💬 *WhatsApp*`,
-    `• Total: ${fmt(w.total)} (IN ${fmt(w.mensagens_in)} / OUT ${fmt(w.mensagens_out)})`,
+    `• Total: ${fmt(w.total)} (recebidas ${fmt(w.mensagens_in)} / enviadas ${fmt(w.mensagens_out)})`,
     ``,
     `👥 *CRM*`,
     `• Novos leads: ${fmt(c.leads_novos)}`,
-    `• Conversões: ${fmt(c.conversoes)}`,
-    ``,
-    `🤖 *Bot*`,
-    `• Ações: ${fmt(b.acoes_total)}`,
-    `• Escaladas p/ humano: ${fmt(b.escalacoes)} (${escTaxa}%)`,
+    `• Conversões: ${fmt(c.conversoes)} (${taxaConv}%)`,
   ].join("\n");
 }
 
