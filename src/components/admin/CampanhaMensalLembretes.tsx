@@ -148,6 +148,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
   const [visualizarOpen, setVisualizarOpen] = useState(false);
   const [visualizandoRemessa, setVisualizandoRemessa] = useState<number | null>(null);
   const [confirmarExcluirOpen, setConfirmarExcluirOpen] = useState(false);
+  const [relatorioOpen, setRelatorioOpen] = useState(false);
 
   // Envio
   const [enviando, setEnviando] = useState(false);
@@ -1256,6 +1257,15 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                   </Button>
                 </>
               )}
+              <Button
+                data-testid="lembretes-btn-relatorio-detalhado"
+                variant="outline"
+                onClick={() => setRelatorioOpen(true)}
+                disabled={!campanha}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Ver relatório detalhado
+              </Button>
               <Button data-testid="lembretes-exportar-csv" variant="outline" onClick={exportarCSV}>
                 <Download className="h-4 w-4 mr-2" />
                 Exportar CSV
