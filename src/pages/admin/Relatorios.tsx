@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { BarChart3, MessageCircle, Users, Bot, Sparkles, Send, RefreshCw } from "lucide-react";
+import { BarChart3, MessageCircle, Users, TrendingUp, Send, RefreshCw } from "lucide-react";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
   BarChart, Bar,
@@ -16,8 +16,6 @@ interface Relatorio {
   periodo: { inicio: string; fim: string };
   whatsapp: { mensagens_in: number; mensagens_out: number; total: number; por_tipo: Record<string, number> };
   crm: { leads_novos: number; conversoes: number; funil_atual: Record<string, number> };
-  bot: { acoes_total: number; escalacoes: number; top_intencoes: Record<string, number> };
-  
 }
 
 interface SerieDia {
@@ -25,7 +23,6 @@ interface SerieDia {
   msg_in: number;
   msg_out: number;
   leads_novos: number;
-  drafts_gerados: number;
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -74,9 +71,10 @@ export default function Relatorios() {
   const tipoMensagens = relatorio
     ? Object.entries(relatorio.whatsapp.por_tipo).map(([tipo, qtd]) => ({ tipo, qtd }))
     : [];
-  const intencoes = relatorio
-    ? Object.entries(relatorio.bot.top_intencoes).map(([intencao, qtd]) => ({ intencao, qtd }))
-    : [];
+
+  const taxaConversao = relatorio && relatorio.crm.leads_novos > 0
+    ? Math.round((relatorio.crm.conversoes / relatorio.crm.leads_novos) * 100)
+    : 0;
 
   return (
     <AdminLayout>
@@ -85,7 +83,7 @@ export default function Relatorios() {
           <BarChart3 className="h-8 w-8 text-primary" />
           <div className="flex-1">
             <h1 className="text-2xl font-bold">Relatórios · WhatsApp & CRM</h1>
-            <p className="text-sm text-muted-foreground">Métricas consolidadas do período selecionado.</p>
+            <p className="text-sm text-muted-foreground">Métricas consolidadas de mensagens, leads e conversões no período.</p>
           </div>
         </div>
 
@@ -117,17 +115,31 @@ export default function Relatorios() {
 
         {relatorio && (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard icon={MessageCircle} label="Mensagens (total)" value={relatorio.whatsapp.total} sub={`${relatorio.whatsapp.mensagens_in} IN · ${relatorio.whatsapp.mensagens_out} OUT`} />
-              <StatCard icon={Users} label="Novos leads" value={relatorio.crm.leads_novos} sub={`${relatorio.crm.conversoes} conversões`} />
-              <StatCard icon={Bot} label="Ações do bot" value={relatorio.bot.acoes_total} sub={`${relatorio.bot.escalacoes} escalações p/ humano`} />
-              
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <StatCard
+                icon={MessageCircle}
+                label="Mensagens (total)"
+                value={relatorio.whatsapp.total}
+                sub={`${relatorio.whatsapp.mensagens_in} recebidas · ${relatorio.whatsapp.mensagens_out} enviadas`}
+              />
+              <StatCard
+                icon={Users}
+                label="Novos leads"
+                value={relatorio.crm.leads_novos}
+                sub={`${relatorio.crm.conversoes} convertidos em agendamento`}
+              />
+              <StatCard
+                icon={TrendingUp}
+                label="Taxa de conversão"
+                value={taxaConversao}
+                sub={`${taxaConversao}% dos leads viraram agendamento`}
+              />
             </div>
 
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Série diária</CardTitle>
-                <CardDescription>Mensagens, leads e drafts por dia</CardDescription>
+                <CardDescription>Mensagens recebidas/enviadas e novos leads por dia</CardDescription>
               </CardHeader>
               <CardContent style={{ height: 320 }}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -137,49 +149,37 @@ export default function Relatorios() {
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="msg_in" stroke="hsl(var(--primary))" name="Msg IN" />
-                    <Line type="monotone" dataKey="msg_out" stroke="hsl(var(--accent))" name="Msg OUT" />
-                    <Line type="monotone" dataKey="leads_novos" stroke="#10b981" name="Leads" />
-                    <Line type="monotone" dataKey="drafts_gerados" stroke="#f59e0b" name="Drafts" />
+                    <Line type="monotone" dataKey="msg_in" stroke="hsl(var(--primary))" name="Msg recebidas" />
+                    <Line type="monotone" dataKey="msg_out" stroke="hsl(var(--accent))" name="Msg enviadas" />
+                    <Line type="monotone" dataKey="leads_novos" stroke="#10b981" name="Novos leads" />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader><CardTitle className="text-base">Mensagens por tipo</CardTitle></CardHeader>
-                <CardContent style={{ height: 280 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={tipoMensagens}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="tipo" tick={{ fontSize: 11 }} angle={-25} textAnchor="end" height={70} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Bar dataKey="qtd" fill="hsl(var(--primary))" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader><CardTitle className="text-base">Top intenções (bot)</CardTitle></CardHeader>
-                <CardContent style={{ height: 280 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={intencoes} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" tick={{ fontSize: 12 }} />
-                      <YAxis dataKey="intencao" type="category" tick={{ fontSize: 11 }} width={120} />
-                      <Tooltip />
-                      <Bar dataKey="qtd" fill="hsl(var(--accent))" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Mensagens por tipo</CardTitle>
+                <CardDescription>Distribuição entre confirmações, lembretes, manuais, etc.</CardDescription>
+              </CardHeader>
+              <CardContent style={{ height: 320 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={tipoMensagens}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="tipo" tick={{ fontSize: 11 }} angle={-25} textAnchor="end" height={70} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Bar dataKey="qtd" fill="hsl(var(--primary))" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
 
             <Card>
-              <CardHeader><CardTitle className="text-base">Funil CRM (estado atual)</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="text-base">Funil CRM (estado atual)</CardTitle>
+                <CardDescription>Distribuição de todos os agendamentos pelo status do funil</CardDescription>
+              </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {Object.entries(relatorio.crm.funil_atual).map(([s, q]) => (
