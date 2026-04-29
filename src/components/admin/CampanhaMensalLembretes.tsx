@@ -1272,6 +1272,9 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
               </Button>
             </div>
 
+            {/* Configurações Avançadas de Envio (compartilhadas com outros módulos) */}
+            <ConfiguracoesAvancadasEnvio />
+
             {/* Progresso */}
             {enviando && (
               <div
