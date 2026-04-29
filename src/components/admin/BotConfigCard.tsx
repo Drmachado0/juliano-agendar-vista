@@ -4,14 +4,16 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, Bot } from "lucide-react";
+import { Loader2, Bot, AlertTriangle } from "lucide-react";
 import { obterBotConfig, atualizarBotConfig, BotConfig } from "@/services/botPausa";
 
 const BotConfigCard = () => {
   const [cfg, setCfg] = useState<BotConfig>({
     pausa_automatica_ativa: true,
     pausa_automatica_minutos: 30,
+    bot_global_ativo: true,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -37,11 +39,10 @@ const BotConfigCard = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Bot className="h-5 w-5 text-primary" />
-          Bot — Pausa automática
+          Bot — Automação WhatsApp
         </CardTitle>
         <CardDescription>
-          Quando alguém da equipe responde uma conversa pelo painel, o bot fica em silêncio
-          por um período. Mensagens automáticas do sistema (lembretes, confirmações) não disparam pausa.
+          Controle global da automação e regras de pausa quando a equipe responde.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -51,6 +52,35 @@ const BotConfigCard = () => {
           </div>
         ) : (
           <>
+            {/* Toggle global */}
+            <div className="flex items-center justify-between gap-4 p-4 rounded-lg border border-border bg-muted/30">
+              <div>
+                <Label htmlFor="bot-global" className="text-sm font-semibold">
+                  Automação global ativa
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Quando desligado, o bot não responde nenhuma conversa, independente das regras
+                  individuais. Use para emergências ou manutenção.
+                </p>
+              </div>
+              <Switch
+                id="bot-global"
+                checked={cfg.bot_global_ativo}
+                onCheckedChange={(v) => setCfg((p) => ({ ...p, bot_global_ativo: v }))}
+              />
+            </div>
+
+            {!cfg.bot_global_ativo && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Automação global desligada</AlertTitle>
+                <AlertDescription>
+                  Nenhum paciente está recebendo respostas automáticas. Os controles individuais
+                  por conversa só voltam a ter efeito quando esta opção for reativada.
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="flex items-center justify-between gap-4">
               <div>
                 <Label htmlFor="pausa-ativa" className="text-sm font-medium">

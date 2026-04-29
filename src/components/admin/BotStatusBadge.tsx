@@ -9,7 +9,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Bot, BotOff, Pause, Play, ChevronDown } from "lucide-react";
+import { Bot, BotOff, Pause, Play, ChevronDown, PowerOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -18,6 +18,8 @@ import {
   pausarBot,
   reativarBot,
 } from "@/services/botPausa";
+import { useBotGlobalStatus } from "@/hooks/useBotGlobalStatus";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Props {
   agendamentoId: string;
