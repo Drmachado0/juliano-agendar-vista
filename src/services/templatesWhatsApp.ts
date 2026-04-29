@@ -173,6 +173,21 @@ Vimos seu interesse em agendar uma {{tipo_atendimento}} no local *{{local}}*.
 Qual data e horário seriam melhores para você? 📅
 
 Aguardamos seu retorno! 🙏`,
+
+  lembrete_anual: `Olá, {{nome}}! 👋
+
+Já faz 1 ano desde sua última consulta oftalmológica conosco.
+
+Manter seus exames em dia é fundamental para a saúde dos seus olhos. 👀
+
+Gostaria de agendar seu retorno? Podemos encontrar o melhor horário para você.
+
+📱 Agende pelo WhatsApp ou pelo nosso site:
+👉 https://drjulianomachado.com.br/agendar
+
+Atenciosamente,
+Dr. Juliano Machado
+Oftalmologia`,
 };
 
 // Mapeamento de ícones por tipo de template
@@ -183,4 +198,5 @@ export const tipoIcones: Record<string, string> = {
   resposta_cancelamento: '❌',
   reagendamento: '🔄',
   boas_vindas_lead: '👋',
+  lembrete_anual: '🔔',
 };
