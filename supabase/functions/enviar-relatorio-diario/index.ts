@@ -18,7 +18,7 @@ interface Body {
 function fmt(n: number) { return n.toLocaleString("pt-BR"); }
 
 function montarMensagem(r: any): string {
-  const w = r.whatsapp; const c = r.crm; const b = r.bot; const h = r.hermes;
+  const w = r.whatsapp; const c = r.crm; const b = r.bot;
   const periodo = r.periodo.inicio === r.periodo.fim
     ? r.periodo.inicio
     : `${r.periodo.inicio} a ${r.periodo.fim}`;
@@ -37,11 +37,6 @@ function montarMensagem(r: any): string {
     `🤖 *Bot*`,
     `• Ações: ${fmt(b.acoes_total)}`,
     `• Escaladas p/ humano: ${fmt(b.escalacoes)} (${escTaxa}%)`,
-    ``,
-    `✨ *Hermes Copiloto*`,
-    `• Drafts: ${fmt(h.drafts_gerados)}`,
-    `• Aceitos/editados: ${fmt(h.drafts_aceitos + h.drafts_editados)} (${h.taxa_aceitacao}%)`,
-    `• Descartados: ${fmt(h.drafts_descartados)}`,
   ].join("\n");
 }
 
