@@ -104,6 +104,26 @@ serve(async (req) => {
           continue;
         }
 
+        // GUARD #4: bot pausado
+        if (isBotPaused(agendamento)) {
+          console.log(`[Confirmação] Agendamento ${agendamento.id} com bot pausado — pulando`);
+          continue;
+        }
+
+        // GUARD #1: número conhecido como sem WhatsApp
+        if (await isKnownInvalidWhatsapp(supabase, agendamento.telefone_whatsapp)) {
+          console.warn(`[Confirmação] ${agendamento.id} sem WhatsApp (cache) — marcando falha`);
+          await supabase
+            .from('agendamentos')
+            .update({
+              confirmation_status: 'falha_envio',
+              confirmation_sent_at: new Date().toISOString(),
+            })
+            .eq('id', agendamento.id);
+          errorCount++;
+          continue;
+        }
+
         console.log(`[Confirmação] Processando agendamento ${agendamento.id} - ${agendamento.nome_completo}`);
 
         // Montar mensagem de confirmação
@@ -117,20 +137,24 @@ serve(async (req) => {
         // Enviar mensagem via Evolution API
         const result = await sendWhatsappTextMessage(agendamento.telefone_whatsapp, message);
 
-        // Registrar log na tabela mensagens_whatsapp
+        // Item #5: persistir sanitizedResponse (sem token/apikey)
         const logData: Record<string, unknown> = {
           agendamento_id: agendamento.id,
           telefone: normalizePhoneNumber(agendamento.telefone_whatsapp),
           direcao: 'OUT',
           conteudo: message,
           tipo_mensagem: 'confirmacao_automatica',
-          status_envio: result.success ? 'enviado' : 'erro',
+          status_envio: result.success ? (result.deliveryStatus ?? 'enviado') : 'erro',
           mensagem_externa_id: result.messageId || null,
-          payload: result.rawResponse || null,
+          payload: sanitizePayload({
+            evolution_status: result.evolutionStatus ?? null,
+            response: result.sanitizedResponse ?? null,
+          }) as any,
           error_message: result.errorMessage || null,
         };
 
         await supabase.from('mensagens_whatsapp').insert(logData);
+
 
         // Atualizar status do agendamento
         const updateData: Record<string, unknown> = {
