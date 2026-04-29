@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { gerarMensagemDoTemplate, formatarData, formatarHora } from "../_shared/templateRenderer.ts";
+import { sendWhatsappTextMessage, normalizePhoneNumber, sanitizePayload } from "../_shared/evolutionApiClient.ts";
+import { isBotPaused, isKnownInvalidWhatsapp } from "../_shared/whatsappGuards.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,7 +10,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -16,42 +17,24 @@ serve(async (req) => {
   console.log("[lembrete-consulta] Iniciando processamento de lembretes...");
 
   try {
-    // Validate cron secret for authentication
     const cronSecret = Deno.env.get("CRON_SECRET");
     const authHeader = req.headers.get("authorization");
-    
+
     if (!cronSecret) {
-      console.error("[lembrete-consulta] CRON_SECRET não configurado");
-      return new Response(
-        JSON.stringify({ error: "Configuração de segurança ausente" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Configuração de segurança ausente" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-    
-    // Check Authorization header for Bearer token
-    const expectedAuth = `Bearer ${cronSecret}`;
-    if (authHeader !== expectedAuth) {
-      console.error("[lembrete-consulta] Tentativa de acesso não autorizado");
-      return new Response(
-        JSON.stringify({ error: "Não autorizado" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const evolutionApiUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
-    const evolutionApiToken = Deno.env.get("EVOLUTION_API_TOKEN");
-    const evolutionInstance = Deno.env.get("EVOLUTION_API_INSTANCE");
-
-    if (!evolutionApiUrl || !evolutionApiToken) {
-      console.error("[lembrete-consulta] Configuração da Evolution API ausente");
-      return new Response(
-        JSON.stringify({ error: "Configuração da Evolution API ausente" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Buscar consultas de amanhã
@@ -67,37 +50,60 @@ serve(async (req) => {
       .eq("data_agendamento", tomorrowStr)
       .eq("aceita_contato_whatsapp_email", true);
 
-    if (fetchError) {
-      console.error("[lembrete-consulta] Erro ao buscar agendamentos:", fetchError);
-      throw fetchError;
-    }
-
-    console.log(`[lembrete-consulta] Encontradas ${agendamentos?.length || 0} consultas para amanhã`);
+    if (fetchError) throw fetchError;
 
     if (!agendamentos || agendamentos.length === 0) {
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: "Nenhuma consulta para amanhã",
-          count: 0 
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: true, message: "Nenhuma consulta para amanhã", count: 0 }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
+    // GUARD #3: dedup — buscar quem já recebeu lembrete_24h
+    const ids = agendamentos.map((a) => a.id);
+    const { data: jaRecebidos } = await supabase
+      .from("mensagens_whatsapp")
+      .select("agendamento_id")
+      .eq("tipo_mensagem", "lembrete_24h")
+      .eq("direcao", "OUT")
+      .in("agendamento_id", ids);
+    const idsJaRecebidos = new Set((jaRecebidos || []).map((m: any) => m.agendamento_id));
+
     let enviados = 0;
     let erros = 0;
+    let pulados = 0;
 
     for (const agendamento of agendamentos) {
       try {
-        // Formatar telefone
-        let telefone = agendamento.telefone_whatsapp.replace(/\D/g, "");
-        if (!telefone.startsWith("55")) {
-          telefone = "55" + telefone;
+        // GUARD #3: já recebeu lembrete
+        if (idsJaRecebidos.has(agendamento.id)) {
+          console.log(`[lembrete-consulta] ⏭️  ${agendamento.id} já recebeu lembrete_24h`);
+          pulados++;
+          continue;
         }
 
-        // Gerar mensagem do template do banco
-        const mensagem = await gerarMensagemDoTemplate('lembrete_24h', {
+        // GUARD #6: já confirmou presença
+        if (agendamento.confirmation_status === "confirmado") {
+          console.log(`[lembrete-consulta] ⏭️  ${agendamento.id} já confirmado`);
+          pulados++;
+          continue;
+        }
+
+        // GUARD #4: bot pausado
+        if (isBotPaused(agendamento)) {
+          console.log(`[lembrete-consulta] ⏭️  ${agendamento.id} com bot pausado`);
+          pulados++;
+          continue;
+        }
+
+        // GUARD #1: número conhecido como sem WhatsApp
+        if (await isKnownInvalidWhatsapp(supabase, agendamento.telefone_whatsapp)) {
+          console.warn(`[lembrete-consulta] ⛔ ${agendamento.id} número sem WhatsApp (cache)`);
+          pulados++;
+          continue;
+        }
+
+        const mensagem = await gerarMensagemDoTemplate("lembrete_24h", {
           nome: agendamento.nome_completo,
           data: formatarData(tomorrowStr),
           hora: formatarHora(agendamento.hora_agendamento),
@@ -106,66 +112,54 @@ serve(async (req) => {
           link_status: `https://drjulianomachado.com/status/${agendamento.id}`,
         });
 
-        console.log(`[lembrete-consulta] Enviando lembrete para: ${telefone}`);
+        // Item #2: usa cliente compartilhado (sanitização + status mapeado)
+        const result = await sendWhatsappTextMessage(agendamento.telefone_whatsapp, mensagem);
+        const normalizedPhone = normalizePhoneNumber(agendamento.telefone_whatsapp);
 
-        // Enviar via Evolution API
-        const evolutionResponse = await fetch(`${evolutionApiUrl}/message/sendText/${evolutionInstance}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": evolutionApiToken,
-          },
-          body: JSON.stringify({
-            number: telefone,
-            text: mensagem,
-          }),
-        });
-
-        if (!evolutionResponse.ok) {
-          const errorText = await evolutionResponse.text();
-          console.error(`[lembrete-consulta] Erro Evolution para ${telefone}:`, errorText);
-          erros++;
-          continue;
-        }
-
-        const evolutionData = await evolutionResponse.json();
-        console.log(`[lembrete-consulta] Lembrete enviado para ${telefone}:`, evolutionData);
-
-        // Salvar mensagem no histórico
         await supabase.from("mensagens_whatsapp").insert({
           agendamento_id: agendamento.id,
-          telefone: telefone,
+          telefone: normalizedPhone,
           direcao: "OUT",
           conteudo: mensagem,
-          status_envio: "enviado",
           tipo_mensagem: "lembrete_24h",
-          mensagem_externa_id: evolutionData?.key?.id || null,
+          status_envio: result.success ? (result.deliveryStatus ?? "enviado") : "erro",
+          mensagem_externa_id: result.messageId || null,
+          error_message: result.errorMessage || null,
+          payload: sanitizePayload({
+            evolution_status: result.evolutionStatus ?? null,
+            response: result.sanitizedResponse ?? null,
+          }) as any,
         });
 
-        enviados++;
+        if (result.success) {
+          enviados++;
+        } else {
+          erros++;
+          console.error(`[lembrete-consulta] Falha ${normalizedPhone}: ${result.errorMessage}`);
+        }
       } catch (err) {
-        console.error(`[lembrete-consulta] Erro ao processar agendamento ${agendamento.id}:`, err);
+        console.error(`[lembrete-consulta] Erro agendamento ${agendamento.id}:`, err);
         erros++;
       }
     }
 
-    console.log(`[lembrete-consulta] Finalizado: ${enviados} enviados, ${erros} erros`);
+    console.log(`[lembrete-consulta] Final: ${enviados} enviados, ${erros} erros, ${pulados} pulados`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Lembretes processados: ${enviados} enviados, ${erros} erros`,
         enviados,
         erros,
+        pulados,
         total: agendamentos.length,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error: any) {
     console.error("[lembrete-consulta] Erro geral:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
