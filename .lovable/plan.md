@@ -1,76 +1,67 @@
+# Atualizar Evolution API para Hermes2 + Card de Configuração visível
 
 ## Objetivo
+1. Trocar a instância Evolution de `Hermes` para **`Hermes2`** e a API key para **`82E7794B1DCA-4ACF-B6A7-EB80FFD70C70`**.
+2. Criar um novo card **"Configuração da Instância"** dentro de `/admin/configuracoes/evolution` que exibe (e permite atualizar) os valores atuais — facilitando criar/conferir credenciais sem precisar abrir o painel de secrets.
 
-Implementar **Variação Automática de Mensagens** nos Lembretes Anuais (`/admin/lembretes`) idêntica ao sistema da página de Avaliações: combinar aleatoriamente saudações, blocos de texto, CTAs e emojis para que **nenhuma mensagem seja igual à anterior**, evitando bloqueios por padrão repetido (anti-spam WhatsApp).
+## Arquitetura — leitura importante
 
-## Conflito com regra anterior — atenção
+Hoje a integração usa **3 secrets** das Edge Functions (Supabase Secrets), consumidas por 11 edge functions via `Deno.env.get(...)`:
 
-Hoje o Lembretes intencionalmente **só varia a saudação** (linha 65-132 de `Lembretes.tsx`) por causa da sua instrução anterior: *"sempre siga o template das configurações, nunca mude o link, apenas as frases"*.
+- `EVOLUTION_API_BASE_URL` (ex.: `https://secretaria-evolution.cloudfy.live`)
+- `EVOLUTION_API_INSTANCE` (atual: `Hermes` → novo: `Hermes2`)
+- `EVOLUTION_API_TOKEN` (atual: oculto → novo: `82E7794B1DCA-4ACF-B6A7-EB80FFD70C70`)
 
-Para atender o pedido atual sem violar aquela regra, vou:
-- **Variar saudação + corpo + CTA + emojis** (frases) — como em Avaliações.
-- **Manter intactos**: o link de agendamento (`https://drjulianomachado.com.br/agendar`) e a assinatura ("Dr. Juliano Machado / Oftalmologia").
-- A variação fica **opt-in via toggle** "Variação de Texto Ativa" (já existe na UI). Quando **desligado**, o template salvo em /admin/whatsapp é usado puro (comportamento atual preservado).
-- Quando **ligado**, o template salvo é **ignorado** e a mensagem é montada por composição aleatória (igual Avaliações).
+Esses valores são **somente backend** (server-side) e não podem ser lidos diretamente pelo frontend. Para o card "ver e editar" funcionar com segurança, vamos criar uma **edge function nova** que age como ponte de leitura/escrita.
 
-Isso preserva: link fixo, regra anti-spam, e o template configurado continua sendo a fonte quando a variação está desativada.
+## Passo 1 — Atualizar os secrets
 
-## Mudanças
+Vou atualizar via tool de secrets:
+- `EVOLUTION_API_INSTANCE` = `Hermes2`
+- `EVOLUTION_API_TOKEN` = `82E7794B1DCA-4ACF-B6A7-EB80FFD70C70`
 
-### 1) `src/pages/admin/Lembretes.tsx`
+(O `EVOLUTION_API_BASE_URL` permanece igual ao atual.)
 
-Substituir a função `aplicarVariacaoSeguraNoTemplate` por uma `gerarMensagemVariadaLembrete(nome, ultimaMensagem?)` nos moldes de `gerarMensagemVariada` em Avaliações:
+Isso já faz com que **todas as 11 edge functions** passem a usar a nova instância Hermes2 imediatamente, sem precisar alterar código.
 
-- Adicionar arrays no topo do arquivo:
-  - `SAUDACOES_LEMBRETE` (expandir o atual)
-  - `BLOCOS_ABERTURA_LEMBRETE` — ex.: "Já faz cerca de 1 ano desde sua última consulta.", "Notamos que sua última visita foi há aproximadamente 1 ano.", "Faz quase um ano desde nosso último encontro.", etc.
-  - `BLOCOS_IMPORTANCIA_LEMBRETE` — ex.: "Manter os exames em dia é essencial para a saúde dos seus olhos.", "Acompanhamento anual é fundamental para prevenir problemas oculares.", etc.
-  - `CTAS_LEMBRETE` — ex.: "Gostaria de agendar seu retorno?", "Posso te ajudar a marcar uma nova consulta?", "Que tal agendarmos seu retorno?", etc.
-  - `EMOJIS_OPCIONAIS_LEMBRETE` — `["👀", "💙", "✨", "🙏", "👨‍⚕️", ""]`
-  - Constante `LINK_AGENDAMENTO = "https://drjulianomachado.com.br/agendar"` (FIXO, nunca varia).
+## Passo 2 — Edge function nova: `evolution-config`
 
-- Função monta a mensagem no formato:
-  ```
-  {saudacao}, {nome}! [emoji?]
+`supabase/functions/evolution-config/index.ts` — protegida por JWT admin (verifica `has_role(uid, 'admin')`).
 
-  {bloco_abertura} {bloco_importancia}
+- `GET` (action `read`): retorna `{ baseUrl, instance, tokenMasked }` onde `tokenMasked` mostra apenas os 4 primeiros e 4 últimos caracteres (ex.: `82E7…70C70`). Nunca expõe o token completo.
+- `POST` (action `update`): recebe `{ baseUrl?, instance?, token? }`, valida formato e faz teste rápido de `connectionState` na Evolution API com os novos valores antes de aceitar. Se válido, atualiza os secrets via `Deno.env`/Supabase Management API.
 
-  {cta}
-  📱 Agende pelo WhatsApp ou pelo nosso site:
-  👉 {LINK_AGENDAMENTO}
+> Observação importante: o Supabase **não permite** atualizar secrets em runtime via SDK por design de segurança. Portanto a função `update` apresentará as instruções e um botão direto para a UI de secrets do Lovable Cloud, mas a **leitura mascarada funciona normalmente** — o que já cobre seu pedido de "conferir com maior facilidade".
 
-  Atenciosamente,
-  Dr. Juliano Machado
-  Oftalmologia
-  ```
-- Loop `do/while` (até 10 tentativas) garantindo `mensagem !== ultimaMensagem`.
+## Passo 3 — Novo card no `/admin/configuracoes/evolution`
 
-### 2) Integração no fluxo de envio (mesmo arquivo)
+Adicionar acima do card "Status da Conexão" um card **"Configuração da Instância"** com:
 
-- No envio em lote (linha ~541), quando `variacaoTextoAtiva` for `true`, usar `gerarMensagemVariadaLembrete(nome, ultimaMensagemEnviada)` em vez de aplicar variação sobre o template salvo. Manter referência da última mensagem para passar ao próximo envio (evita duas iguais consecutivas).
-- Quando `variacaoTextoAtiva` for `false`, manter o comportamento atual: usar o template configurado em /admin/whatsapp puro, apenas substituindo `{{nome}}`.
+- **Base URL**: campo readonly + botão copiar
+- **Instância**: campo readonly mostrando `Hermes2` + botão copiar
+- **API Key**: campo readonly mascarado (`82E7••••••••70C70`) + botão "mostrar/ocultar" (revela por 10s) + botão copiar
+- Botão **"Atualizar credenciais"** que abre dialog explicando como editar via Lovable Cloud → Backend → Secrets, com link direto.
+- Botão **"Testar credenciais"** que chama `verificar-status-evolution` e mostra resultado (verde se conectou, vermelho se 401/404).
 
-### 3) Preview na UI
+Layout no estilo do card de Status atual (mesmo padrão visual dark/gold).
 
-- Atualizar `mensagemPreviewVariada` para chamar a nova função.
-- Botão "Gerar nova variação" (já existe) chama `gerarMensagemVariadaLembrete("Maria", mensagemPreviewVariada)`.
-- No card de variação (linha ~1525), adicionar texto explicativo idêntico ao de Avaliações: *"Gera mensagens únicas combinando diferentes saudações, textos e emojis. Nenhuma mensagem será igual à anterior."*
-- Adicionar Badge "Ativa/Inativa" ao lado do switch (espelhar Avaliações).
+## Passo 4 — Atualizar memória do projeto
 
-### 4) Campanha mensal (`CampanhaMensalLembretes.tsx`)
-
-Verificar se a campanha mensal usa a mesma flag `variacaoTextoAtiva` — se sim, exportar `gerarMensagemVariadaLembrete` (ou movê-la para um helper compartilhado `src/lib/variacaoMensagensLembrete.ts`) e aplicar o mesmo padrão na geração de mensagens das 4 remessas.
-
-## Garantias
-
-- **Link nunca muda** — `LINK_AGENDAMENTO` é constante.
-- **Assinatura nunca muda** — texto fixo no final.
-- **Toggle off = template das configurações é respeitado integralmente** (regra antiga preservada).
-- **Toggle on = variação completa estilo Avaliações** (pedido novo).
-- Loop anti-duplicata garante mensagens consecutivas diferentes.
+Atualizar `mem://infrastructure/whatsapp-evolution-api-architecture` registrando:
+- Instância atual = `Hermes2`
+- Existência do card de configuração visível em `/admin/configuracoes/evolution`
 
 ## Arquivos afetados
 
-- `src/pages/admin/Lembretes.tsx` (principal)
-- `src/components/admin/CampanhaMensalLembretes.tsx` (se compartilhar a flag)
-- (opcional) novo `src/lib/variacaoMensagensLembrete.ts` para reuso
+- **Secrets atualizados**: `EVOLUTION_API_INSTANCE`, `EVOLUTION_API_TOKEN`
+- **Criados**:
+  - `supabase/functions/evolution-config/index.ts`
+- **Editados**:
+  - `src/pages/admin/ConfiguracoesEvolution.tsx` (novo card)
+  - `src/hooks/useEvolutionStatus.ts` (adicionar método `getConfig()` opcional)
+  - `mem://infrastructure/whatsapp-evolution-api-architecture`
+
+## Resultado final
+
+- Toda comunicação WhatsApp passa a usar `Hermes2` com a nova key automaticamente.
+- Você terá um painel visível em `/admin/configuracoes/evolution` mostrando qual instância e qual key (mascarada) estão em uso, com botão de teste — sem precisar nunca mais abrir a UI de secrets só para conferir.
