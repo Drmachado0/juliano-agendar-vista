@@ -1471,12 +1471,17 @@ const Lembretes = () => {
                       {/* Variação de Texto */}
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <div>
+                          <div className="flex-1 pr-3">
                             <h4 className="text-sm font-medium flex items-center gap-2">
                               <Shuffle className="h-4 w-4 text-muted-foreground" />
-                              Variação Automática de Texto
+                              Variação Automática de Mensagens
+                              <Badge variant={variacaoTextoAtiva ? "default" : "secondary"} className="text-xs">
+                                {variacaoTextoAtiva ? "Ativa" : "Inativa"}
+                              </Badge>
                             </h4>
-                            <p className="text-xs text-muted-foreground">Gera mensagens únicas para evitar detecção de spam</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Gera mensagens únicas combinando diferentes saudações, textos e emojis. Nenhuma mensagem será igual à anterior. O link de agendamento e a assinatura permanecem fixos.
+                            </p>
                           </div>
                           <Switch checked={variacaoTextoAtiva} onCheckedChange={setVariacaoTextoAtiva} />
                         </div>
