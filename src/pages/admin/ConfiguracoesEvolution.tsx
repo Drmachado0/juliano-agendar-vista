@@ -578,7 +578,7 @@ const ConfiguracoesEvolution = () => {
                 <div>
                   <h4 className="font-medium">Selecione a instância</h4>
                   <p className="text-sm text-muted-foreground">
-                    Na lista de instâncias, clique na instância <Badge variant="outline">{status?.instanceName || "Secretaria"}</Badge> para abrir as opções.
+                    Na lista de instâncias, clique na instância <span className="inline-flex items-center rounded-md border border-border bg-background px-2 py-0.5 text-xs font-medium">{status?.instanceName || "Secretaria"}</span> para abrir as opções.
                   </p>
                 </div>
               </div>
