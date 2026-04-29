@@ -515,9 +515,10 @@ const Lembretes = () => {
       const lembrete = lembretesParaEnviar[i];
       const primeiroNome = lembrete.primeiro_nome || lembrete.nome.split(' ')[0];
 
-      // Generate message
-      const mensagem = variacaoTextoAtiva 
-        ? gerarMensagemLembreteVariada(primeiroNome, ultimaMensagem)
+      // Generate message — sempre usa o template configurado.
+      // Quando a variação está ativa, apenas a saudação é trocada.
+      const mensagem = variacaoTextoAtiva
+        ? aplicarVariacaoSeguraNoTemplate(template, primeiroNome, ultimaMensagem)
         : renderizarTemplate(primeiroNome);
       ultimaMensagem = mensagem;
 
