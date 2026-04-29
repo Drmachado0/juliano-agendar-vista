@@ -1,123 +1,76 @@
+
 ## Objetivo
 
-Resolver 3 problemas no editor de **Templates de Mensagens WhatsApp** (`/admin/whatsapp` → aba Templates):
+Implementar **Variação Automática de Mensagens** nos Lembretes Anuais (`/admin/lembretes`) idêntica ao sistema da página de Avaliações: combinar aleatoriamente saudações, blocos de texto, CTAs e emojis para que **nenhuma mensagem seja igual à anterior**, evitando bloqueios por padrão repetido (anti-spam WhatsApp).
 
-1. **Preview ilegível**: a bolha verde do preview está com texto branco sobre fundo verde claro — o usuário não consegue ler.
-2. **Falta o template "Lembrete Anual"**: o template usado em `/admin/lembretes` (mensagem de retorno após 1 ano) não aparece no editor.
-3. **Não há como testar**: usuário precisa enviar a mensagem renderizada para um número real para validar.
+## Conflito com regra anterior — atenção
 
----
+Hoje o Lembretes intencionalmente **só varia a saudação** (linha 65-132 de `Lembretes.tsx`) por causa da sua instrução anterior: *"sempre siga o template das configurações, nunca mude o link, apenas as frases"*.
+
+Para atender o pedido atual sem violar aquela regra, vou:
+- **Variar saudação + corpo + CTA + emojis** (frases) — como em Avaliações.
+- **Manter intactos**: o link de agendamento (`https://drjulianomachado.com.br/agendar`) e a assinatura ("Dr. Juliano Machado / Oftalmologia").
+- A variação fica **opt-in via toggle** "Variação de Texto Ativa" (já existe na UI). Quando **desligado**, o template salvo em /admin/whatsapp é usado puro (comportamento atual preservado).
+- Quando **ligado**, o template salvo é **ignorado** e a mensagem é montada por composição aleatória (igual Avaliações).
+
+Isso preserva: link fixo, regra anti-spam, e o template configurado continua sendo a fonte quando a variação está desativada.
 
 ## Mudanças
 
-### 1. Corrigir o Preview da Mensagem
+### 1) `src/pages/admin/Lembretes.tsx`
 
-Arquivo: `src/components/admin/TemplatesWhatsAppTab.tsx`
+Substituir a função `aplicarVariacaoSeguraNoTemplate` por uma `gerarMensagemVariadaLembrete(nome, ultimaMensagem?)` nos moldes de `gerarMensagemVariada` em Avaliações:
 
-Atualmente o `<pre>` usa `text-foreground`, que no tema escuro vira branco — invisível sobre o fundo verde claro `#e7ffd8`. Vamos forçar cores fixas estilo WhatsApp para o balão (independente do tema):
+- Adicionar arrays no topo do arquivo:
+  - `SAUDACOES_LEMBRETE` (expandir o atual)
+  - `BLOCOS_ABERTURA_LEMBRETE` — ex.: "Já faz cerca de 1 ano desde sua última consulta.", "Notamos que sua última visita foi há aproximadamente 1 ano.", "Faz quase um ano desde nosso último encontro.", etc.
+  - `BLOCOS_IMPORTANCIA_LEMBRETE` — ex.: "Manter os exames em dia é essencial para a saúde dos seus olhos.", "Acompanhamento anual é fundamental para prevenir problemas oculares.", etc.
+  - `CTAS_LEMBRETE` — ex.: "Gostaria de agendar seu retorno?", "Posso te ajudar a marcar uma nova consulta?", "Que tal agendarmos seu retorno?", etc.
+  - `EMOJIS_OPCIONAIS_LEMBRETE` — `["👀", "💙", "✨", "🙏", "👨‍⚕️", ""]`
+  - Constante `LINK_AGENDAMENTO = "https://drjulianomachado.com.br/agendar"` (FIXO, nunca varia).
 
-- Fundo: `#e7ffd8` (claro) / `#005c4b` (escuro)
-- Texto: `#111` (claro) / `#e9edef` (escuro)
-- Hora: cinza neutro fixo
-- Renderizar **markdown leve do WhatsApp**: `*negrito*` vira `<strong>`, quebras de linha preservadas, e `https://...` vira link clicável. Isso deixa o preview muito mais próximo do que o paciente realmente verá.
-- Adicionar mini header da bolha (nome do contato simulado: "Paciente") para dar contexto.
+- Função monta a mensagem no formato:
+  ```
+  {saudacao}, {nome}! [emoji?]
 
-### 2. Adicionar template "Lembrete Anual"
+  {bloco_abertura} {bloco_importancia}
 
-Hoje a página `/admin/lembretes` usa um template fixo no código (`TEMPLATE_LEMBRETE_PADRAO`). Vamos:
+  {cta}
+  📱 Agende pelo WhatsApp ou pelo nosso site:
+  👉 {LINK_AGENDAMENTO}
 
-**a) Migration** — inserir o registro na tabela `templates_whatsapp`:
+  Atenciosamente,
+  Dr. Juliano Machado
+  Oftalmologia
+  ```
+- Loop `do/while` (até 10 tentativas) garantindo `mensagem !== ultimaMensagem`.
 
-- `tipo`: `lembrete_anual`
-- `nome`: "Lembrete Anual de Retorno"
-- `descricao`: "Mensagem enviada a pacientes 1 ano após a última consulta"
-- `variaveis_disponiveis`: `['{{nome}}']`
-- `conteudo`: o texto atual usado em `Lembretes.tsx` (com `{{nome}}`)
-- `ativo`: true
+### 2) Integração no fluxo de envio (mesmo arquivo)
 
-**b) Atualizar `src/services/templatesWhatsApp.ts`**:
-- Incluir `lembrete_anual` em `templatesPadrao` (fallback)
-- Incluir `lembrete_anual: '🔔'` em `tipoIcones`
+- No envio em lote (linha ~541), quando `variacaoTextoAtiva` for `true`, usar `gerarMensagemVariadaLembrete(nome, ultimaMensagemEnviada)` em vez de aplicar variação sobre o template salvo. Manter referência da última mensagem para passar ao próximo envio (evita duas iguais consecutivas).
+- Quando `variacaoTextoAtiva` for `false`, manter o comportamento atual: usar o template configurado em /admin/whatsapp puro, apenas substituindo `{{nome}}`.
 
-**c) Atualizar `src/pages/admin/Lembretes.tsx`**:
-- Carregar o template do banco via `buscarTemplatePorTipo('lembrete_anual')` no mount
-- Usar o template do banco como valor inicial de `template`, mantendo o `TEMPLATE_LEMBRETE_PADRAO` apenas como fallback se a busca falhar
-- Assim, qualquer edição feita no editor de templates passa a refletir automaticamente nos lembretes anuais
+### 3) Preview na UI
 
-**d) Atualizar `supabase/functions/_shared/templateRenderer.ts`**:
-- Adicionar `lembrete_anual` em `templatesPadrao` para que edge functions futuras também possam usar.
+- Atualizar `mensagemPreviewVariada` para chamar a nova função.
+- Botão "Gerar nova variação" (já existe) chama `gerarMensagemVariadaLembrete("Maria", mensagemPreviewVariada)`.
+- No card de variação (linha ~1525), adicionar texto explicativo idêntico ao de Avaliações: *"Gera mensagens únicas combinando diferentes saudações, textos e emojis. Nenhuma mensagem será igual à anterior."*
+- Adicionar Badge "Ativa/Inativa" ao lado do switch (espelhar Avaliações).
 
-### 3. Card de Envio de Teste
+### 4) Campanha mensal (`CampanhaMensalLembretes.tsx`)
 
-Novo bloco abaixo do "Preview da Mensagem" em `TemplatesWhatsAppTab.tsx`:
+Verificar se a campanha mensal usa a mesma flag `variacaoTextoAtiva` — se sim, exportar `gerarMensagemVariadaLembrete` (ou movê-la para um helper compartilhado `src/lib/variacaoMensagensLembrete.ts`) e aplicar o mesmo padrão na geração de mensagens das 4 remessas.
 
-**Componentes UI:**
-- Título: "Enviar Teste"
-- `Select` para escolher qual template enviar (lista todos os templates ativos, default = template atualmente selecionado)
-- `Input` para o número de telefone (com placeholder "Ex: 5591999999999" e validação básica de 10–13 dígitos)
-- `Button` "Enviar Teste" com ícone `Send`
-- Toast de sucesso/erro
-- Aviso pequeno: "A mensagem será enviada com dados de exemplo (mesmo do preview)."
+## Garantias
 
-**Lógica:**
-- Renderiza o `editedContent` (não o salvo) com `dadosExemplo`, para o usuário poder testar mudanças antes de salvar
-- Sanitiza o telefone: remove tudo que não é dígito, garante que comece com `55` (DDI Brasil) se tiver 10–11 dígitos
-- Chama `enviarMensagemWhatsApp(telefone, mensagemRenderizada, { campaign: 'teste_template', priority: 'high' })` do `services/integracoes.ts` (que já passa pela edge function `enviar-whatsapp-queue`)
-- Estado de loading no botão durante o envio
-- Persiste o último número testado em `localStorage` (`templates_teste_telefone`) para conveniência
+- **Link nunca muda** — `LINK_AGENDAMENTO` é constante.
+- **Assinatura nunca muda** — texto fixo no final.
+- **Toggle off = template das configurações é respeitado integralmente** (regra antiga preservada).
+- **Toggle on = variação completa estilo Avaliações** (pedido novo).
+- Loop anti-duplicata garante mensagens consecutivas diferentes.
 
-**Permissão:** o componente já vive dentro do admin protegido — basta usar a função existente.
+## Arquivos afetados
 
----
-
-## Detalhes Técnicos
-
-### Renderização markdown WhatsApp (helper inline)
-
-```tsx
-function renderWhatsAppMarkdown(text: string) {
-  // *bold*, _italic_, ~strike~, links http(s)://
-  const escaped = text
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/\*(.+?)\*/g, '<strong>$1</strong>')
-    .replace(/_(.+?)_/g, '<em>$1</em>')
-    .replace(/~(.+?)~/g, '<s>$1</s>')
-    .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" class="underline">$1</a>');
-  return { __html: escaped };
-}
-```
-
-Bolha do preview:
-```tsx
-<div className="rounded-lg p-3 max-w-md shadow-sm bg-[#e7ffd8] dark:bg-[#005c4b]">
-  <div
-    className="whitespace-pre-wrap text-sm font-sans leading-relaxed text-[#111] dark:text-[#e9edef]"
-    dangerouslySetInnerHTML={renderWhatsAppMarkdown(previewMensagem)}
-  />
-  <div className="text-right mt-1">
-    <span className="text-[10px] text-[#667781] dark:text-[#8696a0]">09:00 ✓✓</span>
-  </div>
-</div>
-```
-
-### Sanitização de telefone para teste
-
-```ts
-function normalizarTelefoneTeste(raw: string): string | null {
-  const digits = raw.replace(/\D/g, '');
-  if (digits.length < 10 || digits.length > 13) return null;
-  if (digits.startsWith('55')) return digits;
-  if (digits.length === 10 || digits.length === 11) return `55${digits}`;
-  return digits;
-}
-```
-
-### Arquivos modificados
-
-- `src/components/admin/TemplatesWhatsAppTab.tsx` (preview + card de teste)
-- `src/services/templatesWhatsApp.ts` (fallback + ícone do `lembrete_anual`)
-- `src/pages/admin/Lembretes.tsx` (carrega template do banco)
-- `supabase/functions/_shared/templateRenderer.ts` (fallback `lembrete_anual`)
-- Nova migration: insert do template `lembrete_anual` em `templates_whatsapp`
-
-Sem mudanças em RLS — a tabela `templates_whatsapp` já é gerenciável via admin existente, e o envio usa a edge function já protegida.
+- `src/pages/admin/Lembretes.tsx` (principal)
+- `src/components/admin/CampanhaMensalLembretes.tsx` (se compartilhar a flag)
+- (opcional) novo `src/lib/variacaoMensagensLembrete.ts` para reuso
