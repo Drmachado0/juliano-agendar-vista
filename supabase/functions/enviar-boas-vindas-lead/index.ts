@@ -66,19 +66,24 @@ Deno.serve(async (req) => {
     const cutoffMinutes = isAdmin ? 0 : 5;
     const cutoffISO = new Date(Date.now() - cutoffMinutes * 60 * 1000).toISOString();
 
-    // Buscar leads que ainda estão como 'lead' e que NÃO possuem mensagem de boas_vindas
+    // Buscar leads que ainda estão como NOVO LEAD e que NÃO possuem mensagem
+    // de boas_vindas (independente de status_envio: enviado/pendente/erro).
+    // Isso evita reenvios em loop quando uma tentativa anterior ficou pendente
+    // ou com erro — esses casos vão para PRECISA_DE_HUMANO/retry separado.
     const { data: leads, error } = await supabase
-      .rpc('get_leads_sem_boas_vindas')
+      .rpc('get_leads_sem_boas_vindas', { p_cutoff_minutes: cutoffMinutes })
       .limit(fetchLimit);
 
-    let leadsToProcess = leads;
+    let leadsToProcess: any[] | null = leads ?? null;
+
     if (error) {
-      console.log('[boas-vindas] RPC não encontrada, usando query direta...');
+      console.log('[boas-vindas] RPC indisponível, usando query direta:', error.message);
 
       const { data: rawLeads, error: rawError } = await supabase
         .from('agendamentos')
         .select('id, nome_completo, telefone_whatsapp, tipo_atendimento, local_atendimento, convenio')
         .eq('status_funil', 'lead')
+        .eq('status_crm', 'NOVO LEAD')
         .lt('created_at', cutoffISO)
         .order('created_at', { ascending: true })
         .limit(fetchLimit);
@@ -99,17 +104,21 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Filtrar os que já receberam boas_vindas
-      const phones = rawLeads.map(l => normalizePhoneNumber(l.telefone_whatsapp));
+      // Dedup por agendamento_id (NÃO por telefone) — uma só tentativa por lead
+      const leadIds = rawLeads.map((l) => l.id);
       const { data: jaEnviados } = await supabase
         .from('mensagens_whatsapp')
-        .select('telefone')
+        .select('agendamento_id')
         .eq('tipo_mensagem', 'boas_vindas')
         .eq('direcao', 'OUT')
-        .in('telefone', phones);
+        .in('agendamento_id', leadIds);
 
-      const phonesJaEnviados = new Set((jaEnviados || []).map(m => m.telefone));
-      leadsToProcess = rawLeads.filter(l => !phonesJaEnviados.has(normalizePhoneNumber(l.telefone_whatsapp)));
+      const idsJaEnviados = new Set(
+        (jaEnviados || [])
+          .map((m: any) => m.agendamento_id)
+          .filter((v: string | null) => !!v),
+      );
+      leadsToProcess = rawLeads.filter((l) => !idsJaEnviados.has(l.id));
       console.log(`[boas-vindas] ${rawLeads.length} candidatos, ${rawLeads.length - leadsToProcess.length} já receberam, ${leadsToProcess.length} a processar.`);
     }
 
