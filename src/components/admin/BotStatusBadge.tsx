@@ -39,6 +39,7 @@ function formatRestante(ms: number): string {
 
 const BotStatusBadge = ({ agendamentoId }: Props) => {
   const { toast } = useToast();
+  const { globalAtivo } = useBotGlobalStatus();
   const [status, setStatus] = useState<BotStatusAgendamento | null>(null);
   const [now, setNow] = useState(Date.now());
   const [busy, setBusy] = useState(false);
@@ -106,7 +107,24 @@ const BotStatusBadge = ({ agendamentoId }: Props) => {
   };
 
   let badge: JSX.Element;
-  if (pausaAtiva) {
+  if (!globalAtivo) {
+    badge = (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge variant="destructive" className="gap-1 cursor-help">
+            <PowerOff className="h-3 w-3" />
+            Bot pausado globalmente
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="max-w-xs text-xs">
+            A automação global está desligada nas configurações do bot. Os controles individuais
+            só voltam a ter efeito quando ela for reativada.
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  } else if (pausaAtiva) {
     const restante = formatRestante(ateMs! - now);
     badge = (
       <Badge className="gap-1 bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40 hover:bg-amber-500/30">
@@ -128,6 +146,11 @@ const BotStatusBadge = ({ agendamentoId }: Props) => {
         Bot ativo
       </Badge>
     );
+  }
+
+  // Se global desligado, exibir badge sem dropdown (controles individuais sem efeito)
+  if (!globalAtivo) {
+    return badge;
   }
 
   return (
