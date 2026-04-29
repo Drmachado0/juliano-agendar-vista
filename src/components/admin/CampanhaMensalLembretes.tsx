@@ -148,6 +148,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
   const [visualizarOpen, setVisualizarOpen] = useState(false);
   const [visualizandoRemessa, setVisualizandoRemessa] = useState<number | null>(null);
   const [confirmarExcluirOpen, setConfirmarExcluirOpen] = useState(false);
+  const [relatorioOpen, setRelatorioOpen] = useState(false);
 
   // Envio
   const [enviando, setEnviando] = useState(false);
@@ -1256,6 +1257,15 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                   </Button>
                 </>
               )}
+              <Button
+                data-testid="lembretes-btn-relatorio-detalhado"
+                variant="outline"
+                onClick={() => setRelatorioOpen(true)}
+                disabled={!campanha}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Ver relatório detalhado
+              </Button>
               <Button data-testid="lembretes-exportar-csv" variant="outline" onClick={exportarCSV}>
                 <Download className="h-4 w-4 mr-2" />
                 Exportar CSV
@@ -1561,6 +1571,178 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                 ))}
             </div>
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+      {/* Relatório detalhado da campanha */}
+      <Dialog open={relatorioOpen} onOpenChange={setRelatorioOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col" data-testid="lembretes-dialog-relatorio">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-primary" />
+              Relatório detalhado — {formatarMesAno(anoRef, mesRef)}
+            </DialogTitle>
+            <DialogDescription>
+              Resumo por remessa, totais consolidados e razão das falhas. Revise antes de exportar o CSV.
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="flex-1 pr-3">
+            <div className="space-y-4">
+              {/* Totais consolidados */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                <div className="p-3 rounded-lg border bg-card">
+                  <p className="text-xs text-muted-foreground">Total elegível</p>
+                  <p className="text-2xl font-semibold">{campanha?.total_elegivel ?? 0}</p>
+                </div>
+                <div className="p-3 rounded-lg border bg-emerald-500/10 border-emerald-500/30">
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300">Enviados</p>
+                  <p className="text-2xl font-semibold text-emerald-700 dark:text-emerald-300">{totalEnviados}</p>
+                </div>
+                <div className="p-3 rounded-lg border bg-red-500/10 border-red-500/30">
+                  <p className="text-xs text-red-700 dark:text-red-300">Falhas</p>
+                  <p className="text-2xl font-semibold text-red-700 dark:text-red-300">{totalFalhas}</p>
+                </div>
+                <div className="p-3 rounded-lg border bg-slate-500/10 border-slate-500/30">
+                  <p className="text-xs text-slate-700 dark:text-slate-300">Ignorados</p>
+                  <p className="text-2xl font-semibold text-slate-700 dark:text-slate-300">{totalIgnorados}</p>
+                </div>
+                <div className="p-3 rounded-lg border bg-amber-500/10 border-amber-500/30">
+                  <p className="text-xs text-amber-700 dark:text-amber-300">Pendentes</p>
+                  <p className="text-2xl font-semibold text-amber-700 dark:text-amber-300">{Math.max(restantes, 0)}</p>
+                </div>
+              </div>
+
+              {/* Resumo por remessa */}
+              <div className="space-y-2">
+                <p className="font-semibold text-sm">Resumo por remessa</p>
+                {[...remessas]
+                  .sort((a, b) => a.numero_remessa - b.numero_remessa)
+                  .map((r) => {
+                    const ps = pacientesDaRemessa(r.id);
+                    const enviadosR = ps.filter((p) => p.status === "enviado").length;
+                    const falhasR = ps.filter((p) => p.status === "falha").length;
+                    const ignoradosR = ps.filter((p) => p.status === "ignorado").length;
+                    const pendentesR = ps.filter((p) => p.status === "pendente").length;
+                    const taxa = ps.length > 0 ? Math.round((enviadosR / ps.length) * 100) : 0;
+                    return (
+                      <div key={r.id} className="p-3 rounded-lg border space-y-2">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="font-mono">#{r.numero_remessa}</Badge>
+                            <span className="text-sm font-medium">{formatarData(r.data_programada)}</span>
+                            <Badge variant="outline" className={cn("text-[10px]", corStatus(r.status))}>
+                              {STATUS_LABEL[r.status]}
+                            </Badge>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            Taxa de envio: <strong>{taxa}%</strong>
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                          <div>Total: <strong>{ps.length}</strong></div>
+                          <div className="text-emerald-700 dark:text-emerald-300">Enviados: <strong>{enviadosR}</strong></div>
+                          <div className="text-red-700 dark:text-red-300">Falhas: <strong>{falhasR}</strong></div>
+                          <div className="text-slate-700 dark:text-slate-300">Ignorados: <strong>{ignoradosR}</strong></div>
+                          <div className="text-amber-700 dark:text-amber-300">Pendentes: <strong>{pendentesR}</strong></div>
+                        </div>
+                        <Progress value={taxa} className="h-1.5" />
+                      </div>
+                    );
+                  })}
+                {remessas.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Nenhuma remessa para exibir.</p>
+                )}
+              </div>
+
+              {/* Falhas com motivo */}
+              {(() => {
+                const falhasList = pacientes.filter((p) => p.status === "falha");
+                const agrupado = falhasList.reduce<Record<string, number>>((acc, p) => {
+                  const motivo = (p.motivo_falha || "Sem motivo informado").trim();
+                  acc[motivo] = (acc[motivo] || 0) + 1;
+                  return acc;
+                }, {});
+                const motivos = Object.entries(agrupado).sort((a, b) => b[1] - a[1]);
+                return (
+                  <div className="space-y-2">
+                    <p className="font-semibold text-sm flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                      Falhas por motivo ({falhasList.length})
+                    </p>
+                    {motivos.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Nenhuma falha registrada.</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {motivos.map(([motivo, qtd]) => (
+                          <div key={motivo} className="flex items-center justify-between p-2 rounded border bg-red-500/5 text-sm">
+                            <span className="break-all pr-2">{motivo}</span>
+                            <Badge variant="outline" className="border-red-500/40 text-red-700 dark:text-red-300">
+                              {qtd}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {falhasList.length > 0 && (
+                      <details className="rounded border p-2">
+                        <summary className="cursor-pointer text-xs text-muted-foreground">
+                          Ver lista completa de pacientes com falha
+                        </summary>
+                        <div className="mt-2 space-y-1 max-h-64 overflow-auto">
+                          {falhasList.map((p) => (
+                            <div key={p.id} className="flex items-center justify-between text-xs p-1.5 rounded bg-card border">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-[10px] font-mono">#{p.numero_remessa}</Badge>
+                                <span>{mascararNome(p.nome)}</span>
+                                <span className="font-mono text-muted-foreground">{mascararTelefone(p.telefone)}</span>
+                              </div>
+                              <span className="text-red-700 dark:text-red-300 truncate max-w-[40%]" title={p.motivo_falha || ""}>
+                                {p.motivo_falha || "Sem motivo"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Ignorados com motivo */}
+              {(() => {
+                const ignList = pacientes.filter((p) => p.status === "ignorado");
+                if (ignList.length === 0) return null;
+                const agrupado = ignList.reduce<Record<string, number>>((acc, p) => {
+                  const motivo = (p.motivo_ignorado || "Sem motivo informado").trim();
+                  acc[motivo] = (acc[motivo] || 0) + 1;
+                  return acc;
+                }, {});
+                const motivos = Object.entries(agrupado).sort((a, b) => b[1] - a[1]);
+                return (
+                  <div className="space-y-2">
+                    <p className="font-semibold text-sm">Ignorados por motivo ({ignList.length})</p>
+                    {motivos.map(([motivo, qtd]) => (
+                      <div key={motivo} className="flex items-center justify-between p-2 rounded border bg-slate-500/5 text-sm">
+                        <span className="break-all pr-2">{motivo}</span>
+                        <Badge variant="outline">{qtd}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setRelatorioOpen(false)}>
+              Fechar
+            </Button>
+            <Button onClick={exportarCSV} disabled={!campanha}>
+              <Download className="h-4 w-4 mr-2" />
+              Exportar CSV
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Card>
