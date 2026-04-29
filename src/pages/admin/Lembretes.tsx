@@ -64,15 +64,13 @@ type EstadoEnvio = 'idle' | 'enviando' | 'aguardando_intervalo' | 'pausa_seguran
 type FiltroLembrete = string; // 'vencidos' | 'semana' | 'mes' | 'todos' | 'mes_YYYY-MM'
 
 // ===== Variação anti-spam =====
-// IMPORTANTE: a variação NUNCA altera o corpo, links ou CTAs do template
-// configurado em /admin/whatsapp (aba Templates). Ela apenas troca a
-// SAUDAÇÃO inicial (primeira linha) por sinônimos neutros, e adiciona
-// pequenas variações invisíveis (espaçamento) para evitar fingerprint
-// idêntico em envios em massa.
-const SAUDACOES_LEMBRETE = [
-  "Olá", "Oi", "Olá 😊", "Oi 👋", "Olá!",
-  "Oi, tudo bem?", "Olá, tudo bem?", "Oi 🙂",
-];
+// Quando o toggle "Variação Automática" está LIGADO, geramos a mensagem
+// inteira por composição (saudação + abertura + importância + CTA + emojis)
+// via gerarMensagemVariadaLembrete (src/lib/variacaoMensagensLembrete.ts).
+// O LINK e a ASSINATURA permanecem fixos.
+//
+// Quando DESLIGADO, usamos o template configurado em /admin/whatsapp puro,
+// apenas substituindo {{nome}}.
 
 const TEMPLATE_LEMBRETE_PADRAO = `Olá, {{nome}}! 👋
 
@@ -88,49 +86,6 @@ Gostaria de agendar seu retorno? Podemos encontrar o melhor horário para você.
 Atenciosamente,
 Dr. Juliano Machado
 Oftalmologia`;
-
-/**
- * Aplica variação anti-spam preservando o template configurado.
- * - Substitui {{nome}} pelo primeiro nome.
- * - Troca apenas a saudação da PRIMEIRA linha (algo como "Olá, {nome}! 👋").
- * - Mantém intactos: corpo, links, CTAs, assinatura.
- */
-const aplicarVariacaoSeguraNoTemplate = (
-  templateBase: string,
-  nome: string,
-  ultimaMensagem?: string,
-): string => {
-  const renderizado = (templateBase || TEMPLATE_LEMBRETE_PADRAO).replace(
-    /\{\{nome\}\}/g,
-    nome,
-  );
-
-  const linhas = renderizado.split("\n");
-  // Detecta se a primeira linha é uma saudação (tem o nome do paciente)
-  const primeira = linhas[0] || "";
-  const ehSaudacao =
-    primeira.includes(nome) &&
-    /^(ol[áa]|oi|bom dia|boa tarde|boa noite)/i.test(primeira.trim());
-
-  let tentativas = 0;
-  let resultado = renderizado;
-  do {
-    if (ehSaudacao) {
-      const saudacao =
-        SAUDACOES_LEMBRETE[Math.floor(Math.random() * SAUDACOES_LEMBRETE.length)];
-      // Mantém o restante da linha após o nome (ex.: "! 👋")
-      const matchSufixo = primeira.match(
-        new RegExp(`${nome.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(.*)$`),
-      );
-      const sufixo = matchSufixo?.[1] ?? "!";
-      const novaSaudacao = `${saudacao}, ${nome}${sufixo}`;
-      resultado = [novaSaudacao, ...linhas.slice(1)].join("\n");
-    }
-    tentativas++;
-  } while (resultado === ultimaMensagem && tentativas < 10);
-
-  return resultado;
-};
 
 const Lembretes = () => {
   // Import patients state - now with date range
