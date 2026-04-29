@@ -1463,6 +1463,18 @@ export type Database = {
       encrypt_sensitive_data: { Args: { plain_text: string }; Returns: string }
       encrypt_totp_secret: { Args: { plain_secret: string }; Returns: string }
       exportar_dados_paciente: { Args: { p_telefone: string }; Returns: Json }
+      get_leads_sem_boas_vindas: {
+        Args: { p_cutoff_minutes?: number }
+        Returns: {
+          convenio: string
+          created_at: string
+          id: string
+          local_atendimento: string
+          nome_completo: string
+          telefone_whatsapp: string
+          tipo_atendimento: string
+        }[]
+      }
       get_observacoes_decrypted: {
         Args: { agendamento_id: string }
         Returns: string
