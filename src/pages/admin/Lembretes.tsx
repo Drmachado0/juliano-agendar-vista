@@ -248,7 +248,22 @@ const Lembretes = () => {
   useEffect(() => {
     carregarDashboard();
     carregarHistorico();
+    carregarTemplateDoBanco();
   }, []);
+
+  // Carrega o template "lembrete_anual" do banco para que mudanças feitas
+  // em /admin/whatsapp (aba Templates) reflitam aqui automaticamente.
+  const carregarTemplateDoBanco = async () => {
+    const { data, error } = await supabase
+      .from("templates_whatsapp")
+      .select("conteudo")
+      .eq("tipo", "lembrete_anual")
+      .eq("ativo", true)
+      .maybeSingle();
+    if (!error && data?.conteudo) {
+      setTemplate(data.conteudo);
+    }
+  };
 
   const carregarLembretesPendentes = async () => {
     setLoadingLembretes(true);
