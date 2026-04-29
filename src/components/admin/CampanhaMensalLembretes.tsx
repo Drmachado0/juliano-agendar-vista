@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { marcarLembreteEnviado, type LembreteAnual } from "@/services/lembretesAnuais";
 import { enviarMensagemWhatsApp } from "@/services/integracoes";
 import { useEnvioLoteConfig } from "@/hooks/useEnvioLoteConfig";
+import ConfiguracoesAvancadasEnvio from "@/components/admin/ConfiguracoesAvancadasEnvio";
 import {
   buscarCampanha,
   buscarRemessasComPacientes,
