@@ -25,7 +25,7 @@ import AdminLembretes from "./pages/admin/Lembretes";
 import AdminConfiguracoesEvolution from "./pages/admin/ConfiguracoesEvolution";
 import AdminAuditoriaTracking from "./pages/admin/AuditoriaTracking";
 import AdminLogs from "./pages/admin/Logs";
-import AdminHermes from "./pages/admin/Hermes";
+
 import AdminLGPD from "./pages/admin/LGPD";
 import AdminRelatorios from "./pages/admin/Relatorios";
 import AdminMonitorEnvios from "./pages/admin/MonitorEnvios";
@@ -59,7 +59,7 @@ const App = () => (
               <Route path="/admin/lembretes" element={<AdminLembretes />} />
               <Route path="/admin/avaliacoes" element={<AdminAvaliacoes />} />
               <Route path="/admin/whatsapp" element={<AdminWhatsApp />} />
-              <Route path="/admin/hermes" element={<AdminHermes />} />
+              
               <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
               <Route path="/admin/configuracoes/evolution" element={<AdminConfiguracoesEvolution />} />
               <Route path="/admin/auditoria-tracking" element={<AdminAuditoriaTracking />} />
