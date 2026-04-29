@@ -1507,7 +1507,6 @@ export type Database = {
         Args: { p_data_fim?: string; p_data_inicio?: string }
         Returns: {
           dia: string
-          drafts_gerados: number
           leads_novos: number
           msg_in: number
           msg_out: number

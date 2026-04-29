@@ -1,81 +1,66 @@
-## Problema
+## Avaliação
 
-A mensagem de boas-vindas está sendo enviada repetidamente porque:
+**Monitor de Envios → MANTER.** Ele nunca dependeu do Hermes — monitora a fila `mensagens_whatsapp` (direção OUT) de TODOS os envios: confirmações, lembretes, boas-vindas, manuais, lembretes anuais, avaliações, lote, etc. Continua sendo a principal ferramenta para detectar:
+- Falhas de envio (Evolution offline, número inválido, SEND_FAILED)
+- Throughput de mensagens nas últimas 24h
+- Botão de reenvio para falhas
 
-1. O cron `enviar-boas-vindas-lead` roda a cada **2 minutos** (`*/2 * * * *`).
-2. A função tenta o RPC `get_leads_sem_boas_vindas` — esse RPC **não existe** no banco, então sempre cai no fallback.
-3. O fallback filtra "já recebeu boas-vindas" por **telefone**, mas só conta linhas em `mensagens_whatsapp`. Se a mensagem foi apagada pela retenção LGPD (180 dias) ou se houver qualquer race condition, o lead volta a ser elegível.
-4. O filtro **não** descarta leads que já estão em `PRECISA_DE_HUMANO` (filtra só por `status_funil='lead'`), então mesmo um lead escalado para humano pode voltar à fila.
+Sem o Hermes ele segue 100% relevante. Só precisa de pequenos ajustes cosméticos.
+
+**Relatórios → LIMPAR.** Tem 3 referências mortas ao Hermes:
+1. RPC `relatorio_diario_serie` ainda faz `SELECT FROM hermes_drafts` (tabela já dropada → vai dar erro 500 ao abrir Relatórios).
+2. UI mostra linha "Drafts" no gráfico de série diária.
+3. Card "Top intenções (bot)" — vinha do `bot_assistente_log` do Hermes, hoje não é mais alimentado, fica zerado.
+
+Também há um StatCard vazio (grid 4 colunas com só 3 cards) sobrando do layout antigo do Hermes.
+
+---
 
 ## Mudanças
 
-### 1. Migration: criar RPC `get_leads_sem_boas_vindas`
+### 1. Migração SQL — corrigir RPC `relatorio_diario_serie`
+Remove a coluna `drafts_gerados` (que consultava `hermes_drafts`). Nova assinatura retorna apenas: `dia, msg_in, msg_out, leads_novos`.
 
+### 2. `src/pages/admin/Relatorios.tsx`
+- Remover `drafts_gerados` da interface `SerieDia` e da `<Line>` do gráfico.
+- Remover bloco "Top intenções (bot)" e a interface `bot.top_intencoes` correspondente (deixar grid de gráficos com só "Mensagens por tipo" em largura total).
+- Remover StatCard "Ações do bot" (referência ao bot_assistente_log do Hermes que não é mais alimentado).
+- Reorganizar grid de stats para 3 colunas: Mensagens, Novos leads, Conversões.
+- Atualizar legenda do gráfico de série: "Mensagens IN/OUT e novos leads por dia".
+
+### 3. `src/pages/admin/MonitorEnvios.tsx` — pequenos ajustes
+- Subtítulo atualizado: "Monitora envios automáticos (confirmações, lembretes, boas-vindas, lote) e manuais — últimas 24h".
+- Sem mudanças funcionais (a tela continua útil exatamente como está).
+
+### 4. Memória
+Atualizar `mem://index.md` com nota de que `relatorio_diario_serie` foi corrigida pós-remoção do Hermes (não recriar coluna drafts_gerados).
+
+---
+
+## Detalhes técnicos
+
+**SQL da migração:**
 ```sql
-CREATE OR REPLACE FUNCTION public.get_leads_sem_boas_vindas(
-  p_cutoff_minutes integer DEFAULT 5
+DROP FUNCTION IF EXISTS public.relatorio_diario_serie(date, date);
+
+CREATE OR REPLACE FUNCTION public.relatorio_diario_serie(
+  p_data_inicio date DEFAULT (CURRENT_DATE - interval '13 days')::date,
+  p_data_fim date DEFAULT CURRENT_DATE
 )
-RETURNS TABLE (
-  id uuid, nome_completo text, telefone_whatsapp text,
-  tipo_atendimento text, local_atendimento text, convenio text,
-  created_at timestamptz
-)
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-  SELECT a.id, a.nome_completo, a.telefone_whatsapp,
-         a.tipo_atendimento, a.local_atendimento, a.convenio, a.created_at
-  FROM public.agendamentos a
-  WHERE a.status_funil = 'lead'
-    AND a.status_crm = 'NOVO LEAD'
-    AND a.created_at < (now() - make_interval(mins => GREATEST(0, p_cutoff_minutes)))
-    AND NOT EXISTS (
-      SELECT 1 FROM public.mensagens_whatsapp m
-      WHERE m.agendamento_id = a.id
-        AND m.tipo_mensagem = 'boas_vindas'
-        AND m.direcao = 'OUT'
-    )
-  ORDER BY a.created_at ASC;
-$$;
-GRANT EXECUTE ON FUNCTION public.get_leads_sem_boas_vindas(integer) TO service_role, authenticated;
+RETURNS TABLE(dia date, msg_in bigint, msg_out bigint, leads_novos bigint)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path TO 'public' AS $$
+BEGIN
+  IF NOT public.has_role(auth.uid(),'admin'::app_role) THEN
+    RAISE EXCEPTION 'Access denied: admin role required';
+  END IF;
+  RETURN QUERY
+  WITH dias AS (SELECT generate_series(p_data_inicio, p_data_fim, interval '1 day')::date AS d)
+  SELECT dias.d,
+    COALESCE((SELECT COUNT(*) FROM public.mensagens_whatsapp m WHERE m.created_at::date = dias.d AND m.direcao='IN'),0),
+    COALESCE((SELECT COUNT(*) FROM public.mensagens_whatsapp m WHERE m.created_at::date = dias.d AND m.direcao='OUT'),0),
+    COALESCE((SELECT COUNT(*) FROM public.agendamentos a WHERE a.created_at::date = dias.d),0)
+  FROM dias ORDER BY dias.d ASC;
+END; $$;
 ```
 
-Filtra por `status_crm='NOVO LEAD'` (exclui automaticamente PRECISA_DE_HUMANO/AGUARDANDO) e dedup por `agendamento_id` (não por telefone).
-
-### 2. Reduzir frequência do cron
-
-```sql
-SELECT cron.unschedule('enviar-boas-vindas-lead');
-SELECT cron.schedule(
-  'enviar-boas-vindas-lead',
-  '*/10 * * * *',  -- 10 min em vez de 2 min
-  $$SELECT net.http_post(
-    url := 'https://cnpifhaszbonwlqruwnn.supabase.co/functions/v1/enviar-boas-vindas-lead',
-    headers := '{"Content-Type":"application/json","Authorization":"Bearer lembrete-drjuliano-2024-xK9mP3nQ7wR2"}'::jsonb,
-    body := '{"source":"pg_cron"}'::jsonb
-  );$$
-);
-```
-
-De 720 execuções/dia para 144.
-
-### 3. Corrigir `supabase/functions/enviar-boas-vindas-lead/index.ts`
-
-- Passar `p_cutoff_minutes` ao RPC novo.
-- Reescrever o fallback para deduplicar por `agendamento_id` (não por telefone) e considerar **qualquer** `status_envio` (incluindo `erro` e `pendente`) como "já tentou — não reenviar".
-- Adicionar filtro `status_crm = 'NOVO LEAD'` no fallback.
-
-### 4. (Opcional) Corrigir o lead atual do Alex
-
-Hoje o lead `2077f466-...` está com `status_crm='PRECISA_DE_HUMANO'`. Após as mudanças acima, ele **não** será mais elegível para o cron — fica para a secretária tratar pelo chat admin. Nada a fazer no banco.
-
-## Resultado esperado
-
-- Cada lead recebe **no máximo 1 boas-vindas automática** (em qualquer status_envio: enviado/pendente/erro).
-- Se a Evolution falhar, o lead vai direto para `PRECISA_DE_HUMANO` e o cron **nunca** tenta de novo.
-- Se ficar `pendente`, quem cuida é o cron `retentar-boas-vindas-pendentes` (já tem `MAX_TENTATIVAS=4` com backoff).
-- Cron principal cai de 720 → 144 execuções/dia.
-
-## Arquivos alterados
-
-- Nova migration: `supabase/migrations/<timestamp>_get_leads_sem_boas_vindas.sql` (RPC + reagenda cron).
-- `supabase/functions/enviar-boas-vindas-lead/index.ts` (RPC com parâmetro + fallback dedup por agendamento_id).
+**Riscos:** baixo. `relatorio_diario` (a outra RPC) já foi corrigida na migração anterior do Hermes. `bot_assistente_log` é mantido (ainda existe a tabela, só não há mais escritor) — então remover só a UI.

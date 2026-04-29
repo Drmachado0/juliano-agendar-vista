@@ -265,7 +265,9 @@ export default function MonitorEnvios() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold">Monitor de Envios WhatsApp</h1>
-            <p className="text-sm text-muted-foreground">Fila, falhas e últimos erros (últimas 24h)</p>
+            <p className="text-sm text-muted-foreground">
+              Fila, falhas e reenvio de envios automáticos (confirmações, lembretes, boas-vindas, lote) e manuais — últimas 24h.
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <EvolutionStatusBadge />
