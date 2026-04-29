@@ -65,15 +65,22 @@ export default function Relatorios() {
 
   const carregar = async () => {
     setLoading(true);
-    const [r1, r2] = await Promise.all([
-      supabase.rpc("relatorio_diario", { p_data_inicio: inicio, p_data_fim: fim }),
-      supabase.rpc("relatorio_diario_serie", { p_data_inicio: inicio, p_data_fim: fim }),
-    ]);
-    setLoading(false);
-    if (r1.error) { toast.error(r1.error.message); return; }
-    if (r2.error) { toast.error(r2.error.message); return; }
-    setRelatorio(r1.data as unknown as Relatorio);
-    setSerie((r2.data || []) as SerieDia[]);
+    try {
+      const [r1, r2] = await Promise.all([
+        supabase.rpc("relatorio_diario", { p_data_inicio: inicio, p_data_fim: fim }),
+        supabase.rpc("relatorio_diario_serie", { p_data_inicio: inicio, p_data_fim: fim }),
+      ]);
+      if (r1.error) { toast.error(r1.error.message); }
+      if (r2.error) { toast.error(r2.error.message); }
+      setRelatorio(normalizeRelatorio(r1.data));
+      setSerie(Array.isArray(r2.data) ? (r2.data as SerieDia[]) : []);
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao carregar relatórios");
+      setRelatorio(normalizeRelatorio({}));
+      setSerie([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { carregar(); /* eslint-disable-next-line */ }, []);
