@@ -342,7 +342,9 @@ const Lembretes = () => {
   };
 
   const gerarNovaMensagemPreview = () => {
-    setMensagemPreviewVariada(gerarMensagemLembreteVariada("Maria", mensagemPreviewVariada));
+    setMensagemPreviewVariada(
+      aplicarVariacaoSeguraNoTemplate(template, "Maria", mensagemPreviewVariada),
+    );
   };
 
   const renderizarTemplate = (nome: string) => {
