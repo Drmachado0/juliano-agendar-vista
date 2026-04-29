@@ -253,20 +253,91 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
       const ultimoBase = new Date(anoRef - 1, mesRef + 1, 0).getDate();
       const fimBase = new Date(anoRef - 1, mesRef, ultimoBase).toISOString().split("T")[0];
 
-      const validos = (data || [])
-        .filter((l: any) => (l.telefone || "").replace(/\D/g, "").length >= 10)
-        .map((l: any) => ({
-          ...l,
-          inconsistente_data: !(
-            l.data_ultima_consulta &&
-            l.data_ultima_consulta >= inicioBase &&
-            l.data_ultima_consulta <= fimBase
-          ),
-        })) as Array<LembreteAnual & { inconsistente_data?: boolean }>;
+      const norm = (s: string) => (s || "").replace(/\D/g, "");
+      const normNome = (s: string) =>
+        (s || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, " ");
+      const chaveDedup = (l: any) => `${norm(l.telefone)}|${normNome(l.nome)}`;
+
+      const baseValidos = (data || []).filter(
+        (l: any) => norm(l.telefone).length >= 10,
+      );
+
+      // ===== Dedup interno: 1 por (telefone+nome), mantém consulta mais ANTIGA =====
+      // (já vem ordenado por data_ultima_consulta ASC)
+      const mapDedup = new Map<string, any>();
+      let removidosDedup = 0;
+      for (const l of baseValidos) {
+        const k = chaveDedup(l);
+        if (mapDedup.has(k)) {
+          removidosDedup++;
+          continue;
+        }
+        mapDedup.set(k, l);
+      }
+      const deduplicados = Array.from(mapDedup.values());
+
+      // ===== Bloquear quem já recebeu lembrete nos últimos 12 meses =====
+      const corte12m = new Date();
+      corte12m.setMonth(corte12m.getMonth() - 12);
+      const corteIso = corte12m.toISOString();
+
+      const telefones = Array.from(
+        new Set(deduplicados.map((l: any) => norm(l.telefone))),
+      );
+
+      const jaEnviadosSet = new Set<string>();
+      // Consulta em lotes de 200 para evitar URL gigante
+      for (let i = 0; i < telefones.length; i += 200) {
+        const lote = telefones.slice(i, i + 200);
+        const { data: msgs, error: errMsg } = await supabase
+          .from("mensagens_whatsapp")
+          .select("telefone")
+          .eq("direcao", "OUT")
+          .eq("tipo_mensagem", "lembrete_anual")
+          .gte("created_at", corteIso)
+          .in("telefone", lote);
+        // Fallback: a coluna telefone pode estar formatada — tenta também por sufixo
+        if (!errMsg && msgs) {
+          for (const m of msgs) jaEnviadosSet.add(norm(m.telefone));
+        }
+      }
+      // Match adicional por sufixo (últimos 10 dígitos), pois telefones podem
+      // estar gravados com/sem DDI 55
+      const jaEnviadosSufixos = new Set<string>(
+        Array.from(jaEnviadosSet).map((t) => t.slice(-10)),
+      );
+      const jaRecebeu = (tel: string) => {
+        const n = norm(tel);
+        return jaEnviadosSet.has(n) || jaEnviadosSufixos.has(n.slice(-10));
+      };
+
+      const filtrados = deduplicados.filter((l: any) => !jaRecebeu(l.telefone));
+      const removidos12m = deduplicados.length - filtrados.length;
+
+      const validos = filtrados.map((l: any) => ({
+        ...l,
+        inconsistente_data: !(
+          l.data_ultima_consulta &&
+          l.data_ultima_consulta >= inicioBase &&
+          l.data_ultima_consulta <= fimBase
+        ),
+      })) as Array<LembreteAnual & { inconsistente_data?: boolean }>;
 
       setPreviewElegiveis(validos);
       setPreviewCarregado(true);
       setQtdManual(dividirEmRemessas(validos.length));
+
+      if (removidosDedup > 0 || removidos12m > 0) {
+        toast({
+          title: "Deduplicação aplicada",
+          description: `${removidosDedup} duplicado(s) no mês + ${removidos12m} já receberam lembrete nos últimos 12 meses.`,
+        });
+      }
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
     }
