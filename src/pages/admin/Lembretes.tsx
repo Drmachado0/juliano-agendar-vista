@@ -1211,7 +1211,7 @@ const Lembretes = () => {
           </TabsContent>
 
           {/* Pending Reminders Tab */}
-          <TabsContent value="pendentes" className="space-y-4" data-testid="lembretes-tab-pendentes">
+          <TabsContent value="pendentes" className="space-y-4" data-testid="lembretes-tabpanel-pendentes">
             {/* Campanha mensal parcelada (4 remessas) */}
             <CampanhaMensalLembretes
               onAfterEnvio={() => {
