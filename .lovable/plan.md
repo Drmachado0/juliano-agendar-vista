@@ -1,58 +1,81 @@
-# Toggle manual do bot Hermes por conversa
+## Problema
 
-## Situação atual
-O componente `BotStatusBadge` já existe e aparece no header do chat (`WhatsAppChat.tsx`), com dropdown para pausar (15 / 30 / 60 / 240 min) e reativar. Cada ação chama as RPCs `pausar_bot_agendamento` / `reativar_bot_agendamento`, que afetam **apenas** aquele `agendamento_id` — ou seja, não impacta outras conversas.
+A mensagem de boas-vindas está sendo enviada repetidamente porque:
 
-O que falta para entregar o pedido:
+1. O cron `enviar-boas-vindas-lead` roda a cada **2 minutos** (`*/2 * * * *`).
+2. A função tenta o RPC `get_leads_sem_boas_vindas` — esse RPC **não existe** no banco, então sempre cai no fallback.
+3. O fallback filtra "já recebeu boas-vindas" por **telefone**, mas só conta linhas em `mensagens_whatsapp`. Se a mensagem foi apagada pela retenção LGPD (180 dias) ou se houver qualquer race condition, o lead volta a ser elegível.
+4. O filtro **não** descarta leads que já estão em `PRECISA_DE_HUMANO` (filtra só por `status_funil='lead'`), então mesmo um lead escalado para humano pode voltar à fila.
 
-1. **Visibilidade do estado do bot na lista lateral de conversas** (`WhatsAppLeadsList`) — hoje a única forma de ver se uma conversa está pausada é abrindo o chat dela.
-2. **Toggle rápido (1 clique)** direto na lista, sem precisar abrir o dropdown completo.
-3. **Garantir que o badge no header siga o mesmo padrão visual** e fique mais óbvio como "controle ON/OFF".
+## Mudanças
 
-## O que será entregue
+### 1. Migration: criar RPC `get_leads_sem_boas_vindas`
 
-### 1. Indicador de status na lista de conversas
-Em cada `WhatsAppLeadItem` da coluna esquerda, mostrar um pequeno ícone à direita do nome:
-- 🟢 Bot ativo (ícone Bot)
-- 🟡 Bot pausado (ícone Pause + tempo restante em tooltip, ex.: "30min")
-- 🔴 Bot desligado (ícone BotOff)
+```sql
+CREATE OR REPLACE FUNCTION public.get_leads_sem_boas_vindas(
+  p_cutoff_minutes integer DEFAULT 5
+)
+RETURNS TABLE (
+  id uuid, nome_completo text, telefone_whatsapp text,
+  tipo_atendimento text, local_atendimento text, convenio text,
+  created_at timestamptz
+)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT a.id, a.nome_completo, a.telefone_whatsapp,
+         a.tipo_atendimento, a.local_atendimento, a.convenio, a.created_at
+  FROM public.agendamentos a
+  WHERE a.status_funil = 'lead'
+    AND a.status_crm = 'NOVO LEAD'
+    AND a.created_at < (now() - make_interval(mins => GREATEST(0, p_cutoff_minutes)))
+    AND NOT EXISTS (
+      SELECT 1 FROM public.mensagens_whatsapp m
+      WHERE m.agendamento_id = a.id
+        AND m.tipo_mensagem = 'boas_vindas'
+        AND m.direcao = 'OUT'
+    )
+  ORDER BY a.created_at ASC;
+$$;
+GRANT EXECUTE ON FUNCTION public.get_leads_sem_boas_vindas(integer) TO service_role, authenticated;
+```
 
-O ícone fica visível em todas as conversas para a equipe identificar rapidamente onde o bot está/não está atuando.
+Filtra por `status_crm='NOVO LEAD'` (exclui automaticamente PRECISA_DE_HUMANO/AGUARDANDO) e dedup por `agendamento_id` (não por telefone).
 
-### 2. Toggle de 1 clique na lista
-Clicar no ícone:
-- Se **ativo** → pausa por 30 min (valor padrão do `bot_config`).
-- Se **pausado/desligado** → reativa imediatamente.
+### 2. Reduzir frequência do cron
 
-Toast confirma a ação. O clique no ícone **não** seleciona a conversa (stopPropagation).
+```sql
+SELECT cron.unschedule('enviar-boas-vindas-lead');
+SELECT cron.schedule(
+  'enviar-boas-vindas-lead',
+  '*/10 * * * *',  -- 10 min em vez de 2 min
+  $$SELECT net.http_post(
+    url := 'https://cnpifhaszbonwlqruwnn.supabase.co/functions/v1/enviar-boas-vindas-lead',
+    headers := '{"Content-Type":"application/json","Authorization":"Bearer lembrete-drjuliano-2024-xK9mP3nQ7wR2"}'::jsonb,
+    body := '{"source":"pg_cron"}'::jsonb
+  );$$
+);
+```
 
-Para opções avançadas (15min, 1h, 4h) o usuário continua usando o dropdown completo no header do chat.
+De 720 execuções/dia para 144.
 
-### 3. Header do chat (já existe, ajustes finos)
-- Manter o `BotStatusBadge` com dropdown completo no `WhatsAppChat`.
-- Adicionar texto auxiliar discreto abaixo do badge quando pausado: "*só esta conversa*", deixando claro que o efeito é local e não global.
+### 3. Corrigir `supabase/functions/enviar-boas-vindas-lead/index.ts`
 
-### 4. Dados em tempo real
-- Estender `LeadComMensagens` com `bot_ativo`, `bot_pausado_ate`, `bot_pausa_motivo`.
-- `listarLeadsComMensagens` passa a buscar essas colunas.
-- Subscription Realtime no `WhatsAppLeadsList` para `UPDATE` em `agendamentos` (filtrando os IDs em tela), mantendo os ícones sincronizados quando a pausa expira ou alguém pausa de outro lugar.
+- Passar `p_cutoff_minutes` ao RPC novo.
+- Reescrever o fallback para deduplicar por `agendamento_id` (não por telefone) e considerar **qualquer** `status_envio` (incluindo `erro` e `pendente`) como "já tentou — não reenviar".
+- Adicionar filtro `status_crm = 'NOVO LEAD'` no fallback.
 
-## Detalhes técnicos
+### 4. (Opcional) Corrigir o lead atual do Alex
 
-- **Backend**: nada novo. Reaproveita as RPCs `pausar_bot_agendamento(p_agendamento_id, p_minutos, p_motivo)` e `reativar_bot_agendamento(p_agendamento_id)` já existentes (com auditoria automática em `crm_audit_log`).
-- **Isolamento**: ambas as RPCs operam em uma única linha de `agendamentos` (`WHERE id = p_agendamento_id`), garantindo que outras conversas não são afetadas.
-- **Motivo da pausa manual da lista**: `"manual_lista"` (no header continua `"manual"`).
-- **Componente novo**: `BotStatusToggle` (versão compacta, só ícone + tooltip + 1 clique) — usado dentro de `WhatsAppLeadItem`.
-- **Reuso**: `BotStatusBadge` (dropdown completo) continua igual no header.
-- **Service** `botPausa.ts`: já tem `pausarBot` / `reativarBot` / `obterStatusBot` — sem mudanças.
-- **Realtime**: 1 canal único na lista (`leads_bot_status`) escutando `UPDATE` em `agendamentos` e atualizando localmente os campos de bot dos leads em memória.
+Hoje o lead `2077f466-...` está com `status_crm='PRECISA_DE_HUMANO'`. Após as mudanças acima, ele **não** será mais elegível para o cron — fica para a secretária tratar pelo chat admin. Nada a fazer no banco.
 
-## Arquivos afetados
+## Resultado esperado
 
-- `src/services/mensagens.ts` — adicionar 3 campos ao tipo `LeadComMensagens` e ao `select`.
-- `src/components/admin/WhatsAppLeadItem.tsx` — renderizar o novo `BotStatusToggle`.
-- `src/components/admin/WhatsAppLeadsList.tsx` — subscription Realtime para campos de bot.
-- `src/components/admin/BotStatusToggle.tsx` — **novo**, versão compacta.
-- `src/components/admin/WhatsAppChat.tsx` — texto "*só esta conversa*" abaixo do badge quando pausado.
+- Cada lead recebe **no máximo 1 boas-vindas automática** (em qualquer status_envio: enviado/pendente/erro).
+- Se a Evolution falhar, o lead vai direto para `PRECISA_DE_HUMANO` e o cron **nunca** tenta de novo.
+- Se ficar `pendente`, quem cuida é o cron `retentar-boas-vindas-pendentes` (já tem `MAX_TENTATIVAS=4` com backoff).
+- Cron principal cai de 720 → 144 execuções/dia.
 
-Sem mudanças de banco e sem mudanças em edge functions.
+## Arquivos alterados
+
+- Nova migration: `supabase/migrations/<timestamp>_get_leads_sem_boas_vindas.sql` (RPC + reagenda cron).
+- `supabase/functions/enviar-boas-vindas-lead/index.ts` (RPC com parâmetro + fallback dedup por agendamento_id).
