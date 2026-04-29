@@ -196,8 +196,8 @@ const Lembretes = () => {
   const [imagemPreview, setImagemPreview] = useState<string | null>(null);
   const [imagemNome, setImagemNome] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [mensagemPreviewVariada, setMensagemPreviewVariada] = useState(() => 
-    gerarMensagemLembreteVariada("Maria")
+  const [mensagemPreviewVariada, setMensagemPreviewVariada] = useState(() =>
+    aplicarVariacaoSeguraNoTemplate(TEMPLATE_LEMBRETE_PADRAO, "Maria"),
   );
 
   // History from database
