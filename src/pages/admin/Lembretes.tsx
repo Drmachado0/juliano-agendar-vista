@@ -18,10 +18,12 @@ import {
   type PacienteN8n,
   type LembreteAnual,
   type EstatisticasGerais,
-  type EstatisticaMensal
+  type EstatisticaMensal,
+  atualizarTelefoneLembrete
 } from "@/services/lembretesAnuais";
+import { validarTelefoneBrasileiro, autocorrigirTelefone } from "@/lib/validarTelefoneBR";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, Send, RefreshCw, Loader2, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Save, Filter, CheckCircle, Calendar as CalendarIconLucide, CalendarRange, ArrowRight, BarChart3, TrendingUp, History, MessageCircle, ImagePlus, X, Shuffle, ChevronDown, ChevronUp, Eye } from "lucide-react";
+import { Bell, Send, RefreshCw, Loader2, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Save, Filter, CheckCircle, Calendar as CalendarIconLucide, CalendarRange, ArrowRight, BarChart3, TrendingUp, History, MessageCircle, ImagePlus, X, Shuffle, ChevronDown, ChevronUp, Eye, Zap, Pencil, Check } from "lucide-react";
 import { format, formatDistanceToNow, isPast, isWithinInterval, addDays, addMonths, eachDayOfInterval, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -104,6 +106,13 @@ const Lembretes = () => {
   const [loadingLembretes, setLoadingLembretes] = useState(true);
   const [filtroLembrete, setFiltroLembrete] = useState<FiltroLembrete>('vencidos');
   const [selectedLembretes, setSelectedLembretes] = useState<Set<string>>(new Set());
+
+  // WhatsApp verification state (per lembrete id)
+  const [verificacoesTelefone, setVerificacoesTelefone] = useState<Map<string, 'valido' | 'invalido' | 'pendente'>>(new Map());
+  const [verificandoWhatsApp, setVerificandoWhatsApp] = useState(false);
+  const [verificacaoConcluida, setVerificacaoConcluida] = useState(false);
+  const [editandoTelefoneId, setEditandoTelefoneId] = useState<string | null>(null);
+  const [novoTelefone, setNovoTelefone] = useState("");
 
   // Dashboard statistics state
   const [estatisticasGerais, setEstatisticasGerais] = useState<EstatisticasGerais | null>(null);
@@ -446,11 +455,25 @@ const Lembretes = () => {
 
   // === Batch sending ===
   const enviarEmLote = async () => {
-    const lembretesParaEnviar = lembretesPendentes.filter(l => selectedLembretes.has(l.id));
-    
+    let lembretesParaEnviar = lembretesPendentes.filter(l => selectedLembretes.has(l.id));
+
     if (lembretesParaEnviar.length === 0) {
       toast({ title: "Nenhum selecionado", description: "Selecione ao menos um paciente.", variant: "destructive" });
       return;
+    }
+
+    // Filtra inválidos verificados (sem WhatsApp) — pula sem consumir cota
+    const invalidos = lembretesParaEnviar.filter(l => verificacoesTelefone.get(l.id) === 'invalido');
+    if (invalidos.length > 0) {
+      const ok = window.confirm(
+        `${invalidos.length} número(s) selecionado(s) não existem no WhatsApp e serão pulados. Continuar com ${lembretesParaEnviar.length - invalidos.length} envio(s)?`,
+      );
+      if (!ok) return;
+      lembretesParaEnviar = lembretesParaEnviar.filter(l => verificacoesTelefone.get(l.id) !== 'invalido');
+      if (lembretesParaEnviar.length === 0) {
+        toast({ title: "Nada a enviar", description: "Todos os selecionados estão sem WhatsApp.", variant: "destructive" });
+        return;
+      }
     }
 
     const validacao = validarLimitesEnvio();
@@ -645,6 +668,182 @@ const Lembretes = () => {
       return <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">Esta semana</Badge>;
     } else {
       return <Badge variant="outline" className="text-xs">Programado</Badge>;
+    }
+  };
+
+  // === WhatsApp number verification & correction ===
+  const contarTelefonesCorrigiveis = () => {
+    return lembretesPendentes.filter(l => {
+      const v = validarTelefoneBrasileiro(l.telefone);
+      return !v.valido && v.podeCorrigir;
+    }).length;
+  };
+
+  const contarNumerosVerificados = () => {
+    let validos = 0, invalidos = 0, pendentes = 0;
+    for (const l of lembretesPendentes) {
+      const s = verificacoesTelefone.get(l.id);
+      if (s === 'valido') validos++;
+      else if (s === 'invalido') invalidos++;
+      else pendentes++;
+    }
+    return { validos, invalidos, pendentes };
+  };
+
+  const corrigirTodosTelefones = async () => {
+    const corrigir = lembretesPendentes.filter(l => {
+      const v = validarTelefoneBrasileiro(l.telefone);
+      return !v.valido && v.podeCorrigir;
+    });
+
+    if (corrigir.length === 0) {
+      toast({ title: "Nenhuma correção necessária", description: "Todos os telefones já estão no formato correto." });
+      return;
+    }
+
+    let corrigidos = 0;
+    for (const l of corrigir) {
+      const { corrigido, foiCorrigido } = autocorrigirTelefone(l.telefone);
+      if (foiCorrigido) {
+        const { success } = await atualizarTelefoneLembrete(l.id, corrigido);
+        if (success) corrigidos++;
+      }
+    }
+
+    if (corrigidos > 0) {
+      toast({ title: "Telefones corrigidos!", description: `${corrigidos} telefone(s) tiveram o dígito 9 adicionado.` });
+      // remove verificações dos corrigidos para forçar re-verificação
+      setVerificacoesTelefone(prev => {
+        const next = new Map(prev);
+        corrigir.forEach(l => next.delete(l.id));
+        return next;
+      });
+      await carregarLembretesPendentes();
+    }
+  };
+
+  const salvarEdicaoTelefone = async (id: string) => {
+    const limpo = novoTelefone.replace(/\D/g, '');
+    if (limpo.length < 10) {
+      toast({ title: "Telefone inválido", description: "Digite ao menos 10 dígitos.", variant: "destructive" });
+      return;
+    }
+    const { success, error } = await atualizarTelefoneLembrete(id, limpo);
+    if (!success) {
+      toast({ title: "Erro ao salvar", description: error || "Tente novamente.", variant: "destructive" });
+      return;
+    }
+    setVerificacoesTelefone(prev => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+    setEditandoTelefoneId(null);
+    setNovoTelefone("");
+    await carregarLembretesPendentes();
+    toast({ title: "Telefone atualizado!", description: "Reverifique o WhatsApp para revalidar." });
+  };
+
+  const verificarNumerosWhatsAppLembretes = async () => {
+    if (lembretesPendentes.length === 0) return;
+
+    setVerificandoWhatsApp(true);
+    setVerificacaoConcluida(false);
+
+    // Pega o universo: selecionados, ou todos da lista filtrada
+    const alvo = selectedLembretes.size > 0
+      ? lembretesPendentes.filter(l => selectedLembretes.has(l.id))
+      : lembretesPendentes;
+
+    // Marca todos como pendentes
+    setVerificacoesTelefone(prev => {
+      const next = new Map(prev);
+      alvo.forEach(l => next.set(l.id, 'pendente'));
+      return next;
+    });
+
+    try {
+      // Telefones únicos formatados
+      const telSet = new Set<string>();
+      alvo.forEach(l => {
+        let n = l.telefone.replace(/\D/g, '');
+        if (!n.startsWith('55')) n = '55' + n;
+        telSet.add(n);
+      });
+      const telefones = Array.from(telSet);
+
+      const BATCH = 50;
+      const all: { telefoneFormatado: string; existeWhatsApp: boolean; fromCache?: boolean }[] = [];
+
+      for (let i = 0; i < telefones.length; i += BATCH) {
+        const batch = telefones.slice(i, i + BATCH);
+        const { data, error } = await supabase.functions.invoke('verificar-numeros-whatsapp', { body: { telefones: batch } });
+
+        let errData = data;
+        if (error && typeof error === 'object') {
+          try {
+            const e = error as { context?: { body?: string }; message?: string };
+            if (e.context?.body) errData = JSON.parse(e.context.body);
+            else if (e.message) {
+              const m = e.message.match(/\{.*\}/);
+              if (m) errData = JSON.parse(m[0]);
+            }
+          } catch { /* ignore */ }
+        }
+
+        if (errData?.isConnectionError) {
+          toast({
+            title: "WhatsApp Desconectado",
+            description: "Reconecte o WhatsApp nas configurações antes de verificar números.",
+            variant: "destructive",
+          });
+          setVerificacoesTelefone(prev => {
+            const next = new Map(prev);
+            alvo.forEach(l => next.delete(l.id));
+            return next;
+          });
+          setVerificandoWhatsApp(false);
+          return;
+        }
+
+        if (error && !errData?.resultados) throw error;
+
+        if (errData?.resultados) all.push(...errData.resultados);
+      }
+
+      // Atualiza estado por id usando o telefone normalizado
+      setVerificacoesTelefone(prev => {
+        const next = new Map(prev);
+        alvo.forEach(l => {
+          let n = l.telefone.replace(/\D/g, '');
+          if (!n.startsWith('55')) n = '55' + n;
+          const r = all.find(x => x.telefoneFormatado === n);
+          next.set(l.id, r?.existeWhatsApp ? 'valido' : 'invalido');
+        });
+        return next;
+      });
+
+      setVerificacaoConcluida(true);
+      const validos = all.filter(r => r.existeWhatsApp).length;
+      const invalidos = all.filter(r => !r.existeWhatsApp).length;
+      const cache = all.filter(r => r.fromCache).length;
+
+      toast({
+        title: "Verificação concluída!",
+        description: cache > 0
+          ? `${validos} válido(s), ${invalidos} inválido(s). ${cache} do cache.`
+          : `${validos} válido(s), ${invalidos} não encontrado(s) no WhatsApp.`,
+      });
+    } catch (err) {
+      console.error("Erro ao verificar números:", err);
+      toast({ title: "Erro na verificação", description: "Não foi possível verificar os números.", variant: "destructive" });
+      setVerificacoesTelefone(prev => {
+        const next = new Map(prev);
+        alvo.forEach(l => next.delete(l.id));
+        return next;
+      });
+    } finally {
+      setVerificandoWhatsApp(false);
     }
   };
 
@@ -1250,7 +1449,7 @@ const Lembretes = () => {
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <Checkbox
                           checked={selectedLembretes.size === lembretesPendentes.length && lembretesPendentes.length > 0}
@@ -1260,44 +1459,143 @@ const Lembretes = () => {
                           Selecionar todos ({lembretesPendentes.length})
                         </span>
                       </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={verificarNumerosWhatsAppLembretes}
+                          disabled={verificandoWhatsApp || lembretesPendentes.length === 0}
+                          className="gap-2"
+                        >
+                          {verificandoWhatsApp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                          Verificar WhatsApp
+                        </Button>
+                        {contarTelefonesCorrigiveis() > 0 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={corrigirTodosTelefones}
+                            className="gap-2"
+                          >
+                            <Pencil className="h-4 w-4" />
+                            Corrigir {contarTelefonesCorrigiveis()} telefone(s)
+                          </Button>
+                        )}
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {selectedLembretes.size} selecionado(s)
+                        </span>
+                      </div>
                     </div>
+
+                    {verificacaoConcluida && (() => {
+                      const c = contarNumerosVerificados();
+                      return (
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground px-1">
+                          <span className="text-green-600">✓ {c.validos} válido(s)</span>
+                          <span className="text-destructive">✗ {c.invalidos} inválido(s)</span>
+                          {c.pendentes > 0 && <span>? {c.pendentes} não verificado(s)</span>}
+                        </div>
+                      );
+                    })()}
 
                     <ScrollArea className="h-[300px] border rounded-lg">
                       <div className="p-2 space-y-2">
-                        {lembretesPendentes.map((lembrete) => (
-                          <div
-                            key={lembrete.id}
-                            className={cn(
-                              "flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer",
-                              selectedLembretes.has(lembrete.id) ? "bg-primary/10 border-primary" : "hover:bg-muted"
-                            )}
-                            onClick={() => {
-                              const newSet = new Set(selectedLembretes);
-                              if (newSet.has(lembrete.id)) {
-                                newSet.delete(lembrete.id);
-                              } else {
-                                newSet.add(lembrete.id);
-                              }
-                              setSelectedLembretes(newSet);
-                            }}
-                          >
-                            <Checkbox checked={selectedLembretes.has(lembrete.id)} />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium truncate">{lembrete.nome}</p>
-                                {getStatusBadge(lembrete)}
+                        {lembretesPendentes.map((lembrete) => {
+                          const validacao = validarTelefoneBrasileiro(lembrete.telefone);
+                          const statusVerif = verificacoesTelefone.get(lembrete.id);
+                          const editando = editandoTelefoneId === lembrete.id;
+                          return (
+                            <div
+                              key={lembrete.id}
+                              className={cn(
+                                "flex items-center gap-3 p-3 rounded-lg border transition-colors",
+                                selectedLembretes.has(lembrete.id) ? "bg-primary/10 border-primary" : "hover:bg-muted",
+                                statusVerif === 'invalido' && "border-destructive/50",
+                              )}
+                            >
+                              <div
+                                className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                                onClick={() => {
+                                  if (editando) return;
+                                  const newSet = new Set(selectedLembretes);
+                                  if (newSet.has(lembrete.id)) newSet.delete(lembrete.id);
+                                  else newSet.add(lembrete.id);
+                                  setSelectedLembretes(newSet);
+                                }}
+                              >
+                                <Checkbox checked={selectedLembretes.has(lembrete.id)} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="font-medium truncate">{lembrete.nome}</p>
+                                    {getStatusBadge(lembrete)}
+                                    {statusVerif === 'pendente' && (
+                                      <Badge variant="outline" className="text-xs gap-1">
+                                        <Loader2 className="h-3 w-3 animate-spin" /> Verificando
+                                      </Badge>
+                                    )}
+                                    {statusVerif === 'valido' && (
+                                      <Badge className="text-xs bg-green-600 hover:bg-green-600 text-white gap-1">
+                                        <CheckCircle className="h-3 w-3" /> WhatsApp OK
+                                      </Badge>
+                                    )}
+                                    {statusVerif === 'invalido' && (
+                                      <Badge variant="destructive" className="text-xs gap-1">
+                                        <XCircle className="h-3 w-3" /> Sem WhatsApp
+                                      </Badge>
+                                    )}
+                                    {!validacao.valido && !statusVerif && (
+                                      <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 border-amber-300 gap-1">
+                                        <AlertTriangle className="h-3 w-3" /> {validacao.podeCorrigir ? 'Corrigir' : 'Inválido'}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {editando ? (
+                                    <div className="flex items-center gap-2 mt-1" onClick={e => e.stopPropagation()}>
+                                      <Input
+                                        autoFocus
+                                        value={novoTelefone}
+                                        onChange={e => setNovoTelefone(e.target.value)}
+                                        placeholder="Ex.: 91999999999"
+                                        className="h-8 text-sm max-w-[220px]"
+                                      />
+                                      <Button size="sm" variant="default" className="h-8 gap-1" onClick={() => salvarEdicaoTelefone(lembrete.id)}>
+                                        <Check className="h-3 w-3" /> Salvar
+                                      </Button>
+                                      <Button size="sm" variant="ghost" className="h-8" onClick={() => { setEditandoTelefoneId(null); setNovoTelefone(""); }}>
+                                        Cancelar
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                      <Phone className="h-3 w-3" />
+                                      <span className={cn(!validacao.valido && "text-amber-700")}>{lembrete.telefone}</span>
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Última consulta: {format(new Date(lembrete.data_ultima_consulta), 'dd/MM/yyyy')} •
+                                    Lembrete: {format(new Date(lembrete.data_proximo_lembrete), 'dd/MM/yyyy')}
+                                  </p>
+                                </div>
                               </div>
-                              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                                <Phone className="h-3 w-3" />
-                                {lembrete.telefone}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Última consulta: {format(new Date(lembrete.data_ultima_consulta), 'dd/MM/yyyy')} •
-                                Lembrete: {format(new Date(lembrete.data_proximo_lembrete), 'dd/MM/yyyy')}
-                              </p>
+                              {!editando && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 px-2"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditandoTelefoneId(lembrete.id);
+                                    setNovoTelefone(lembrete.telefone);
+                                  }}
+                                  title="Editar telefone"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </ScrollArea>
                   </>

@@ -179,6 +179,25 @@ export async function buscarTelefonesExistentes(): Promise<{ data: Set<string> |
   }
 }
 
+// Update phone of a lembrete
+export async function atualizarTelefoneLembrete(
+  id: string,
+  novoTelefone: string,
+): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const { error } = await supabase
+      .from("lembretes_anuais")
+      .update({ telefone: novoTelefone })
+      .eq("id", id);
+
+    if (error) throw error;
+    return { success: true, error: null };
+  } catch (error: any) {
+    console.error("Erro ao atualizar telefone do lembrete:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 // Delete lembrete
 export async function deletarLembrete(id: string): Promise<{ success: boolean; error: string | null }> {
   try {
