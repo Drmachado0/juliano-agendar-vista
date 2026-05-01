@@ -176,19 +176,43 @@ serve(async (req: Request) => {
         return new Response(
           JSON.stringify({ ok: false, error: e?.message || "Credenciais não configuradas" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "test") {
+      // Testa as credenciais atualmente persistidas chamando connectionState
+      log("→ test: lendo config (invalidando cache primeiro)");
+      let baseUrl = "";
+      let instance = "";
+      let evoToken = "";
+      try {
+        invalidateEvolutionConfigCache();
+        const cfg = await getEvolutionConfigAsync();
+        baseUrl = cfg.baseUrl;
+        instance = cfg.instance;
+        evoToken = cfg.token;
+        log("Config carregada:", { baseUrl, instance, tokenLen: evoToken.length });
+      } catch (e: any) {
+        logErr("Falha ao carregar config (decrypt?):", e?.message);
+        return new Response(
+          JSON.stringify({ ok: false, step: "load_config", error: e?.message || "Credenciais não configuradas" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       const ctrl = new AbortController();
       const tId = setTimeout(() => ctrl.abort(), 10000);
       try {
-        const resp = await fetch(`${baseUrl}/instance/connectionState/${instance}`, {
+        const url = `${baseUrl}/instance/connectionState/${instance}`;
+        log("→ GET", url);
+        const resp = await fetch(url, {
           method: "GET",
           headers: { apikey: evoToken },
           signal: ctrl.signal,
         });
         clearTimeout(tId);
         const text = await resp.text();
+        log("← Evolution respondeu", resp.status, "body:", text.slice(0, 200));
         let parsed: any;
         try { parsed = JSON.parse(text); } catch { parsed = { raw: text }; }
 
@@ -196,6 +220,7 @@ serve(async (req: Request) => {
           return new Response(
             JSON.stringify({
               ok: false,
+              step: "evolution_http",
               status: resp.status,
               error: parsed?.message || parsed?.error || `HTTP ${resp.status}`,
               details: parsed,
@@ -211,21 +236,25 @@ serve(async (req: Request) => {
         );
       } catch (err: any) {
         clearTimeout(tId);
+        logErr("Erro fetch Evolution:", err?.message);
         return new Response(
-          JSON.stringify({ ok: false, error: err?.name === "AbortError" ? "Timeout ao conectar" : err.message }),
+          JSON.stringify({ ok: false, step: "evolution_fetch", error: err?.name === "AbortError" ? "Timeout ao conectar" : err.message }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     }
 
+    log("Ação inválida:", action);
     return new Response(
       JSON.stringify({ error: "Ação inválida. Use 'read', 'update' ou 'test'." }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("[evolution-config] Erro:", error);
+    const msg = error instanceof Error ? error.message : "Erro desconhecido";
+    const stack = error instanceof Error ? error.stack : undefined;
+    console.error("[evolution-config] EXCEÇÃO não tratada:", msg, "\nstack:", stack);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Erro desconhecido" }),
+      JSON.stringify({ error: msg, step: "uncaught" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
