@@ -18,8 +18,10 @@ import {
   type PacienteN8n,
   type LembreteAnual,
   type EstatisticasGerais,
-  type EstatisticaMensal
+  type EstatisticaMensal,
+  atualizarTelefoneLembrete
 } from "@/services/lembretesAnuais";
+import { validarTelefoneBrasileiro, autocorrigirTelefone } from "@/lib/validarTelefoneBR";
 import { supabase } from "@/integrations/supabase/client";
 import { Bell, Send, RefreshCw, Loader2, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Save, Filter, CheckCircle, Calendar as CalendarIconLucide, CalendarRange, ArrowRight, BarChart3, TrendingUp, History, MessageCircle, ImagePlus, X, Shuffle, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { format, formatDistanceToNow, isPast, isWithinInterval, addDays, addMonths, eachDayOfInterval, differenceInDays } from "date-fns";
