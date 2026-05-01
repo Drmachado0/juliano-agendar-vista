@@ -70,15 +70,19 @@ serve(async (req: Request) => {
     const supabaseAuthed = supabase;
 
     if (action === "read") {
+      log("→ RPC obter_evolution_config_mascarada");
+      const t0 = Date.now();
       const { data, error } = await supabaseAuthed.rpc("obter_evolution_config_mascarada");
+      log("← RPC retornou em", Date.now() - t0, "ms", { hasError: !!error });
       if (error) {
+        logErr("Erro RPC read:", error.message, "code:", (error as any).code, "details:", (error as any).details);
         return new Response(
-          JSON.stringify({ error: error.message }),
+          JSON.stringify({ error: error.message, step: "rpc_read" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      // Compat com formato antigo do front
       const d = data as Record<string, unknown>;
+      log("Read OK:", { instance: d?.instance, baseUrl: d?.base_url, tokenLength: d?.token_length, configured: d?.configured });
       return new Response(
         JSON.stringify({
           baseUrl: d?.base_url || "",
@@ -100,30 +104,51 @@ serve(async (req: Request) => {
       const p_api_token = typeof body.api_token === "string" && body.api_token.trim() !== ""
         ? (body.api_token as string).trim() : null;
 
+      log("Campos recebidos:", {
+        base_url: p_base_url ? "✓ (" + p_base_url.length + " chars)" : "—",
+        instance: p_instance ? "✓ '" + p_instance + "'" : "—",
+        api_token: p_api_token ? "✓ (" + p_api_token.length + " chars) — tentará pgp_sym_encrypt" : "— (mantém atual)",
+      });
+
       if (!p_base_url && !p_instance && !p_api_token) {
+        logErr("Nenhum campo enviado");
         return new Response(
           JSON.stringify({ error: "Nenhum campo para atualizar" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
+      log("→ RPC atualizar_evolution_config (etapa: validação + UPDATE + encrypt_sensitive_data)");
+      const t0 = Date.now();
       const { data, error } = await supabaseAuthed.rpc("atualizar_evolution_config", {
         p_base_url,
         p_instance,
         p_api_token,
       });
+      const elapsed = Date.now() - t0;
+      log("← RPC retornou em", elapsed, "ms", { hasError: !!error });
 
       if (error) {
+        const msg = error.message || "";
+        let step = "rpc_update";
+        if (/pgp_sym_encrypt/i.test(msg)) step = "pgp_sym_encrypt (pgcrypto não acessível ou ENCRYPTION_KEY ausente)";
+        else if (/encryption key|vault/i.test(msg)) step = "vault.ENCRYPTION_KEY (segredo do vault ausente)";
+        else if (/decrypt_sensitive_data/i.test(msg)) step = "decrypt_sensitive_data (após salvar)";
+        else if (/base_url inválida/i.test(msg)) step = "validação base_url";
+        else if (/api_token muito curto/i.test(msg)) step = "validação api_token";
+        else if (/Forbidden/i.test(msg)) step = "has_role check (RPC)";
+        logErr("Erro RPC update — step:", step, "| msg:", msg, "| code:", (error as any).code, "| details:", (error as any).details, "| hint:", (error as any).hint);
         return new Response(
-          JSON.stringify({ error: error.message }),
+          JSON.stringify({ error: msg, step, code: (error as any).code, details: (error as any).details, hint: (error as any).hint }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Invalida cache local desta instância da edge function
       invalidateEvolutionConfigCache();
+      log("Cache invalidado nesta instância da edge function");
 
       const d = data as Record<string, unknown>;
+      log("Update OK:", { instance: d?.instance, baseUrl: d?.base_url, tokenLength: d?.token_length, configured: d?.configured });
       return new Response(
         JSON.stringify({
           success: true,
@@ -137,8 +162,6 @@ serve(async (req: Request) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    if (action === "test") {
       // Testa as credenciais atualmente persistidas chamando connectionState
       let baseUrl = "";
       let instance = "";
