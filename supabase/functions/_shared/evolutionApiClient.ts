@@ -63,32 +63,86 @@ export function mapEvolutionStatusToDelivery(
   return { deliveryStatus: 'pendente', confirmed: false };
 }
 
+// Cache em memória da config (TTL 30s) para evitar SELECT por chamada
+let _configCache: { value: EvolutionConfig; expiresAt: number } | null = null;
+const CONFIG_TTL_MS = 30_000;
+
+export function invalidateEvolutionConfigCache(): void {
+  _configCache = null;
+}
+
 /**
- * Obtém a configuração da Evolution API a partir das variáveis de ambiente
- * @throws Error se alguma variável obrigatória não estiver configurada
+ * Versão SÍNCRONA legada — lê apenas das ENV vars (fallback puro).
+ * Mantida para compatibilidade. Prefira `getEvolutionConfigAsync()`.
  */
 export function getEvolutionConfig(): EvolutionConfig {
   const baseUrl = Deno.env.get('EVOLUTION_API_BASE_URL');
   const instance = Deno.env.get('EVOLUTION_API_INSTANCE');
   const token = Deno.env.get('EVOLUTION_API_TOKEN');
 
-  if (!baseUrl) {
-    throw new Error('EVOLUTION_API_BASE_URL não está configurada. Configure nas secrets do Supabase.');
+  if (!baseUrl) throw new Error('EVOLUTION_API_BASE_URL não configurada.');
+  if (!instance) throw new Error('EVOLUTION_API_INSTANCE não configurada.');
+  if (!token) throw new Error('EVOLUTION_API_TOKEN não configurada.');
+
+  return { baseUrl: baseUrl.replace(/\/$/, ''), instance, token };
+}
+
+/**
+ * Lê a config da tabela `integracoes_evolution` via RPC (cache 30s).
+ * Faz fallback para variáveis de ambiente se a tabela estiver vazia
+ * ou se algo falhar (zero-downtime durante a migração).
+ */
+export async function getEvolutionConfigAsync(): Promise<EvolutionConfig> {
+  const now = Date.now();
+  if (_configCache && _configCache.expiresAt > now) {
+    return _configCache.value;
   }
 
-  if (!instance) {
-    throw new Error('EVOLUTION_API_INSTANCE não está configurada. Configure nas secrets do Supabase.');
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  let dbConfig: EvolutionConfig | null = null;
+  if (supabaseUrl && serviceKey) {
+    try {
+      const resp = await fetch(`${supabaseUrl}/rest/v1/rpc/obter_evolution_config_interna`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+        },
+        body: '{}',
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const baseUrl = (data?.base_url || '').replace(/\/+$/, '');
+        const instance = data?.instance || '';
+        const token = data?.token || '';
+        if (baseUrl && instance && token) {
+          dbConfig = { baseUrl, instance, token };
+        }
+      } else {
+        console.warn('[EvolutionConfig] RPC falhou, fallback p/ env. Status:', resp.status);
+      }
+    } catch (err) {
+      console.warn('[EvolutionConfig] Erro lendo RPC, fallback p/ env:', err);
+    }
   }
 
-  if (!token) {
-    throw new Error('EVOLUTION_API_TOKEN não está configurada. Configure nas secrets do Supabase.');
-  }
-
-  return {
-    baseUrl: baseUrl.replace(/\/$/, ''), // Remove trailing slash
-    instance,
-    token
+  const final: EvolutionConfig = dbConfig ?? {
+    baseUrl: (Deno.env.get('EVOLUTION_API_BASE_URL') || '').replace(/\/+$/, ''),
+    instance: Deno.env.get('EVOLUTION_API_INSTANCE') || '',
+    token: Deno.env.get('EVOLUTION_API_TOKEN') || '',
   };
+
+  if (!final.baseUrl || !final.instance || !final.token) {
+    throw new Error(
+      'Credenciais Evolution não configuradas. Configure em /admin/configuracoes/evolution.'
+    );
+  }
+
+  _configCache = { value: final, expiresAt: now + CONFIG_TTL_MS };
+  return final;
 }
 
 /**
