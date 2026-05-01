@@ -162,22 +162,7 @@ serve(async (req: Request) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-      // Testa as credenciais atualmente persistidas chamando connectionState
-      let baseUrl = "";
-      let instance = "";
-      let evoToken = "";
-      try {
-        invalidateEvolutionConfigCache();
-        const cfg = await getEvolutionConfigAsync();
-        baseUrl = cfg.baseUrl;
-        instance = cfg.instance;
-        evoToken = cfg.token;
-      } catch (e: any) {
-        return new Response(
-          JSON.stringify({ ok: false, error: e?.message || "Credenciais não configuradas" }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+
 
     if (action === "test") {
       // Testa as credenciais atualmente persistidas chamando connectionState
