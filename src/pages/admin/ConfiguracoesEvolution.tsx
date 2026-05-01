@@ -26,6 +26,9 @@ import {
   Copy,
   ServerCog,
   TestTube2,
+  Save,
+  Loader2,
+  Info,
 } from "lucide-react";
 import { useEvolutionStatus } from "@/hooks/useEvolutionStatus";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,6 +75,12 @@ const ConfiguracoesEvolution = () => {
   const [testingCreds, setTestingCreds] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
+  // Edição inline da configuração
+  const [editBaseUrl, setEditBaseUrl] = useState("");
+  const [editInstance, setEditInstance] = useState("");
+  const [editToken, setEditToken] = useState("");
+  const [savingCfg, setSavingCfg] = useState(false);
+
   const fetchConfig = async () => {
     setLoadingConfig(true);
     try {
@@ -79,7 +88,11 @@ const ConfiguracoesEvolution = () => {
         body: { action: "read" },
       });
       if (error) throw error;
-      setConfig(data as EvoConfig);
+      const cfg = data as EvoConfig;
+      setConfig(cfg);
+      setEditBaseUrl(cfg.baseUrl || "");
+      setEditInstance(cfg.instance || "");
+      setEditToken("");
     } catch (err: any) {
       toast.error("Erro ao carregar configuração: " + (err.message || "desconhecido"));
     } finally {
@@ -90,6 +103,52 @@ const ConfiguracoesEvolution = () => {
   useEffect(() => {
     fetchConfig();
   }, []);
+
+  const hasChanges =
+    (editBaseUrl || "").trim() !== (config?.baseUrl || "").trim() ||
+    (editInstance || "").trim() !== (config?.instance || "").trim() ||
+    (editToken || "").trim().length > 0;
+
+  const handleSaveConfig = async () => {
+    if (!hasChanges) return;
+
+    const url = editBaseUrl.trim();
+    if (url && !/^https?:\/\//i.test(url)) {
+      toast.error("BASE URL precisa começar com http:// ou https://");
+      return;
+    }
+    if (!editInstance.trim()) {
+      toast.error("Instância não pode ser vazia");
+      return;
+    }
+    if (editToken.trim().length > 0 && editToken.trim().length < 10) {
+      toast.error("API Key muito curta (mínimo 10 caracteres)");
+      return;
+    }
+
+    setSavingCfg(true);
+    try {
+      const payload: Record<string, string> = {
+        action: "update",
+        base_url: url,
+        instance: editInstance.trim(),
+      };
+      if (editToken.trim().length > 0) payload.api_token = editToken.trim();
+
+      const { data, error } = await supabase.functions.invoke("evolution-config", { body: payload });
+      if (error) throw error;
+      const r = data as EvoConfig & { success?: boolean };
+      setConfig(r);
+      setEditToken("");
+      toast.success("Configuração salva com sucesso!");
+      // Auto-testa após salvar
+      setTimeout(() => handleTestCreds(), 200);
+    } catch (err: any) {
+      toast.error("Erro ao salvar: " + (err.message || "desconhecido"));
+    } finally {
+      setSavingCfg(false);
+    }
+  };
 
   const handleTestCreds = async () => {
     setTestingCreds(true);
