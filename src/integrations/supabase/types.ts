@@ -747,6 +747,33 @@ export type Database = {
         }
         Relationships: []
       }
+      integracoes_evolution: {
+        Row: {
+          api_token_encrypted: string | null
+          base_url: string
+          id: boolean
+          instance: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          api_token_encrypted?: string | null
+          base_url?: string
+          id?: boolean
+          instance?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          api_token_encrypted?: string | null
+          base_url?: string
+          id?: boolean
+          instance?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       lembretes_anuais: {
         Row: {
           created_at: string | null
@@ -1433,6 +1460,10 @@ export type Database = {
         Returns: Json
       }
       aplicar_retencao_lgpd: { Args: never; Returns: Json }
+      atualizar_evolution_config: {
+        Args: { p_api_token?: string; p_base_url?: string; p_instance?: string }
+        Returns: Json
+      }
       buscar_agendamento_por_telefone: {
         Args: { p_telefone: string }
         Returns: {
@@ -1613,6 +1644,8 @@ export type Database = {
       mask_nome: { Args: { p_nome: string }; Returns: string }
       mask_telefone: { Args: { p_tel: string }; Returns: string }
       normalizar_telefone: { Args: { p_telefone: string }; Returns: string }
+      obter_evolution_config_interna: { Args: never; Returns: Json }
+      obter_evolution_config_mascarada: { Args: never; Returns: Json }
       pausar_bot_agendamento: {
         Args: {
           p_agendamento_id: string

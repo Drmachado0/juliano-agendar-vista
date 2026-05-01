@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getEvolutionConfigAsync } from "../_shared/evolutionApiClient.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -106,21 +107,23 @@ serve(async (req) => {
       );
     }
 
-    let evolutionBaseUrl = Deno.env.get('EVOLUTION_API_BASE_URL');
-    const EVOLUTION_API_INSTANCE = Deno.env.get('EVOLUTION_API_INSTANCE');
-    const EVOLUTION_API_TOKEN = Deno.env.get('EVOLUTION_API_TOKEN');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!evolutionBaseUrl || !EVOLUTION_API_INSTANCE || !EVOLUTION_API_TOKEN) {
+    let evolutionBaseUrl: string;
+    let EVOLUTION_API_INSTANCE: string;
+    let EVOLUTION_API_TOKEN: string;
+    try {
+      const cfg = await getEvolutionConfigAsync();
+      evolutionBaseUrl = cfg.baseUrl;
+      EVOLUTION_API_INSTANCE = cfg.instance;
+      EVOLUTION_API_TOKEN = cfg.token;
+    } catch (_e) {
       return new Response(
         JSON.stringify({ success: false, error: 'Configuração da Evolution API incompleta' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Remove trailing slash from base URL to prevent double slashes
-    evolutionBaseUrl = evolutionBaseUrl.replace(/\/+$/, "");
 
     // Check connection FIRST before doing anything else
     console.log('=== VERIFICANDO CONEXÃO EVOLUTION ANTES DE VERIFICAR NÚMEROS ===');

@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { gerarMensagemDoTemplate, formatarData, formatarHora } from "../_shared/templateRenderer.ts";
+import { getEvolutionConfigAsync } from "../_shared/evolutionApiClient.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -125,13 +126,17 @@ serve(async (req) => {
       );
     }
 
-    // Configurações da Evolution API
-    const evolutionBaseUrl = Deno.env.get('EVOLUTION_API_BASE_URL');
-    const evolutionToken = Deno.env.get('EVOLUTION_API_TOKEN');
-    const evolutionInstance = Deno.env.get("EVOLUTION_API_INSTANCE");
-
-    if (!evolutionBaseUrl || !evolutionToken) {
-      console.error('[ConfirmarWhatsApp] Variáveis de ambiente da Evolution não configuradas');
+    // Configurações da Evolution API (tabela com fallback p/ env vars)
+    let evolutionBaseUrl: string;
+    let evolutionToken: string;
+    let evolutionInstance: string;
+    try {
+      const cfg = await getEvolutionConfigAsync();
+      evolutionBaseUrl = cfg.baseUrl;
+      evolutionToken = cfg.token;
+      evolutionInstance = cfg.instance;
+    } catch (_e) {
+      console.error('[ConfirmarWhatsApp] Configuração Evolution indisponível');
       return new Response(
         JSON.stringify({ 
           success: false, 

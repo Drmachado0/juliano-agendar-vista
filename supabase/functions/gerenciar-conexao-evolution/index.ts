@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { getEvolutionConfigAsync } from "../_shared/evolutionApiClient.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -231,11 +232,15 @@ serve(async (req) => {
   console.log("[gerenciar-conexao] ========== NOVA REQUISIÇÃO ==========");
 
   try {
-    let evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
-    const evolutionToken = Deno.env.get("EVOLUTION_API_TOKEN");
-    const instanceName = Deno.env.get("EVOLUTION_API_INSTANCE");
-
-    if (!evolutionBaseUrl || !evolutionToken) {
+    let evolutionBaseUrl: string;
+    let evolutionToken: string;
+    let instanceName: string;
+    try {
+      const cfg = await getEvolutionConfigAsync();
+      evolutionBaseUrl = cfg.baseUrl;
+      evolutionToken = cfg.token;
+      instanceName = cfg.instance;
+    } catch (_e) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -245,9 +250,6 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Remove trailing slash from base URL to prevent double slashes
-    evolutionBaseUrl = evolutionBaseUrl.replace(/\/+$/, "");
 
     // Parse action from request body
     let action = "check";

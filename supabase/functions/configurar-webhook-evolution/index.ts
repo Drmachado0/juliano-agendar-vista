@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { getEvolutionConfigAsync } from "../_shared/evolutionApiClient.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,14 +12,24 @@ serve(async (req: Request) => {
   }
 
   try {
-    const baseUrl = Deno.env.get("EVOLUTION_API_BASE_URL")?.replace(/\/$/, "");
-    const token = Deno.env.get("EVOLUTION_API_TOKEN");
-    const instance = Deno.env.get("EVOLUTION_API_INSTANCE");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
-
-    if (!baseUrl || !token || !supabaseUrl) {
+    let baseUrl: string;
+    let token: string;
+    let instance: string;
+    try {
+      const cfg = await getEvolutionConfigAsync();
+      baseUrl = cfg.baseUrl;
+      token = cfg.token;
+      instance = cfg.instance;
+    } catch (_e) {
       return new Response(
-        JSON.stringify({ success: false, error: "Variáveis de ambiente não configuradas" }),
+        JSON.stringify({ success: false, error: "Configuração Evolution indisponível" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (!supabaseUrl) {
+      return new Response(
+        JSON.stringify({ success: false, error: "SUPABASE_URL não configurada" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
