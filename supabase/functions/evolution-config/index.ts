@@ -1,16 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { getEvolutionConfigAsync, invalidateEvolutionConfigCache } from "../_shared/evolutionApiClient.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-function maskToken(token: string | undefined): string {
-  if (!token) return "";
-  if (token.length <= 8) return "•".repeat(token.length);
-  return `${token.slice(0, 4)}${"•".repeat(Math.max(4, token.length - 8))}${token.slice(-4)}`;
-}
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -27,11 +22,13 @@ serve(async (req: Request) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const supabase = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userErr } = await supabase.auth.getUser(token);
@@ -51,34 +48,98 @@ serve(async (req: Request) => {
       });
     }
 
-    const baseUrl = (Deno.env.get("EVOLUTION_API_BASE_URL") || "").replace(/\/+$/, "");
-    const instance = Deno.env.get("EVOLUTION_API_INSTANCE") || "";
-    const evoToken = Deno.env.get("EVOLUTION_API_TOKEN") || "";
-
     let body: Record<string, unknown> = {};
     if (req.method === "POST") {
       try { body = await req.json(); } catch { body = {}; }
     }
     const action = (body.action as string) || "read";
 
+    // Cliente com auth do usuário (RPCs admin-only respeitam JWT)
+    const supabaseAuthed = supabase;
+
     if (action === "read") {
+      const { data, error } = await supabaseAuthed.rpc("obter_evolution_config_mascarada");
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      // Compat com formato antigo do front
+      const d = data as Record<string, unknown>;
       return new Response(
         JSON.stringify({
-          baseUrl,
-          instance,
-          tokenMasked: maskToken(evoToken),
-          tokenLength: evoToken.length,
-          configured: Boolean(baseUrl && instance && evoToken),
+          baseUrl: d?.base_url || "",
+          instance: d?.instance || "",
+          tokenMasked: d?.token_masked || "",
+          tokenLength: d?.token_length || 0,
+          configured: Boolean(d?.configured),
+          updatedAt: d?.updated_at || null,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "update") {
+      const p_base_url = typeof body.base_url === "string" && body.base_url.trim() !== ""
+        ? (body.base_url as string).trim() : null;
+      const p_instance = typeof body.instance === "string" && body.instance.trim() !== ""
+        ? (body.instance as string).trim() : null;
+      const p_api_token = typeof body.api_token === "string" && body.api_token.trim() !== ""
+        ? (body.api_token as string).trim() : null;
+
+      if (!p_base_url && !p_instance && !p_api_token) {
+        return new Response(
+          JSON.stringify({ error: "Nenhum campo para atualizar" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data, error } = await supabaseAuthed.rpc("atualizar_evolution_config", {
+        p_base_url,
+        p_instance,
+        p_api_token,
+      });
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Invalida cache local desta instância da edge function
+      invalidateEvolutionConfigCache();
+
+      const d = data as Record<string, unknown>;
+      return new Response(
+        JSON.stringify({
+          success: true,
+          baseUrl: d?.base_url || "",
+          instance: d?.instance || "",
+          tokenMasked: d?.token_masked || "",
+          tokenLength: d?.token_length || 0,
+          configured: Boolean(d?.configured),
+          updatedAt: d?.updated_at || null,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (action === "test") {
-      // Test current credentials by calling connectionState
-      if (!baseUrl || !instance || !evoToken) {
+      // Testa as credenciais atualmente persistidas chamando connectionState
+      let baseUrl = "";
+      let instance = "";
+      let evoToken = "";
+      try {
+        invalidateEvolutionConfigCache();
+        const cfg = await getEvolutionConfigAsync();
+        baseUrl = cfg.baseUrl;
+        instance = cfg.instance;
+        evoToken = cfg.token;
+      } catch (e: any) {
         return new Response(
-          JSON.stringify({ ok: false, error: "Credenciais incompletas (baseUrl, instance ou token vazios)" }),
+          JSON.stringify({ ok: false, error: e?.message || "Credenciais não configuradas" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -123,7 +184,7 @@ serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ error: "Ação inválida. Use 'read' ou 'test'." }),
+      JSON.stringify({ error: "Ação inválida. Use 'read', 'update' ou 'test'." }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
