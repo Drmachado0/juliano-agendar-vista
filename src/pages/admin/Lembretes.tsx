@@ -455,11 +455,25 @@ const Lembretes = () => {
 
   // === Batch sending ===
   const enviarEmLote = async () => {
-    const lembretesParaEnviar = lembretesPendentes.filter(l => selectedLembretes.has(l.id));
-    
+    let lembretesParaEnviar = lembretesPendentes.filter(l => selectedLembretes.has(l.id));
+
     if (lembretesParaEnviar.length === 0) {
       toast({ title: "Nenhum selecionado", description: "Selecione ao menos um paciente.", variant: "destructive" });
       return;
+    }
+
+    // Filtra inválidos verificados (sem WhatsApp) — pula sem consumir cota
+    const invalidos = lembretesParaEnviar.filter(l => verificacoesTelefone.get(l.id) === 'invalido');
+    if (invalidos.length > 0) {
+      const ok = window.confirm(
+        `${invalidos.length} número(s) selecionado(s) não existem no WhatsApp e serão pulados. Continuar com ${lembretesParaEnviar.length - invalidos.length} envio(s)?`,
+      );
+      if (!ok) return;
+      lembretesParaEnviar = lembretesParaEnviar.filter(l => verificacoesTelefone.get(l.id) !== 'invalido');
+      if (lembretesParaEnviar.length === 0) {
+        toast({ title: "Nada a enviar", description: "Todos os selecionados estão sem WhatsApp.", variant: "destructive" });
+        return;
+      }
     }
 
     const validacao = validarLimitesEnvio();
