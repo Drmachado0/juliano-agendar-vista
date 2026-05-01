@@ -1435,7 +1435,7 @@ const Lembretes = () => {
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <Checkbox
                           checked={selectedLembretes.size === lembretesPendentes.length && lembretesPendentes.length > 0}
@@ -1445,44 +1445,143 @@ const Lembretes = () => {
                           Selecionar todos ({lembretesPendentes.length})
                         </span>
                       </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={verificarNumerosWhatsAppLembretes}
+                          disabled={verificandoWhatsApp || lembretesPendentes.length === 0}
+                          className="gap-2"
+                        >
+                          {verificandoWhatsApp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                          Verificar WhatsApp
+                        </Button>
+                        {contarTelefonesCorrigiveis() > 0 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={corrigirTodosTelefones}
+                            className="gap-2"
+                          >
+                            <Pencil className="h-4 w-4" />
+                            Corrigir {contarTelefonesCorrigiveis()} telefone(s)
+                          </Button>
+                        )}
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {selectedLembretes.size} selecionado(s)
+                        </span>
+                      </div>
                     </div>
+
+                    {verificacaoConcluida && (() => {
+                      const c = contarNumerosVerificados();
+                      return (
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground px-1">
+                          <span className="text-green-600">✓ {c.validos} válido(s)</span>
+                          <span className="text-destructive">✗ {c.invalidos} inválido(s)</span>
+                          {c.pendentes > 0 && <span>? {c.pendentes} não verificado(s)</span>}
+                        </div>
+                      );
+                    })()}
 
                     <ScrollArea className="h-[300px] border rounded-lg">
                       <div className="p-2 space-y-2">
-                        {lembretesPendentes.map((lembrete) => (
-                          <div
-                            key={lembrete.id}
-                            className={cn(
-                              "flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer",
-                              selectedLembretes.has(lembrete.id) ? "bg-primary/10 border-primary" : "hover:bg-muted"
-                            )}
-                            onClick={() => {
-                              const newSet = new Set(selectedLembretes);
-                              if (newSet.has(lembrete.id)) {
-                                newSet.delete(lembrete.id);
-                              } else {
-                                newSet.add(lembrete.id);
-                              }
-                              setSelectedLembretes(newSet);
-                            }}
-                          >
-                            <Checkbox checked={selectedLembretes.has(lembrete.id)} />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium truncate">{lembrete.nome}</p>
-                                {getStatusBadge(lembrete)}
+                        {lembretesPendentes.map((lembrete) => {
+                          const validacao = validarTelefoneBrasileiro(lembrete.telefone);
+                          const statusVerif = verificacoesTelefone.get(lembrete.id);
+                          const editando = editandoTelefoneId === lembrete.id;
+                          return (
+                            <div
+                              key={lembrete.id}
+                              className={cn(
+                                "flex items-center gap-3 p-3 rounded-lg border transition-colors",
+                                selectedLembretes.has(lembrete.id) ? "bg-primary/10 border-primary" : "hover:bg-muted",
+                                statusVerif === 'invalido' && "border-destructive/50",
+                              )}
+                            >
+                              <div
+                                className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                                onClick={() => {
+                                  if (editando) return;
+                                  const newSet = new Set(selectedLembretes);
+                                  if (newSet.has(lembrete.id)) newSet.delete(lembrete.id);
+                                  else newSet.add(lembrete.id);
+                                  setSelectedLembretes(newSet);
+                                }}
+                              >
+                                <Checkbox checked={selectedLembretes.has(lembrete.id)} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="font-medium truncate">{lembrete.nome}</p>
+                                    {getStatusBadge(lembrete)}
+                                    {statusVerif === 'pendente' && (
+                                      <Badge variant="outline" className="text-xs gap-1">
+                                        <Loader2 className="h-3 w-3 animate-spin" /> Verificando
+                                      </Badge>
+                                    )}
+                                    {statusVerif === 'valido' && (
+                                      <Badge className="text-xs bg-green-600 hover:bg-green-600 text-white gap-1">
+                                        <CheckCircle className="h-3 w-3" /> WhatsApp OK
+                                      </Badge>
+                                    )}
+                                    {statusVerif === 'invalido' && (
+                                      <Badge variant="destructive" className="text-xs gap-1">
+                                        <XCircle className="h-3 w-3" /> Sem WhatsApp
+                                      </Badge>
+                                    )}
+                                    {!validacao.valido && !statusVerif && (
+                                      <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 border-amber-300 gap-1">
+                                        <AlertTriangle className="h-3 w-3" /> {validacao.podeCorrigir ? 'Corrigir' : 'Inválido'}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {editando ? (
+                                    <div className="flex items-center gap-2 mt-1" onClick={e => e.stopPropagation()}>
+                                      <Input
+                                        autoFocus
+                                        value={novoTelefone}
+                                        onChange={e => setNovoTelefone(e.target.value)}
+                                        placeholder="Ex.: 91999999999"
+                                        className="h-8 text-sm max-w-[220px]"
+                                      />
+                                      <Button size="sm" variant="default" className="h-8 gap-1" onClick={() => salvarEdicaoTelefone(lembrete.id)}>
+                                        <Check className="h-3 w-3" /> Salvar
+                                      </Button>
+                                      <Button size="sm" variant="ghost" className="h-8" onClick={() => { setEditandoTelefoneId(null); setNovoTelefone(""); }}>
+                                        Cancelar
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                      <Phone className="h-3 w-3" />
+                                      <span className={cn(!validacao.valido && "text-amber-700")}>{lembrete.telefone}</span>
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Última consulta: {format(new Date(lembrete.data_ultima_consulta), 'dd/MM/yyyy')} •
+                                    Lembrete: {format(new Date(lembrete.data_proximo_lembrete), 'dd/MM/yyyy')}
+                                  </p>
+                                </div>
                               </div>
-                              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                                <Phone className="h-3 w-3" />
-                                {lembrete.telefone}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Última consulta: {format(new Date(lembrete.data_ultima_consulta), 'dd/MM/yyyy')} •
-                                Lembrete: {format(new Date(lembrete.data_proximo_lembrete), 'dd/MM/yyyy')}
-                              </p>
+                              {!editando && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 px-2"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditandoTelefoneId(lembrete.id);
+                                    setNovoTelefone(lembrete.telefone);
+                                  }}
+                                  title="Editar telefone"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </ScrollArea>
                   </>
