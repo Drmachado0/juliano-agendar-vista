@@ -833,6 +833,7 @@ const Lembretes = () => {
     }
   };
 
+  const countLogsByStatus = () => {
     const sucesso = logsEnvio.filter(l => l.status === 'sucesso').length;
     const falha = logsEnvio.filter(l => l.status === 'falha').length;
     const bloqueado = logsEnvio.filter(l => l.status === 'bloqueado').length;
