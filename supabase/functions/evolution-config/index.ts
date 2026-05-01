@@ -37,9 +37,10 @@ serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+    const tokenJwt = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userErr } = await supabase.auth.getUser(tokenJwt);
     if (userErr || !userData?.user) {
+      logErr("Falha auth.getUser:", userErr?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -47,8 +48,11 @@ serve(async (req: Request) => {
     }
 
     const userId = userData.user.id;
-    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    log("Usuário autenticado:", userId);
+    const { data: isAdmin, error: roleErr } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    if (roleErr) logErr("Erro has_role:", roleErr.message);
     if (!isAdmin) {
+      logErr("Acesso negado — não é admin");
       return new Response(JSON.stringify({ error: "Forbidden: admin only" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -60,6 +64,7 @@ serve(async (req: Request) => {
       try { body = await req.json(); } catch { body = {}; }
     }
     const action = (body.action as string) || "read";
+    log("Ação:", action);
 
     // Cliente com auth do usuário (RPCs admin-only respeitam JWT)
     const supabaseAuthed = supabase;
