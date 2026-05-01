@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { registrarMensagemWhatsapp } from "../_shared/registrarMensagem.ts";
+import { getEvolutionConfigAsync } from "../_shared/evolutionApiClient.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -124,21 +125,22 @@ serve(async (req) => {
       );
     }
 
-    // Get Evolution API configuration
-    let evolutionBaseUrl = Deno.env.get('EVOLUTION_API_BASE_URL');
-    const EVOLUTION_API_INSTANCE = Deno.env.get('EVOLUTION_API_INSTANCE');
-    const EVOLUTION_API_TOKEN = Deno.env.get('EVOLUTION_API_TOKEN');
-
-    if (!evolutionBaseUrl || !EVOLUTION_API_INSTANCE || !EVOLUTION_API_TOKEN) {
-      console.error('Variáveis de ambiente da Evolution API não configuradas');
+    // Get Evolution API configuration (tabela com fallback p/ env vars)
+    let evolutionBaseUrl: string;
+    let EVOLUTION_API_INSTANCE: string;
+    let EVOLUTION_API_TOKEN: string;
+    try {
+      const cfg = await getEvolutionConfigAsync();
+      evolutionBaseUrl = cfg.baseUrl;
+      EVOLUTION_API_INSTANCE = cfg.instance;
+      EVOLUTION_API_TOKEN = cfg.token;
+    } catch (_e) {
+      console.error('Configuração Evolution indisponível');
       return new Response(
         JSON.stringify({ success: false, error: 'Configuração da Evolution API incompleta' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Remove trailing slash from base URL to prevent double slashes
-    evolutionBaseUrl = evolutionBaseUrl.replace(/\/+$/, "");
 
     // Check connection before sending
     console.log('=== VERIFICANDO CONEXÃO EVOLUTION ANTES DE ENVIAR ===');

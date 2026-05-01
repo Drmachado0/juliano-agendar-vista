@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { registrarMensagemWhatsapp } from "../_shared/registrarMensagem.ts";
+import { getEvolutionConfigAsync } from "../_shared/evolutionApiClient.ts";
 
 // CORS configuration
 const corsHeaders = {
@@ -106,12 +107,16 @@ serve(async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // 2. Get Evolution API config
-    let evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
-    const evolutionToken = Deno.env.get("EVOLUTION_API_TOKEN");
-    const instanceName = Deno.env.get("EVOLUTION_API_INSTANCE");
-
-    if (!evolutionBaseUrl || !evolutionToken) {
+    // 2. Get Evolution API config (tabela com fallback p/ env vars)
+    let evolutionBaseUrl: string;
+    let evolutionToken: string;
+    let instanceName: string;
+    try {
+      const cfg = await getEvolutionConfigAsync();
+      evolutionBaseUrl = cfg.baseUrl;
+      evolutionToken = cfg.token;
+      instanceName = cfg.instance;
+    } catch (_e) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -121,9 +126,6 @@ serve(async (req: Request): Promise<Response> => {
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
-
-    // Remove trailing slash from base URL to prevent double slashes
-    evolutionBaseUrl = evolutionBaseUrl.replace(/\/+$/, "");
 
     console.log("[enviar-whatsapp] Config:", { baseUrl: evolutionBaseUrl, instance: instanceName, telefone: phoneFormatted });
 

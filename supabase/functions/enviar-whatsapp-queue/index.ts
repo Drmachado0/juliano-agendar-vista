@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { getEvolutionConfigAsync } from "../_shared/evolutionApiClient.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -93,12 +94,16 @@ serve(async (req: Request): Promise<Response> => {
       priority: priority || "normal"
     });
 
-    // 2. Get Evolution API config
-    let evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
-    const evolutionToken = Deno.env.get("EVOLUTION_API_TOKEN");
-    const instanceName = Deno.env.get("EVOLUTION_API_INSTANCE");
-
-    if (!evolutionBaseUrl || !evolutionToken) {
+    // 2. Get Evolution API config (tabela com fallback p/ env vars)
+    let evolutionBaseUrl: string;
+    let evolutionToken: string;
+    let instanceName: string;
+    try {
+      const cfg = await getEvolutionConfigAsync();
+      evolutionBaseUrl = cfg.baseUrl;
+      evolutionToken = cfg.token;
+      instanceName = cfg.instance;
+    } catch (_e) {
       console.error("[enviar-whatsapp-queue] Configuração Evolution ausente");
       return new Response(
         JSON.stringify({ 
@@ -109,9 +114,6 @@ serve(async (req: Request): Promise<Response> => {
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
-
-    // Remove trailing slash from base URL to prevent double slashes
-    evolutionBaseUrl = evolutionBaseUrl.replace(/\/+$/, "");
 
     console.log("[enviar-whatsapp-queue] Config:", { baseUrl: evolutionBaseUrl, instance: instanceName });
 

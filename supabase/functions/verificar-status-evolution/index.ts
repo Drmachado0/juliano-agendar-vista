@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { getEvolutionConfigAsync } from "../_shared/evolutionApiClient.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,13 +21,17 @@ serve(async (req) => {
 
   console.log("[verificar-status-evolution] Verificando status da instância...");
 
+  let instanceName = "";
   try {
-    let evolutionBaseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
-    const evolutionToken = Deno.env.get("EVOLUTION_API_TOKEN");
-    const instanceName = Deno.env.get("EVOLUTION_API_INSTANCE");
-
-    if (!evolutionBaseUrl || !evolutionToken) {
-      console.error("[verificar-status-evolution] Variáveis não configuradas");
+    let evolutionBaseUrl: string;
+    let evolutionToken: string;
+    try {
+      const cfg = await getEvolutionConfigAsync();
+      evolutionBaseUrl = cfg.baseUrl;
+      evolutionToken = cfg.token;
+      instanceName = cfg.instance;
+    } catch (e) {
+      console.error("[verificar-status-evolution] Config indisponível:", e);
       return new Response(
         JSON.stringify({
           connected: false,
@@ -37,9 +42,6 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Remove trailing slash from base URL to prevent double slashes
-    evolutionBaseUrl = evolutionBaseUrl.replace(/\/+$/, "");
 
     // Check instance connection state
     const statusUrl = `${evolutionBaseUrl}/instance/connectionState/${instanceName}`;
@@ -110,7 +112,7 @@ serve(async (req) => {
       JSON.stringify({
         connected: false,
         state: isTimeout ? "timeout" : "error",
-        instanceName: Deno.env.get("EVOLUTION_API_INSTANCE"),
+        instanceName,
         error: isTimeout ? "Tempo limite ao verificar status" : error.message,
       } as InstanceStatus),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

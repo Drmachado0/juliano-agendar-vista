@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { registrarMensagemWhatsapp } from "../_shared/registrarMensagem.ts";
+import { getEvolutionConfigAsync } from "../_shared/evolutionApiClient.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -125,17 +126,21 @@ function normalizePhoneNumber(rawPhone: string): string {
 // Função para enviar mensagem via Evolution API
 async function sendWhatsappTextMessage(phone: string, body: string): Promise<{ success: boolean; errorMessage?: string }> {
   try {
-    const baseUrl = Deno.env.get('EVOLUTION_API_BASE_URL');
-    const instance = Deno.env.get("EVOLUTION_API_INSTANCE");
-    const token = Deno.env.get('EVOLUTION_API_TOKEN');
-
-    if (!baseUrl || !token) {
-      console.error('[Evolution API] Variáveis de ambiente não configuradas');
+    let baseUrl: string;
+    let instance: string;
+    let token: string;
+    try {
+      const cfg = await getEvolutionConfigAsync();
+      baseUrl = cfg.baseUrl;
+      instance = cfg.instance;
+      token = cfg.token;
+    } catch (e) {
+      console.error('[Evolution API] Config indisponível:', e);
       return { success: false, errorMessage: 'Evolution API não configurada' };
     }
 
     const normalizedPhone = normalizePhoneNumber(phone);
-    const url = `${baseUrl.replace(/\/$/, '')}/message/sendText/${instance}`;
+    const url = `${baseUrl}/message/sendText/${instance}`;
 
     console.log(`[Evolution API] Enviando resposta automática para ${normalizedPhone}`);
 

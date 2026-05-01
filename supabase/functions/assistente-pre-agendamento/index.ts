@@ -4,6 +4,7 @@
 //   e cria agendamento (status_funil='aguardando', status_crm='AGUARDANDO')
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { getEvolutionConfigAsync } from "../_shared/evolutionApiClient.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -45,12 +46,19 @@ function normalizePhoneBR(raw: string): string {
 }
 
 async function sendWhatsappText(phone: string, text: string) {
-  const baseUrl = Deno.env.get("EVOLUTION_API_BASE_URL");
-  const instance = Deno.env.get("EVOLUTION_API_INSTANCE");
-  const token = Deno.env.get("EVOLUTION_API_TOKEN");
-  if (!baseUrl || !token) return { success: false, error: "Evolution API não configurada" };
+  let baseUrl: string;
+  let instance: string;
+  let token: string;
+  try {
+    const cfg = await getEvolutionConfigAsync();
+    baseUrl = cfg.baseUrl;
+    instance = cfg.instance;
+    token = cfg.token;
+  } catch {
+    return { success: false, error: "Evolution API não configurada" };
+  }
 
-  const url = `${baseUrl.replace(/\/$/, "")}/message/sendText/${instance}`;
+  const url = `${baseUrl}/message/sendText/${instance}`;
   const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: token },
