@@ -1,69 +1,54 @@
-## Problema
+# Verificar WhatsApp + Corrigir telefones em Lembretes Anuais
 
-Ao clicar **"Salvar alterações"** na tela `/admin/configuracoes/evolution`, o backend retorna:
+Replicar na aba **Pendentes** de `/admin/lembretes` o mesmo fluxo de proteção anti-bloqueio que já existe em `/admin/avaliacoes`: validar formato dos telefones, verificar quais realmente existem no WhatsApp via Evolution API e permitir corrigir números inválidos antes do disparo em lote.
 
-```
-Edge function returned 400: {"error":"Encryption key not found in vault"}
-```
+## O que muda na UI (aba Pendentes)
 
-### Causa raiz
+Acima da lista de pacientes pendentes, ao lado de "Selecionar todos", adicionar uma barra de ações idêntica à de Avaliações:
 
-A RPC `atualizar_evolution_config` (criada na migração de hoje) chama `public.encrypt_sensitive_data(token)`. Essa função busca um segredo chamado **`ENCRYPTION_KEY`** no Supabase Vault para criptografar com `pgp_sym_encrypt`. **Esse segredo não existe** no Vault deste projeto, então a função aborta com a mensagem acima — e o save inteiro falha.
-
-A mesma função já é usada para criptografar `observacoes_internas` em agendamentos, então provavelmente esse fluxo também está quebrado silenciosamente.
-
----
-
-## Solução
-
-Criar uma migração que **garante a existência da `ENCRYPTION_KEY` no Vault**, gerando uma chave aleatória forte (256 bits) caso ela ainda não esteja lá. Operação idempotente — não sobrescreve se já existir.
-
-### Migração SQL (resumo do que será executado)
-
-```sql
--- Garante extensões necessárias
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
--- Insere ENCRYPTION_KEY no Vault apenas se não existir
-DO $$
-DECLARE
-  v_existing uuid;
-BEGIN
-  SELECT id INTO v_existing
-  FROM vault.secrets
-  WHERE name = 'ENCRYPTION_KEY'
-  LIMIT 1;
-
-  IF v_existing IS NULL THEN
-    PERFORM vault.create_secret(
-      encode(gen_random_bytes(32), 'hex'),  -- 256-bit key, hex
-      'ENCRYPTION_KEY',
-      'Chave mestra para encrypt_sensitive_data / decrypt_sensitive_data'
-    );
-  END IF;
-END $$;
+```text
+[ ] Selecionar todos (N)        [⚡ Verificar WhatsApp]  [✎ Corrigir X telefone(s)]  N selecionado(s)
 ```
 
-### Por que essa abordagem
-- **Idempotente:** roda sem risco mesmo se a chave já existir um dia.
-- **Sem downtime:** não toca dados existentes (a coluna `api_token_encrypted` está vazia hoje).
-- **Sem dependência externa:** chave gerada dentro do próprio banco com `pgcrypto`.
+Em cada item da lista de lembrete pendente:
+- Badge de status do telefone ao lado do número:
+  - verde `✓` = formato válido + verificado no WhatsApp
+  - vermelho `✗ Inválido` = não existe no WhatsApp (após verificação)
+  - amarelo `⚠ Corrigir` = formato BR inválido mas corrigível (ex.: faltando 9, DDD errado)
+  - cinza `?` = ainda não verificado
+- Quando o telefone for corrigível, mostrar botão inline **Corrigir** que abre um pequeno input para edição rápida (mesmo componente de Avaliações).
 
-### Efeito imediato
-- Salvar credenciais Evolution na UI passa a funcionar.
-- Trigger de criptografia de `observacoes_internas` em `agendamentos` volta a funcionar.
+Botão **Iniciar Envio** existente passa a respeitar a verificação:
+- Se houver selecionados com `whatsappVerificado === 'invalido'`, exibir confirmação: "X número(s) selecionado(s) não existem no WhatsApp e serão pulados. Continuar?"
+- Itens marcados como inválidos são automaticamente excluídos do loop de envio (sem consumir cota da sessão).
 
----
+## Fluxo técnico
 
-## Verificação após apply
+1. **Validação local de formato** — usar a mesma função `validarTelefoneBrasileiro` já existente em `Avaliacoes.tsx`. Será extraída para `src/lib/validarTelefoneBR.ts` e importada nos dois lugares.
+2. **Verificação remota** — botão "Verificar WhatsApp" chama a edge function existente `verificar-numeros-whatsapp` em lotes de 50 (mesmo padrão de Avaliações), envia apenas os telefones dos pacientes selecionados (ou todos da lista filtrada se nada estiver selecionado).
+3. **Cache** — a edge function já usa `verificacoes_whatsapp` com TTL de 30 dias, então não há custo adicional para reverificar pacientes recentes.
+4. **Erro de conexão** — se a edge retornar `isConnectionError`, mostrar toast "Reconecte o WhatsApp nas configurações" (mesmo texto de Avaliações) e abortar.
+5. **Corrigir telefone** — abre o input inline; ao salvar, atualiza `lembretes_anuais.telefone` no banco via `supabase.from('lembretes_anuais').update(...)` e marca o item como "não verificado" novamente.
+6. **Persistência da verificação** — armazenar resultado apenas em estado local da página (`Map<lembreteId, 'valido'|'invalido'|'pendente'>`), igual a Avaliações. Não precisa de coluna nova.
 
-1. Recarregar `/admin/configuracoes/evolution`.
-2. Colar BASE URL, INSTÂNCIA e API KEY → **Salvar alterações**.
-3. Esperado: toast verde + badge muda de **"NÃO CONFIGURADA"** para **"CONFIGURADA"** + token mascarado aparece.
-4. Clicar **"Testar credenciais"** → deve responder OK da Evolution.
+## Arquivos afetados
 
-## Detalhes técnicos
+- `src/lib/validarTelefoneBR.ts` (novo) — extrai `validarTelefoneBrasileiro` de `Avaliacoes.tsx`.
+- `src/pages/admin/Avaliacoes.tsx` — passa a importar de `@/lib/validarTelefoneBR` (sem mudança de comportamento).
+- `src/pages/admin/Lembretes.tsx`:
+  - Estado novo: `verificacoesTelefone: Map<string, 'valido'|'invalido'|'pendente'>`, `verificandoWhatsApp: boolean`, `verificacaoConcluida: boolean`.
+  - Funções novas: `verificarNumerosWhatsApp()`, `corrigirTelefoneLembrete(id, novo)`, `contarTelefonesCorrigiveis()`, `contarNumerosVerificados()`.
+  - UI nova na barra de ações da aba Pendentes e nos itens da lista.
+  - Loop `enviarEmLote` filtra `whatsappVerificado !== 'invalido'`.
+- `src/services/lembretesAnuais.ts` — adicionar `atualizarTelefoneLembrete(id, telefone)` (update simples).
 
-- **Arquivo único:** uma nova migração `supabase/migrations/<timestamp>_ensure_encryption_key.sql`.
-- **Sem mudanças em código** (edge functions, helper, UI permanecem como estão — eles já estão corretos).
-- **Sem rotação de chave:** não estamos trocando uma chave existente, só criando se faltar. Se algum dia houver dados criptografados com chave diferente, eles permaneceriam ilegíveis — mas não há esse caso aqui (tabela `integracoes_evolution` está vazia e `observacoes_internas_encrypted` provavelmente também).
+## Não muda
+
+- Edge function `verificar-numeros-whatsapp` — já existe e já é usada por Avaliações; sem alterações.
+- Tabela `lembretes_anuais` — sem migração, apenas updates de coluna existente `telefone`.
+- Lógica de variação de mensagem, limites de sessão/dia, pausas anti-bloqueio.
+- Importar pacientes / Dashboard / Histórico — nenhuma mudança.
+
+## Observação
+
+Não vou tocar em `Hermes` nem recriar nada relacionado (memória do projeto confirma remoção). Também não mexo em `bot_config` ou pause do bot.
