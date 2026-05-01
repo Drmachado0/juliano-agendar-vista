@@ -188,7 +188,7 @@ export async function sendWhatsappTextMessage(
   body: string
 ): Promise<SendMessageResult> {
   try {
-    const config = getEvolutionConfig();
+    const config = await getEvolutionConfigAsync();
     const normalizedPhone = normalizePhoneNumber(phone);
     
     const url = `${config.baseUrl}/message/sendText/${config.instance}`;
