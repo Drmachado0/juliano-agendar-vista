@@ -107,6 +107,13 @@ const Lembretes = () => {
   const [filtroLembrete, setFiltroLembrete] = useState<FiltroLembrete>('vencidos');
   const [selectedLembretes, setSelectedLembretes] = useState<Set<string>>(new Set());
 
+  // WhatsApp verification state (per lembrete id)
+  const [verificacoesTelefone, setVerificacoesTelefone] = useState<Map<string, 'valido' | 'invalido' | 'pendente'>>(new Map());
+  const [verificandoWhatsApp, setVerificandoWhatsApp] = useState(false);
+  const [verificacaoConcluida, setVerificacaoConcluida] = useState(false);
+  const [editandoTelefoneId, setEditandoTelefoneId] = useState<string | null>(null);
+  const [novoTelefone, setNovoTelefone] = useState("");
+
   // Dashboard statistics state
   const [estatisticasGerais, setEstatisticasGerais] = useState<EstatisticasGerais | null>(null);
   const [estatisticasMensais, setEstatisticasMensais] = useState<EstatisticaMensal[]>([]);
