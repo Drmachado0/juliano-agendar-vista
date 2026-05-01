@@ -657,7 +657,182 @@ const Lembretes = () => {
     }
   };
 
-  const countLogsByStatus = () => {
+  // === WhatsApp number verification & correction ===
+  const contarTelefonesCorrigiveis = () => {
+    return lembretesPendentes.filter(l => {
+      const v = validarTelefoneBrasileiro(l.telefone);
+      return !v.valido && v.podeCorrigir;
+    }).length;
+  };
+
+  const contarNumerosVerificados = () => {
+    let validos = 0, invalidos = 0, pendentes = 0;
+    for (const l of lembretesPendentes) {
+      const s = verificacoesTelefone.get(l.id);
+      if (s === 'valido') validos++;
+      else if (s === 'invalido') invalidos++;
+      else pendentes++;
+    }
+    return { validos, invalidos, pendentes };
+  };
+
+  const corrigirTodosTelefones = async () => {
+    const corrigir = lembretesPendentes.filter(l => {
+      const v = validarTelefoneBrasileiro(l.telefone);
+      return !v.valido && v.podeCorrigir;
+    });
+
+    if (corrigir.length === 0) {
+      toast({ title: "Nenhuma correção necessária", description: "Todos os telefones já estão no formato correto." });
+      return;
+    }
+
+    let corrigidos = 0;
+    for (const l of corrigir) {
+      const { corrigido, foiCorrigido } = autocorrigirTelefone(l.telefone);
+      if (foiCorrigido) {
+        const { success } = await atualizarTelefoneLembrete(l.id, corrigido);
+        if (success) corrigidos++;
+      }
+    }
+
+    if (corrigidos > 0) {
+      toast({ title: "Telefones corrigidos!", description: `${corrigidos} telefone(s) tiveram o dígito 9 adicionado.` });
+      // remove verificações dos corrigidos para forçar re-verificação
+      setVerificacoesTelefone(prev => {
+        const next = new Map(prev);
+        corrigir.forEach(l => next.delete(l.id));
+        return next;
+      });
+      await carregarLembretesPendentes();
+    }
+  };
+
+  const salvarEdicaoTelefone = async (id: string) => {
+    const limpo = novoTelefone.replace(/\D/g, '');
+    if (limpo.length < 10) {
+      toast({ title: "Telefone inválido", description: "Digite ao menos 10 dígitos.", variant: "destructive" });
+      return;
+    }
+    const { success, error } = await atualizarTelefoneLembrete(id, limpo);
+    if (!success) {
+      toast({ title: "Erro ao salvar", description: error || "Tente novamente.", variant: "destructive" });
+      return;
+    }
+    setVerificacoesTelefone(prev => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+    setEditandoTelefoneId(null);
+    setNovoTelefone("");
+    await carregarLembretesPendentes();
+    toast({ title: "Telefone atualizado!", description: "Reverifique o WhatsApp para revalidar." });
+  };
+
+  const verificarNumerosWhatsAppLembretes = async () => {
+    if (lembretesPendentes.length === 0) return;
+
+    setVerificandoWhatsApp(true);
+    setVerificacaoConcluida(false);
+
+    // Pega o universo: selecionados, ou todos da lista filtrada
+    const alvo = selectedLembretes.size > 0
+      ? lembretesPendentes.filter(l => selectedLembretes.has(l.id))
+      : lembretesPendentes;
+
+    // Marca todos como pendentes
+    setVerificacoesTelefone(prev => {
+      const next = new Map(prev);
+      alvo.forEach(l => next.set(l.id, 'pendente'));
+      return next;
+    });
+
+    try {
+      // Telefones únicos formatados
+      const telSet = new Set<string>();
+      alvo.forEach(l => {
+        let n = l.telefone.replace(/\D/g, '');
+        if (!n.startsWith('55')) n = '55' + n;
+        telSet.add(n);
+      });
+      const telefones = Array.from(telSet);
+
+      const BATCH = 50;
+      const all: { telefoneFormatado: string; existeWhatsApp: boolean; fromCache?: boolean }[] = [];
+
+      for (let i = 0; i < telefones.length; i += BATCH) {
+        const batch = telefones.slice(i, i + BATCH);
+        const { data, error } = await supabase.functions.invoke('verificar-numeros-whatsapp', { body: { telefones: batch } });
+
+        let errData = data;
+        if (error && typeof error === 'object') {
+          try {
+            const e = error as { context?: { body?: string }; message?: string };
+            if (e.context?.body) errData = JSON.parse(e.context.body);
+            else if (e.message) {
+              const m = e.message.match(/\{.*\}/);
+              if (m) errData = JSON.parse(m[0]);
+            }
+          } catch { /* ignore */ }
+        }
+
+        if (errData?.isConnectionError) {
+          toast({
+            title: "WhatsApp Desconectado",
+            description: "Reconecte o WhatsApp nas configurações antes de verificar números.",
+            variant: "destructive",
+          });
+          setVerificacoesTelefone(prev => {
+            const next = new Map(prev);
+            alvo.forEach(l => next.delete(l.id));
+            return next;
+          });
+          setVerificandoWhatsApp(false);
+          return;
+        }
+
+        if (error && !errData?.resultados) throw error;
+
+        if (errData?.resultados) all.push(...errData.resultados);
+      }
+
+      // Atualiza estado por id usando o telefone normalizado
+      setVerificacoesTelefone(prev => {
+        const next = new Map(prev);
+        alvo.forEach(l => {
+          let n = l.telefone.replace(/\D/g, '');
+          if (!n.startsWith('55')) n = '55' + n;
+          const r = all.find(x => x.telefoneFormatado === n);
+          next.set(l.id, r?.existeWhatsApp ? 'valido' : 'invalido');
+        });
+        return next;
+      });
+
+      setVerificacaoConcluida(true);
+      const validos = all.filter(r => r.existeWhatsApp).length;
+      const invalidos = all.filter(r => !r.existeWhatsApp).length;
+      const cache = all.filter(r => r.fromCache).length;
+
+      toast({
+        title: "Verificação concluída!",
+        description: cache > 0
+          ? `${validos} válido(s), ${invalidos} inválido(s). ${cache} do cache.`
+          : `${validos} válido(s), ${invalidos} não encontrado(s) no WhatsApp.`,
+      });
+    } catch (err) {
+      console.error("Erro ao verificar números:", err);
+      toast({ title: "Erro na verificação", description: "Não foi possível verificar os números.", variant: "destructive" });
+      setVerificacoesTelefone(prev => {
+        const next = new Map(prev);
+        alvo.forEach(l => next.delete(l.id));
+        return next;
+      });
+    } finally {
+      setVerificandoWhatsApp(false);
+    }
+  };
+
     const sucesso = logsEnvio.filter(l => l.status === 'sucesso').length;
     const falha = logsEnvio.filter(l => l.status === 'falha').length;
     const bloqueado = logsEnvio.filter(l => l.status === 'bloqueado').length;
