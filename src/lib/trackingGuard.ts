@@ -38,3 +38,16 @@ export function safeGtag(...args: unknown[]): void {
     gtag(...args);
   }
 }
+
+export function safeFbq(
+  method: "track" | "trackCustom",
+  event: string,
+  params?: Record<string, unknown>
+): void {
+  if (!isTrackingAllowed()) return;
+  if (typeof window === "undefined") return;
+  const fbq = (window as any).fbq;
+  if (typeof fbq === "function") {
+    fbq(method, event, params);
+  }
+}
