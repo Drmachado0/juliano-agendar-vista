@@ -361,13 +361,19 @@ const ConfiguracoesEvolution = () => {
                 Base URL
               </Label>
               <div className="flex gap-2">
-                <Input readOnly value={config?.baseUrl || ""} placeholder="—" className="font-mono text-sm" />
+                <Input
+                  value={editBaseUrl}
+                  onChange={(e) => setEditBaseUrl(e.target.value)}
+                  placeholder="https://sua-evolution.exemplo.com"
+                  className="font-mono text-sm"
+                  disabled={savingCfg}
+                />
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => handleCopy(config?.baseUrl || "", "Base URL")}
                   disabled={!config?.baseUrl}
-                  title="Copiar"
+                  title="Copiar valor atual"
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
@@ -380,55 +386,72 @@ const ConfiguracoesEvolution = () => {
                 Instância
               </Label>
               <div className="flex gap-2">
-                <Input readOnly value={config?.instance || ""} placeholder="—" className="font-mono text-sm" />
+                <Input
+                  value={editInstance}
+                  onChange={(e) => setEditInstance(e.target.value)}
+                  placeholder="nome-da-instancia"
+                  className="font-mono text-sm"
+                  disabled={savingCfg}
+                />
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => handleCopy(config?.instance || "", "Nome da instância")}
                   disabled={!config?.instance}
-                  title="Copiar"
+                  title="Copiar valor atual"
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
-            {/* API Key (mascarada) */}
+            {/* API Key (editável) */}
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-2">
                 <KeyRound className="h-3.5 w-3.5" />
                 API Key
                 {config?.tokenLength ? (
                   <Badge variant="secondary" className="text-[10px]">
-                    {config.tokenLength} chars
+                    atual: {config.tokenLength} chars
                   </Badge>
-                ) : null}
+                ) : (
+                  <Badge variant="destructive" className="text-[10px]">não configurada</Badge>
+                )}
               </Label>
               <div className="flex gap-2">
                 <Input
-                  readOnly
                   type={showToken ? "text" : "password"}
-                  value={
-                    showToken
-                      ? config?.tokenMasked || ""
-                      : "•".repeat(Math.min(config?.tokenLength || 0, 32))
-                  }
-                  placeholder="—"
+                  value={editToken}
+                  onChange={(e) => setEditToken(e.target.value)}
+                  placeholder={config?.tokenMasked ? `Atual: ${config.tokenMasked} (deixe vazio para manter)` : "Cole a API key da Evolution"}
                   className="font-mono text-sm"
+                  disabled={savingCfg}
+                  autoComplete="off"
                 />
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => setShowToken((v) => !v)}
-                  disabled={!config?.tokenMasked}
-                  title={showToken ? "Ocultar" : "Mostrar (mascarado)"}
+                  title={showToken ? "Ocultar" : "Mostrar"}
                 >
                   {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Por segurança a key nunca é exibida completa — apenas os 4 primeiros e 4 últimos caracteres.
+                Por segurança o token é armazenado criptografado e nunca exibido completo. Deixe o campo
+                vazio se quiser manter o token atual.
               </p>
+            </div>
+
+            {/* Botão Salvar */}
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <p className="text-xs text-muted-foreground">
+                {hasChanges ? "Há alterações não salvas." : "Sem alterações pendentes."}
+              </p>
+              <Button onClick={handleSaveConfig} disabled={!hasChanges || savingCfg} className="gap-2">
+                {savingCfg ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Salvar alterações
+              </Button>
             </div>
 
             {/* Resultado do teste */}
@@ -444,17 +467,14 @@ const ConfiguracoesEvolution = () => {
               </Alert>
             )}
 
-            {/* Como atualizar */}
+            {/* Aviso */}
             <Alert>
-              <KeyRound className="h-4 w-4" />
-              <AlertTitle>Como atualizar instância ou API key</AlertTitle>
+              <Info className="h-4 w-4" />
+              <AlertTitle>Como funciona</AlertTitle>
               <AlertDescription className="text-sm">
-                Os valores ficam armazenados como <strong>secrets</strong> do backend. Para alterar,
-                acesse <strong>Lovable Cloud → Backend → Secrets</strong> e edite{" "}
-                <code className="text-xs bg-muted px-1 py-0.5 rounded">EVOLUTION_API_INSTANCE</code>{" "}
-                ou{" "}
-                <code className="text-xs bg-muted px-1 py-0.5 rounded">EVOLUTION_API_TOKEN</code>.
-                As mudanças passam a valer imediatamente em todas as 11 edge functions.
+                As credenciais ficam armazenadas com segurança no backend (token criptografado em repouso).
+                Alterações passam a valer em todas as edge functions em até <strong>30 segundos</strong> (cache).
+                Para trocar de instância, basta editar acima e salvar.
               </AlertDescription>
             </Alert>
           </CardContent>
