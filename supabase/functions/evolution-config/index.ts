@@ -12,10 +12,17 @@ serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const reqId = crypto.randomUUID().slice(0, 8);
+  const log = (...args: unknown[]) => console.log(`[evolution-config][${reqId}]`, ...args);
+  const logErr = (...args: unknown[]) => console.error(`[evolution-config][${reqId}]`, ...args);
+
   try {
+    log("=== NOVA REQUISIÇÃO ===", { method: req.method });
+
     // Auth: only admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
+      logErr("Sem Authorization Bearer");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
