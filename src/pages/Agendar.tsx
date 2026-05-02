@@ -249,8 +249,8 @@ const Agendar = () => {
       );
       await Promise.race([notificationsPromise, timeoutPromise]);
 
-      trackSchedule(formData.appointmentType, formData.location);
-      trackCompleteRegistration(formData.appointmentType, formData.location);
+      trackSchedule(formData.appointmentType, formData.location, leadId);
+      trackCompleteRegistration(formData.appointmentType, formData.location, leadId);
       trackFormSubmitConversion();
 
       if (typeof (window as any).gtag !== "undefined") {
