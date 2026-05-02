@@ -126,10 +126,14 @@ const Agendamento = () => {
 
   const totalSteps = 4;
 
-  // ViewContent + page_view + UTMs
+  // view_scheduling_page + ViewContent + UTMs (também persistidos por getTrackingParams)
   useEffect(() => {
     trackViewContent("Landing Agendamento", "Consulta Oftalmológica");
-    pushDL({ event: "page_view", page_type: "landing_agendamento", page_path: "/agendamento" });
+    pushDL({
+      event: "view_scheduling_page",
+      page_path: "/agendamento",
+      page_type: "landing_agendamento",
+    });
 
     try {
       const params = new URLSearchParams(window.location.search);
@@ -205,9 +209,13 @@ const Agendamento = () => {
         } else if (lead_id) {
           setLeadId(lead_id);
           pushDL({
-            event: "lp_lead_generated",
-            page_type: "landing_agendamento",
+            event: "lead_created",
             lead_id,
+            event_id: `lead_${lead_id}`,
+            content_name: "Agendamento Formulario - Site",
+            content_category: "Consulta Oftalmológica",
+            value: 300,
+            currency: "BRL",
             tipo_atendimento: leadData.tipo_atendimento,
           });
         }

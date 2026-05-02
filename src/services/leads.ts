@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getTrackingParams } from "@/lib/tracking";
 
 export interface LeadData {
   nome_completo: string;
@@ -14,8 +15,27 @@ export interface LeadData {
 
 export async function criarLead(data: LeadData): Promise<{ lead_id: string | null; error: Error | null }> {
   try {
+    const tracking = getTrackingParams();
+    const payload = {
+      ...data,
+      origem: tracking.utm_source || "site",
+      utm_source: tracking.utm_source || null,
+      utm_medium: tracking.utm_medium || null,
+      utm_campaign: tracking.utm_campaign || null,
+      utm_term: tracking.utm_term || null,
+      utm_content: tracking.utm_content || null,
+      gclid: tracking.gclid || null,
+      fbclid: tracking.fbclid || null,
+      gbraid: tracking.gbraid || null,
+      wbraid: tracking.wbraid || null,
+      fbp: tracking.fbp || null,
+      fbc: tracking.fbc || null,
+      landing_page: tracking.landing_page || null,
+      referrer: tracking.referrer || null,
+    };
+
     const { data: responseData, error } = await supabase.functions.invoke('criar-lead', {
-      body: data,
+      body: payload,
     });
 
     if (error) {
