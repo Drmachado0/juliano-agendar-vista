@@ -313,9 +313,9 @@ const Agendamento = () => {
       );
       await Promise.race([notificationsPromise, timeoutPromise]);
 
-      // Tracking
-      trackSchedule(formData.appointmentTypeName, formData.locationName);
-      trackCompleteRegistration(formData.appointmentTypeName, formData.locationName);
+      // Tracking (event_id = leadId para dedup com CAPI server-side)
+      trackSchedule(formData.appointmentTypeName, formData.locationName, leadId);
+      trackCompleteRegistration(formData.appointmentTypeName, formData.locationName, leadId);
       trackFormSubmitConversion();
 
       pushDL({
