@@ -155,6 +155,57 @@ function determineStatusCrmByLocation(localAtendimento: string): string {
   return "NOVO LEAD";
 }
 
+// Captura sinais de tracking (cookies fbc/fbp/UTMs/click IDs/landing/referrer)
+// para CAPI dedup E persistência na tabela agendamentos (colunas adicionadas
+// em migration 20260502005818).
+function captureMetaSignals() {
+  if (typeof window === 'undefined') return {};
+
+  const getCookie = (name: string): string | undefined => {
+    const m = document.cookie.match(new RegExp(`(^|;\\s*)${name}=([^;]+)`));
+    return m ? m[2] : undefined;
+  };
+
+  const params = new URLSearchParams(window.location.search);
+  const persisted = (key: string) =>
+    params.get(key) ?? sessionStorage.getItem(key) ?? undefined;
+
+  // Persiste em sessionStorage para sobreviver à navegação interna até o submit
+  for (const k of [
+    'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+    'gclid', 'fbclid', 'gbraid', 'wbraid',
+  ]) {
+    const v = params.get(k);
+    if (v) sessionStorage.setItem(k, v);
+  }
+  if (!sessionStorage.getItem('landing_page')) {
+    sessionStorage.setItem('landing_page', window.location.href);
+  }
+  if (!sessionStorage.getItem('referrer') && document.referrer) {
+    sessionStorage.setItem('referrer', document.referrer);
+  }
+
+  return {
+    // Persistido na tabela (Edge Function vai escrever nas colunas)
+    utm_source: persisted('utm_source'),
+    utm_medium: persisted('utm_medium'),
+    utm_campaign: persisted('utm_campaign'),
+    utm_content: persisted('utm_content'),
+    utm_term: persisted('utm_term'),
+    gclid: persisted('gclid'),
+    fbclid: persisted('fbclid'),
+    gbraid: persisted('gbraid'),
+    wbraid: persisted('wbraid'),
+    fbc: getCookie('_fbc'),
+    fbp: getCookie('_fbp'),
+    landing_page: sessionStorage.getItem('landing_page') || window.location.href,
+    referrer: sessionStorage.getItem('referrer') || document.referrer || undefined,
+    // Sinais usados só pelo CAPI (não persistidos)
+    meta_event_source_url: window.location.href,
+    meta_user_agent: navigator.userAgent,
+  };
+}
+
 // Create new agendamento (public - from website form) via rate-limited edge function
 export async function criarAgendamento(data: AgendamentoInsert): Promise<{ data: Agendamento | null; error: Error | null }> {
   // Validate input with zod schema on client side first
@@ -190,8 +241,9 @@ export async function criarAgendamento(data: AgendamentoInsert): Promise<{ data:
   };
 
   // Call rate-limited edge function instead of direct insert
+  // Inclui sinais Meta CAPI no body (fbc/fbp/UTMs/source URL/user agent) para dedup
   const { data: responseData, error } = await supabase.functions.invoke('criar-agendamento', {
-    body: sanitizedData,
+    body: { ...sanitizedData, ...captureMetaSignals() },
   });
 
   // Detecta erro de slot tomado (HTTP 409). O supabase-js coloca o body no responseData

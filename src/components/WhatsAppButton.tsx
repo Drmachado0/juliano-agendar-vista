@@ -2,10 +2,48 @@ import { MessageCircle } from "lucide-react";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const WhatsAppButton = () => {
   const { trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
-  const { trackContact: trackMetaContact } = useMetaPixel();
+  const { trackContact: trackMetaContact, generateEventId } = useMetaPixel();
+
+  // Dispara CAPI server-side para WhatsApp Contact (sem agendamento.id — usa UUID + cookies)
+  const fireMetaCapiContact = async (eventId: string) => {
+    const getCookie = (name: string): string | undefined => {
+      const m = document.cookie.match(new RegExp(`(^|;\\s*)${name}=([^;]+)`));
+      return m ? m[2] : undefined;
+    };
+    const params = new URLSearchParams(window.location.search);
+    const ssGet = (k: string) => params.get(k) ?? sessionStorage.getItem(k) ?? undefined;
+    try {
+      await supabase.functions.invoke('meta-capi', {
+        body: {
+          event_name: 'Contact',
+          event_id: eventId,
+          event_source_url: window.location.href,
+          user_data: {
+            country: 'BR',
+            fbc: getCookie('_fbc'),
+            fbp: getCookie('_fbp'),
+            client_user_agent: navigator.userAgent,
+          },
+          custom_data: {
+            content_name: 'WhatsApp_Floating',
+            content_category: 'Lead_Channel',
+            utm_source: ssGet('utm_source'),
+            utm_medium: ssGet('utm_medium'),
+            utm_campaign: ssGet('utm_campaign'),
+            utm_content: ssGet('utm_content'),
+            utm_term: ssGet('utm_term'),
+          },
+        },
+      });
+    } catch (err) {
+      // Falha em CAPI nunca bloqueia a UX do WhatsApp
+      console.warn('[meta-capi] Contact event failed:', err);
+    }
+  };
   const [show, setShow] = useState(false);
   const [pulseReady, setPulseReady] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -41,9 +79,12 @@ const WhatsAppButton = () => {
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => {
+          const eventId = generateEventId();
           trackWhatsAppClick(whatsappUrl, 'Fale conosco', 'whatsapp_floating', 'floating_bottom_right');
           trackWhatsAppGoogleAdsConversion();
-          trackMetaContact('WhatsApp');
+          trackMetaContact('WhatsApp_Floating', eventId);
+          // fire-and-forget: não bloqueia a navegação para o WhatsApp
+          fireMetaCapiContact(eventId);
         }}
         className={`flex items-center gap-2.5 bg-[#25D366] text-white pl-4 pr-5 py-3.5 rounded-2xl shadow-xl shadow-[#25D366]/25 hover:shadow-2xl hover:shadow-[#25D366]/35 hover:scale-105 active:scale-100 transition-all duration-300 backdrop-blur-sm ring-2 ring-[#25D366]/20 ring-offset-2 ring-offset-background ${
           pulseReady ? 'animate-whatsapp-pulse' : ''

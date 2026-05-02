@@ -135,15 +135,18 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
         await notificarN8n('agendamento_criado', data);
       }
 
+      // event_id usado para dedup com CAPI server-side (criar-agendamento → meta-capi)
+      const metaEventId = data?.id;
+
       // Google Tag tracking
       trackScheduleComplete(formData.appointmentTypeName, formData.locationName);
       trackLeadGA('agendamento');
       trackFormSubmitConversion();
 
-      // Meta Pixel tracking
-      trackSchedule(formData.appointmentTypeName, formData.locationName);
-      trackCompleteRegistration(formData.appointmentTypeName, formData.locationName);
-      trackLeadMeta('Agendamento Confirmado - Modal');
+      // Meta Pixel tracking — passa agendamento.id como event_id para dedup com CAPI
+      trackSchedule(formData.appointmentTypeName, formData.locationName, metaEventId);
+      trackCompleteRegistration(formData.appointmentTypeName, formData.locationName, metaEventId);
+      trackLeadMeta('Agendamento Confirmado - Modal', metaEventId);
 
       // Google Ads Conversion
       if (typeof (window as any).gtag !== 'undefined') {

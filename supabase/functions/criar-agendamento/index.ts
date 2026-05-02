@@ -198,7 +198,9 @@ Deno.serve(async (req) => {
 
     console.log(`[criar-agendamento] Disponibilidade confirmada, prosseguindo com criação...`);
 
-    // Prepare sanitized data
+    // Prepare sanitized data — inclui colunas de tracking adicionadas em
+    // migration 20260502005818 (utm_*, gclid, fbclid, gbraid, wbraid, fbc, fbp,
+    // landing_page, referrer) para attribution multi-touch e CAPI replay.
     const autoStatusCrm = determineStatusCrmByLocation(body.local_atendimento);
     const sanitizedData = {
       nome_completo: body.nome_completo.trim(),
@@ -216,6 +218,19 @@ Deno.serve(async (req) => {
       aceita_contato_whatsapp_email: body.aceita_contato_whatsapp_email ?? false,
       status_crm: autoStatusCrm,
       origem: body.origem || 'site',
+      utm_source: body.utm_source || null,
+      utm_medium: body.utm_medium || null,
+      utm_campaign: body.utm_campaign || null,
+      utm_term: body.utm_term || null,
+      utm_content: body.utm_content || null,
+      gclid: body.gclid || null,
+      fbclid: body.fbclid || null,
+      gbraid: body.gbraid || null,
+      wbraid: body.wbraid || null,
+      fbp: body.fbp || null,
+      fbc: body.fbc || null,
+      landing_page: body.landing_page || null,
+      referrer: body.referrer || null,
     };
 
     // Insert into database
@@ -244,6 +259,51 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[criar-agendamento] Created appointment: ${data.id}`);
+
+    // Fire-and-forget: Meta CAPI server-side (Schedule event)
+    // Usa data.id como event_id para dedup com pixel browser (GTM)
+    const localLower = sanitizedData.local_atendimento.toLowerCase();
+    const cidade =
+      localLower.includes("belém") || localLower.includes("belem") ||
+      localLower.includes("iob") || localLower.includes("vitria")
+        ? "Belém"
+        : "Paragominas";
+    const nameParts = sanitizedData.nome_completo.trim().split(/\s+/);
+    const fn = nameParts[0];
+    const ln = nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined;
+
+    const notifyMetaCapi = supabase.functions.invoke('meta-capi', {
+      body: {
+        event_name: 'Schedule',
+        event_id: data.id,
+        event_source_url: body.meta_event_source_url || sanitizedData.landing_page || 'https://drjulianomachado.com/',
+        user_data: {
+          em: sanitizedData.email || undefined,
+          ph: sanitizedData.telefone_whatsapp,
+          fn,
+          ln,
+          ct: cidade,
+          st: 'PA',
+          country: 'BR',
+          external_id: data.id,
+          fbc: sanitizedData.fbc || undefined,
+          fbp: sanitizedData.fbp || undefined,
+          client_user_agent: body.meta_user_agent || undefined,
+        },
+        custom_data: {
+          content_name: `Agendamento_${sanitizedData.tipo_atendimento}`,
+          content_category: cidade,
+          value: 300,
+          currency: 'BRL',
+          utm_source: sanitizedData.utm_source || undefined,
+          utm_medium: sanitizedData.utm_medium || undefined,
+          utm_campaign: sanitizedData.utm_campaign || undefined,
+          utm_content: sanitizedData.utm_content || undefined,
+          utm_term: sanitizedData.utm_term || undefined,
+        },
+      },
+    }).then(() => console.log(`[criar-agendamento] Meta CAPI Schedule sent (event_id=${data.id})`))
+      .catch((err: unknown) => console.error('[criar-agendamento] Meta CAPI failed:', err));
 
     // Fire-and-forget: dispara notificações sem bloquear a resposta
     const notifyWhatsApp = supabase.functions.invoke('confirmar-agendamento-whatsapp', {
@@ -284,7 +344,7 @@ Deno.serve(async (req) => {
       .catch((err: unknown) => console.error("[criar-agendamento] Google Calendar sync failed:", err));
 
     // Aguarda todas sem bloquear o retorno (best-effort)
-    Promise.allSettled([notifyWhatsApp, notifyEmail, notifyCalendar]);
+    Promise.allSettled([notifyWhatsApp, notifyEmail, notifyCalendar, notifyMetaCapi]);
 
     return new Response(
       JSON.stringify({ 
