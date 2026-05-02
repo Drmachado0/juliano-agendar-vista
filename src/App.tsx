@@ -44,12 +44,14 @@ const App = () => (
           <Sonner closeButton richColors position="top-right" />
           <BrowserRouter>
           <RouteChangeTracker />
+          <ConsentBanner />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/agendar" element={<Agendar />} />
             <Route path="/agendar-consulta" element={<AgendarConsulta />} />
             <Route path="/agendamento" element={<Agendamento />} />
             <Route path="/obrigado" element={<Obrigado />} />
+            <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
             <Route path="/auth" element={<Auth />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
