@@ -181,10 +181,6 @@ const Agendamento = () => {
 
   const nextStep = async () => {
     if (currentStep < totalSteps) {
-      if (currentStep === 1) {
-        trackLead("Dados Pessoais Preenchidos - Landing");
-      }
-
       if (currentStep === 2 && !leadId) {
         const leadData = {
           nome_completo: formData.fullName,
@@ -208,6 +204,8 @@ const Agendamento = () => {
           });
         } else if (lead_id) {
           setLeadId(lead_id);
+          // Lead tracking com event_id = lead_id (dedup com CAPI server-side)
+          trackLead("Dados Pessoais Preenchidos - Landing", lead_id);
           pushDL({
             event: "lead_created",
             lead_id,
