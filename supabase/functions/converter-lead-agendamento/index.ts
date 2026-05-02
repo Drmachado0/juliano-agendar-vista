@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
       .from("agendamentos")
       .update(updatePayload)
       .eq("id", lead_id)
-      .select("id, clinica_id")
+      .select("id, clinica_id, nome_completo, email, telefone_whatsapp, tipo_atendimento, local_atendimento, utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbc, fbp, landing_page")
       .single();
 
     if (updateError) {
