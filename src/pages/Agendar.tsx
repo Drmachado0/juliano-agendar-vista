@@ -129,10 +129,6 @@ const Agendar = () => {
 
   const nextStep = async () => {
     if (currentStep < totalSteps) {
-      if (currentStep === 1) {
-        trackLead("Dados Pessoais Preenchidos");
-      }
-
       if (currentStep === 2 && !leadId) {
         const leadData = {
           nome_completo: formData.fullName,
@@ -155,6 +151,7 @@ const Agendar = () => {
           });
         } else if (lead_id) {
           setLeadId(lead_id);
+          trackLead("Dados Pessoais Preenchidos", lead_id);
         }
       }
 
