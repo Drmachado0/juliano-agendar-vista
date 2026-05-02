@@ -15,6 +15,86 @@ interface LeadData {
   local_atendimento: string;
   convenio: string;
   convenio_outro?: string;
+  // Tracking
+  origem?: string;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  utm_term?: string | null;
+  utm_content?: string | null;
+  gclid?: string | null;
+  fbclid?: string | null;
+  gbraid?: string | null;
+  wbraid?: string | null;
+  fbp?: string | null;
+  fbc?: string | null;
+  landing_page?: string | null;
+  referrer?: string | null;
+}
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+async function fireMetaCapiLead(
+  lead: { id: string; email: string | null; telefone: string; nome: string },
+  tracking: Partial<LeadData>,
+  clientIp: string,
+  userAgent: string,
+) {
+  try {
+    const [first_name, ...rest] = (lead.nome || '').trim().split(/\s+/);
+    const last_name = rest.join(' ');
+    const url = `${SUPABASE_URL}/functions/v1/meta-capi`;
+    const landing = tracking.landing_page || '/';
+    const event_source_url = landing.startsWith('http')
+      ? landing
+      : `https://drjulianomachado.com${landing}`;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
+        'x-forwarded-for': clientIp,
+        'user-agent': userAgent,
+      },
+      body: JSON.stringify({
+        event_name: 'Lead',
+        event_id: lead.id,
+        event_source_url,
+        user_data: {
+          em: lead.email || undefined,
+          ph: lead.telefone || undefined,
+          fn: first_name || undefined,
+          ln: last_name || undefined,
+          country: 'BR',
+          external_id: lead.id,
+          fbc: tracking.fbc || undefined,
+          fbp: tracking.fbp || undefined,
+          client_user_agent: userAgent || undefined,
+        },
+        custom_data: {
+          content_name: 'Lead Site',
+          content_category: 'Consulta Oftalmológica',
+          value: 300,
+          currency: 'BRL',
+          utm_source: tracking.utm_source || undefined,
+          utm_medium: tracking.utm_medium || undefined,
+          utm_campaign: tracking.utm_campaign || undefined,
+          utm_content: tracking.utm_content || undefined,
+          utm_term: tracking.utm_term || undefined,
+        },
+      }),
+    });
+    const body = await res.text();
+    if (!res.ok) {
+      console.error(`[criar-lead] Meta CAPI Lead failed (${res.status}): ${body}`);
+    } else {
+      console.log(`[criar-lead] Meta CAPI Lead sent event_id=${lead.id} resp=${body}`);
+    }
+  } catch (err) {
+    console.error('[criar-lead] Meta CAPI Lead error:', err);
+  }
 }
 
 Deno.serve(async (req) => {
@@ -31,10 +111,9 @@ Deno.serve(async (req) => {
 
   try {
     const data: LeadData = await req.json();
-    
+
     console.log('[criar-lead] Dados recebidos:', JSON.stringify(data));
 
-    // Validação básica
     if (!data.nome_completo || !data.telefone_whatsapp || !data.tipo_atendimento || !data.local_atendimento || !data.convenio) {
       console.error('[criar-lead] Campos obrigatórios faltando');
       return new Response(
@@ -43,13 +122,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
     const phoneClean = data.telefone_whatsapp.replace(/\D/g, '');
 
-    // Criar lead
     const { data: lead, error } = await supabase
       .from('agendamentos')
       .insert({
@@ -64,9 +140,23 @@ Deno.serve(async (req) => {
         convenio_outro: data.convenio_outro || null,
         status_crm: 'NOVO LEAD',
         status_funil: 'lead',
-        origem: 'site',
+        origem: data.origem || 'site',
         data_agendamento: null,
         hora_agendamento: null,
+        // Tracking persistido
+        utm_source: data.utm_source || null,
+        utm_medium: data.utm_medium || null,
+        utm_campaign: data.utm_campaign || null,
+        utm_term: data.utm_term || null,
+        utm_content: data.utm_content || null,
+        gclid: data.gclid || null,
+        fbclid: data.fbclid || null,
+        gbraid: data.gbraid || null,
+        wbraid: data.wbraid || null,
+        fbp: data.fbp || null,
+        fbc: data.fbc || null,
+        landing_page: data.landing_page || null,
+        referrer: data.referrer || null,
       })
       .select('id')
       .single();
@@ -80,8 +170,18 @@ Deno.serve(async (req) => {
     }
 
     console.log('Lead criado com sucesso:', lead.id);
-    // Mensagem de boas-vindas será enviada pela função agendada (enviar-boas-vindas-lead)
-    // após 5 minutos de delay, evitando duplicatas e envios prematuros.
+
+    // Fire-and-forget Meta CAPI Lead (server-side dedup com browser via event_id = lead.id)
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim()
+      ?? req.headers.get('x-real-ip')
+      ?? '';
+    const userAgent = req.headers.get('user-agent') ?? '';
+    fireMetaCapiLead(
+      { id: lead.id, email: data.email?.trim() || null, telefone: phoneClean, nome: data.nome_completo },
+      data,
+      clientIp,
+      userAgent,
+    ).catch((e) => console.error('[criar-lead] Meta CAPI fire-and-forget error:', e));
 
     return new Response(
       JSON.stringify({ success: true, lead_id: lead.id }),

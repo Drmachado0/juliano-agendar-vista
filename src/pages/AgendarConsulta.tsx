@@ -108,10 +108,6 @@ const AgendarConsulta = () => {
     if (currentStep < totalSteps) {
       pushDataLayer({ event: "lp_step_complete", step: currentStep });
 
-      if (currentStep === 1) {
-        trackLead("Dados Pessoais Preenchidos");
-      }
-
       if (currentStep === 2 && !leadId) {
         const leadData = {
           nome_completo: formData.fullName,
@@ -134,6 +130,7 @@ const AgendarConsulta = () => {
           });
         } else if (lead_id) {
           setLeadId(lead_id);
+          trackLead("Dados Pessoais Preenchidos", lead_id);
           pushDataLayer({ event: "lp_lead_generated", lead_id });
         }
       }
@@ -233,9 +230,9 @@ const AgendarConsulta = () => {
       );
       await Promise.race([notificationsPromise, timeoutPromise]);
 
-      // Conversion tracking
-      trackSchedule(formData.appointmentType, formData.location);
-      trackCompleteRegistration(formData.appointmentType, formData.location);
+      // Conversion tracking (event_id = leadId para dedup com CAPI server-side)
+      trackSchedule(formData.appointmentType, formData.location, leadId);
+      trackCompleteRegistration(formData.appointmentType, formData.location, leadId);
       trackFormSubmitConversion();
 
       pushDataLayer({

@@ -129,10 +129,6 @@ const Agendar = () => {
 
   const nextStep = async () => {
     if (currentStep < totalSteps) {
-      if (currentStep === 1) {
-        trackLead("Dados Pessoais Preenchidos");
-      }
-
       if (currentStep === 2 && !leadId) {
         const leadData = {
           nome_completo: formData.fullName,
@@ -155,6 +151,7 @@ const Agendar = () => {
           });
         } else if (lead_id) {
           setLeadId(lead_id);
+          trackLead("Dados Pessoais Preenchidos", lead_id);
         }
       }
 
@@ -252,8 +249,8 @@ const Agendar = () => {
       );
       await Promise.race([notificationsPromise, timeoutPromise]);
 
-      trackSchedule(formData.appointmentType, formData.location);
-      trackCompleteRegistration(formData.appointmentType, formData.location);
+      trackSchedule(formData.appointmentType, formData.location, leadId);
+      trackCompleteRegistration(formData.appointmentType, formData.location, leadId);
       trackFormSubmitConversion();
 
       if (typeof (window as any).gtag !== "undefined") {
