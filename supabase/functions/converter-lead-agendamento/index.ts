@@ -173,6 +173,16 @@ Deno.serve(async (req) => {
       .then(() => console.log("[converter-lead] Google Calendar sync triggered"))
       .catch((err: unknown) => console.error("[converter-lead] Google Calendar sync failed:", err));
 
+    // Meta CAPI Schedule + CompleteRegistration (fire-and-forget, dedup com browser via event_id = updated.id)
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0].trim()
+      ?? req.headers.get("x-real-ip")
+      ?? "";
+    const userAgent = req.headers.get("user-agent") ?? "";
+    fireMetaCapiSchedule(updated as any, clientIp, userAgent)
+      .catch((e) => console.error("[converter-lead] Meta CAPI Schedule fire-and-forget error:", e));
+    fireMetaCapiCompleteRegistration(updated as any, clientIp, userAgent)
+      .catch((e) => console.error("[converter-lead] Meta CAPI CompleteRegistration fire-and-forget error:", e));
+
     return new Response(
       JSON.stringify({ success: true, id: updated.id, clinica_id: updated.clinica_id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
