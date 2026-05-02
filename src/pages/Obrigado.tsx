@@ -10,24 +10,17 @@ const Obrigado = () => {
   const { trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
   useEffect(() => {
-    // Meta Pixel — disparo direto via fbq (garante envio mesmo sem GTM)
-    if (typeof window !== "undefined" && typeof (window as any).fbq === "function") {
-      (window as any).fbq("track", "Lead", {
-        content_name: "Agendamento Confirmado",
-        content_category: "Consulta Oftalmológica",
-        value: 300,
-        currency: "BRL",
-      });
-      (window as any).fbq("track", "CompleteRegistration", {
-        content_name: "Página Obrigado",
-        content_category: "Consulta Oftalmológica",
-        value: 300,
-        currency: "BRL",
-      });
-    }
-
-    // DataLayer (backup via GTM)
+    // Eventos via dataLayer — Meta Pixel e Google Ads disparam pelo GTM
     window.dataLayer = window.dataLayer || [];
+    const eventId = `schedule_${Date.now()}`;
+    window.dataLayer.push({
+      event: 'schedule_confirmed',
+      event_id: eventId,
+      content_name: 'Agendamento Confirmado',
+      content_category: 'Consulta Oftalmológica',
+      value: 300,
+      currency: 'BRL',
+    });
     window.dataLayer.push({
       event: 'meta_lead',
       form_name: 'agendamento',
@@ -130,7 +123,7 @@ const Obrigado = () => {
 
         <footer className="mt-12 text-center text-gray-500 text-xs space-y-1">
           <p className="font-serif text-sm text-gray-400">Dr. Juliano Machado</p>
-          <p>Oftalmologista &middot; CRM-PA 12345</p>
+          <p>Médico Oftalmologista &middot; CRM-PA 15253</p>
           <p>Cirurgia de Catarata &middot; Glaucoma &middot; Retina</p>
         </footer>
       </div>

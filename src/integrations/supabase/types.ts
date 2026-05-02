@@ -36,18 +36,25 @@ export type Database = {
           data_nascimento: string | null
           detalhe_exame_ou_cirurgia: string | null
           email: string | null
+          fbc: string | null
+          fbclid: string | null
+          fbp: string | null
+          gbraid: string | null
+          gclid: string | null
           google_calendar_etag: string | null
           google_calendar_event_id: string | null
           google_calendar_synced_at: string | null
           hora_agendamento: string | null
           id: string
           is_sandbox: boolean
+          landing_page: string | null
           local_atendimento: string
           nome_completo: string
           observacoes_internas: string | null
           observacoes_internas_encrypted: string | null
           origem: string | null
           profissional_id: string | null
+          referrer: string | null
           sandbox_reason: string | null
           servico_id: string | null
           status_crm: string
@@ -55,6 +62,12 @@ export type Database = {
           telefone_whatsapp: string
           tipo_atendimento: string
           updated_at: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          wbraid: string | null
         }
         Insert: {
           aceita_contato_whatsapp_email?: boolean | null
@@ -77,18 +90,25 @@ export type Database = {
           data_nascimento?: string | null
           detalhe_exame_ou_cirurgia?: string | null
           email?: string | null
+          fbc?: string | null
+          fbclid?: string | null
+          fbp?: string | null
+          gbraid?: string | null
+          gclid?: string | null
           google_calendar_etag?: string | null
           google_calendar_event_id?: string | null
           google_calendar_synced_at?: string | null
           hora_agendamento?: string | null
           id?: string
           is_sandbox?: boolean
+          landing_page?: string | null
           local_atendimento: string
           nome_completo: string
           observacoes_internas?: string | null
           observacoes_internas_encrypted?: string | null
           origem?: string | null
           profissional_id?: string | null
+          referrer?: string | null
           sandbox_reason?: string | null
           servico_id?: string | null
           status_crm?: string
@@ -96,6 +116,12 @@ export type Database = {
           telefone_whatsapp: string
           tipo_atendimento: string
           updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          wbraid?: string | null
         }
         Update: {
           aceita_contato_whatsapp_email?: boolean | null
@@ -118,18 +144,25 @@ export type Database = {
           data_nascimento?: string | null
           detalhe_exame_ou_cirurgia?: string | null
           email?: string | null
+          fbc?: string | null
+          fbclid?: string | null
+          fbp?: string | null
+          gbraid?: string | null
+          gclid?: string | null
           google_calendar_etag?: string | null
           google_calendar_event_id?: string | null
           google_calendar_synced_at?: string | null
           hora_agendamento?: string | null
           id?: string
           is_sandbox?: boolean
+          landing_page?: string | null
           local_atendimento?: string
           nome_completo?: string
           observacoes_internas?: string | null
           observacoes_internas_encrypted?: string | null
           origem?: string | null
           profissional_id?: string | null
+          referrer?: string | null
           sandbox_reason?: string | null
           servico_id?: string | null
           status_crm?: string
@@ -137,6 +170,12 @@ export type Database = {
           telefone_whatsapp?: string
           tipo_atendimento?: string
           updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          wbraid?: string | null
         }
         Relationships: [
           {

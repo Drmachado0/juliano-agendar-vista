@@ -338,7 +338,7 @@ const Agendar = () => {
               <h1 className="text-base font-serif font-semibold leading-tight text-foreground md:text-lg">
                 Dr. Juliano Machado
               </h1>
-              <p className="text-[11px] text-muted-foreground md:text-xs">Oftalmologista · CRM-PA</p>
+              <p className="text-[11px] text-muted-foreground md:text-xs">Médico Oftalmologista · CRM-PA 15253</p>
             </div>
             <div />
           </div>
@@ -565,7 +565,7 @@ const Agendar = () => {
 
         <footer className="mt-12 border-t border-border/40 py-6">
           <div className="container mx-auto space-y-1 px-4 text-center text-xs text-muted-foreground">
-            <p>Dr. Juliano Machado · Oftalmologista · CRM-PA</p>
+            <p>Dr. Juliano Machado · Médico Oftalmologista · CRM-PA 15253</p>
             <p>Ao prosseguir, você concorda em receber contato via WhatsApp e e-mail.</p>
           </div>
         </footer>

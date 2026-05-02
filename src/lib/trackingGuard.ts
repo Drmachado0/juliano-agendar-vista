@@ -56,15 +56,14 @@ export function safeGtag(...args: unknown[]): void {
   }
 }
 
+/**
+ * Mantido apenas como compatibilidade — o site não dispara fbq() diretamente.
+ * O Meta Pixel é servido via GTM e respeita Consent Mode v2.
+ */
 export function safeFbq(
-  method: "track" | "trackCustom",
-  event: string,
-  params?: Record<string, unknown>
+  _method: "track" | "trackCustom",
+  _event: string,
+  _params?: Record<string, unknown>
 ): void {
-  if (!isMarketingAllowed()) return;
-  if (typeof window === "undefined") return;
-  const fbq = (window as any).fbq;
-  if (typeof fbq === "function") {
-    fbq(method, event, params);
-  }
+  /* noop: pixel só dispara via GTM */
 }

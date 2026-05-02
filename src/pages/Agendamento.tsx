@@ -126,10 +126,14 @@ const Agendamento = () => {
 
   const totalSteps = 4;
 
-  // ViewContent + page_view + UTMs
+  // view_scheduling_page + ViewContent + UTMs (também persistidos por getTrackingParams)
   useEffect(() => {
     trackViewContent("Landing Agendamento", "Consulta Oftalmológica");
-    pushDL({ event: "page_view", page_type: "landing_agendamento", page_path: "/agendamento" });
+    pushDL({
+      event: "view_scheduling_page",
+      page_path: "/agendamento",
+      page_type: "landing_agendamento",
+    });
 
     try {
       const params = new URLSearchParams(window.location.search);
@@ -205,9 +209,13 @@ const Agendamento = () => {
         } else if (lead_id) {
           setLeadId(lead_id);
           pushDL({
-            event: "lp_lead_generated",
-            page_type: "landing_agendamento",
+            event: "lead_created",
             lead_id,
+            event_id: `lead_${lead_id}`,
+            content_name: "Agendamento Formulario - Site",
+            content_category: "Consulta Oftalmológica",
+            value: 300,
+            currency: "BRL",
             tipo_atendimento: leadData.tipo_atendimento,
           });
         }
@@ -412,7 +420,7 @@ const Agendamento = () => {
               <h1 className="text-base font-serif font-semibold leading-tight text-foreground md:text-lg">
                 Dr. Juliano Machado
               </h1>
-              <p className="text-[11px] text-muted-foreground md:text-xs">Oftalmologista · CRM-PA</p>
+              <p className="text-[11px] text-muted-foreground md:text-xs">Médico Oftalmologista · CRM-PA 15253</p>
             </div>
             <div />
           </div>
@@ -638,7 +646,7 @@ const Agendamento = () => {
 
         <footer className="mt-12 border-t border-border/40 py-6">
           <div className="container mx-auto space-y-1 px-4 text-center text-xs text-muted-foreground">
-            <p>Dr. Juliano Machado · Oftalmologista · CRM-PA</p>
+            <p>Dr. Juliano Machado · Médico Oftalmologista · CRM-PA 15253</p>
             <p>Ao prosseguir, você concorda em receber contato via WhatsApp e e-mail.</p>
           </div>
         </footer>
