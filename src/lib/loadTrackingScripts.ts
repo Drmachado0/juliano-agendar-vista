@@ -1,10 +1,9 @@
 /**
- * Carregamento idempotente dos scripts de tracking.
- * Só deve ser chamado após consentimento do usuário.
+ * Carregamento idempotente do GTM. O Meta Pixel é disparado exclusivamente
+ * via GTM (controlado pelo Consent Mode v2 — ad_storage).
  */
 
 const GTM_ID = "GTM-K3C2NNF6";
-const META_PIXEL_ID = "1003792428067622";
 
 export function loadGTM(): void {
   if (typeof window === "undefined") return;
@@ -22,37 +21,11 @@ export function loadGTM(): void {
   f.parentNode?.insertBefore(j, f);
 }
 
-export function loadMetaPixel(): void {
-  if (typeof window === "undefined") return;
-  const w = window as any;
-  if (w.__metaPixelLoaded) return;
-  w.__metaPixelLoaded = true;
-
-  /* eslint-disable */
-  // @ts-ignore
-  !(function (f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any) {
-    if (f.fbq) return;
-    n = f.fbq = function () {
-      n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
-    };
-    if (!f._fbq) f._fbq = n;
-    n.push = n;
-    n.loaded = !0;
-    n.version = "2.0";
-    n.queue = [];
-    t = b.createElement(e);
-    t.async = !0;
-    t.src = v;
-    s = b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t, s);
-  })(window, document, "script", "https://connect.facebook.net/en_US/fbevents.js");
-  /* eslint-enable */
-
-  (window as any).fbq("init", META_PIXEL_ID);
-  (window as any).fbq("track", "PageView");
-}
-
+/**
+ * Aplica consent: GTM carrega quando analytics OU marketing for autorizado
+ * (o GTM precisa estar presente para servir as tags de marketing também).
+ * O Meta Pixel é uma tag dentro do GTM e respeita o Consent Mode automaticamente.
+ */
 export function applyConsentToScripts(opts: { analytics: boolean; marketing: boolean }): void {
-  if (opts.analytics) loadGTM();
-  if (opts.marketing) loadMetaPixel();
+  if (opts.analytics || opts.marketing) loadGTM();
 }
