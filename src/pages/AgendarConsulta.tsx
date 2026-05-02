@@ -230,9 +230,9 @@ const AgendarConsulta = () => {
       );
       await Promise.race([notificationsPromise, timeoutPromise]);
 
-      // Conversion tracking
-      trackSchedule(formData.appointmentType, formData.location);
-      trackCompleteRegistration(formData.appointmentType, formData.location);
+      // Conversion tracking (event_id = leadId para dedup com CAPI server-side)
+      trackSchedule(formData.appointmentType, formData.location, leadId);
+      trackCompleteRegistration(formData.appointmentType, formData.location, leadId);
       trackFormSubmitConversion();
 
       pushDataLayer({
