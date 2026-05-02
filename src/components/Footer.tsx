@@ -132,6 +132,14 @@ const Footer = () => {
               <circle cx="30" cy="30" r="20" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.5" />
               <circle cx="30" cy="30" r="12" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.5" />
             </svg>
+            <div className="text-center md:text-left">
+              <p className="text-sm font-semibold text-foreground">
+                Dr. Juliano Machado — Médico Oftalmologista
+              </p>
+              <p className="text-xs text-primary/90 font-medium mt-0.5">
+                CRM-PA 15253
+              </p>
+            </div>
             <p className="text-xs text-muted-foreground">
               © {currentYear} Dr. Juliano Machado — Todos os direitos reservados.
             </p>
