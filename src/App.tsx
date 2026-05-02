@@ -10,7 +10,9 @@ import Agendar from "./pages/Agendar";
 import AgendarConsulta from "./pages/AgendarConsulta";
 import Agendamento from "./pages/Agendamento";
 import Obrigado from "./pages/Obrigado";
+import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
 import NotFound from "./pages/NotFound";
+import ConsentBanner from "./components/ConsentBanner";
 import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminAgendamentos from "./pages/admin/Agendamentos";
@@ -42,12 +44,14 @@ const App = () => (
           <Sonner closeButton richColors position="top-right" />
           <BrowserRouter>
           <RouteChangeTracker />
+          <ConsentBanner />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/agendar" element={<Agendar />} />
             <Route path="/agendar-consulta" element={<AgendarConsulta />} />
             <Route path="/agendamento" element={<Agendamento />} />
             <Route path="/obrigado" element={<Obrigado />} />
+            <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
             <Route path="/auth" element={<Auth />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />

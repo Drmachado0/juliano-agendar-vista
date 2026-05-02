@@ -1,7 +1,9 @@
 import { Heart, MapPin, Instagram, MessageCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 import logoImage from "@/assets/dr-juliano-logo.webp";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
+import { openPreferences } from "@/lib/consent";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -133,6 +135,21 @@ const Footer = () => {
             <p className="text-xs text-muted-foreground">
               © {currentYear} Dr. Juliano Machado — Todos os direitos reservados.
             </p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+              <Link
+                to="/politica-de-privacidade"
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                Política de Privacidade
+              </Link>
+              <button
+                type="button"
+                onClick={openPreferences}
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                Gerenciar cookies
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <a
