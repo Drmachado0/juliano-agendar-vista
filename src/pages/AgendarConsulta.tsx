@@ -291,7 +291,7 @@ const AgendarConsulta = () => {
               <h1 className="text-base md:text-lg font-serif font-semibold text-foreground leading-tight">
                 Dr. Juliano Machado
               </h1>
-              <p className="text-[11px] md:text-xs text-muted-foreground">Oftalmologista · CRM-PA</p>
+              <p className="text-[11px] md:text-xs text-muted-foreground">Médico Oftalmologista · CRM-PA 15253</p>
             </div>
             <a
               href="https://wa.me/5591936180476?text=Ol%C3%A1%21+Gostaria+de+agendar+uma+consulta."
@@ -474,7 +474,7 @@ const AgendarConsulta = () => {
 
         <footer className="border-t border-border/40 mt-12 py-6">
           <div className="container mx-auto px-4 text-center text-xs text-muted-foreground space-y-1">
-            <p>Dr. Juliano Machado · Oftalmologista · CRM-PA</p>
+            <p>Dr. Juliano Machado · Médico Oftalmologista · CRM-PA 15253</p>
             <p>Ao prosseguir, você concorda em receber contato via WhatsApp e e-mail.</p>
           </div>
         </footer>
