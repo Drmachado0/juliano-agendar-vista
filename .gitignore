@@ -13,9 +13,14 @@ dist-ssr
 *.local
 
 # Environment / secrets
+# .env é local-only (overrides + secrets que NUNCA vão pro repo).
+# .env.production tem só valores PÚBLICOS (Supabase anon key, URL) que o Vite
+# precisa injetar no bundle durante `vite build` no Lovable.
 .env
-.env.*
+.env.local
+.env.*.local
 !.env.example
+!.env.production
 
 # Editor directories and files
 .vscode/*
