@@ -5,6 +5,44 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+// Defesa contra build de produção sem secrets injetados (ex: Publish do Lovable
+// rodado antes dos VITE_SUPABASE_* serem configurados). Sem este guard, o
+// createClient(undefined, undefined) lança "supabaseUrl is required" no boot
+// e a tela inteira fica preta. Aqui mostramos um fallback com CTA WhatsApp.
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  const msg =
+    "[supabase] VITE_SUPABASE_URL e/ou VITE_SUPABASE_PUBLISHABLE_KEY ausentes no build. Republicar (Lovable Publish → Update) injeta os secrets.";
+  // eslint-disable-next-line no-console
+  console.error(msg);
+
+  if (typeof document !== "undefined") {
+    const root = document.getElementById("root");
+    if (root && root.children.length === 0) {
+      root.innerHTML =
+        '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;' +
+        'font-family:system-ui,-apple-system,sans-serif;background:#0d1117;color:#f0f6fc;' +
+        'padding:2rem;text-align:center;">' +
+        '<div style="max-width:480px;">' +
+        '<h1 style="margin:0 0 1rem;font-size:1.5rem;font-weight:600;color:#58a6ff;">Site em manutenção</h1>' +
+        '<p style="opacity:0.75;margin:0 0 1.75rem;line-height:1.55;font-size:0.95rem;">' +
+        "Estamos publicando uma atualização. Para agendar agora, fale com a secretária pelo WhatsApp:" +
+        "</p>" +
+        '<a href="https://wa.me/5591936180476?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consulta%20oftalmol%C3%B3gica." ' +
+        'style="display:inline-block;padding:0.875rem 1.75rem;background:#25D366;color:#fff;' +
+        'text-decoration:none;border-radius:10px;font-weight:600;font-size:0.95rem;">' +
+        "Falar no WhatsApp" +
+        "</a>" +
+        '<p style="opacity:0.4;margin:2rem 0 0;font-size:0.75rem;">' +
+        "Dr. Juliano Machado &middot; Médico Oftalmologista &middot; CRM-PA 15253" +
+        "</p>" +
+        "</div>" +
+        "</div>";
+    }
+  }
+
+  throw new Error(msg);
+}
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
