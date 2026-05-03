@@ -62,7 +62,7 @@ export function getTrackingParams(): TrackingParams {
 
   captured.fbp = getCookie("_fbp") || captured.fbp || null;
   captured.fbc = getCookie("_fbc") || captured.fbc || null;
-  captured.landing_page = captured.landing_page || window.location.pathname;
+  captured.landing_page = captured.landing_page || window.location.href;
   captured.referrer = captured.referrer || document.referrer || null;
 
   try {
