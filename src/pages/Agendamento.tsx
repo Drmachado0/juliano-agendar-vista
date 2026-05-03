@@ -362,26 +362,33 @@ const Agendamento = () => {
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => handleWhatsAppClick(location)}
-      className="group relative block overflow-hidden rounded-2xl bg-[#25D366] p-5 shadow-xl shadow-[#25D366]/30 ring-2 ring-[#25D366]/30 ring-offset-2 ring-offset-background transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-[#25D366]/40"
+      className="group relative block overflow-hidden rounded-2xl border border-primary/20 bg-card/70 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_20px_50px_-15px_hsl(var(--primary)/0.35)]"
     >
-      <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
-      <div className="relative flex items-center gap-4">
-        <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20">
-          <span className="absolute inset-0 animate-ping rounded-full bg-white/30" />
-          <MessageCircle className="relative h-6 w-6 text-white" />
+      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl transition-opacity duration-500 group-hover:opacity-80" />
+      <div className="pointer-events-none absolute -bottom-20 -left-10 h-32 w-32 rounded-full bg-accent/10 blur-3xl" />
+
+      <div className="relative flex items-start gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-gradient-to-br from-primary/15 to-accent/10">
+          <MessageCircle className="h-5 w-5 text-primary" strokeWidth={1.75} />
         </div>
-        <div className="flex-1 text-white">
-          <p className="text-sm font-bold leading-tight md:text-base">
-            Prefere falar com nossa secretária?
+        <div className="flex-1">
+          <p className="font-serif text-base font-medium leading-snug text-foreground md:text-lg">
+            Prefere atendimento humano?
           </p>
-          <p className="mt-0.5 text-xs text-white/90 md:text-sm">
-            Atendimento humano pelo WhatsApp — tire dúvidas e agende em minutos.
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground md:text-sm">
+            Fale diretamente com nossa equipe pelo WhatsApp e agende em minutos.
           </p>
         </div>
       </div>
-      <div className="relative mt-4 flex items-center justify-between rounded-xl bg-white/15 px-4 py-2.5 backdrop-blur-sm transition-colors group-hover:bg-white/25">
-        <span className="text-sm font-semibold text-white">Chamar no WhatsApp agora</span>
-        <ArrowRight className="h-4 w-4 text-white transition-transform group-hover:translate-x-1" />
+
+      <div className="relative mt-5 flex items-center justify-between gap-3 border-t border-border/40 pt-4">
+        <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+          Resposta em minutos · Seg a Sáb
+        </span>
+        <span className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-[0_4px_14px_-4px_hsl(var(--primary)/0.6)] transition-all duration-300 group-hover:shadow-[0_8px_24px_-6px_hsl(var(--primary)/0.7)] md:text-sm">
+          Chamar agora
+          <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+        </span>
       </div>
     </a>
   );
