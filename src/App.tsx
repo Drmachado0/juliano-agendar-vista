@@ -45,8 +45,8 @@ const App = () => (
           <ConsentBanner />
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/agendar" element={<Agendar />} />
-            <Route path="/agendar-consulta" element={<AgendarConsulta />} />
+            <Route path="/agendar" element={<RedirectToAgendamento />} />
+            <Route path="/agendar-consulta" element={<RedirectToAgendamento />} />
             <Route path="/agendamento" element={<Agendamento />} />
             <Route path="/obrigado" element={<Obrigado />} />
             <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
