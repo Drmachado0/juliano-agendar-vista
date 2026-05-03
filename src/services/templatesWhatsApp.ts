@@ -183,7 +183,7 @@ Manter seus exames em dia é fundamental para a saúde dos seus olhos. 👀
 Gostaria de agendar seu retorno? Podemos encontrar o melhor horário para você.
 
 📱 Agende pelo WhatsApp ou pelo nosso site:
-👉 https://drjulianomachado.com.br/agendar
+👉 https://drjulianomachado.com/agendamento
 
 Atenciosamente,
 Dr. Juliano Machado

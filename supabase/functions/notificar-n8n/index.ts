@@ -3,8 +3,8 @@ import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 // Allowed origins for CORS
 const allowedOrigins = [
-  "https://drjulianomachado.com.br",
-  "https://www.drjulianomachado.com.br",
+  "https://drjulianomachado.com",
+  "https://www.drjulianomachado.com",
   /^https:\/\/.*\.lovable\.app$/,
   /^https:\/\/.*\.lovableproject\.com$/,
 ];

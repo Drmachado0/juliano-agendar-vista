@@ -1,8 +1,14 @@
 User-agent: Googlebot
 Allow: /
+Disallow: /admin/
+Disallow: /auth
+Disallow: /obrigado
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin/
+Disallow: /auth
+Disallow: /obrigado
 
 User-agent: Twitterbot
 Allow: /
@@ -12,3 +18,8 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /auth
+Disallow: /obrigado
+
+Sitemap: https://drjulianomachado.com/sitemap.xml

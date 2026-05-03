@@ -2,12 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
-import Agendar from "./pages/Agendar";
-import AgendarConsulta from "./pages/AgendarConsulta";
 import Agendamento from "./pages/Agendamento";
 import Obrigado from "./pages/Obrigado";
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
@@ -35,6 +33,11 @@ import RouteChangeTracker from "./components/RouteChangeTracker";
 
 const queryClient = new QueryClient();
 
+const RedirectToAgendamento = () => {
+  const location = useLocation();
+  return <Navigate to={`/agendamento${location.search}${location.hash}`} replace />;
+};
+
 const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
@@ -47,8 +50,13 @@ const App = () => (
           <ConsentBanner />
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/agendar" element={<Agendar />} />
-            <Route path="/agendar-consulta" element={<AgendarConsulta />} />
+<<<<<<< HEAD
+            <Route path="/agendar" element={<Agendamento />} />
+            <Route path="/agendar-consulta" element={<Agendamento />} />
+=======
+            <Route path="/agendar" element={<RedirectToAgendamento />} />
+            <Route path="/agendar-consulta" element={<RedirectToAgendamento />} />
+>>>>>>> 5639679325590c13278142832e56fb21f71cd2e0
             <Route path="/agendamento" element={<Agendamento />} />
             <Route path="/obrigado" element={<Obrigado />} />
             <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />

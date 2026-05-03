@@ -8,6 +8,92 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+interface UpdatedAgendamento {
+  id: string;
+  nome_completo: string | null;
+  email: string | null;
+  telefone_whatsapp: string | null;
+  tipo_atendimento: string | null;
+  local_atendimento: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_content: string | null;
+  utm_term: string | null;
+  fbc: string | null;
+  fbp: string | null;
+  landing_page: string | null;
+}
+
+async function fireMetaCapi(
+  eventName: "Schedule" | "CompleteRegistration",
+  ag: UpdatedAgendamento,
+  clientIp: string,
+  userAgent: string,
+) {
+  try {
+    const [first_name, ...rest] = (ag.nome_completo || "").trim().split(/\s+/);
+    const last_name = rest.join(" ");
+    const landing = ag.landing_page || "/";
+    const event_source_url = landing.startsWith("http")
+      ? landing
+      : `https://drjulianomachado.com${landing}`;
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/meta-capi`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${SERVICE_ROLE_KEY}`,
+        "x-forwarded-for": clientIp,
+        "user-agent": userAgent,
+      },
+      body: JSON.stringify({
+        event_name: eventName,
+        event_id: ag.id,
+        event_source_url,
+        user_data: {
+          em: ag.email || undefined,
+          ph: ag.telefone_whatsapp || undefined,
+          fn: first_name || undefined,
+          ln: last_name || undefined,
+          country: "BR",
+          external_id: ag.id,
+          fbc: ag.fbc || undefined,
+          fbp: ag.fbp || undefined,
+          client_user_agent: userAgent || undefined,
+        },
+        custom_data: {
+          content_name: eventName === "Schedule" ? "Agendamento Confirmado" : "Agendamento Finalizado",
+          content_category: ag.tipo_atendimento || undefined,
+          value: 300,
+          currency: "BRL",
+          utm_source: ag.utm_source || undefined,
+          utm_medium: ag.utm_medium || undefined,
+          utm_campaign: ag.utm_campaign || undefined,
+          utm_content: ag.utm_content || undefined,
+          utm_term: ag.utm_term || undefined,
+        },
+      }),
+    });
+    const body = await res.text();
+    if (!res.ok) {
+      console.error(`[converter-lead] Meta CAPI ${eventName} failed (${res.status}): ${body}`);
+    } else {
+      console.log(`[converter-lead] Meta CAPI ${eventName} sent event_id=${ag.id} resp=${body}`);
+    }
+  } catch (err) {
+    console.error(`[converter-lead] Meta CAPI ${eventName} error:`, err);
+  }
+}
+
+const fireMetaCapiSchedule = (ag: UpdatedAgendamento, ip: string, ua: string) =>
+  fireMetaCapi("Schedule", ag, ip, ua);
+const fireMetaCapiCompleteRegistration = (ag: UpdatedAgendamento, ip: string, ua: string) =>
+  fireMetaCapi("CompleteRegistration", ag, ip, ua);
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -124,7 +210,7 @@ Deno.serve(async (req) => {
       .from("agendamentos")
       .update(updatePayload)
       .eq("id", lead_id)
-      .select("id, clinica_id")
+      .select("id, clinica_id, nome_completo, email, telefone_whatsapp, tipo_atendimento, local_atendimento, utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbc, fbp, landing_page")
       .single();
 
     if (updateError) {
@@ -172,6 +258,16 @@ Deno.serve(async (req) => {
     syncAgendamentoToCalendar(supabase, updated.id, "create")
       .then(() => console.log("[converter-lead] Google Calendar sync triggered"))
       .catch((err: unknown) => console.error("[converter-lead] Google Calendar sync failed:", err));
+
+    // Meta CAPI Schedule + CompleteRegistration (fire-and-forget, dedup com browser via event_id = updated.id)
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0].trim()
+      ?? req.headers.get("x-real-ip")
+      ?? "";
+    const userAgent = req.headers.get("user-agent") ?? "";
+    fireMetaCapiSchedule(updated as any, clientIp, userAgent)
+      .catch((e) => console.error("[converter-lead] Meta CAPI Schedule fire-and-forget error:", e));
+    fireMetaCapiCompleteRegistration(updated as any, clientIp, userAgent)
+      .catch((e) => console.error("[converter-lead] Meta CAPI CompleteRegistration fire-and-forget error:", e));
 
     return new Response(
       JSON.stringify({ success: true, id: updated.id, clinica_id: updated.clinica_id }),
