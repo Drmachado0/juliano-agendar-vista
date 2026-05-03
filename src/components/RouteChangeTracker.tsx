@@ -30,7 +30,7 @@ const RouteChangeTracker = () => {
       if (value) sessionStorage.setItem(key, value);
     }
 
-    // landing_page e referrer só na primeira navegação da sessão
+    // landing_page = URL completa da primeira navegação da sessão (com query string)
     if (!sessionStorage.getItem('landing_page')) {
       sessionStorage.setItem('landing_page', window.location.href);
     }
