@@ -41,14 +41,18 @@ export function isTrackingAllowed(): boolean {
 }
 
 export function safeDataLayerPush(event: Record<string, unknown>): void {
-  if (!isAnalyticsAllowed()) return;
+  // Permite push se QUALQUER consent (analytics OU marketing) estiver granted.
+  // Consent Mode v2 no GTM filtra internamente quais tags podem disparar
+  // baseado em analytics_storage e ad_storage — não precisamos bloquear o
+  // push antes de chegar no GTM.
+  if (!isTrackingAllowed()) return;
   if (typeof window === "undefined") return;
   (window as any).dataLayer = (window as any).dataLayer || [];
   (window as any).dataLayer.push(event);
 }
 
 export function safeGtag(...args: unknown[]): void {
-  if (!isAnalyticsAllowed()) return;
+  if (!isTrackingAllowed()) return;
   if (typeof window === "undefined") return;
   const gtag = (window as any).gtag;
   if (typeof gtag === "function") {
