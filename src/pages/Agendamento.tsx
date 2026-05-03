@@ -362,32 +362,39 @@ const Agendamento = () => {
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => handleWhatsAppClick(location)}
-      className="group relative block overflow-hidden rounded-2xl border border-primary/20 bg-card/70 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_20px_50px_-15px_hsl(var(--primary)/0.35)]"
+      className="group relative block overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-card/90 via-card/70 to-card/90 p-7 backdrop-blur-xl transition-all duration-500 hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_30px_70px_-20px_hsl(var(--primary)/0.45)]"
     >
-      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl transition-opacity duration-500 group-hover:opacity-80" />
-      <div className="pointer-events-none absolute -bottom-20 -left-10 h-32 w-32 rounded-full bg-accent/10 blur-3xl" />
+      {/* Glow ornaments */}
+      <div className="pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full bg-primary/15 blur-3xl transition-all duration-700 group-hover:scale-110 group-hover:opacity-90" />
+      <div className="pointer-events-none absolute -bottom-24 -left-12 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
 
-      <div className="relative flex items-start gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-gradient-to-br from-primary/15 to-accent/10">
-          <MessageCircle className="h-5 w-5 text-primary" strokeWidth={1.75} />
+      <div className="relative flex items-start gap-5">
+        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/20 via-primary/10 to-accent/10 shadow-[inset_0_1px_0_0_hsl(var(--primary)/0.3)]">
+          <MessageCircle className="h-6 w-6 text-primary" strokeWidth={1.75} />
+          <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
+          </span>
         </div>
         <div className="flex-1">
-          <p className="font-serif text-base font-medium leading-snug text-foreground md:text-lg">
+          <p className="font-serif text-lg font-medium leading-snug text-foreground md:text-xl">
             Prefere atendimento humano?
           </p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground md:text-sm">
-            Fale diretamente com nossa equipe pelo WhatsApp e agende em minutos.
+          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+            Fale diretamente com nossa equipe pelo WhatsApp e agende com tranquilidade.
           </p>
         </div>
       </div>
 
-      <div className="relative mt-5 flex items-center justify-between gap-3 border-t border-border/40 pt-4">
-        <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-          Resposta em minutos · Seg a Sáb
+      <div className="relative mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-5">
+        <span className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary))]" />
+          Disponível 24 horas
         </span>
-        <span className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-[0_4px_14px_-4px_hsl(var(--primary)/0.6)] transition-all duration-300 group-hover:shadow-[0_8px_24px_-6px_hsl(var(--primary)/0.7)] md:text-sm">
+        <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-primary/85 px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_8px_24px_-8px_hsl(var(--primary)/0.7)] transition-all duration-300 group-hover:shadow-[0_12px_32px_-8px_hsl(var(--primary)/0.85)]">
           Chamar agora
-          <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+          <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
         </span>
       </div>
     </a>
