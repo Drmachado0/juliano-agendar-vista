@@ -25,7 +25,7 @@ import { criarLead, converterLeadEmAgendamento } from "@/services/leads";
 import { notificarN8n } from "@/services/integracoes";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
-import drJulianoHero from "@/assets/dr-juliano-hero.png";
+import drJulianoHero from "@/assets/dr-juliano-hero.jpg";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
 type Depoimento = {
