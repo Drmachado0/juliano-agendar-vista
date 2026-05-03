@@ -2,7 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Award, Users, Star, Shield, CalendarCheck, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import drJulianoHero from "@/assets/dr-juliano-hero.png";
+import drJulianoHeroWebp from "@/assets/dr-juliano-hero.webp";
+import drJulianoHeroWebp2x from "@/assets/dr-juliano-hero@2x.webp";
+import drJulianoHeroJpg from "@/assets/dr-juliano-hero.jpg";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 
 const HeroSection = () => {
