@@ -59,11 +59,23 @@ const HeroSection = () => {
 
               {/* Photo container */}
               <div className="relative w-56 h-72 sm:w-64 sm:h-80 md:w-72 md:h-[22rem] lg:w-[22rem] lg:h-[28rem] rounded-[2rem] rounded-bl-[4rem] overflow-hidden border-2 border-primary/25 shadow-2xl shadow-primary/10">
-                <img
-                  src={drJulianoHero}
-                  alt="Dr. Juliano Machado - Médico Oftalmologista"
-                  className="w-full h-full object-cover object-top"
-                />
+                <picture>
+                  <source
+                    type="image/webp"
+                    srcSet={`${drJulianoHeroWebp} 900w, ${drJulianoHeroWebp2x} 1400w`}
+                    sizes="(min-width: 1024px) 22rem, (min-width: 768px) 18rem, 16rem"
+                  />
+                  <img
+                    src={drJulianoHeroJpg}
+                    alt="Dr. Juliano Machado - Médico Oftalmologista"
+                    width={900}
+                    height={1206}
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
+                    className="w-full h-full object-cover object-top"
+                  />
+                </picture>
                 {/* Subtle overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-background/10 to-transparent" />
               </div>
