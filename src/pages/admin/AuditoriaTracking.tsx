@@ -81,7 +81,6 @@ const TRACKING_INVENTORY: TrackingEntry[] = [
     purpose: "Conversão — Clique em WhatsApp",
     files: [
       "src/hooks/useGoogleTag.ts",
-      "src/pages/AgendarConsulta.tsx",
     ],
     source: "code",
   },
