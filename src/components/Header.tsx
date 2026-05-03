@@ -12,7 +12,7 @@ const Header = () => {
   const [activeSection, setActiveSection] = useState<string>("");
   const [scrolled, setScrolled] = useState(false);
   const { user, isAdmin } = useAuth();
-  const { trackWhatsAppClick } = useGoogleTag();
+  const { trackWhatsAppClick, trackCTAClick } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
 
   const navItems = [
@@ -113,7 +113,10 @@ const Header = () => {
                 </Button>
               </Link>
             )}
-            <Link to="/agendamento">
+            <Link
+              to="/agendamento"
+              onClick={() => trackCTAClick('agendar_consulta', 'header_desktop', 'Agendar Online')}
+            >
               <Button variant="hero" size="sm" className="gap-1.5 card-shimmer">
                 <CalendarCheck className="h-5 w-5" />
                 Agendar Online
@@ -136,7 +139,10 @@ const Header = () => {
             >
               <Phone className="w-4 h-4" />
             </a>
-            <Link to="/agendamento">
+            <Link
+              to="/agendamento"
+              onClick={() => trackCTAClick('agendar_consulta', 'header_mobile', 'Agendar')}
+            >
               <Button variant="hero" size="sm" className="gap-1 text-xs px-2.5 py-1.5 h-auto">
                 <CalendarCheck className="h-3.5 w-3.5" />
                 Agendar

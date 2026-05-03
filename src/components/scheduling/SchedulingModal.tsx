@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import StepIndicator from "./StepIndicator";
 import PersonalDataStep from "./PersonalDataStep";
 import ConsultationDetailsStep from "./ConsultationDetailsStep";
@@ -59,8 +59,17 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { trackScheduleStart, trackScheduleComplete, trackLead: trackLeadGA, trackFormSubmitConversion } = useGoogleTag();
+  const {
+    trackScheduleStart,
+    trackScheduleComplete,
+    trackLead: trackLeadGA,
+    trackFormSubmitConversion,
+    trackFormStart,
+    trackStepCompleted,
+    trackAppointmentError,
+  } = useGoogleTag();
   const { trackViewContent, trackLead: trackLeadMeta, trackSchedule, trackCompleteRegistration } = useMetaPixel();
+  const formStartFiredRef = useRef(false);
 
   const totalSteps = 4;
 
@@ -73,6 +82,10 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
   }, [isOpen]);
 
   const updateFormData = (data: Partial<FormData>) => {
+    if (!formStartFiredRef.current) {
+      formStartFiredRef.current = true;
+      trackFormStart("modal");
+    }
     setFormData((prev) => ({ ...prev, ...data }));
   };
 
@@ -82,6 +95,8 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
 
   const nextStep = async () => {
     if (currentStep < totalSteps) {
+      trackStepCompleted(currentStep, "modal");
+
       // Track Lead when personal data is filled (step 1)
       if (currentStep === 1) {
         trackLeadMeta("Dados Pessoais Preenchidos - Modal");
@@ -121,8 +136,9 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
       };
 
       const { data, error } = await criarAgendamento(agendamentoData);
-      
+
       if (error) {
+        trackAppointmentError("modal", "other", error.message);
         toast({
           title: "Erro ao agendar",
           description: error.message || "Não foi possível enviar seu agendamento. Tente novamente.",
@@ -159,6 +175,11 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
 
       setIsSubmitted(true);
     } catch (err) {
+      trackAppointmentError(
+        "modal",
+        "unexpected",
+        err instanceof Error ? err.message : "unknown",
+      );
       toast({
         title: "Erro",
         description: "Ocorreu um erro inesperado. Tente novamente.",

@@ -156,7 +156,7 @@
 {
   event: 'cta_click',
   cta_name: 'agendar_consulta' | 'saiba_mais',
-  cta_location: 'hero' | 'convenios' | 'about' | 'procedures' | 'footer',
+  cta_location: 'hero' | 'convenios' | 'about' | 'procedures' | 'footer' | 'header_desktop' | 'header_mobile',
   cta_text: 'Agendar consulta'
 }
 ```
@@ -171,6 +171,73 @@
 **Uso recomendado:**
 - GA4: Análise de engajamento por seção
 - Heatmaps: Identificar CTAs mais clicados
+
+---
+
+### 6. Funil granular do agendamento (step tracking)
+
+Eventos para medir taxa de conversão por etapa do formulário. Disparados pelos
+helpers `trackFormStart`, `trackStepCompleted`, `trackAppointmentError` em
+`useGoogleTag.ts`. Prefixo `lp_` na landing `/agendamento`, `modal_` no
+`SchedulingModal` da homepage.
+
+#### `lp_form_start` / `modal_form_start`
+
+Dispara **uma única vez** no primeiro `updateFormData` (primeiro keystroke
+real no form). Distingue "viu a página" de "começou a preencher".
+
+```javascript
+{
+  event: 'lp_form_start' | 'modal_form_start',
+  page_type: 'landing_agendamento' | 'modal'
+}
+```
+
+#### `lp_step_completed` / `modal_step_completed`
+
+Dispara quando o usuário avança um step (antes de `setCurrentStep`). Combinado
+com `lp_step_view` permite calcular taxa de saída por etapa.
+
+```javascript
+{
+  event: 'lp_step_completed' | 'modal_step_completed',
+  step: 1 | 2 | 3,
+  page_type: 'landing_agendamento' | 'modal'
+}
+```
+
+#### `lp_appointment_error` / `modal_appointment_error`
+
+Dispara em caso de erro no submit final.
+
+```javascript
+{
+  event: 'lp_appointment_error' | 'modal_appointment_error',
+  page_type: 'landing_agendamento' | 'modal',
+  error_type: 'availability' | 'other' | 'unexpected',
+  error_message: '...'
+}
+```
+
+#### Funil completo (landing)
+
+```
+view_scheduling_page  →  lp_form_start  →  lp_step_view (×4)  →
+lp_step_completed (×3)  →  lead_created  →
+lp_appointment_scheduled  OU  lp_appointment_error
+```
+
+#### Como medir taxa de conversão (GA4/GTM)
+
+Sem código adicional — apenas crie tags GA4 com triggers `Custom Event` para
+cada nome de evento. Métricas derivadas:
+
+| Métrica | Fórmula |
+|---|---|
+| Taxa global | `count(lp_appointment_scheduled) / count(view_scheduling_page)` |
+| Taxa de início | `count(lp_form_start) / count(view_scheduling_page)` |
+| Taxa por step | `count(lp_step_completed step=N) / count(lp_step_view step=N)` |
+| Taxa de erro | `count(lp_appointment_error) / count(lp_step_completed step=3)` |
 
 ---
 

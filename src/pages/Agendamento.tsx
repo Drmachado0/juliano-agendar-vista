@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import {
@@ -122,7 +122,11 @@ const Agendamento = () => {
     trackFormSubmitConversion,
     trackWhatsAppClick,
     trackWhatsAppGoogleAdsConversion,
+    trackFormStart,
+    trackStepCompleted,
+    trackAppointmentError,
   } = useGoogleTag();
+  const formStartFiredRef = useRef(false);
 
   const totalSteps = 4;
 
@@ -170,6 +174,10 @@ const Agendamento = () => {
   }, []);
 
   const updateFormData = (data: Partial<FormData>) => {
+    if (!formStartFiredRef.current) {
+      formStartFiredRef.current = true;
+      trackFormStart("landing_agendamento");
+    }
     setFormData((prev) => ({ ...prev, ...data }));
   };
 
@@ -181,6 +189,7 @@ const Agendamento = () => {
 
   const nextStep = async () => {
     if (currentStep < totalSteps) {
+      trackStepCompleted(currentStep, "landing_agendamento");
       if (currentStep === 2 && !leadId) {
         const leadData = {
           nome_completo: formData.fullName,
@@ -258,6 +267,12 @@ const Agendamento = () => {
           error.message.includes("disponível") ||
           error.message.includes("bloqueado") ||
           error.message.includes("ocupado");
+
+        trackAppointmentError(
+          "landing_agendamento",
+          isAvailabilityError ? "availability" : "other",
+          error.message,
+        );
 
         toast({
           title: isAvailabilityError ? "Horário indisponível" : "Erro ao agendar",
@@ -339,6 +354,11 @@ const Agendamento = () => {
       window.location.href = "/obrigado";
     } catch (err) {
       console.error("[Agendamento] Erro inesperado:", err);
+      trackAppointmentError(
+        "landing_agendamento",
+        "unexpected",
+        err instanceof Error ? err.message : "unknown",
+      );
       toast({
         title: "Erro",
         description: "Ocorreu um erro inesperado. Tente novamente.",

@@ -116,6 +116,39 @@ export const useGoogleTag = () => {
     });
   };
 
+  // Funil de conversão (analytics-only): GA4/GTM lê via dataLayer.
+  // Nomes de eventos prefixados por contexto para distinguir landing (/agendamento)
+  // do modal (homepage). Combinados com lp_step_view permitem medir taxa por step.
+  type AppointmentContext = 'landing_agendamento' | 'modal';
+
+  const trackFormStart = (pageType: AppointmentContext) => {
+    pushToDataLayer({
+      event: pageType === 'modal' ? 'modal_form_start' : 'lp_form_start',
+      page_type: pageType,
+    });
+  };
+
+  const trackStepCompleted = (step: number, pageType: AppointmentContext) => {
+    pushToDataLayer({
+      event: pageType === 'modal' ? 'modal_step_completed' : 'lp_step_completed',
+      step,
+      page_type: pageType,
+    });
+  };
+
+  const trackAppointmentError = (
+    pageType: AppointmentContext,
+    errorType: 'availability' | 'other' | 'unexpected',
+    errorMessage?: string,
+  ) => {
+    pushToDataLayer({
+      event: pageType === 'modal' ? 'modal_appointment_error' : 'lp_appointment_error',
+      page_type: pageType,
+      error_type: errorType,
+      error_message: errorMessage,
+    });
+  };
+
   return {
     trackEvent,
     trackWhatsAppClick,
@@ -127,5 +160,8 @@ export const useGoogleTag = () => {
     trackCTAClick,
     trackFormSubmitConversion,
     trackWhatsAppGoogleAdsConversion,
+    trackFormStart,
+    trackStepCompleted,
+    trackAppointmentError,
   };
 };
