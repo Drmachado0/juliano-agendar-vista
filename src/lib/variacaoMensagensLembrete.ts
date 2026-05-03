@@ -10,7 +10,7 @@
  * - Assinatura ("Atenciosamente, Dr. Juliano Machado / Oftalmologia")
  */
 
-export const LINK_AGENDAMENTO = "https://drjulianomachado.com.br/agendar";
+export const LINK_AGENDAMENTO = "https://drjulianomachado.com/agendamento";
 
 const SAUDACOES_LEMBRETE = [
   "Olá",

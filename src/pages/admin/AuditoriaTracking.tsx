@@ -61,8 +61,6 @@ const TRACKING_INVENTORY: TrackingEntry[] = [
     purpose: "Conversão — Formulário/Agendamento confirmado",
     files: [
       "src/pages/Obrigado.tsx",
-      "src/pages/Agendar.tsx",
-      "src/pages/AgendarConsulta.tsx",
       "src/pages/Agendamento.tsx",
       "src/components/scheduling/SchedulingModal.tsx",
     ],
@@ -83,7 +81,6 @@ const TRACKING_INVENTORY: TrackingEntry[] = [
     purpose: "Conversão — Clique em WhatsApp",
     files: [
       "src/hooks/useGoogleTag.ts",
-      "src/pages/AgendarConsulta.tsx",
     ],
     source: "code",
   },
