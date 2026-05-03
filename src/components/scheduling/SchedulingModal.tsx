@@ -97,11 +97,6 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
     if (currentStep < totalSteps) {
       trackStepCompleted(currentStep, "modal");
 
-      // Track Lead when personal data is filled (step 1)
-      if (currentStep === 1) {
-        trackLeadMeta("Dados Pessoais Preenchidos - Modal");
-      }
-
       if (currentStep === 3) {
         await sendToWebhook(formData);
       }
@@ -152,7 +147,8 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
       }
 
       // event_id usado para dedup com CAPI server-side (criar-agendamento → meta-capi)
-      const metaEventId = data?.id;
+      // Filtra fallback 'created' do agendamentos.ts pra preservar o contrato de dedup
+      const metaEventId = (data?.id && data.id !== 'created') ? data.id : undefined;
 
       // Google Tag tracking
       trackScheduleComplete(formData.appointmentTypeName, formData.locationName);
@@ -163,15 +159,6 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
       trackSchedule(formData.appointmentTypeName, formData.locationName, metaEventId);
       trackCompleteRegistration(formData.appointmentTypeName, formData.locationName, metaEventId);
       trackLeadMeta('Agendamento Confirmado - Modal', metaEventId);
-
-      // Google Ads Conversion
-      if (typeof (window as any).gtag !== 'undefined') {
-        (window as any).gtag('event', 'conversion', {
-          send_to: 'AW-436492720/tUOICNX06JwcELCzkdAB',
-          value: 300,
-          currency: 'BRL',
-        });
-      }
 
       setIsSubmitted(true);
     } catch (err) {
