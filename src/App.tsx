@@ -33,6 +33,11 @@ import RouteChangeTracker from "./components/RouteChangeTracker";
 
 const queryClient = new QueryClient();
 
+const RedirectToAgendamento = () => {
+  const location = useLocation();
+  return <Navigate to={`/agendamento${location.search}${location.hash}`} replace />;
+};
+
 const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
