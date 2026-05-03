@@ -61,8 +61,6 @@ const TRACKING_INVENTORY: TrackingEntry[] = [
     purpose: "Conversão — Formulário/Agendamento confirmado",
     files: [
       "src/pages/Obrigado.tsx",
-      "src/pages/Agendar.tsx",
-      "src/pages/AgendarConsulta.tsx",
       "src/pages/Agendamento.tsx",
       "src/components/scheduling/SchedulingModal.tsx",
     ],
