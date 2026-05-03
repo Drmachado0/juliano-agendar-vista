@@ -62,9 +62,9 @@
             ]
           },
           {
-            "type": "TAG_REFERENCE",
-            "key": "measurementId",
-            "value": "GA4 - Configuracao"
+            "type": "TEMPLATE",
+            "key": "measurementIdOverride",
+            "value": "G-79BDCX4R2L"
           }
         ],
         "fingerprint": "1714700000001",
@@ -113,9 +113,9 @@
             ]
           },
           {
-            "type": "TAG_REFERENCE",
-            "key": "measurementId",
-            "value": "GA4 - Configuracao"
+            "type": "TEMPLATE",
+            "key": "measurementIdOverride",
+            "value": "G-79BDCX4R2L"
           }
         ],
         "fingerprint": "1714700000002",

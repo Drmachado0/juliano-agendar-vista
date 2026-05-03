@@ -1,7 +1,7 @@
 # Documentação de Eventos do DataLayer - Google Tag Manager
 
-**Container GTM:** `GTM-NQ2GJ4GX`  
-**Última atualização:** Dezembro 2024
+**Container GTM:** `GTM-K3C2NNF6`  
+**Última atualização:** 2026-05-03 (Pixel ID corrigido + arquitetura via GTM-only com CAPI dedup)
 
 ---
 
@@ -9,11 +9,20 @@
 
 | Plataforma | ID | Descrição | Status |
 |------------|-----|-----------|--------|
-| GTM Container | GTM-NQ2GJ4GX | Google Tag Manager | ✅ Ativo |
+| GTM Container | GTM-K3C2NNF6 | Google Tag Manager | ✅ Ativo |
 | GA4 Principal | G-79BDCX4R2L | drjulianomachado.com | ✅ gtag.js direto |
 | GA4 Secundário | G-380EGEFL1S | site Dr Juliano Machado | ✅ gtag.js direto |
 | Google Ads | AW-436492720 | Conta de Ads | Via GTM |
-| Meta Pixel | 1358767025715686 | Facebook/Instagram | ✅ Ativo |
+| Meta Pixel | 1003792428067622 | Pixel site Dr Juliano (BM 493850516412413) | ✅ CAPI dedup ativo |
+
+---
+
+## GA4 — Estratégia de propriedades duplas
+
+- **GA4 Principal `G-79BDCX4R2L`** — propriedade canônica para drjulianomachado.com, alimenta Looker Studio e relatórios
+- **GA4 Secundário `G-380EGEFL1S`** — `[TODO PREENCHER MOTIVO]` Possíveis: backup, analytics terceirizado, agência, deduplicação. Investigar com stakeholder antes de remover ou consolidar.
+
+Decisão arquitetural: ambas as propriedades são gerenciadas via GTM (tag `GA4 - Configuracao` Google Tag). **NÃO criar** tag GA4 Configuration paralela com trigger All Pages no GTM — causaria duplicação de pageviews. Code guard recomendado em `docs/ADS-ACTION-PLAN-2026-05-03.md` Low #10.
 
 ---
 
@@ -24,11 +33,11 @@
 │                    ARQUITETURA DE TRACKING                       │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  index.html                                                      │
-│  ├── Meta Pixel (1358767025715686) → PageView automático        │
+│  index.html (sob LGPD Consent Mode v2 default-denied)            │
 │  ├── gtag.js → G-79BDCX4R2L (Principal)                         │
 │  │         └→ G-380EGEFL1S (Secundário)                         │
-│  └── GTM (GTM-NQ2GJ4GX) → Tags configuradas via painel          │
+│  └── GTM (GTM-K3C2NNF6) → Meta Pixel + Google Ads via tags      │
+│       └── Pixel 1003792428067622 com CAPI dedup (server-side)   │
 │                                                                  │
 │  useGoogleTag.ts (DataLayer)                                     │
 │  ├── trackScheduleStart() → begin_checkout                      │
@@ -38,11 +47,13 @@
 │  ├── trackCTAClick() → cta_click                                │
 │  └── trackEvent() → eventos customizados                        │
 │                                                                  │
-│  useMetaPixel.ts (Facebook Pixel)                                │
-│  ├── trackViewContent() → ViewContent                           │
-│  ├── trackLead() → Lead                                         │
-│  ├── trackSchedule() → Schedule                                 │
-│  └── trackCompleteRegistration() → CompleteRegistration         │
+│  useMetaPixel.ts → empurra para dataLayer (sem fbq direto)       │
+│  ├── trackViewContent() → meta_view_content (ViewContent)       │
+│  ├── trackLead() → meta_lead (Lead)                             │
+│  ├── trackSchedule() → meta_schedule (Schedule)                 │
+│  ├── trackCompleteRegistration() → meta_complete_registration   │
+│  └── trackContact() → meta_contact (Contact)                    │
+│  Cada evento envia meta_event_id (UUID) para CAPI dedup          │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
