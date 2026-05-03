@@ -119,6 +119,7 @@ const Agendamento = () => {
     trackContact: trackMetaContact,
   } = useMetaPixel();
   const {
+    trackScheduleComplete,
     trackFormSubmitConversion,
     trackWhatsAppClick,
     trackWhatsAppGoogleAdsConversion,
@@ -329,6 +330,7 @@ const Agendamento = () => {
       await Promise.race([notificationsPromise, timeoutPromise]);
 
       // Tracking (event_id = leadId para dedup com CAPI server-side)
+      trackScheduleComplete(formData.appointmentTypeName, formData.locationName);
       trackSchedule(formData.appointmentTypeName, formData.locationName, leadId);
       trackCompleteRegistration(formData.appointmentTypeName, formData.locationName, leadId);
       trackFormSubmitConversion();
@@ -342,16 +344,9 @@ const Agendamento = () => {
         currency: "BRL",
       });
 
-      // Google Ads conversion
-      if (typeof (window as any).gtag !== "undefined") {
-        (window as any).gtag("event", "conversion", {
-          send_to: "AW-436492720/tUOICNX06JwcELCzkdAB",
-          value: 300,
-          currency: "BRL",
-        });
-      }
-
-      window.location.href = "/obrigado";
+      // Renderiza SuccessStep inline (sem hard navigation) — preserva fbq async
+      // pra terminar de enviar Lead/Schedule/CompleteRegistration ao Meta
+      setIsSubmitted(true);
     } catch (err) {
       console.error("[Agendamento] Erro inesperado:", err);
       trackAppointmentError(
