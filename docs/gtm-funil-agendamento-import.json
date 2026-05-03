@@ -1,0 +1,258 @@
+{
+  "exportFormatVersion": 2,
+  "exportTime": "2026-05-03 00:00:00",
+  "containerVersion": {
+    "path": "accounts/0/containers/0/versions/0",
+    "accountId": "0",
+    "containerId": "0",
+    "containerVersionId": "0",
+    "container": {
+      "path": "accounts/0/containers/0",
+      "accountId": "0",
+      "containerId": "0",
+      "name": "Dr. Juliano - Funil Agendamento + CTA",
+      "publicId": "GTM-K3C2NNF6",
+      "usageContext": ["WEB"]
+    },
+    "tag": [
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "tagId": "9101",
+        "name": "GA4 - Funil Agendamento (form_start, step_completed, appointment_error)",
+        "type": "gaawe",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "{{Event}}"
+          },
+          {
+            "type": "LIST",
+            "key": "eventParameters",
+            "list": [
+              {
+                "type": "MAP",
+                "map": [
+                  { "type": "TEMPLATE", "key": "name", "value": "step" },
+                  { "type": "TEMPLATE", "key": "value", "value": "{{DLV - step}}" }
+                ]
+              },
+              {
+                "type": "MAP",
+                "map": [
+                  { "type": "TEMPLATE", "key": "name", "value": "page_type" },
+                  { "type": "TEMPLATE", "key": "value", "value": "{{DLV - page_type}}" }
+                ]
+              },
+              {
+                "type": "MAP",
+                "map": [
+                  { "type": "TEMPLATE", "key": "name", "value": "error_type" },
+                  { "type": "TEMPLATE", "key": "value", "value": "{{DLV - error_type}}" }
+                ]
+              },
+              {
+                "type": "MAP",
+                "map": [
+                  { "type": "TEMPLATE", "key": "name", "value": "error_message" },
+                  { "type": "TEMPLATE", "key": "value", "value": "{{DLV - error_message}}" }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "TAG_REFERENCE",
+            "key": "measurementId",
+            "value": "GA4 - Configuracao"
+          }
+        ],
+        "fingerprint": "1714700000001",
+        "firingTriggerId": ["7101"],
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": { "type": "MAP" },
+        "consentSettings": { "consentStatus": "NOT_SET" }
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "tagId": "9102",
+        "name": "GA4 - CTA Click",
+        "type": "gaawe",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "cta_click"
+          },
+          {
+            "type": "LIST",
+            "key": "eventParameters",
+            "list": [
+              {
+                "type": "MAP",
+                "map": [
+                  { "type": "TEMPLATE", "key": "name", "value": "cta_name" },
+                  { "type": "TEMPLATE", "key": "value", "value": "{{DLV - cta_name}}" }
+                ]
+              },
+              {
+                "type": "MAP",
+                "map": [
+                  { "type": "TEMPLATE", "key": "name", "value": "cta_location" },
+                  { "type": "TEMPLATE", "key": "value", "value": "{{DLV - cta_location}}" }
+                ]
+              },
+              {
+                "type": "MAP",
+                "map": [
+                  { "type": "TEMPLATE", "key": "name", "value": "cta_text" },
+                  { "type": "TEMPLATE", "key": "value", "value": "{{DLV - cta_text}}" }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "TAG_REFERENCE",
+            "key": "measurementId",
+            "value": "GA4 - Configuracao"
+          }
+        ],
+        "fingerprint": "1714700000002",
+        "firingTriggerId": ["7102"],
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": { "type": "MAP" },
+        "consentSettings": { "consentStatus": "NOT_SET" }
+      }
+    ],
+    "trigger": [
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "triggerId": "7101",
+        "name": "Custom Event - Funil Agendamento",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "MATCH_REGEX",
+            "parameter": [
+              { "type": "TEMPLATE", "key": "arg0", "value": "{{_event}}" },
+              { "type": "TEMPLATE", "key": "arg1", "value": "^(lp|modal)_(form_start|step_completed|appointment_error)$" }
+            ]
+          }
+        ],
+        "fingerprint": "1714700000003"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "triggerId": "7102",
+        "name": "Custom Event - CTA Click",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              { "type": "TEMPLATE", "key": "arg0", "value": "{{_event}}" },
+              { "type": "TEMPLATE", "key": "arg1", "value": "cta_click" }
+            ]
+          }
+        ],
+        "fingerprint": "1714700000004"
+      }
+    ],
+    "variable": [
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "variableId": "5101",
+        "name": "DLV - step",
+        "type": "v",
+        "parameter": [
+          { "type": "INTEGER", "key": "dataLayerVersion", "value": "2" },
+          { "type": "BOOLEAN", "key": "setDefaultValue", "value": "false" },
+          { "type": "TEMPLATE", "key": "name", "value": "step" }
+        ],
+        "fingerprint": "1714700000005"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "variableId": "5102",
+        "name": "DLV - page_type",
+        "type": "v",
+        "parameter": [
+          { "type": "INTEGER", "key": "dataLayerVersion", "value": "2" },
+          { "type": "BOOLEAN", "key": "setDefaultValue", "value": "false" },
+          { "type": "TEMPLATE", "key": "name", "value": "page_type" }
+        ],
+        "fingerprint": "1714700000006"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "variableId": "5103",
+        "name": "DLV - error_type",
+        "type": "v",
+        "parameter": [
+          { "type": "INTEGER", "key": "dataLayerVersion", "value": "2" },
+          { "type": "BOOLEAN", "key": "setDefaultValue", "value": "false" },
+          { "type": "TEMPLATE", "key": "name", "value": "error_type" }
+        ],
+        "fingerprint": "1714700000007"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "variableId": "5104",
+        "name": "DLV - error_message",
+        "type": "v",
+        "parameter": [
+          { "type": "INTEGER", "key": "dataLayerVersion", "value": "2" },
+          { "type": "BOOLEAN", "key": "setDefaultValue", "value": "false" },
+          { "type": "TEMPLATE", "key": "name", "value": "error_message" }
+        ],
+        "fingerprint": "1714700000008"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "variableId": "5105",
+        "name": "DLV - cta_name",
+        "type": "v",
+        "parameter": [
+          { "type": "INTEGER", "key": "dataLayerVersion", "value": "2" },
+          { "type": "BOOLEAN", "key": "setDefaultValue", "value": "false" },
+          { "type": "TEMPLATE", "key": "name", "value": "cta_name" }
+        ],
+        "fingerprint": "1714700000009"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "variableId": "5106",
+        "name": "DLV - cta_location",
+        "type": "v",
+        "parameter": [
+          { "type": "INTEGER", "key": "dataLayerVersion", "value": "2" },
+          { "type": "BOOLEAN", "key": "setDefaultValue", "value": "false" },
+          { "type": "TEMPLATE", "key": "name", "value": "cta_location" }
+        ],
+        "fingerprint": "1714700000010"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "variableId": "5107",
+        "name": "DLV - cta_text",
+        "type": "v",
+        "parameter": [
+          { "type": "INTEGER", "key": "dataLayerVersion", "value": "2" },
+          { "type": "BOOLEAN", "key": "setDefaultValue", "value": "false" },
+          { "type": "TEMPLATE", "key": "name", "value": "cta_text" }
+        ],
+        "fingerprint": "1714700000011"
+      }
+    ]
+  }
+}
