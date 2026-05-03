@@ -35,15 +35,25 @@ export const useMetaPixel = () => {
 
   const trackLead = (contentName?: string, eventId?: string) => {
     const name = contentName || 'Formulário Agendamento Iniciado';
+    const id = eventId || generateEventId();
+    // Standard event (pode ser bloqueado por Meta Health Data Restrictions)
     pushToDataLayer({
       event: 'meta_lead',
       meta_event_name: 'Lead',
-      meta_event_id: eventId || generateEventId(),
+      meta_event_id: id,
       form_name: 'agendamento',
       content_name: name,
       content_category: 'Consulta Oftalmológica',
       value: 300,
       currency: 'BRL',
+    });
+    // Custom event paralelo (escapa parcialmente da blocklist, cria audiences)
+    pushToDataLayer({
+      event: 'meta_appointment_form_started',
+      meta_event_name: 'AppointmentFormStarted',
+      meta_event_id: id,
+      form_name: 'agendamento',
+      content_name: name,
     });
   };
 
@@ -52,15 +62,24 @@ export const useMetaPixel = () => {
     location?: string,
     eventId?: string,
   ) => {
+    const id = eventId || generateEventId();
+    // Standard event (bloqueado por Health Restrictions enquanto domínio não verificado)
     pushToDataLayer({
       event: 'meta_schedule',
       meta_event_name: 'Schedule',
-      meta_event_id: eventId || generateEventId(),
+      meta_event_id: id,
       content_name: 'Agendamento Confirmado',
       content_category: appointmentType,
       content_type: location,
       value: 300,
       currency: 'BRL',
+    });
+    // Custom event paralelo
+    pushToDataLayer({
+      event: 'meta_appointment_booked',
+      meta_event_name: 'AppointmentBooked',
+      meta_event_id: id,
+      content_name: 'Agendamento Confirmado',
     });
   };
 
@@ -69,15 +88,23 @@ export const useMetaPixel = () => {
     location?: string,
     eventId?: string,
   ) => {
+    const id = eventId || generateEventId();
     pushToDataLayer({
       event: 'meta_complete_registration',
       meta_event_name: 'CompleteRegistration',
-      meta_event_id: eventId || generateEventId(),
+      meta_event_id: id,
       content_name: 'Agendamento Finalizado',
       content_category: appointmentType,
       content_type: location,
       value: 300,
       currency: 'BRL',
+    });
+    // Custom event paralelo
+    pushToDataLayer({
+      event: 'meta_appointment_confirmed',
+      meta_event_name: 'AppointmentConfirmed',
+      meta_event_id: id,
+      content_name: 'Agendamento Finalizado',
     });
   };
 
