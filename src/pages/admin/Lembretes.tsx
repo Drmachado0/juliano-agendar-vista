@@ -19,7 +19,8 @@ import {
   type LembreteAnual,
   type EstatisticasGerais,
   type EstatisticaMensal,
-  atualizarTelefoneLembrete
+  atualizarTelefoneLembrete,
+  deletarLembrete
 } from "@/services/lembretesAnuais";
 import { validarTelefoneBrasileiro, autocorrigirTelefone } from "@/lib/validarTelefoneBR";
 import { supabase } from "@/integrations/supabase/client";
