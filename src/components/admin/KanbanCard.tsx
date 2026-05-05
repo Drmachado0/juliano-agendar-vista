@@ -327,6 +327,11 @@ const KanbanCard = ({
         </Button>
       </div>
     </div>
+    <HistoricoConversaModal
+      agendamento={agendamento}
+      isOpen={historicoOpen}
+      onClose={() => setHistoricoOpen(false)}
+    />
     </TooltipProvider>
   );
 };
