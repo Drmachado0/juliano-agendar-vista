@@ -1,26 +1,28 @@
-# Adicionar aba "Contatos" no CRM
+# Histórico de conversas no card do Kanban
 
-Hoje `/admin/crm` mostra direto o Kanban. A página `/admin/whatsapp` já tem uma aba "Contatos" funcional usando o componente `WhatsAppContatos` (que lista contatos únicos por telefone, com busca, edição e exclusão).
-
-A proposta é embrulhar o conteúdo do CRM em `Tabs` com duas abas:
-
-1. **Kanban** (default) — todo o conteúdo atual da página (header de stats, filtros, colunas Kanban, modais).
-2. **Contatos** — reusa `<WhatsAppContatos />` já existente.
+Adicionar botão "Histórico" em cada card do Kanban que abre um modal mostrando todas as mensagens WhatsApp trocadas com aquele paciente (IN/OUT, agrupadas por dia, em tempo real).
 
 ## Mudanças
 
-### `src/pages/admin/CRM.tsx`
-- Importar `Tabs, TabsList, TabsTrigger, TabsContent` de `@/components/ui/tabs` e `WhatsAppContatos`.
-- Adicionar state `tab: "kanban" | "contatos"` (default `"kanban"`, persistido em `localStorage` `crm:tab:v1` para manter a aba escolhida entre navegações).
-- Logo abaixo do `<h1>CRM Kanban</h1>` + badges de stats, inserir `<TabsList>` com os dois triggers.
-- Envolver o bloco atual (filtros + grid de `KanbanColumn` + modais) dentro de `<TabsContent value="kanban">`.
-- Adicionar `<TabsContent value="contatos">` renderizando `<WhatsAppContatos onAbrirChat={(tel) => navigate('/admin/whatsapp')} />` (ao clicar em "Abrir conversa" leva para a página de WhatsApp — mesmo padrão já usado lá; podemos passar o telefone via query string `?telefone=` numa iteração futura, mas por enquanto só navegar é suficiente e consistente).
-- O header com stats (leads/agendados/atendidos/total), o `EvolutionStatusBadge`, "Última atualização" e botões "Reprocessar boas-vindas" / "Auditoria" / "Duplicados" continuam acima das tabs (válidos para ambas).
+### 1. Novo componente `src/components/admin/HistoricoConversaModal.tsx`
+- Recebe `agendamento`, `isOpen`, `onClose`.
+- Ao abrir, chama `listarMensagensPorAgendamento(agendamento.id, telefone)` (já existe em `src/services/mensagens.ts` — cobre mensagens ligadas ao id e mensagens órfãs por telefone).
+- Subscreve realtime na tabela `mensagens_whatsapp` (canal `historico-{id}`) e recarrega quando há mudança.
+- Layout: `Dialog` com `max-w-2xl h-[80vh]`, header com nome + telefone + contador, corpo com `ScrollArea`.
+- Mensagens agrupadas por dia com separador (`dd 'de' MMMM 'de' yyyy`).
+- Reusa `WhatsAppMessageBubble` para renderizar cada bolha (já trata IN/OUT + status enviado/entregue/lido).
+- Estados: loading (spinner), vazio ("Nenhuma mensagem trocada ainda"), lista normal.
 
-### Detalhes técnicos
-- Não mexer em `WhatsAppContatos.tsx` — ele já é genérico e aceita `onAbrirChat: (telefone: string) => void`.
-- Não criar tabela nova nem edge function. Sem migrações.
-- Visual: `TabsList` alinhada à esquerda, mesmo estilo da página WhatsApp (`self-start mb-3`).
+### 2. `src/components/admin/KanbanCard.tsx`
+- Importar `History` de `lucide-react` e `HistoricoConversaModal`.
+- Adicionar state local `historicoOpen`.
+- Adicionar botão `History` na barra de ações (ao lado de WhatsApp/Automação/Sandbox), tooltip "Histórico de conversas".
+- Renderizar `<HistoricoConversaModal agendamento={agendamento} isOpen={historicoOpen} onClose={...} />` no fim do card.
+- O botão usa `e.stopPropagation()` para não disparar drag.
+
+## Sem mudanças
+- Sem migrações, sem edge functions, sem novos serviços (toda infra já existe).
+- Não mexe em CRM.tsx nem em KanbanColumn — modal é local ao card.
 
 ## Resultado
-Ao entrar em `/admin/crm` o usuário vê duas abas no topo: **Kanban** (atual) e **Contatos** (lista única de pacientes por telefone, com busca, editar e apagar — mesma UX da aba já existente em `/admin/whatsapp`).
+Cada card no Kanban ganha um ícone de histórico (clock/history). Clicar abre um modal com a thread completa do WhatsApp daquele paciente, atualizando em tempo real, sem precisar sair do CRM ou abrir a página de WhatsApp.

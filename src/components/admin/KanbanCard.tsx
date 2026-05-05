@@ -1,12 +1,14 @@
+import { useState } from "react";
 import { Agendamento } from "@/services/agendamentos";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle, CheckCircle2, UserPlus, Timer, Send, XCircle, Loader2, FlaskConical, CheckCheck, Eye as EyeIcon } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle, CheckCircle2, UserPlus, Timer, Send, XCircle, Loader2, FlaskConical, CheckCheck, Eye as EyeIcon, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { BoasVindasInfo } from "@/hooks/useBoasVindasStatus";
+import HistoricoConversaModal from "./HistoricoConversaModal";
 
 interface KanbanCardProps {
   agendamento: Agendamento;
@@ -45,6 +47,7 @@ const KanbanCard = ({
 }: KanbanCardProps) => {
   const isLead = isLeadIncompleto(agendamento);
   const atendido = isAtendido(agendamento);
+  const [historicoOpen, setHistoricoOpen] = useState(false);
 
   // Calcula tempo desde criação e tempo na fase atual
   const createdDate = new Date(agendamento.created_at);
@@ -270,6 +273,18 @@ const KanbanCard = ({
           <Button
             variant="ghost"
             size="sm"
+            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            onClick={(e) => {
+              e.stopPropagation();
+              setHistoricoOpen(true);
+            }}
+            title="Histórico de conversas"
+          >
+            <History className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
             onClick={(e) => {
               e.stopPropagation();
@@ -312,6 +327,11 @@ const KanbanCard = ({
         </Button>
       </div>
     </div>
+    <HistoricoConversaModal
+      agendamento={agendamento}
+      isOpen={historicoOpen}
+      onClose={() => setHistoricoOpen(false)}
+    />
     </TooltipProvider>
   );
 };
