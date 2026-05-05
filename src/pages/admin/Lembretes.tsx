@@ -1641,6 +1641,26 @@ const Lembretes = () => {
                                     <p className="text-sm text-muted-foreground flex items-center gap-2">
                                       <Phone className="h-3 w-3" />
                                       <span className={cn(!validacao.valido && "text-amber-700")}>{lembrete.telefone}</span>
+                                      {!validacao.valido && validacao.podeCorrigir && (
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-5 px-1.5 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-500/10"
+                                                onClick={(e) => { e.stopPropagation(); corrigirTelefoneIndividual(lembrete.id, lembrete.telefone); }}
+                                              >
+                                                <Zap className="h-3 w-3 mr-1" />
+                                                +9
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p className="text-xs">Adicionar dígito 9 automaticamente</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      )}
                                     </p>
                                   )}
                                   <p className="text-xs text-muted-foreground mt-1">
