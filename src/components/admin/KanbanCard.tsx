@@ -273,6 +273,18 @@ const KanbanCard = ({
           <Button
             variant="ghost"
             size="sm"
+            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            onClick={(e) => {
+              e.stopPropagation();
+              setHistoricoOpen(true);
+            }}
+            title="Histórico de conversas"
+          >
+            <History className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
             onClick={(e) => {
               e.stopPropagation();
