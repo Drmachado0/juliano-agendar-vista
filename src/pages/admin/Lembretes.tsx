@@ -691,7 +691,46 @@ const Lembretes = () => {
     return { validos, invalidos, pendentes };
   };
 
-  const corrigirTodosTelefones = async () => {
+  const removerInvalidosVerificados = async () => {
+    const invalidos = lembretesPendentes.filter(l => verificacoesTelefone.get(l.id) === 'invalido');
+    if (invalidos.length === 0) {
+      toast({ title: "Nenhum inválido", description: "Verifique os números no WhatsApp primeiro." });
+      return;
+    }
+    if (!confirm(`Remover ${invalidos.length} contato(s) sem WhatsApp da lista de lembretes? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+    let removidos = 0;
+    for (const l of invalidos) {
+      const { success } = await deletarLembrete(l.id);
+      if (success) removidos++;
+    }
+    setVerificacoesTelefone(prev => {
+      const next = new Map(prev);
+      invalidos.forEach(l => next.delete(l.id));
+      return next;
+    });
+    setSelectedLembretes(prev => {
+      const next = new Set(prev);
+      invalidos.forEach(l => next.delete(l.id));
+      return next;
+    });
+    toast({ title: "Contatos removidos", description: `${removidos} contato(s) inválido(s) foram apagados.` });
+    await carregarLembretesPendentes();
+  };
+
+  const removerLembreteIndividual = async (id: string, nome: string) => {
+    if (!confirm(`Remover ${nome} da lista de lembretes?`)) return;
+    const { success, error } = await deletarLembrete(id);
+    if (!success) {
+      toast({ title: "Erro ao remover", description: error || "Tente novamente.", variant: "destructive" });
+      return;
+    }
+    setVerificacoesTelefone(prev => { const n = new Map(prev); n.delete(id); return n; });
+    setSelectedLembretes(prev => { const n = new Set(prev); n.delete(id); return n; });
+    toast({ title: "Contato removido" });
+    await carregarLembretesPendentes();
+  };
     const corrigir = lembretesPendentes.filter(l => {
       const v = validarTelefoneBrasileiro(l.telefone);
       return !v.valido && v.podeCorrigir;
