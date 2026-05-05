@@ -1,0 +1,153 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-n8n-secret",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const BodySchema = z.object({
+  telefone: z.string().min(8),
+  conteudo: z.string().min(1),
+  mensagem_externa_id: z.string().optional(),
+  tipo_mensagem: z.string().optional(),
+  payload: z.record(z.unknown()).optional(),
+});
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+
+  const sharedSecret = Deno.env.get("N8N_SHARED_SECRET");
+  const provided = req.headers.get("x-n8n-secret");
+  if (!sharedSecret || !provided || provided !== sharedSecret) {
+    return json({ error: "Unauthorized" }, 401);
+  }
+
+  let raw: unknown;
+  try {
+    raw = await req.json();
+  } catch {
+    return json({ error: "JSON inválido" }, 400);
+  }
+
+  const parsed = BodySchema.safeParse(raw);
+  if (!parsed.success) {
+    return json({ error: "Dados inválidos", details: parsed.error.flatten() }, 400);
+  }
+  const body = parsed.data;
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  // 1) Normaliza telefone via RPC
+  const { data: telNorm, error: normErr } = await supabase.rpc("normalizar_telefone", {
+    p_telefone: body.telefone,
+  });
+  if (normErr) return json({ error: normErr.message }, 500);
+  const telefoneNormalizado = (telNorm as string) ?? body.telefone.replace(/\D/g, "");
+
+  // 2) Busca agendamento mais recente por telefone normalizado
+  const last8 = telefoneNormalizado.slice(-8);
+  let agendamentoId: string | null = null;
+  if (last8.length >= 8) {
+    const { data: candidatos, error: selErr } = await supabase
+      .from("agendamentos")
+      .select("id, telefone_whatsapp, created_at, is_sandbox, data_agendamento")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (selErr) return json({ error: selErr.message }, 500);
+
+    const match = (candidatos ?? [])
+      .filter((a: any) => (a.telefone_whatsapp ?? "").replace(/\D/g, "").endsWith(last8))
+      .sort((a: any, b: any) => {
+        const sb = Number(a.is_sandbox ?? false) - Number(b.is_sandbox ?? false);
+        if (sb !== 0) return sb;
+        const da = Number(!!b.data_agendamento) - Number(!!a.data_agendamento);
+        if (da !== 0) return da;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      })[0];
+    agendamentoId = match?.id ?? null;
+  }
+
+  // 3) Idempotência: se mensagem_externa_id já existe, retorna duplicada
+  if (body.mensagem_externa_id) {
+    const { data: existente, error: existErr } = await supabase
+      .from("mensagens_whatsapp")
+      .select("id, agendamento_id")
+      .eq("mensagem_externa_id", body.mensagem_externa_id)
+      .maybeSingle();
+    if (existErr) return json({ error: existErr.message }, 500);
+    if (existente) {
+      return json({
+        ok: true,
+        mensagem_id: existente.id,
+        agendamento_id: existente.agendamento_id ?? null,
+        agendamento_encontrado: !!existente.agendamento_id,
+        duplicada: true,
+      });
+    }
+  }
+
+  // 4) Insere mensagem
+  const insertRow = {
+    agendamento_id: agendamentoId,
+    telefone: telefoneNormalizado,
+    direcao: "IN",
+    conteudo: body.conteudo,
+    mensagem_externa_id: body.mensagem_externa_id ?? null,
+    tipo_mensagem: body.tipo_mensagem ?? "whatsapp",
+    status_envio: "recebida",
+    payload: body.payload ?? { origem: "n8n_in" },
+  };
+
+  const { data: inserted, error: insErr } = await supabase
+    .from("mensagens_whatsapp")
+    .insert(insertRow)
+    .select("id")
+    .single();
+
+  if (insErr) {
+    // Race condition: outro request inseriu o mesmo mensagem_externa_id entre o check e o insert
+    if (
+      body.mensagem_externa_id &&
+      (insErr.code === "23505" || /duplicate key/i.test(insErr.message))
+    ) {
+      const { data: existente } = await supabase
+        .from("mensagens_whatsapp")
+        .select("id, agendamento_id")
+        .eq("mensagem_externa_id", body.mensagem_externa_id)
+        .maybeSingle();
+      if (existente) {
+        return json({
+          ok: true,
+          mensagem_id: existente.id,
+          agendamento_id: existente.agendamento_id ?? null,
+          agendamento_encontrado: !!existente.agendamento_id,
+          duplicada: true,
+        });
+      }
+    }
+    return json({ error: insErr.message }, 500);
+  }
+
+  return json({
+    ok: true,
+    mensagem_id: inserted.id,
+    agendamento_id: agendamentoId,
+    agendamento_encontrado: !!agendamentoId,
+    duplicada: false,
+  });
+});
