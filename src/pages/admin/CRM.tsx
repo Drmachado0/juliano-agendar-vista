@@ -599,6 +599,16 @@ const AdminCRM = () => {
             ))}
           </div>
         )}
+          </TabsContent>
+
+          <TabsContent value="contatos" className="mt-0">
+            <div className="bg-card rounded-xl border border-border overflow-hidden" style={{ height: "calc(100vh - 16rem)" }}>
+              <WhatsAppContatos
+                onAbrirChat={() => navigate("/admin/whatsapp")}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Modals */}
