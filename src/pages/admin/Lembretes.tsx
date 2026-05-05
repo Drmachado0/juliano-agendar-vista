@@ -1533,10 +1533,23 @@ const Lembretes = () => {
                     {verificacaoConcluida && (() => {
                       const c = contarNumerosVerificados();
                       return (
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground px-1">
-                          <span className="text-green-600">✓ {c.validos} válido(s)</span>
-                          <span className="text-destructive">✗ {c.invalidos} inválido(s)</span>
-                          {c.pendentes > 0 && <span>? {c.pendentes} não verificado(s)</span>}
+                        <div className="flex items-center justify-between gap-3 px-1">
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <span className="text-green-600">✓ {c.validos} válido(s)</span>
+                            <span className="text-destructive">✗ {c.invalidos} inválido(s)</span>
+                            {c.pendentes > 0 && <span>? {c.pendentes} não verificado(s)</span>}
+                          </div>
+                          {c.invalidos > 0 && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-7 gap-1 text-xs"
+                              onClick={removerInvalidosVerificados}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              Remover {c.invalidos} inválido(s)
+                            </Button>
+                          )}
                         </div>
                       );
                     })()}
