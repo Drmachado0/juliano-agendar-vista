@@ -1634,19 +1634,33 @@ const Lembretes = () => {
                                 </div>
                               </div>
                               {!editando && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-8 px-2"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditandoTelefoneId(lembrete.id);
-                                    setNovoTelefone(lembrete.telefone);
-                                  }}
-                                  title="Editar telefone"
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </Button>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 px-2"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditandoTelefoneId(lembrete.id);
+                                      setNovoTelefone(lembrete.telefone);
+                                    }}
+                                    title="Editar telefone"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 px-2 text-destructive hover:text-destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      removerLembreteIndividual(lembrete.id, lembrete.nome);
+                                    }}
+                                    title="Remover contato"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
                               )}
                             </div>
                           );
