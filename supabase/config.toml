@@ -96,3 +96,6 @@ verify_jwt = false
 [functions.atualizar-status-crm]
 verify_jwt = false
 
+[functions.registrar-mensagem-in-n8n]
+verify_jwt = false
+
