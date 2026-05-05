@@ -764,6 +764,22 @@ const Lembretes = () => {
     }
   };
 
+  const corrigirTelefoneIndividual = async (id: string, telefone: string) => {
+    const { corrigido, foiCorrigido } = autocorrigirTelefone(telefone);
+    if (!foiCorrigido) {
+      toast({ title: "Nada a corrigir", description: "Este telefone já está no formato correto." });
+      return;
+    }
+    const { success, error } = await atualizarTelefoneLembrete(id, corrigido);
+    if (!success) {
+      toast({ title: "Erro ao corrigir", description: error || "Tente novamente.", variant: "destructive" });
+      return;
+    }
+    setVerificacoesTelefone(prev => { const n = new Map(prev); n.delete(id); return n; });
+    toast({ title: "Telefone corrigido!", description: "Dígito 9 adicionado. Reverifique o WhatsApp." });
+    await carregarLembretesPendentes();
+  };
+
   const salvarEdicaoTelefone = async (id: string) => {
     const limpo = novoTelefone.replace(/\D/g, '');
     if (limpo.length < 10) {
