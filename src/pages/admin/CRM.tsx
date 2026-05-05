@@ -155,6 +155,22 @@ const AdminCRM = () => {
   const isFetchingRef = useRef(false);
 
   const [filters, setFilters] = useState<CrmFilters>(() => loadFilters());
+  const [tab, setTab] = useState<"kanban" | "contatos">(() => {
+    try {
+      const v = localStorage.getItem(TAB_STORAGE_KEY);
+      return v === "contatos" ? "contatos" : "kanban";
+    } catch {
+      return "kanban";
+    }
+  });
+  const navigate = useNavigate();
+  useEffect(() => {
+    try {
+      localStorage.setItem(TAB_STORAGE_KEY, tab);
+    } catch {
+      /* ignore */
+    }
+  }, [tab]);
   useEffect(() => {
     try {
       localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
