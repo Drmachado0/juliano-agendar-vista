@@ -47,6 +47,7 @@ const KanbanCard = ({
 }: KanbanCardProps) => {
   const isLead = isLeadIncompleto(agendamento);
   const atendido = isAtendido(agendamento);
+  const [historicoOpen, setHistoricoOpen] = useState(false);
 
   // Calcula tempo desde criação e tempo na fase atual
   const createdDate = new Date(agendamento.created_at);
