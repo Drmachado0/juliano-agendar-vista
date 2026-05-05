@@ -90,3 +90,9 @@ verify_jwt = false
 [functions.converter-lead-agendamento]
 verify_jwt = false
 
+[functions.atualizar-agendamento-por-telefone]
+verify_jwt = false
+
+[functions.atualizar-status-crm]
+verify_jwt = false
+
