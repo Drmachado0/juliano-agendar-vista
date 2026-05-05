@@ -488,6 +488,19 @@ const AdminCRM = () => {
           </div>
         </div>
 
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "kanban" | "contatos")} className="space-y-6">
+          <TabsList className="self-start">
+            <TabsTrigger value="kanban" className="gap-2">
+              <LayoutGrid className="h-4 w-4" />
+              Kanban
+            </TabsTrigger>
+            <TabsTrigger value="contatos" className="gap-2">
+              <Contact className="h-4 w-4" />
+              Contatos
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="kanban" className="space-y-6 mt-0">
         {/* Estatísticas de Conversão */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Taxa de Conversão: Leads → Agendados */}
