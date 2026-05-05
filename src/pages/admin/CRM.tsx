@@ -7,14 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm, reprocessarBoasVindas, buscarAgendamento, marcarSandbox } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
-import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, Wifi, History, Copy } from "lucide-react";
+import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, Wifi, History, Copy, Contact } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import AuditLogDrawer from "@/components/admin/AuditLogDrawer";
 import DuplicadosDrawer from "@/components/admin/DuplicadosDrawer";
 import { useBoasVindasStatus } from "@/hooks/useBoasVindasStatus";
 import CRMFilters, { CrmFilters, DEFAULT_CRM_FILTERS } from "@/components/admin/CRMFilters";
 import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
+import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
+import { useNavigate } from "react-router-dom";
+
+const TAB_STORAGE_KEY = "crm:tab:v1";
 
 const FILTERS_STORAGE_KEY = "crm:filters:v1";
 
@@ -150,6 +155,22 @@ const AdminCRM = () => {
   const isFetchingRef = useRef(false);
 
   const [filters, setFilters] = useState<CrmFilters>(() => loadFilters());
+  const [tab, setTab] = useState<"kanban" | "contatos">(() => {
+    try {
+      const v = localStorage.getItem(TAB_STORAGE_KEY);
+      return v === "contatos" ? "contatos" : "kanban";
+    } catch {
+      return "kanban";
+    }
+  });
+  const navigate = useNavigate();
+  useEffect(() => {
+    try {
+      localStorage.setItem(TAB_STORAGE_KEY, tab);
+    } catch {
+      /* ignore */
+    }
+  }, [tab]);
   useEffect(() => {
     try {
       localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
@@ -467,6 +488,19 @@ const AdminCRM = () => {
           </div>
         </div>
 
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "kanban" | "contatos")} className="space-y-6">
+          <TabsList className="self-start">
+            <TabsTrigger value="kanban" className="gap-2">
+              <LayoutGrid className="h-4 w-4" />
+              Kanban
+            </TabsTrigger>
+            <TabsTrigger value="contatos" className="gap-2">
+              <Contact className="h-4 w-4" />
+              Contatos
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="kanban" className="space-y-6 mt-0">
         {/* Estatísticas de Conversão */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Taxa de Conversão: Leads → Agendados */}
@@ -565,6 +599,16 @@ const AdminCRM = () => {
             ))}
           </div>
         )}
+          </TabsContent>
+
+          <TabsContent value="contatos" className="mt-0">
+            <div className="bg-card rounded-xl border border-border overflow-hidden" style={{ height: "calc(100vh - 16rem)" }}>
+              <WhatsAppContatos
+                onAbrirChat={() => navigate("/admin/whatsapp")}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Modals */}
