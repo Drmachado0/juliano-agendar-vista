@@ -7,14 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm, reprocessarBoasVindas, buscarAgendamento, marcarSandbox } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
-import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, Wifi, History, Copy } from "lucide-react";
+import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, Wifi, History, Copy, Contact } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import AuditLogDrawer from "@/components/admin/AuditLogDrawer";
 import DuplicadosDrawer from "@/components/admin/DuplicadosDrawer";
 import { useBoasVindasStatus } from "@/hooks/useBoasVindasStatus";
 import CRMFilters, { CrmFilters, DEFAULT_CRM_FILTERS } from "@/components/admin/CRMFilters";
 import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
+import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
+import { useNavigate } from "react-router-dom";
+
+const TAB_STORAGE_KEY = "crm:tab:v1";
 
 const FILTERS_STORAGE_KEY = "crm:filters:v1";
 
