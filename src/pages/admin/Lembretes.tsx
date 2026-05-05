@@ -730,7 +730,8 @@ const Lembretes = () => {
     setSelectedLembretes(prev => { const n = new Set(prev); n.delete(id); return n; });
     toast({ title: "Contato removido" });
     await carregarLembretesPendentes();
-  };
+
+  const corrigirTodosTelefones = async () => {
     const corrigir = lembretesPendentes.filter(l => {
       const v = validarTelefoneBrasileiro(l.telefone);
       return !v.valido && v.podeCorrigir;
