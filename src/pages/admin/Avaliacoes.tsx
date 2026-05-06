@@ -23,6 +23,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { getLocalBadgeClasses, LOCAL_SHORT_LABELS, getLocalGrupo } from "@/lib/localAtendimento";
+import { cn } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -2392,7 +2394,13 @@ const Avaliacoes = () => {
                               </>
                             )}
                             <span>•</span>
-                            <span className="truncate">{paciente.local_atendimento}</span>
+                            <Badge
+                              variant="outline"
+                              className={cn("text-[10px] font-medium px-1.5 py-0 border", getLocalBadgeClasses(paciente.local_atendimento))}
+                              title={paciente.local_atendimento}
+                            >
+                              {LOCAL_SHORT_LABELS[getLocalGrupo(paciente.local_atendimento)]}
+                            </Badge>
                           </div>
                         </div>
                         <Button

@@ -32,6 +32,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { getLocalBadgeClasses, LOCAL_SHORT_LABELS, getLocalGrupo } from "@/lib/localAtendimento";
+import { getOrigemGrupo, ORIGEM_LABELS, ORIGEM_BADGE_SOFT_CLASSES } from "@/lib/origemLead";
 
 interface AgendamentoDetailsModalProps {
   agendamento: Agendamento | null;
@@ -234,11 +236,19 @@ const AgendamentoDetailsModal = ({ agendamento, isOpen, onClose, onUpdate }: Age
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
             <span>Detalhes do Agendamento</span>
             <Badge className={cn("font-medium", statusColors[agendamento.status_crm])}>
               {agendamento.status_crm}
             </Badge>
+            {(() => {
+              const og = getOrigemGrupo(agendamento.origem);
+              return (
+                <Badge variant="outline" className={cn("text-[11px] font-medium border", ORIGEM_BADGE_SOFT_CLASSES[og])}>
+                  {ORIGEM_LABELS[og]}
+                </Badge>
+              );
+            })()}
           </DialogTitle>
         </DialogHeader>
 
@@ -318,7 +328,12 @@ const AgendamentoDetailsModal = ({ agendamento, isOpen, onClose, onUpdate }: Age
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                   <MapPin className="h-3 w-3" /> Local
                 </p>
-                <p className="font-medium">{agendamento.local_atendimento}</p>
+                <div className="mt-0.5 flex items-center gap-2">
+                  <Badge variant="outline" className={cn("text-[11px] px-2 py-0.5 border", getLocalBadgeClasses(agendamento.local_atendimento))}>
+                    {LOCAL_SHORT_LABELS[getLocalGrupo(agendamento.local_atendimento)]}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground truncate">{agendamento.local_atendimento}</span>
+                </div>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground flex items-center gap-1">

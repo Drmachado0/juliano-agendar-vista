@@ -14,6 +14,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Contato, listarContatos, atualizarContato, apagarContato } from "@/services/contatos";
+import { getLocalBadgeClasses, LOCAL_SHORT_LABELS, getLocalGrupo } from "@/lib/localAtendimento";
+import { cn } from "@/lib/utils";
 
 interface Props {
   onAbrirChat?: (telefone: string) => void;
@@ -171,7 +173,14 @@ const WhatsAppContatos = ({ onAbrirChat }: Props) => {
                       )}
                       {c.local_atendimento && (
                         <div className="flex items-center gap-1.5">
-                          <Calendar className="h-3 w-3" /> {c.local_atendimento} • {c.status_crm}
+                          <Badge
+                            variant="outline"
+                            className={cn("text-[10px] font-medium px-1.5 py-0 border", getLocalBadgeClasses(c.local_atendimento))}
+                            title={c.local_atendimento}
+                          >
+                            {LOCAL_SHORT_LABELS[getLocalGrupo(c.local_atendimento)]}
+                          </Badge>
+                          <span>• {c.status_crm}</span>
                         </div>
                       )}
                     </div>

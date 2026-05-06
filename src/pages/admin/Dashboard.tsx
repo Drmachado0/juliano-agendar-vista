@@ -51,11 +51,23 @@ interface Stats {
   filteredTotal: number;
 }
 
+// Paleta de status mantida; "local" alinhada à paleta unificada (Clinicor=teal, HGP=amber, Belém=violet)
 const COLORS = {
   status: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b'],
-  local: ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981'],
   tipo: ['#10b981', '#6366f1', '#ec4899', '#f97316'],
 };
+
+// Mapa nome-curto-do-local → cor (alinhado a src/lib/localAtendimento.ts)
+const LOCAL_COLOR_BY_NAME: Record<string, string> = {
+  Clinicor: '#14b8a6', // teal-500
+  'Hospital Geral de Paragominas': '#f59e0b', // amber-500
+  HGP: '#f59e0b',
+  Belém: '#8b5cf6', // violet-500
+  'Belém (IOB / Vitria)': '#8b5cf6',
+};
+const LOCAL_FALLBACK_COLORS = ['#14b8a6', '#f59e0b', '#8b5cf6', '#64748b'];
+const colorForLocal = (name: string, idx: number) =>
+  LOCAL_COLOR_BY_NAME[name] || LOCAL_FALLBACK_COLORS[idx % LOCAL_FALLBACK_COLORS.length];
 
 const periodLabels: Record<PeriodFilter, string> = {
   "7dias": "Últimos 7 dias",
@@ -412,8 +424,8 @@ const AdminDashboard = () => {
                           radius={[0, 4, 4, 0]}
                           name="Agendamentos"
                         >
-                          {stats?.porLocal.map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS.local[index % COLORS.local.length]} />
+                          {stats?.porLocal.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={colorForLocal(entry.name, index)} />
                           ))}
                         </Bar>
                       </BarChart>
