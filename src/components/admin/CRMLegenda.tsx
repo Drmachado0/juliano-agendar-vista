@@ -17,17 +17,17 @@ const unidades = [
   {
     label: "Clinicor",
     desc: "Atendimento preferencial pela manhã",
-    cls: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
+    cls: "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30",
   },
   {
     label: "HGP",
     desc: "Atendimento preferencial à tarde",
-    cls: "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30",
+    cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
   },
   {
     label: "Belém",
     desc: "Encaminhamento para clínicas parceiras (IOB / Vitria)",
-    cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+    cls: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
   },
 ];
 

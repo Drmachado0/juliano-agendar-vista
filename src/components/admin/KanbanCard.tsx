@@ -92,7 +92,7 @@ const KanbanCard = ({
       {agendamento.is_sandbox && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="absolute -top-1.5 -right-1.5 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide bg-orange-500 text-white px-1.5 py-0.5 rounded-md shadow">
+            <div className="absolute -top-1.5 -right-1.5 z-10 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide bg-orange-500 text-white px-1.5 py-0.5 rounded-md shadow">
               <FlaskConical className="h-2.5 w-2.5" />
               <span>Teste</span>
             </div>
@@ -104,6 +104,34 @@ const KanbanCard = ({
           </TooltipContent>
         </Tooltip>
       )}
+
+      {/* Selo de Origem (canto superior direito) — só aparece quando NÃO é "site" */}
+      {(() => {
+        const grupo = getOrigemGrupo(agendamento.origem);
+        if (grupo === "site") return null;
+        const Icon = ORIGEM_ICONS[grupo];
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  "absolute -top-1.5 z-10 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md shadow",
+                  ORIGEM_BADGE_CLASSES[grupo],
+                  agendamento.is_sandbox ? "right-14" : "-right-1.5"
+                )}
+              >
+                <Icon className="h-2.5 w-2.5" />
+                <span>{ORIGEM_LABELS[grupo]}</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="text-xs">
+                Origem: {agendamento.origem || "—"} ({ORIGEM_LABELS[grupo]})
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        );
+      })()}
 
       {/* Header - Name + telefone */}
       <Tooltip>
@@ -196,12 +224,12 @@ const KanbanCard = ({
         </div>
       )}
 
-      {/* Badges: unidade + tipo + convênio */}
-      <div className="flex flex-wrap gap-1">
+      {/* Linha: Local (badge colorido) + Tipo · Convênio (texto neutro inline) */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <Badge
           variant="outline"
           className={cn(
-            "font-medium border",
+            "font-medium border shrink-0",
             isComfortable ? "text-[11px] px-2 py-0.5" : "text-[10px] px-1.5 py-0.5",
             localBadgeColors[agendamento.local_atendimento] ||
               "bg-muted text-muted-foreground border-border"
@@ -210,44 +238,19 @@ const KanbanCard = ({
           <MapPin className="h-2.5 w-2.5 mr-1" />
           {agendamento.local_atendimento.split(" – ")[0]}
         </Badge>
-        <Badge variant="outline" className={cn(
-          "font-medium bg-muted/50 text-muted-foreground border-border/60",
-          isComfortable ? "text-[11px] px-2 py-0.5" : "text-[10px] px-1.5 py-0.5"
-        )}>
+        <span
+          className={cn(
+            "text-muted-foreground truncate",
+            isComfortable ? "text-[12px]" : "text-[11px]"
+          )}
+          title={`${agendamento.tipo_atendimento} · ${
+            agendamento.convenio === "Outro" ? agendamento.convenio_outro : agendamento.convenio
+          }`}
+        >
           {agendamento.tipo_atendimento}
-        </Badge>
-        <Badge variant="outline" className={cn(
-          "font-medium bg-muted/50 text-muted-foreground border-border/60",
-          isComfortable ? "text-[11px] px-2 py-0.5" : "text-[10px] px-1.5 py-0.5"
-        )}>
+          <span className="mx-1.5 opacity-50">·</span>
           {agendamento.convenio === "Outro" ? agendamento.convenio_outro : agendamento.convenio}
-        </Badge>
-        {(() => {
-          const grupo = getOrigemGrupo(agendamento.origem);
-          const Icon = ORIGEM_ICONS[grupo];
-          return (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "font-medium border",
-                    isComfortable ? "text-[11px] px-2 py-0.5" : "text-[10px] px-1.5 py-0.5",
-                    ORIGEM_BADGE_CLASSES[grupo]
-                  )}
-                >
-                  <Icon className="h-2.5 w-2.5 mr-1" />
-                  {ORIGEM_LABELS[grupo]}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-xs">
-                  Origem: {agendamento.origem || "—"} ({ORIGEM_LABELS[grupo]})
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          );
-        })()}
+        </span>
       </div>
 
       {/* Meta info: contato + indicadores em uma linha */}
