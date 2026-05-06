@@ -93,28 +93,73 @@ const KanbanCard = ({
       )}
 
       {/* Header - Name + telefone */}
-      <div className="space-y-0.5">
-        <div className="font-semibold text-sm text-foreground truncate leading-tight">
-          {agendamento.nome_completo}
-        </div>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Phone className="h-3 w-3 flex-shrink-0" />
-          <span className="truncate">{agendamento.telefone_whatsapp}</span>
-        </div>
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="space-y-0.5 cursor-help">
+            <div className="font-semibold text-sm text-foreground truncate leading-tight">
+              {agendamento.nome_completo}
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Phone className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">{agendamento.telefone_whatsapp}</span>
+            </div>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          <div className="text-xs space-y-1">
+            <div><strong>Nome:</strong> {agendamento.nome_completo}</div>
+            <div><strong>Telefone:</strong> {agendamento.telefone_whatsapp}</div>
+            {agendamento.email && <div><strong>E-mail:</strong> {agendamento.email}</div>}
+            {agendamento.data_nascimento && (
+              <div>
+                <strong>Nascimento:</strong>{" "}
+                {format(new Date(agendamento.data_nascimento + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR })}
+              </div>
+            )}
+            <div><strong>Local:</strong> {agendamento.local_atendimento}</div>
+            <div><strong>Tipo:</strong> {agendamento.tipo_atendimento}</div>
+            <div>
+              <strong>Convênio:</strong>{" "}
+              {agendamento.convenio === "Outro" ? agendamento.convenio_outro : agendamento.convenio}
+            </div>
+            {agendamento.detalhe_exame_ou_cirurgia && (
+              <div><strong>Detalhe:</strong> {agendamento.detalhe_exame_ou_cirurgia}</div>
+            )}
+            {agendamento.observacoes_internas && (
+              <div className="pt-1 mt-1 border-t border-border/50">
+                <strong>Obs:</strong> {agendamento.observacoes_internas}
+              </div>
+            )}
+          </div>
+        </TooltipContent>
+      </Tooltip>
 
       {/* Bloco data/hora consulta - destacado quando existir */}
       {!isLead && agendamento.data_agendamento && agendamento.hora_agendamento ? (
-        <div className="flex items-center gap-3 text-xs bg-primary/5 border border-primary/20 rounded-md px-2 py-1.5">
-          <span className="flex items-center gap-1 font-medium text-foreground">
-            <Calendar className="h-3 w-3 text-primary" />
-            {format(new Date(agendamento.data_agendamento + "T00:00:00"), "dd/MM/yy", { locale: ptBR })}
-          </span>
-          <span className="flex items-center gap-1 font-medium text-foreground">
-            <Clock className="h-3 w-3 text-primary" />
-            {agendamento.hora_agendamento.slice(0, 5)}
-          </span>
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-3 text-xs bg-primary/5 border border-primary/20 rounded-md px-2 py-1.5 cursor-help">
+              <span className="flex items-center gap-1 font-medium text-foreground">
+                <Calendar className="h-3 w-3 text-primary" />
+                {format(new Date(agendamento.data_agendamento + "T00:00:00"), "dd/MM/yy", { locale: ptBR })}
+              </span>
+              <span className="flex items-center gap-1 font-medium text-foreground">
+                <Clock className="h-3 w-3 text-primary" />
+                {agendamento.hora_agendamento.slice(0, 5)}
+              </span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="text-xs space-y-0.5">
+              <div className="font-medium">
+                {format(new Date(agendamento.data_agendamento + "T00:00:00"), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+              </div>
+              <div className="text-muted-foreground">
+                Horário: {agendamento.hora_agendamento.slice(0, 5)}
+              </div>
+            </div>
+          </TooltipContent>
+        </Tooltip>
       ) : isLead ? (
         <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-md">
           <AlertTriangle className="h-3 w-3" />
