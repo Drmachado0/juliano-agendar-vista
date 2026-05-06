@@ -424,8 +424,8 @@ const AdminDashboard = () => {
                           radius={[0, 4, 4, 0]}
                           name="Agendamentos"
                         >
-                          {stats?.porLocal.map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS.local[index % COLORS.local.length]} />
+                          {stats?.porLocal.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={colorForLocal(entry.name, index)} />
                           ))}
                         </Bar>
                       </BarChart>
