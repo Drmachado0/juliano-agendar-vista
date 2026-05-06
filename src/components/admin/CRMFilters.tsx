@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Search, X, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useDensity } from "@/hooks/useDensity";
 import { cn } from "@/lib/utils";
+import { ORIGEM_FILTER_OPTIONS, ORIGEM_LABELS, type OrigemGrupo } from "@/lib/origemLead";
 
 export type CrmPeriodo = "todos" | "hoje" | "7dias" | "mes" | "atrasados" | "sem_data";
 export type CrmOrdenacao = "data_asc" | "data_desc" | "created_desc" | "created_asc";
@@ -16,6 +17,7 @@ export interface CrmFilters {
   local?: string;
   tipo?: string;
   convenio?: string;
+  origem?: OrigemGrupo;
   periodo: CrmPeriodo;
   ordenacao: CrmOrdenacao;
   sandbox: CrmSandboxFiltro;
@@ -136,6 +138,7 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
     !!filters.local ||
     !!filters.tipo ||
     !!filters.convenio ||
+    !!filters.origem ||
     filters.periodo !== "todos" ||
     filters.ordenacao !== "data_asc" ||
     filters.sandbox !== "reais";
@@ -147,6 +150,8 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
     activeChips.push({ label: `Tipo: ${filters.tipo}`, clear: () => onChange({ ...filters, tipo: undefined }) });
   if (filters.convenio)
     activeChips.push({ label: `Convênio: ${filters.convenio}`, clear: () => onChange({ ...filters, convenio: undefined }) });
+  if (filters.origem)
+    activeChips.push({ label: `Origem: ${ORIGEM_LABELS[filters.origem]}`, clear: () => onChange({ ...filters, origem: undefined }) });
   if (filters.periodo !== "todos") {
     const p = periodos.find((x) => x.value === filters.periodo)?.label ?? filters.periodo;
     activeChips.push({ label: `Período: ${p}`, clear: () => onChange({ ...filters, periodo: "todos" }) });
