@@ -11,6 +11,7 @@ import type { BoasVindasInfo } from "@/hooks/useBoasVindasStatus";
 import HistoricoConversaModal from "./HistoricoConversaModal";
 import { useDensity } from "@/hooks/useDensity";
 import { getOrigemGrupo, ORIGEM_LABELS, ORIGEM_BADGE_CLASSES, type OrigemGrupo } from "@/lib/origemLead";
+import { getLocalBadgeClasses, LOCAL_SHORT_LABELS, getLocalGrupo } from "@/lib/localAtendimento";
 
 const ORIGEM_ICONS: Record<OrigemGrupo, typeof Globe> = {
   site: Globe,
