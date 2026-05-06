@@ -311,6 +311,10 @@ const KanbanCard = ({
       })()}
 
       {/* Actions */}
+      {(() => {
+        const btnSize = isComfortable ? "h-8 w-8" : "h-7 w-7";
+        const iconSize = isComfortable ? "h-4 w-4" : "h-3.5 w-3.5";
+        return (
       <div className="flex items-center justify-between pt-2 border-t border-border/60">
         <div className="flex items-center gap-0.5">
           <Tooltip>
@@ -318,13 +322,13 @@ const KanbanCard = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 hover:bg-accent text-muted-foreground hover:text-foreground"
+                className={cn("p-0 hover:bg-accent text-muted-foreground hover:text-foreground", btnSize)}
                 onClick={(e) => {
                   e.stopPropagation();
                   onSendWhatsApp(agendamento);
                 }}
               >
-                <MessageCircle className="h-3.5 w-3.5" />
+                <MessageCircle className={iconSize} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>WhatsApp</TooltipContent>
@@ -334,13 +338,13 @@ const KanbanCard = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 hover:bg-accent text-muted-foreground hover:text-foreground"
+                className={cn("p-0 hover:bg-accent text-muted-foreground hover:text-foreground", btnSize)}
                 onClick={(e) => {
                   e.stopPropagation();
                   setHistoricoOpen(true);
                 }}
               >
-                <History className="h-3.5 w-3.5" />
+                <History className={iconSize} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Histórico de conversas</TooltipContent>
@@ -350,13 +354,13 @@ const KanbanCard = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 hover:bg-accent text-muted-foreground hover:text-foreground"
+                className={cn("p-0 hover:bg-accent text-muted-foreground hover:text-foreground", btnSize)}
                 onClick={(e) => {
                   e.stopPropagation();
                   onTriggerAutomation(agendamento);
                 }}
               >
-                <Zap className="h-3.5 w-3.5" />
+                <Zap className={iconSize} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Disparar automação n8n</TooltipContent>
@@ -368,7 +372,8 @@ const KanbanCard = ({
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "h-7 w-7 p-0 hover:bg-accent",
+                    "p-0 hover:bg-accent",
+                    btnSize,
                     agendamento.is_sandbox
                       ? "text-orange-500 hover:text-orange-600"
                       : "text-muted-foreground hover:text-foreground"
@@ -378,7 +383,7 @@ const KanbanCard = ({
                     onToggleSandbox(agendamento);
                   }}
                 >
-                  <FlaskConical className="h-3.5 w-3.5" />
+                  <FlaskConical className={iconSize} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -390,16 +395,18 @@ const KanbanCard = ({
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 px-2 text-xs hover:bg-accent"
+          className={cn("hover:bg-accent", isComfortable ? "h-8 px-2.5 text-sm" : "h-7 px-2 text-xs")}
           onClick={(e) => {
             e.stopPropagation();
             onViewDetails(agendamento);
           }}
         >
-          <Eye className="h-3.5 w-3.5 mr-1" />
+          <Eye className={cn("mr-1", iconSize)} />
           Detalhes
         </Button>
       </div>
+        );
+      })()}
     </div>
     <HistoricoConversaModal
       agendamento={agendamento}
