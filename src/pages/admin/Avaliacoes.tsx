@@ -2394,7 +2394,13 @@ const Avaliacoes = () => {
                               </>
                             )}
                             <span>•</span>
-                            <span className="truncate">{paciente.local_atendimento}</span>
+                            <Badge
+                              variant="outline"
+                              className={cn("text-[10px] font-medium px-1.5 py-0 border", getLocalBadgeClasses(paciente.local_atendimento))}
+                              title={paciente.local_atendimento}
+                            >
+                              {LOCAL_SHORT_LABELS[getLocalGrupo(paciente.local_atendimento)]}
+                            </Badge>
                           </div>
                         </div>
                         <Button
