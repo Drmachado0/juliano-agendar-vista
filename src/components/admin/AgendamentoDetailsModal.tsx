@@ -236,11 +236,19 @@ const AgendamentoDetailsModal = ({ agendamento, isOpen, onClose, onUpdate }: Age
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
             <span>Detalhes do Agendamento</span>
             <Badge className={cn("font-medium", statusColors[agendamento.status_crm])}>
               {agendamento.status_crm}
             </Badge>
+            {(() => {
+              const og = getOrigemGrupo(agendamento.origem);
+              return (
+                <Badge variant="outline" className={cn("text-[11px] font-medium border", ORIGEM_BADGE_SOFT_CLASSES[og])}>
+                  {ORIGEM_LABELS[og]}
+                </Badge>
+              );
+            })()}
           </DialogTitle>
         </DialogHeader>
 
