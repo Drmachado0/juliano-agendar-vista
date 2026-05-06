@@ -103,53 +103,51 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
     filters.sandbox !== "reais";
 
   return (
-    <div className="bg-card rounded-xl border border-border p-4 space-y-4">
+    <div className="bg-card rounded-xl border border-border/70 p-3 space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 text-foreground">
-          <Filter className="h-4 w-4" />
-          <h3 className="font-semibold">Filtros</h3>
-          <span className="text-sm text-muted-foreground">
-            {totalFiltrado} de {totalGeral} card{totalGeral !== 1 ? "s" : ""}
+          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+          <h3 className="font-semibold text-sm">Filtros</h3>
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full tabular-nums">
+            {totalFiltrado}/{totalGeral}
           </span>
         </div>
-        {hasActive && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setBuscaLocal("");
-              onChange(DEFAULT_CRM_FILTERS);
-            }}
-            className="text-muted-foreground"
-          >
-            <X className="h-4 w-4 mr-1" />
-            Limpar
-          </Button>
-        )}
-      </div>
-
-      {/* Sandbox toggle (linha separada para destaque) */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <Label className="text-xs text-muted-foreground">Contatos:</Label>
-        <div className="flex rounded-md border border-border overflow-hidden">
-          {sandboxOpcoes.map((o) => (
-            <button
-              key={o.value}
-              type="button"
-              onClick={() => onChange({ ...filters, sandbox: o.value })}
-              className={`px-3 py-1.5 text-xs transition-colors ${
-                filters.sandbox === o.value
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card hover:bg-muted text-muted-foreground"
-              }`}
+        <div className="flex items-center gap-2">
+          {/* Sandbox segmented inline */}
+          <div className="flex rounded-md border border-border/70 overflow-hidden text-xs">
+            {sandboxOpcoes.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => onChange({ ...filters, sandbox: o.value })}
+                className={`px-2.5 py-1 transition-colors ${
+                  filters.sandbox === o.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-card hover:bg-muted text-muted-foreground"
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          {hasActive && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setBuscaLocal("");
+                onChange(DEFAULT_CRM_FILTERS);
+              }}
+              className="h-8 text-muted-foreground hover:text-foreground"
             >
-              {o.label}
-            </button>
-          ))}
+              <X className="h-3.5 w-3.5 mr-1" />
+              Limpar
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2.5 [&_button[role=combobox]]:h-9 [&_input]:h-9">
         {/* Busca */}
         <div className="lg:col-span-2 space-y-1.5">
           <Label className="text-xs text-muted-foreground">Buscar</Label>

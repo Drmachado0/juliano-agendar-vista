@@ -428,40 +428,45 @@ const AdminCRM = () => {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <LayoutGrid className="h-6 w-6" />
-              CRM Kanban
-            </h1>
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-sm">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                <span className="font-medium">{leadsIncompletos}</span>
-                <span className="text-amber-600/80 dark:text-amber-400/80">leads</span>
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <LayoutGrid className="h-5 w-5 text-primary" />
               </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-sm">
-                <CalendarCheck className="h-3.5 w-3.5" />
-                <span className="font-medium">{agendamentosConfirmados}</span>
-                <span className="text-emerald-600/80 dark:text-emerald-400/80">agendados</span>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground leading-tight">CRM Kanban</h1>
+                <p className="text-xs text-muted-foreground">Acompanhamento de pacientes — Oftalmologia</p>
               </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800/50 text-gray-700 dark:text-gray-400 text-sm">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                <span className="font-medium">{atendidos}</span>
-                <span className="text-gray-600/80 dark:text-gray-400/80">atendidos</span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs border border-amber-500/20">
+                <AlertTriangle className="h-3 w-3" />
+                <span className="font-semibold tabular-nums">{leadsIncompletos}</span>
+                <span className="opacity-80">leads</span>
               </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-sm">
-                <Users className="h-3.5 w-3.5" />
-                <span className="font-medium">{totalItems}</span>
-                <span>total</span>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs border border-emerald-500/20">
+                <CalendarCheck className="h-3 w-3" />
+                <span className="font-semibold tabular-nums">{agendamentosConfirmados}</span>
+                <span className="opacity-80">agendados</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs border border-border/60">
+                <CheckCircle2 className="h-3 w-3" />
+                <span className="font-semibold tabular-nums">{atendidos}</span>
+                <span className="opacity-80">atendidos</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs border border-border/60">
+                <Users className="h-3 w-3" />
+                <span className="font-semibold tabular-nums">{totalItems}</span>
+                <span className="opacity-80">total</span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <EvolutionStatusBadge />
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2 py-1 rounded bg-muted/50">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/60">
               <Wifi className="h-3 w-3 text-emerald-500" />
-              <span>Atualizado {ultimaAtualizacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+              <span className="tabular-nums">{ultimaAtualizacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
             <Button
               variant="outline"
@@ -471,7 +476,7 @@ const AdminCRM = () => {
               title="Forçar envio de boas-vindas para leads pendentes"
             >
               <Send className={`h-4 w-4 mr-2 ${reprocessando ? 'animate-pulse' : ''}`} />
-              {reprocessando ? "Enviando..." : "Reprocessar boas-vindas"}
+              {reprocessando ? "Enviando..." : "Boas-vindas"}
             </Button>
             <Button variant="outline" size="sm" onClick={() => setDuplicadosOpen(true)} title="Detectar e unificar leads duplicados por telefone">
               <Copy className="h-4 w-4 mr-2" />
@@ -502,58 +507,58 @@ const AdminCRM = () => {
 
           <TabsContent value="kanban" className="space-y-6 mt-0">
         {/* Estatísticas de Conversão */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Taxa de Conversão: Leads → Agendados */}
-          <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+          <div className="bg-card border border-border/70 rounded-xl p-3.5 space-y-2.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
-                <span>Taxa de Conversão</span>
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                <span>Conversão</span>
               </div>
-              <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+              <span className="text-xl font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
                 {taxaConversao}%
               </span>
             </div>
-            <Progress value={taxaConversao} className="h-2" />
+            <Progress value={taxaConversao} className="h-1.5" />
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <div className="flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3 text-amber-500" />
-                <span>{leadsIncompletos} leads</span>
+                <span className="tabular-nums">{leadsIncompletos} leads</span>
               </div>
-              <ArrowRight className="h-3 w-3" />
+              <ArrowRight className="h-3 w-3 opacity-50" />
               <div className="flex items-center gap-1">
                 <CalendarCheck className="h-3 w-3 text-emerald-500" />
-                <span>{agendamentosConfirmados} agendados</span>
+                <span className="tabular-nums">{agendamentosConfirmados} agendados</span>
               </div>
             </div>
           </div>
 
           {/* Taxa de Conclusão: Agendados → Atendidos */}
-          <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+          <div className="bg-card border border-border/70 rounded-xl p-3.5 space-y-2.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-blue-500" />
-                <span>Taxa de Conclusão</span>
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
+                <span>Conclusão</span>
               </div>
-              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              <span className="text-xl font-semibold text-blue-600 dark:text-blue-400 tabular-nums">
                 {taxaConclusao}%
               </span>
             </div>
-            <Progress value={taxaConclusao} className="h-2" />
+            <Progress value={taxaConclusao} className="h-1.5" />
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <div className="flex items-center gap-1">
                 <CalendarCheck className="h-3 w-3 text-emerald-500" />
-                <span>{agendamentosConfirmados} agendados</span>
+                <span className="tabular-nums">{agendamentosConfirmados} agendados</span>
               </div>
-              <ArrowRight className="h-3 w-3" />
+              <ArrowRight className="h-3 w-3 opacity-50" />
               <div className="flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3 text-gray-500" />
-                <span>{atendidos} atendidos</span>
+                <CheckCircle2 className="h-3 w-3 text-muted-foreground" />
+                <span className="tabular-nums">{atendidos} atendidos</span>
               </div>
             </div>
             {emAndamento > 0 && (
-              <div className="text-xs text-muted-foreground pt-1 border-t border-border">
-                <span className="font-medium text-blue-500">{emAndamento}</span> em andamento (CLINICOR/HGP/Belém)
+              <div className="text-[11px] text-muted-foreground pt-1.5 border-t border-border/60">
+                <span className="font-semibold text-blue-500 tabular-nums">{emAndamento}</span> em andamento (Clinicor / HGP / Belém)
               </div>
             )}
           </div>
@@ -573,7 +578,7 @@ const AdminCRM = () => {
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
           </div>
         ) : (
-          <div className="flex gap-3 overflow-x-auto pb-4 kanban-scroll">
+          <div className="flex gap-4 overflow-x-auto pb-6 kanban-scroll">
             {columns.map((column) => (
               <div
                 key={column.status}
