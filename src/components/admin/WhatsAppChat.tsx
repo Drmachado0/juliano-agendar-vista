@@ -282,7 +282,13 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
           </div>
           <div className="flex items-center gap-1">
             <MapPin className="h-3 w-3" />
-            <span>{agendamentoCompleto.local_atendimento}</span>
+            <Badge
+              variant="outline"
+              className={cn("text-[10px] font-medium px-1.5 py-0 border", getLocalBadgeClasses(agendamentoCompleto.local_atendimento))}
+              title={agendamentoCompleto.local_atendimento}
+            >
+              {LOCAL_SHORT_LABELS[getLocalGrupo(agendamentoCompleto.local_atendimento)]}
+            </Badge>
           </div>
         </div>
       )}
