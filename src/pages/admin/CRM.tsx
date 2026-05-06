@@ -15,6 +15,7 @@ import AuditLogDrawer from "@/components/admin/AuditLogDrawer";
 import DuplicadosDrawer from "@/components/admin/DuplicadosDrawer";
 import { useBoasVindasStatus } from "@/hooks/useBoasVindasStatus";
 import CRMFilters, { CrmFilters, DEFAULT_CRM_FILTERS } from "@/components/admin/CRMFilters";
+import CRMLegenda from "@/components/admin/CRMLegenda";
 import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
 import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
 import { useNavigate } from "react-router-dom";
@@ -563,6 +564,10 @@ const AdminCRM = () => {
             )}
           </div>
         </div>
+
+        {/* Filtros */}
+        {/* Legenda dos cards */}
+        <CRMLegenda />
 
         {/* Filtros */}
         <CRMFilters

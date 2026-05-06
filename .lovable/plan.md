@@ -1,45 +1,41 @@
+## Objetivo
+Adicionar uma seção de **Legenda** colapsável no CRM Kanban (`/admin/crm`) explicando o significado de cada badge (unidade, tipo, convênio) e dos indicadores visuais (cores de borda de urgência, selo TESTE, timer), para acelerar a triagem.
 
-## Problema
+## Onde aparece
+Logo acima da barra de filtros (`<CRMFilters />`) no `src/pages/admin/CRM.tsx`, dentro da aba "Kanban". Por padrão **fechada**, com botão "Legenda dos cards" para expandir — assim não polui a tela de quem já conhece.
 
-O modal "Histórico de conversa" no card do Kanban aparece vazio mesmo quando o paciente tem mensagens trocadas, porque a busca atual:
+## Componente novo: `src/components/admin/CRMLegenda.tsx`
+Card colapsável (estilo `bg-muted/20 rounded-xl border`) com 4 colunas (responsivo: 1/2/4):
 
-1. Busca mensagens com `agendamento_id = id do card atual`
-2. Como fallback, busca mensagens com `agendamento_id IS NULL` cujo telefone bate
+1. **Unidade de atendimento** (badges com cores reais usadas no card)
+   - 🔵 **Clinicor** — Atendimento preferencial pela manhã
+   - 🟣 **HGP** — Atendimento preferencial à tarde
+   - 🟡 **Belém** — Encaminhamento para clínicas parceiras (IOB / Vitria)
 
-Resultado: mensagens vinculadas a **outro** `agendamento_id` do mesmo paciente (ex.: agendamento anterior) ficam invisíveis. Para o caso do screenshot (Raimundo, 91985589084) não há de fato nenhuma mensagem registrada — então o modal está correto exibindo "vazio". Mas para outros pacientes recorrentes o histórico está incompleto.
+2. **Tipo de atendimento**
+   - Consulta — Primeira consulta oftalmológica
+   - Retorno — Reavaliação
+   - Exame — Visual, OCT, mapeamento, etc.
+   - Cirurgia — Catarata, pterígio, refrativas
 
-## Solução (1 arquivo, mudança cirúrgica)
+3. **Convênio**
+   - Particular — Pagamento direto
+   - Bradesco / Unimed / Cassi / Sul América — Convênios aceitos
+   - Outro — Convênio descrito manualmente
 
-### `src/services/mensagens.ts` — função `listarMensagensPorAgendamento`
+4. **Urgência e indicadores**
+   - Borda verde — ≤ 2 dias na fase
+   - Borda amarela — > 2 dias parado
+   - Borda vermelha — > 7 dias (urgente)
+   - Timer "Nd" — dias desde criação do lead
+   - Selo TESTE (laranja) — sandbox, fora das métricas
 
-Trocar a estratégia: **a busca passa a ser feita primariamente por telefone** (últimos 8 dígitos), unindo com a busca por `agendamento_id` para garantir que nada se perca.
+Reutiliza as MESMAS classes de cor do `KanbanCard.tsx` (`localBadgeColors`) para garantir consistência visual perfeita.
 
-Nova lógica:
-1. Se `telefone` for fornecido: buscar `mensagens_whatsapp` onde `telefone ILIKE %ultimos8dig%` (sem filtrar `agendamento_id`).
-2. Em paralelo (sempre): buscar mensagens onde `agendamento_id = id` (cobre casos raros em que o telefone do agendamento foi alterado depois das mensagens chegarem).
-3. Unir resultados, deduplicar por `id`, ordenar `created_at` ASC.
-4. Se não houver telefone, manter o comportamento atual (apenas por `agendamento_id`).
-
-Pseudocódigo:
-```ts
-const last8 = telefone ? normalizePhone(telefone) : null;
-
-const [{data: porAgendamento}, {data: porTelefone}] = await Promise.all([
-  supabase.from("mensagens_whatsapp").select("*").eq("agendamento_id", agendamentoId),
-  last8
-    ? supabase.from("mensagens_whatsapp").select("*").ilike("telefone", `%${last8}%`)
-    : Promise.resolve({data: []}),
-]);
-
-const todas = [...(porAgendamento||[]), ...(porTelefone||[])];
-const unicas = Array.from(new Map(todas.map(m => [m.id, m])).values());
-unicas.sort((a,b) => +new Date(a.created_at) - +new Date(b.created_at));
-```
+## Edição em `src/pages/admin/CRM.tsx`
+- Importar `CRMLegenda`.
+- Renderizar `<CRMLegenda />` imediatamente antes de `<CRMFilters ... />` (linha ~568).
 
 ## Não muda
-- `HistoricoConversaModal.tsx` (continua chamando a mesma função, recebendo todas as mensagens unidas).
-- Estrutura de tabelas, RLS, edge functions, n8n, lógica do Kanban.
-- Realtime: o canal já reage a qualquer mudança em `mensagens_whatsapp`.
-
-## Observação ao usuário
-Para o paciente Raimundo Brito (do print) **não existe nenhuma mensagem registrada** no banco — então mesmo após a correção esse card específico continuará mostrando "Nenhuma mensagem trocada ainda". A correção beneficia todos os outros pacientes que tenham conversa registrada com esse número.
+- Nenhum dado, RLS, estrutura de cards, filtros ou lógica do Kanban.
+- Puramente visual/informativo.
