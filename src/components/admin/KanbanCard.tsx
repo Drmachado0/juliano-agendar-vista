@@ -11,6 +11,7 @@ import type { BoasVindasInfo } from "@/hooks/useBoasVindasStatus";
 import HistoricoConversaModal from "./HistoricoConversaModal";
 import { useDensity } from "@/hooks/useDensity";
 import { getOrigemGrupo, ORIGEM_LABELS, ORIGEM_BADGE_CLASSES, type OrigemGrupo } from "@/lib/origemLead";
+import { getLocalBadgeClasses, LOCAL_SHORT_LABELS, getLocalGrupo } from "@/lib/localAtendimento";
 
 const ORIGEM_ICONS: Record<OrigemGrupo, typeof Globe> = {
   site: Globe,
@@ -40,12 +41,7 @@ const isAtendido = (agendamento: Agendamento) => {
   return agendamento.status_crm === 'ATENDIDO';
 };
 
-// Paleta consolidada com a marca (Teal + Gold) — não compete com bordas de urgência (verde/amarelo/vermelho)
-const localBadgeColors: Record<string, string> = {
-  "Clinicor – Paragominas": "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30",
-  "Hospital Geral de Paragominas": "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
-  "Belém (IOB / Vitria)": "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
-};
+// Local de atendimento — paleta unificada importada de @/lib/localAtendimento
 
 const KanbanCard = ({
   agendamento,
@@ -231,12 +227,11 @@ const KanbanCard = ({
           className={cn(
             "font-medium border shrink-0",
             isComfortable ? "text-[11px] px-2 py-0.5" : "text-[10px] px-1.5 py-0.5",
-            localBadgeColors[agendamento.local_atendimento] ||
-              "bg-muted text-muted-foreground border-border"
+            getLocalBadgeClasses(agendamento.local_atendimento)
           )}
         >
           <MapPin className="h-2.5 w-2.5 mr-1" />
-          {agendamento.local_atendimento.split(" – ")[0]}
+          {LOCAL_SHORT_LABELS[getLocalGrupo(agendamento.local_atendimento)]}
         </Badge>
         <span
           className={cn(

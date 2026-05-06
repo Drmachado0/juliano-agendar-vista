@@ -12,22 +12,25 @@ import {
   Timer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LOCAL_BADGE_SOFT_CLASSES, LOCAL_SHORT_LABELS } from "@/lib/localAtendimento";
+import {
+  ORIGEM_LABELS,
+  ORIGEM_BADGE_SOFT_CLASSES,
+  ORIGEM_FILTER_OPTIONS,
+} from "@/lib/origemLead";
 
 const unidades = [
   {
-    label: "Clinicor",
+    key: "clinicor" as const,
     desc: "Atendimento preferencial pela manhã",
-    cls: "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30",
   },
   {
-    label: "HGP",
+    key: "hgp" as const,
     desc: "Atendimento preferencial à tarde",
-    cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
   },
   {
-    label: "Belém",
+    key: "belem" as const,
     desc: "Encaminhamento para clínicas parceiras (IOB / Vitria)",
-    cls: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
   },
 ];
 
@@ -126,27 +129,60 @@ const CRMLegenda = () => {
       </Button>
 
       {open && (
-        <div className="px-4 pb-4 pt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 border-t border-border/60">
+        <div className="px-4 pb-4 pt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5 border-t border-border/60">
           <Section
             icon={<MapPin className="h-3.5 w-3.5 text-primary" />}
             title="Unidade de atendimento"
           >
             {unidades.map((u) => (
               <Item
-                key={u.label}
+                key={u.key}
                 badge={
                   <Badge
                     variant="outline"
                     className={cn(
                       "text-[10px] font-medium px-1.5 py-0 border",
-                      u.cls
+                      LOCAL_BADGE_SOFT_CLASSES[u.key]
                     )}
                   >
                     <MapPin className="h-2.5 w-2.5 mr-1" />
-                    {u.label}
+                    {LOCAL_SHORT_LABELS[u.key]}
                   </Badge>
                 }
                 desc={u.desc}
+              />
+            ))}
+          </Section>
+
+          <Section
+            icon={<Info className="h-3.5 w-3.5 text-primary" />}
+            title="Origem do lead"
+          >
+            {ORIGEM_FILTER_OPTIONS.map((o) => (
+              <Item
+                key={o.value}
+                badge={
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[10px] font-medium px-1.5 py-0 border",
+                      ORIGEM_BADGE_SOFT_CLASSES[o.value]
+                    )}
+                  >
+                    {ORIGEM_LABELS[o.value]}
+                  </Badge>
+                }
+                desc={
+                  o.value === "site"
+                    ? "Lead vindo do formulário do site (oculto nos cards)"
+                    : o.value === "n8n"
+                    ? "Lead criado via automação / bot n8n"
+                    : o.value === "whatsapp"
+                    ? "Lead que chegou direto pelo WhatsApp"
+                    : o.value === "meta"
+                    ? "Lead vindo de campanhas Meta Ads"
+                    : "Outras origens"
+                }
               />
             ))}
           </Section>

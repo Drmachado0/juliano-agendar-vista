@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Search, X, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useDensity } from "@/hooks/useDensity";
 import { cn } from "@/lib/utils";
-import { ORIGEM_FILTER_OPTIONS, ORIGEM_LABELS, type OrigemGrupo } from "@/lib/origemLead";
+import { ORIGEM_FILTER_OPTIONS, ORIGEM_LABELS, ORIGEM_BADGE_SOFT_CLASSES, getOrigemGrupo, type OrigemGrupo } from "@/lib/origemLead";
+import { LOCAL_DOT_CLASSES, LOCAL_SHORT_LABELS, getLocalGrupo, LOCAL_BADGE_SOFT_CLASSES } from "@/lib/localAtendimento";
+import { Badge } from "@/components/ui/badge";
 
 export type CrmPeriodo = "todos" | "hoje" | "7dias" | "mes" | "atrasados" | "sem_data";
 export type CrmOrdenacao = "data_asc" | "data_desc" | "created_desc" | "created_asc";
@@ -143,15 +145,25 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
     filters.ordenacao !== "data_asc" ||
     filters.sandbox !== "reais";
 
-  const activeChips: { label: string; clear: () => void }[] = [];
-  if (filters.local)
-    activeChips.push({ label: `Local: ${filters.local}`, clear: () => onChange({ ...filters, local: undefined }) });
+  const activeChips: { label: string; colorClass?: string; clear: () => void }[] = [];
+  if (filters.local) {
+    const grupo = getLocalGrupo(filters.local);
+    activeChips.push({
+      label: `Local: ${LOCAL_SHORT_LABELS[grupo]}`,
+      colorClass: LOCAL_BADGE_SOFT_CLASSES[grupo],
+      clear: () => onChange({ ...filters, local: undefined }),
+    });
+  }
   if (filters.tipo)
     activeChips.push({ label: `Tipo: ${filters.tipo}`, clear: () => onChange({ ...filters, tipo: undefined }) });
   if (filters.convenio)
     activeChips.push({ label: `Convênio: ${filters.convenio}`, clear: () => onChange({ ...filters, convenio: undefined }) });
   if (filters.origem)
-    activeChips.push({ label: `Origem: ${ORIGEM_LABELS[filters.origem]}`, clear: () => onChange({ ...filters, origem: undefined }) });
+    activeChips.push({
+      label: `Origem: ${ORIGEM_LABELS[filters.origem]}`,
+      colorClass: ORIGEM_BADGE_SOFT_CLASSES[filters.origem],
+      clear: () => onChange({ ...filters, origem: undefined }),
+    });
   if (filters.periodo !== "todos") {
     const p = periodos.find((x) => x.value === filters.periodo)?.label ?? filters.periodo;
     activeChips.push({ label: `Período: ${p}`, clear: () => onChange({ ...filters, periodo: "todos" }) });
@@ -243,7 +255,10 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
               onClick={chip.clear}
               role="listitem"
               title={chip.label}
-              className="group inline-flex shrink-0 items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors max-w-[200px]"
+              className={cn(
+                "group inline-flex shrink-0 items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors max-w-[200px]",
+                chip.colorClass || "bg-muted text-muted-foreground border-transparent"
+              )}
             >
               <span className="truncate">{chip.label}</span>
               <X className="h-3 w-3 shrink-0 opacity-60 group-hover:opacity-100" />
@@ -270,7 +285,19 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {locais.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                {locais.map((o) => {
+                  const grupo = o.value === "all" ? null : getLocalGrupo(o.value);
+                  return (
+                    <SelectItem key={o.value} value={o.value}>
+                      <span className="flex items-center gap-2">
+                        {grupo && (
+                          <span className={cn("inline-block h-2 w-2 rounded-full", LOCAL_DOT_CLASSES[grupo])} />
+                        )}
+                        {o.label}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -313,7 +340,19 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
               <SelectContent>
                 <SelectItem value="all">Todas as origens</SelectItem>
                 {ORIGEM_FILTER_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  <SelectItem key={o.value} value={o.value}>
+                    <span className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] font-medium px-1.5 py-0 border",
+                          ORIGEM_BADGE_SOFT_CLASSES[o.value]
+                        )}
+                      >
+                        {o.label}
+                      </Badge>
+                    </span>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
