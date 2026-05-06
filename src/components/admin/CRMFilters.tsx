@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Search, X, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useDensity } from "@/hooks/useDensity";
 import { cn } from "@/lib/utils";
-import { ORIGEM_FILTER_OPTIONS, ORIGEM_LABELS, type OrigemGrupo } from "@/lib/origemLead";
+import { ORIGEM_FILTER_OPTIONS, ORIGEM_LABELS, ORIGEM_BADGE_SOFT_CLASSES, getOrigemGrupo, type OrigemGrupo } from "@/lib/origemLead";
+import { LOCAL_DOT_CLASSES, LOCAL_SHORT_LABELS, getLocalGrupo, LOCAL_BADGE_SOFT_CLASSES } from "@/lib/localAtendimento";
+import { Badge } from "@/components/ui/badge";
 
 export type CrmPeriodo = "todos" | "hoje" | "7dias" | "mes" | "atrasados" | "sem_data";
 export type CrmOrdenacao = "data_asc" | "data_desc" | "created_desc" | "created_asc";
