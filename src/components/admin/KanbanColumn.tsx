@@ -1,6 +1,7 @@
 import { Agendamento } from "@/services/agendamentos";
 import KanbanCard from "./KanbanCard";
 import { cn } from "@/lib/utils";
+import { Inbox } from "lucide-react";
 import type { BoasVindasInfo } from "@/hooks/useBoasVindasStatus";
 
 interface KanbanColumnProps {
@@ -37,28 +38,31 @@ const KanbanColumn = ({
   return (
     <div
       className={cn(
-        "w-[200px] sm:w-[260px] shrink-0 bg-muted/30 rounded-xl p-2 sm:p-3 transition-colors",
-        isDragOver && "bg-primary/10 ring-2 ring-primary/30"
+        "w-[220px] sm:w-[280px] shrink-0 bg-muted/20 rounded-2xl border border-border/60 p-3 transition-all",
+        isDragOver && "bg-primary/10 ring-2 ring-primary/40 border-primary/30"
       )}
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, status)}
     >
       {/* Column header */}
-      <div className="flex items-center justify-between mb-3 sm:mb-4">
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          <div className={cn("w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shrink-0", color)} />
-          <h3 className="font-semibold text-foreground text-xs sm:text-sm truncate">{title}</h3>
+      <div className="flex items-center justify-between mb-3 px-1">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className={cn("w-2 h-2 rounded-full shrink-0", color)} />
+          <h3 className="font-semibold text-foreground text-xs sm:text-sm truncate uppercase tracking-wide">
+            {title}
+          </h3>
         </div>
-        <span className="text-[10px] sm:text-sm text-muted-foreground bg-card px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full shrink-0">
+        <span className="text-[10px] sm:text-xs font-medium text-muted-foreground bg-card border border-border/60 px-2 py-0.5 rounded-full shrink-0 tabular-nums">
           {agendamentos.length}
         </span>
       </div>
 
       {/* Cards */}
-      <div className="space-y-2 sm:space-y-3 min-h-[150px] sm:min-h-[200px] max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
+      <div className="space-y-2 min-h-[160px] sm:min-h-[200px] max-h-[calc(100vh-280px)] overflow-y-auto pr-1 kanban-scroll">
         {agendamentos.length === 0 ? (
-          <div className="text-center py-6 sm:py-8 text-muted-foreground text-xs sm:text-sm">
-            Nenhum agendamento
+          <div className="flex flex-col items-center justify-center text-center py-10 px-2 text-muted-foreground/70">
+            <Inbox className="h-6 w-6 mb-2 opacity-40" />
+            <p className="text-xs">Nenhum paciente nesta etapa.</p>
           </div>
         ) : (
           agendamentos.map((agendamento) => (
