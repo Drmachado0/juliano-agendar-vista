@@ -16,6 +16,8 @@ import DuplicadosDrawer from "@/components/admin/DuplicadosDrawer";
 import { useBoasVindasStatus } from "@/hooks/useBoasVindasStatus";
 import CRMFilters, { CrmFilters, DEFAULT_CRM_FILTERS } from "@/components/admin/CRMFilters";
 import CRMLegenda from "@/components/admin/CRMLegenda";
+import DensityToggle from "@/components/admin/DensityToggle";
+import { DensityProvider } from "@/hooks/useDensity";
 import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
 import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
 import { useNavigate } from "react-router-dom";
@@ -427,6 +429,7 @@ const AdminCRM = () => {
 
   return (
     <AdminLayout>
+      <DensityProvider>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -464,6 +467,7 @@ const AdminCRM = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <DensityToggle />
             <EvolutionStatusBadge />
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/60">
               <Wifi className="h-3 w-3 text-emerald-500" />
@@ -686,6 +690,7 @@ const AdminCRM = () => {
         onOpenChange={setDuplicadosOpen}
         onMerged={() => fetchAgendamentos(true)}
       />
+      </DensityProvider>
     </AdminLayout>
   );
 };
