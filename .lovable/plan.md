@@ -1,41 +1,31 @@
 ## Objetivo
-Adicionar uma seção de **Legenda** colapsável no CRM Kanban (`/admin/crm`) explicando o significado de cada badge (unidade, tipo, convênio) e dos indicadores visuais (cores de borda de urgência, selo TESTE, timer), para acelerar a triagem.
+Adicionar tooltips informativos nos cards do Kanban (`/admin/crm`) para que, ao passar o mouse, seja possível ver os detalhes completos do paciente e do agendamento, mesmo quando o conteúdo está truncado no card.
 
-## Onde aparece
-Logo acima da barra de filtros (`<CRMFilters />`) no `src/pages/admin/CRM.tsx`, dentro da aba "Kanban". Por padrão **fechada**, com botão "Legenda dos cards" para expandir — assim não polui a tela de quem já conhece.
+## Onde
+`src/components/admin/KanbanCard.tsx` — único arquivo a alterar. O `TooltipProvider` já envolve o card.
 
-## Componente novo: `src/components/admin/CRMLegenda.tsx`
-Card colapsável (estilo `bg-muted/20 rounded-xl border`) com 4 colunas (responsivo: 1/2/4):
+## Mudanças
 
-1. **Unidade de atendimento** (badges com cores reais usadas no card)
-   - 🔵 **Clinicor** — Atendimento preferencial pela manhã
-   - 🟣 **HGP** — Atendimento preferencial à tarde
-   - 🟡 **Belém** — Encaminhamento para clínicas parceiras (IOB / Vitria)
+### 1. Tooltip no header (Nome + Telefone)
+Envolver o bloco `Nome / Phone` em `<Tooltip>`. Conteúdo do tooltip:
+- **Nome** completo (sem truncar)
+- **Telefone**
+- **E-mail** (se existir)
+- **Data de nascimento** (formatada `dd/MM/yyyy` se existir)
+- **Local de atendimento** completo
+- **Tipo de atendimento**
+- **Convênio** (ou `convenio_outro` se for "Outro")
+- **Detalhe** do exame/cirurgia (se existir)
+- **Observações internas** (se existir, separado por linha)
 
-2. **Tipo de atendimento**
-   - Consulta — Primeira consulta oftalmológica
-   - Retorno — Reavaliação
-   - Exame — Visual, OCT, mapeamento, etc.
-   - Cirurgia — Catarata, pterígio, refrativas
+### 2. Tooltip no bloco Data/Hora
+Envolver o bloco `Calendar + Clock` em `<Tooltip>` quando o agendamento tem data/hora. Conteúdo:
+- Data por extenso: `EEEE, dd 'de' MMMM 'de' yyyy` (pt-BR), ex.: "quinta-feira, 30 de junho de 2025"
+- Horário no formato `HH:mm`
 
-3. **Convênio**
-   - Particular — Pagamento direto
-   - Bradesco / Unimed / Cassi / Sul América — Convênios aceitos
-   - Outro — Convênio descrito manualmente
-
-4. **Urgência e indicadores**
-   - Borda verde — ≤ 2 dias na fase
-   - Borda amarela — > 2 dias parado
-   - Borda vermelha — > 7 dias (urgente)
-   - Timer "Nd" — dias desde criação do lead
-   - Selo TESTE (laranja) — sandbox, fora das métricas
-
-Reutiliza as MESMAS classes de cor do `KanbanCard.tsx` (`localBadgeColors`) para garantir consistência visual perfeita.
-
-## Edição em `src/pages/admin/CRM.tsx`
-- Importar `CRMLegenda`.
-- Renderizar `<CRMLegenda />` imediatamente antes de `<CRMFilters ... />` (linha ~568).
+### 3. Cursor visual
+Usar `cursor-help` nos triggers para indicar que há informação adicional ao passar o mouse.
 
 ## Não muda
-- Nenhum dado, RLS, estrutura de cards, filtros ou lógica do Kanban.
-- Puramente visual/informativo.
+- Tooltips já existentes (timestamps no rodapé, status de boas-vindas, sandbox, botões de ação) permanecem intactos.
+- Nenhuma alteração de dados, layout ou lógica — apenas adição de tooltips.
