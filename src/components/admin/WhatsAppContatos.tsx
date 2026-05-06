@@ -14,6 +14,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Contato, listarContatos, atualizarContato, apagarContato } from "@/services/contatos";
+import { getLocalBadgeClasses, LOCAL_SHORT_LABELS, getLocalGrupo } from "@/lib/localAtendimento";
+import { cn } from "@/lib/utils";
 
 interface Props {
   onAbrirChat?: (telefone: string) => void;
