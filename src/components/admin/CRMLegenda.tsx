@@ -12,22 +12,25 @@ import {
   Timer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LOCAL_BADGE_SOFT_CLASSES, LOCAL_SHORT_LABELS } from "@/lib/localAtendimento";
+import {
+  ORIGEM_LABELS,
+  ORIGEM_BADGE_SOFT_CLASSES,
+  ORIGEM_FILTER_OPTIONS,
+} from "@/lib/origemLead";
 
 const unidades = [
   {
-    label: "Clinicor",
+    key: "clinicor" as const,
     desc: "Atendimento preferencial pela manhã",
-    cls: "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30",
   },
   {
-    label: "HGP",
+    key: "hgp" as const,
     desc: "Atendimento preferencial à tarde",
-    cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
   },
   {
-    label: "Belém",
+    key: "belem" as const,
     desc: "Encaminhamento para clínicas parceiras (IOB / Vitria)",
-    cls: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
   },
 ];
 
