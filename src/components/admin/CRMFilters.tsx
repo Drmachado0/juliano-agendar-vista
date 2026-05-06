@@ -147,7 +147,7 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2.5 [&_button[role=combobox]]:h-9 [&_input]:h-9">
         {/* Busca */}
         <div className="lg:col-span-2 space-y-1.5">
           <Label className="text-xs text-muted-foreground">Buscar</Label>
