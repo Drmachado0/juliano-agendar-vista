@@ -24,6 +24,8 @@ import {
 } from "@/services/conversationIntents";
 import WhatsAppMessageBubble from "./WhatsAppMessageBubble";
 import BotStatusBadge from "./BotStatusBadge";
+import { getLocalBadgeClasses, LOCAL_SHORT_LABELS, getLocalGrupo } from "@/lib/localAtendimento";
+import { cn } from "@/lib/utils";
 
 interface WhatsAppChatProps {
   lead: LeadComMensagens | null;
