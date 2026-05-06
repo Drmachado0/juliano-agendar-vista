@@ -1,46 +1,66 @@
 ## Objetivo
 
-Permitir identificar visualmente de onde veio cada lead/agendamento (n8n, WhatsApp, Site, Meta Ads etc.) direto no card do Kanban, e filtrar a coluna por origem.
-
-## Mapeamento de origens
-
-Valores existentes hoje na tabela `agendamentos.origem`: `site`, `mcp`, `whatsapp`, `whatsapp_manual`, `fb`, `ig`, `soak_test_2`.
-
-Agrupamento exibido na UI:
-
-| Grupo (UI) | Valores no banco | Cor do badge |
-|---|---|---|
-| Site | `site` | azul |
-| n8n / Bot | `mcp` | violeta |
-| WhatsApp | `whatsapp`, `whatsapp_manual` | verde |
-| Meta Ads | `fb`, `ig` | rosa |
-| Outro | qualquer outro (ex.: `soak_test_2`) | cinza |
-
-Helper centralizado em `src/lib/origemLead.ts` exportando:
-- `type OrigemGrupo = 'site' | 'n8n' | 'whatsapp' | 'meta' | 'outro'`
-- `getOrigemGrupo(origem?: string | null): OrigemGrupo`
-- `ORIGEM_LABELS` e `ORIGEM_BADGE_CLASSES` (cores Tailwind no padrão dos outros badges do card).
+Reduzir ruído visual nos cards do Kanban e estabelecer uma hierarquia clara de cores: borda = urgência, local = cor de marca, origem = indicador discreto (só destaca quando NÃO é "Site"), tipo+convênio = texto neutro.
 
 ## Mudanças
 
-### 1. `src/lib/origemLead.ts` (novo)
-Funções e constantes de mapeamento descritas acima.
+### 1. `src/components/admin/KanbanCard.tsx`
 
-### 2. `src/components/admin/KanbanCard.tsx`
-- Adicionar um badge pequeno na linha de badges existente (logo após o local), usando `ORIGEM_LABELS[grupo]` e cor de `ORIGEM_BADGE_CLASSES[grupo]`.
-- Tooltip mostrando a origem bruta (ex.: "Origem: mcp (n8n / Bot)").
-- Ícone discreto por grupo (Globe/site, Bot/n8n, MessageCircle/whatsapp, Megaphone/meta).
+**1.1 Nova paleta de Local (consolidada com a marca Navy/Gold + Teal)**
+- Clinicor – Paragominas → **teal** (era azul)
+- Hospital Geral de Paragominas → **âmbar** (era roxo)
+- Belém (IOB / Vitria) → **violet** (era âmbar)
 
-### 3. `src/components/admin/CRMFilters.tsx`
-- Adicionar campo `origem?: OrigemGrupo` em `CrmFilters`.
-- Novo `Select` "Origem" no grid expandido com opções: Todas, Site, n8n / Bot, WhatsApp, Meta Ads, Outro.
-- Novo chip ativo "Origem: …" quando recolhido.
-- Incluir `origem` em `hasActive`.
+Resultado: Local deixa de competir com a borda lateral de urgência (verde/amarelo/vermelho) e com o badge de origem.
 
-### 4. `src/pages/admin/CRM.tsx`
-- Aplicar filtro: `if (filters.origem && getOrigemGrupo(a.origem) !== filters.origem) return false;`
-- Persistência já é automática (filtros salvos em localStorage).
+**1.2 Origem vira chip no canto superior direito (estilo selo "Teste")**
+- Renderizado **apenas quando o grupo não é `site`** (default → invisível, removendo ruído de ~80% dos cards).
+- Aparece como mini-chip absoluto no `-top-1.5 -right-1.5`, igual o selo "Teste".
+- Quando há AMBOS sandbox e origem-não-site, o de origem fica deslocado para a esquerda (`right: 60px` aprox.) para não sobrepor.
+- Cores discretas (paleta sóbria): n8n=violet, WhatsApp=emerald, Meta=pink, Outro=cinza.
+- Tooltip mantém origem bruta (ex.: "Origem: mcp (n8n / Bot)").
 
-## Observações
-- Não muda schema; apenas leitura do campo `origem` que já existe.
-- Mantém densidade compacta/confortável já implementada.
+**1.3 Remover badge de Origem da linha de badges**
+A linha agora terá só: **Local** (colorido) + **Tipo · Convênio** como texto inline neutro.
+
+**1.4 Tipo + Convênio viram texto inline**
+Substituir os 2 badges neutros por uma linha de texto pequena com separador "·":
+```
+Consulta · Particular
+```
+Em vez de dois badges. Mantém leitura mas economiza espaço vertical e reduz ruído.
+
+### 2. `src/lib/origemLead.ts`
+Ajustar `ORIGEM_BADGE_CLASSES` para um tom mais sóbrio adequado ao chip flutuante (fundo sólido suave + texto branco em modo escuro), padrão similar ao selo "Teste" laranja:
+- n8n: `bg-violet-500 text-white`
+- whatsapp: `bg-emerald-500 text-white`
+- meta: `bg-pink-500 text-white`
+- outro: `bg-muted-foreground text-background`
+- site: (não usado — não renderiza)
+
+Manter as cores antigas (versão "soft" com /15) em uma constante separada `ORIGEM_BADGE_SOFT_CLASSES` caso seja útil em outros lugares (filtros, legenda).
+
+### 3. `src/components/admin/CRMLegenda.tsx`
+Atualizar a legenda das cores de Local para refletir a nova paleta (teal/âmbar/violet).
+
+## Mockup do card depois
+
+```
+                              [🤖 n8n]   ← só aparece se origem ≠ site
+┃ Cleiton Gustavo Conceição D.
+┃ 📞 91985291927
+┃ ┌────────────────────┐
+┃ │ 📅 22/04/26 ⏰ 14:00│
+┃ └────────────────────┘
+┃ [HGP]   Consulta · Particular
+┃ 👤 22/04/26  ⏱ 13d  🔔
+┃ ✈ BV · Enviada
+┃ ─────────────────────
+┃ 💬 🕐 ⚡ 🧪 👁 Detalhes
+```
+
+## O que NÃO muda
+- Borda lateral de urgência (verde/amarelo/vermelho) — continua sendo o único elemento "gritante".
+- Selo "Teste" laranja no canto.
+- Filtros, ordenação, ações e tooltips dos detalhes.
+- Mapeamento `getOrigemGrupo` e o filtro de Origem do CRMFilters.

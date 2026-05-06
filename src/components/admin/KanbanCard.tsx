@@ -40,10 +40,11 @@ const isAtendido = (agendamento: Agendamento) => {
   return agendamento.status_crm === 'ATENDIDO';
 };
 
+// Paleta consolidada com a marca (Teal + Gold) — não compete com bordas de urgência (verde/amarelo/vermelho)
 const localBadgeColors: Record<string, string> = {
-  "Clinicor – Paragominas": "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
-  "Hospital Geral de Paragominas": "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30",
-  "Belém (IOB / Vitria)": "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  "Clinicor – Paragominas": "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30",
+  "Hospital Geral de Paragominas": "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  "Belém (IOB / Vitria)": "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
 };
 
 const KanbanCard = ({
@@ -91,7 +92,7 @@ const KanbanCard = ({
       {agendamento.is_sandbox && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="absolute -top-1.5 -right-1.5 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide bg-orange-500 text-white px-1.5 py-0.5 rounded-md shadow">
+            <div className="absolute -top-1.5 -right-1.5 z-10 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide bg-orange-500 text-white px-1.5 py-0.5 rounded-md shadow">
               <FlaskConical className="h-2.5 w-2.5" />
               <span>Teste</span>
             </div>
@@ -103,6 +104,34 @@ const KanbanCard = ({
           </TooltipContent>
         </Tooltip>
       )}
+
+      {/* Selo de Origem (canto superior direito) — só aparece quando NÃO é "site" */}
+      {(() => {
+        const grupo = getOrigemGrupo(agendamento.origem);
+        if (grupo === "site") return null;
+        const Icon = ORIGEM_ICONS[grupo];
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  "absolute -top-1.5 z-10 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md shadow",
+                  ORIGEM_BADGE_CLASSES[grupo],
+                  agendamento.is_sandbox ? "right-14" : "-right-1.5"
+                )}
+              >
+                <Icon className="h-2.5 w-2.5" />
+                <span>{ORIGEM_LABELS[grupo]}</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="text-xs">
+                Origem: {agendamento.origem || "—"} ({ORIGEM_LABELS[grupo]})
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        );
+      })()}
 
       {/* Header - Name + telefone */}
       <Tooltip>
@@ -195,12 +224,12 @@ const KanbanCard = ({
         </div>
       )}
 
-      {/* Badges: unidade + tipo + convênio */}
-      <div className="flex flex-wrap gap-1">
+      {/* Linha: Local (badge colorido) + Tipo · Convênio (texto neutro inline) */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <Badge
           variant="outline"
           className={cn(
-            "font-medium border",
+            "font-medium border shrink-0",
             isComfortable ? "text-[11px] px-2 py-0.5" : "text-[10px] px-1.5 py-0.5",
             localBadgeColors[agendamento.local_atendimento] ||
               "bg-muted text-muted-foreground border-border"
@@ -209,44 +238,19 @@ const KanbanCard = ({
           <MapPin className="h-2.5 w-2.5 mr-1" />
           {agendamento.local_atendimento.split(" – ")[0]}
         </Badge>
-        <Badge variant="outline" className={cn(
-          "font-medium bg-muted/50 text-muted-foreground border-border/60",
-          isComfortable ? "text-[11px] px-2 py-0.5" : "text-[10px] px-1.5 py-0.5"
-        )}>
+        <span
+          className={cn(
+            "text-muted-foreground truncate",
+            isComfortable ? "text-[12px]" : "text-[11px]"
+          )}
+          title={`${agendamento.tipo_atendimento} · ${
+            agendamento.convenio === "Outro" ? agendamento.convenio_outro : agendamento.convenio
+          }`}
+        >
           {agendamento.tipo_atendimento}
-        </Badge>
-        <Badge variant="outline" className={cn(
-          "font-medium bg-muted/50 text-muted-foreground border-border/60",
-          isComfortable ? "text-[11px] px-2 py-0.5" : "text-[10px] px-1.5 py-0.5"
-        )}>
+          <span className="mx-1.5 opacity-50">·</span>
           {agendamento.convenio === "Outro" ? agendamento.convenio_outro : agendamento.convenio}
-        </Badge>
-        {(() => {
-          const grupo = getOrigemGrupo(agendamento.origem);
-          const Icon = ORIGEM_ICONS[grupo];
-          return (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "font-medium border",
-                    isComfortable ? "text-[11px] px-2 py-0.5" : "text-[10px] px-1.5 py-0.5",
-                    ORIGEM_BADGE_CLASSES[grupo]
-                  )}
-                >
-                  <Icon className="h-2.5 w-2.5 mr-1" />
-                  {ORIGEM_LABELS[grupo]}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-xs">
-                  Origem: {agendamento.origem || "—"} ({ORIGEM_LABELS[grupo]})
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          );
-        })()}
+        </span>
       </div>
 
       {/* Meta info: contato + indicadores em uma linha */}
