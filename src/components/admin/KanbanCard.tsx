@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { BoasVindasInfo } from "@/hooks/useBoasVindasStatus";
 import HistoricoConversaModal from "./HistoricoConversaModal";
+import { useDensity } from "@/hooks/useDensity";
 
 interface KanbanCardProps {
   agendamento: Agendamento;
@@ -48,6 +49,7 @@ const KanbanCard = ({
   const isLead = isLeadIncompleto(agendamento);
   const atendido = isAtendido(agendamento);
   const [historicoOpen, setHistoricoOpen] = useState(false);
+  const { isComfortable } = useDensity();
 
   // Calcula tempo desde criação e tempo na fase atual
   const createdDate = new Date(agendamento.created_at);
@@ -68,7 +70,8 @@ const KanbanCard = ({
     <TooltipProvider delayDuration={200}>
     <div
       className={cn(
-        "relative bg-card border border-border/70 rounded-xl p-3 space-y-2 shadow-sm hover:shadow-md hover:border-border transition-all cursor-grab active:cursor-grabbing border-l-4",
+        "relative bg-card border border-border/70 rounded-xl shadow-sm hover:shadow-md hover:border-border transition-all cursor-grab active:cursor-grabbing border-l-4",
+        isComfortable ? "p-4 space-y-2.5" : "p-3 space-y-2",
         urgenciaColor,
         isDragging && "shadow-lg ring-2 ring-primary/50 opacity-90",
         atendido && "opacity-75",
@@ -96,10 +99,16 @@ const KanbanCard = ({
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="space-y-0.5 cursor-help">
-            <div className="font-semibold text-sm text-foreground truncate leading-tight">
+            <div className={cn(
+              "font-semibold text-foreground truncate",
+              isComfortable ? "text-[15px] leading-snug" : "text-sm leading-tight"
+            )}>
               {agendamento.nome_completo}
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className={cn(
+              "flex items-center gap-1.5 text-muted-foreground",
+              isComfortable ? "text-sm" : "text-xs"
+            )}>
               <Phone className="h-3 w-3 flex-shrink-0" />
               <span className="truncate">{agendamento.telefone_whatsapp}</span>
             </div>
@@ -138,7 +147,10 @@ const KanbanCard = ({
       {!isLead && agendamento.data_agendamento && agendamento.hora_agendamento ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex items-center gap-3 text-xs bg-primary/5 border border-primary/20 rounded-md px-2 py-1.5 cursor-help">
+            <div className={cn(
+              "flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-md cursor-help",
+              isComfortable ? "text-sm px-3 py-2" : "text-xs px-2 py-1.5"
+            )}>
               <span className="flex items-center gap-1 font-medium text-foreground">
                 <Calendar className="h-3 w-3 text-primary" />
                 {format(new Date(agendamento.data_agendamento + "T00:00:00"), "dd/MM/yy", { locale: ptBR })}
@@ -179,7 +191,8 @@ const KanbanCard = ({
         <Badge
           variant="outline"
           className={cn(
-            "text-[10px] font-medium px-1.5 py-0.5 border",
+            "font-medium border",
+            isComfortable ? "text-[11px] px-2 py-0.5" : "text-[10px] px-1.5 py-0.5",
             localBadgeColors[agendamento.local_atendimento] ||
               "bg-muted text-muted-foreground border-border"
           )}
@@ -187,10 +200,16 @@ const KanbanCard = ({
           <MapPin className="h-2.5 w-2.5 mr-1" />
           {agendamento.local_atendimento.split(" – ")[0]}
         </Badge>
-        <Badge variant="outline" className="text-[10px] font-medium px-1.5 py-0.5 bg-muted/50 text-muted-foreground border-border/60">
+        <Badge variant="outline" className={cn(
+          "font-medium bg-muted/50 text-muted-foreground border-border/60",
+          isComfortable ? "text-[11px] px-2 py-0.5" : "text-[10px] px-1.5 py-0.5"
+        )}>
           {agendamento.tipo_atendimento}
         </Badge>
-        <Badge variant="outline" className="text-[10px] font-medium px-1.5 py-0.5 bg-muted/50 text-muted-foreground border-border/60">
+        <Badge variant="outline" className={cn(
+          "font-medium bg-muted/50 text-muted-foreground border-border/60",
+          isComfortable ? "text-[11px] px-2 py-0.5" : "text-[10px] px-1.5 py-0.5"
+        )}>
           {agendamento.convenio === "Outro" ? agendamento.convenio_outro : agendamento.convenio}
         </Badge>
       </div>
