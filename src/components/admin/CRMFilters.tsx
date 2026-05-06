@@ -255,7 +255,10 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
               onClick={chip.clear}
               role="listitem"
               title={chip.label}
-              className="group inline-flex shrink-0 items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors max-w-[200px]"
+              className={cn(
+                "group inline-flex shrink-0 items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors max-w-[200px]",
+                chip.colorClass || "bg-muted text-muted-foreground border-transparent"
+              )}
             >
               <span className="truncate">{chip.label}</span>
               <X className="h-3 w-3 shrink-0 opacity-60 group-hover:opacity-100" />
