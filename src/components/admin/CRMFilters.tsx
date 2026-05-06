@@ -256,7 +256,7 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
       {!collapsed && (
         <div
           className={cn(
-            "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 mt-3",
+            "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 mt-3",
             isComfortable
               ? "gap-3 [&_button[role=combobox]]:h-10 [&_input]:h-10"
               : "gap-2.5 [&_button[role=combobox]]:h-9 [&_input]:h-9"
@@ -297,6 +297,24 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {convenios.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Origem</Label>
+            <Select
+              value={filters.origem || "all"}
+              onValueChange={(v) =>
+                onChange({ ...filters, origem: v === "all" ? undefined : (v as OrigemGrupo) })
+              }
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as origens</SelectItem>
+                {ORIGEM_FILTER_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
