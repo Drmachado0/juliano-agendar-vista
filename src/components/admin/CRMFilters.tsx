@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, X, Filter } from "lucide-react";
+import { Search, X, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useDensity } from "@/hooks/useDensity";
 import { cn } from "@/lib/utils";
 
@@ -82,13 +82,32 @@ const sandboxOpcoes: { value: CrmSandboxFiltro; label: string }[] = [
   { value: "somente_testes", label: "Somente testes" },
 ];
 
+const COLLAPSE_KEY = "crm:filters:collapsed:v1";
+
 const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFiltersProps) => {
-  // Debounce da busca
   const { isComfortable } = useDensity();
   const [buscaLocal, setBuscaLocal] = useState(filters.busca);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem(COLLAPSE_KEY);
+      return v === null ? true : v === "1";
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLLAPSE_KEY, collapsed ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, [collapsed]);
+
   useEffect(() => {
     setBuscaLocal(filters.busca);
   }, [filters.busca]);
+
   useEffect(() => {
     if (buscaLocal === filters.busca) return;
     const t = setTimeout(() => onChange({ ...filters, busca: buscaLocal }), 300);
@@ -105,18 +124,57 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
     filters.ordenacao !== "data_asc" ||
     filters.sandbox !== "reais";
 
+  const activeChips: { label: string; clear: () => void }[] = [];
+  if (filters.local)
+    activeChips.push({ label: `Local: ${filters.local}`, clear: () => onChange({ ...filters, local: undefined }) });
+  if (filters.tipo)
+    activeChips.push({ label: `Tipo: ${filters.tipo}`, clear: () => onChange({ ...filters, tipo: undefined }) });
+  if (filters.convenio)
+    activeChips.push({ label: `Convênio: ${filters.convenio}`, clear: () => onChange({ ...filters, convenio: undefined }) });
+  if (filters.periodo !== "todos") {
+    const p = periodos.find((x) => x.value === filters.periodo)?.label ?? filters.periodo;
+    activeChips.push({ label: `Período: ${p}`, clear: () => onChange({ ...filters, periodo: "todos" }) });
+  }
+  if (filters.ordenacao !== "data_asc") {
+    const o = ordenacoes.find((x) => x.value === filters.ordenacao)?.label ?? filters.ordenacao;
+    activeChips.push({ label: `Ordem: ${o}`, clear: () => onChange({ ...filters, ordenacao: "data_asc" }) });
+  }
+
   return (
-    <div className={cn("bg-card rounded-xl border border-border/70 space-y-3", isComfortable ? "p-4" : "p-3")}>
+    <div className={cn("bg-card rounded-xl border border-border/70", isComfortable ? "p-3" : "p-2.5")}>
+      {/* Cabeçalho compacto */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 text-foreground">
+        <button
+          type="button"
+          onClick={() => setCollapsed((c) => !c)}
+          className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
+          aria-expanded={!collapsed}
+        >
           <Filter className="h-3.5 w-3.5 text-muted-foreground" />
           <h3 className="font-semibold text-sm">Filtros</h3>
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full tabular-nums">
             {totalFiltrado}/{totalGeral}
           </span>
+          {collapsed ? (
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          ) : (
+            <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
+        </button>
+
+        {/* Busca sempre visível */}
+        <div className="relative flex-1 min-w-[200px] max-w-[280px]">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Nome ou telefone..."
+            className={cn("pl-8", isComfortable ? "h-9" : "h-8")}
+            value={buscaLocal}
+            onChange={(e) => setBuscaLocal(e.target.value)}
+          />
         </div>
+
         <div className="flex items-center gap-2">
-          {/* Sandbox segmented inline */}
+          {/* Sandbox segmented */}
           <div className="flex rounded-md border border-border/70 overflow-hidden text-xs">
             {sandboxOpcoes.map((o) => (
               <button
@@ -150,96 +208,99 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
         </div>
       </div>
 
-      <div className={cn(
-        "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6",
-        isComfortable
-          ? "gap-3 [&_button[role=combobox]]:h-10 [&_input]:h-10"
-          : "gap-2.5 [&_button[role=combobox]]:h-9 [&_input]:h-9"
-      )}>
-        {/* Busca */}
-        <div className="lg:col-span-2 space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Buscar</Label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Nome ou telefone..."
-              className="pl-10"
-              value={buscaLocal}
-              onChange={(e) => setBuscaLocal(e.target.value)}
-            />
+      {/* Chips dos filtros ativos quando recolhido */}
+      {collapsed && activeChips.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {activeChips.map((chip, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={chip.clear}
+              className="group inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+            >
+              {chip.label}
+              <X className="h-3 w-3 opacity-60 group-hover:opacity-100" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Grid expandido */}
+      {!collapsed && (
+        <div
+          className={cn(
+            "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 mt-3",
+            isComfortable
+              ? "gap-3 [&_button[role=combobox]]:h-10 [&_input]:h-10"
+              : "gap-2.5 [&_button[role=combobox]]:h-9 [&_input]:h-9"
+          )}
+        >
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Local</Label>
+            <Select
+              value={filters.local || "all"}
+              onValueChange={(v) => onChange({ ...filters, local: v === "all" ? undefined : v })}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {locais.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Tipo</Label>
+            <Select
+              value={filters.tipo || "all"}
+              onValueChange={(v) => onChange({ ...filters, tipo: v === "all" ? undefined : v })}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {tipos.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Convênio</Label>
+            <Select
+              value={filters.convenio || "all"}
+              onValueChange={(v) => onChange({ ...filters, convenio: v === "all" ? undefined : v })}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {convenios.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Período</Label>
+            <Select
+              value={filters.periodo}
+              onValueChange={(v) => onChange({ ...filters, periodo: v as CrmPeriodo })}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {periodos.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Ordenar por</Label>
+            <Select
+              value={filters.ordenacao}
+              onValueChange={(v) => onChange({ ...filters, ordenacao: v as CrmOrdenacao })}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {ordenacoes.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
         </div>
-
-        {/* Local */}
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Local</Label>
-          <Select
-            value={filters.local || "all"}
-            onValueChange={(v) => onChange({ ...filters, local: v === "all" ? undefined : v })}
-          >
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {locais.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Tipo */}
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Tipo</Label>
-          <Select
-            value={filters.tipo || "all"}
-            onValueChange={(v) => onChange({ ...filters, tipo: v === "all" ? undefined : v })}
-          >
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {tipos.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Convênio */}
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Convênio</Label>
-          <Select
-            value={filters.convenio || "all"}
-            onValueChange={(v) => onChange({ ...filters, convenio: v === "all" ? undefined : v })}
-          >
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {convenios.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Período */}
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Período</Label>
-          <Select
-            value={filters.periodo}
-            onValueChange={(v) => onChange({ ...filters, periodo: v as CrmPeriodo })}
-          >
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {periodos.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Ordenação */}
-        <div className="lg:col-span-2 space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Ordenar por</Label>
-          <Select
-            value={filters.ordenacao}
-            onValueChange={(v) => onChange({ ...filters, ordenacao: v as CrmOrdenacao })}
-          >
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {ordenacoes.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
