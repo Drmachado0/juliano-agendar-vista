@@ -227,12 +227,11 @@ const KanbanCard = ({
           className={cn(
             "font-medium border shrink-0",
             isComfortable ? "text-[11px] px-2 py-0.5" : "text-[10px] px-1.5 py-0.5",
-            localBadgeColors[agendamento.local_atendimento] ||
-              "bg-muted text-muted-foreground border-border"
+            getLocalBadgeClasses(agendamento.local_atendimento)
           )}
         >
           <MapPin className="h-2.5 w-2.5 mr-1" />
-          {agendamento.local_atendimento.split(" – ")[0]}
+          {LOCAL_SHORT_LABELS[getLocalGrupo(agendamento.local_atendimento)]}
         </Badge>
         <span
           className={cn(
