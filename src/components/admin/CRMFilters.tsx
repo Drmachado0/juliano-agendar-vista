@@ -82,27 +82,43 @@ const sandboxOpcoes: { value: CrmSandboxFiltro; label: string }[] = [
   { value: "somente_testes", label: "Somente testes" },
 ];
 
-const COLLAPSE_KEY = "crm:filters:collapsed:v1";
+const COLLAPSE_KEY_BASE = "crm:filters:collapsed:v1";
+const collapseKeyFor = (density: "compact" | "comfortable") =>
+  `${COLLAPSE_KEY_BASE}:${density}`;
 
 const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFiltersProps) => {
   const { isComfortable } = useDensity();
+  const density: "compact" | "comfortable" = isComfortable ? "comfortable" : "compact";
   const [buscaLocal, setBuscaLocal] = useState(filters.busca);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
-      const v = localStorage.getItem(COLLAPSE_KEY);
-      return v === null ? true : v === "1";
+      const v = localStorage.getItem(collapseKeyFor(density));
+      if (v !== null) return v === "1";
+      const legacy = localStorage.getItem(COLLAPSE_KEY_BASE);
+      return legacy === null ? true : legacy === "1";
     } catch {
       return true;
     }
   });
 
+  // Ao alternar densidade, restaura a preferência salva para aquela densidade
   useEffect(() => {
     try {
-      localStorage.setItem(COLLAPSE_KEY, collapsed ? "1" : "0");
+      const v = localStorage.getItem(collapseKeyFor(density));
+      if (v !== null) setCollapsed(v === "1");
     } catch {
       /* ignore */
     }
-  }, [collapsed]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [density]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(collapseKeyFor(density), collapsed ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, [collapsed, density]);
 
   useEffect(() => {
     setBuscaLocal(filters.busca);
