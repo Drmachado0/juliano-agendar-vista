@@ -40,10 +40,11 @@ const isAtendido = (agendamento: Agendamento) => {
   return agendamento.status_crm === 'ATENDIDO';
 };
 
+// Paleta consolidada com a marca (Teal + Gold) — não compete com bordas de urgência (verde/amarelo/vermelho)
 const localBadgeColors: Record<string, string> = {
-  "Clinicor – Paragominas": "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
-  "Hospital Geral de Paragominas": "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30",
-  "Belém (IOB / Vitria)": "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  "Clinicor – Paragominas": "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30",
+  "Hospital Geral de Paragominas": "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  "Belém (IOB / Vitria)": "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
 };
 
 const KanbanCard = ({
