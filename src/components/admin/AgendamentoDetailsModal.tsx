@@ -319,7 +319,12 @@ const AgendamentoDetailsModal = ({ agendamento, isOpen, onClose, onUpdate }: Age
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                   <MapPin className="h-3 w-3" /> Local
                 </p>
-                <p className="font-medium">{agendamento.local_atendimento}</p>
+                <div className="mt-0.5 flex items-center gap-2">
+                  <Badge variant="outline" className={cn("text-[11px] px-2 py-0.5 border", getLocalBadgeClasses(agendamento.local_atendimento))}>
+                    {LOCAL_SHORT_LABELS[getLocalGrupo(agendamento.local_atendimento)]}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground truncate">{agendamento.local_atendimento}</span>
+                </div>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
