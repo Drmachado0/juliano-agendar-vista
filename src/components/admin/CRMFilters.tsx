@@ -142,12 +142,12 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
 
   return (
     <div className={cn("bg-card rounded-xl border border-border/70", isComfortable ? "p-3" : "p-2.5")}>
-      {/* Cabeçalho compacto */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+      {/* Cabeçalho: grid responsivo para evitar quebra excessiva */}
+      <div className="grid grid-cols-1 sm:grid-cols-[auto,1fr,auto] items-center gap-2">
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
-          className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
+          className="flex items-center gap-2 text-foreground hover:text-primary transition-colors justify-self-start"
           aria-expanded={!collapsed}
         >
           <Filter className="h-3.5 w-3.5 text-muted-foreground" />
@@ -163,17 +163,17 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
         </button>
 
         {/* Busca sempre visível */}
-        <div className="relative flex-1 min-w-[200px] max-w-[280px]">
+        <div className="relative w-full sm:max-w-[320px] sm:justify-self-stretch">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Nome ou telefone..."
-            className={cn("pl-8", isComfortable ? "h-9" : "h-8")}
+            className={cn("pl-8 w-full", isComfortable ? "h-9" : "h-8")}
             value={buscaLocal}
             onChange={(e) => setBuscaLocal(e.target.value)}
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
           {/* Sandbox segmented */}
           <div className="flex rounded-md border border-border/70 overflow-hidden text-xs">
             {sandboxOpcoes.map((o) => (
@@ -181,7 +181,7 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
                 key={o.value}
                 type="button"
                 onClick={() => onChange({ ...filters, sandbox: o.value })}
-                className={`px-2.5 py-1 transition-colors ${
+                className={`px-2.5 py-1 transition-colors whitespace-nowrap ${
                   filters.sandbox === o.value
                     ? "bg-primary text-primary-foreground"
                     : "bg-card hover:bg-muted text-muted-foreground"
@@ -208,18 +208,24 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
         </div>
       </div>
 
-      {/* Chips dos filtros ativos quando recolhido */}
+      {/* Chips dos filtros ativos quando recolhido — scroll horizontal no mobile */}
       {collapsed && activeChips.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-2">
+        <div
+          className="flex sm:flex-wrap gap-1.5 mt-2 overflow-x-auto sm:overflow-visible -mx-1 px-1 pb-1 sm:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          role="list"
+          aria-label="Filtros ativos"
+        >
           {activeChips.map((chip, i) => (
             <button
               key={i}
               type="button"
               onClick={chip.clear}
-              className="group inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+              role="listitem"
+              title={chip.label}
+              className="group inline-flex shrink-0 items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors max-w-[200px]"
             >
-              {chip.label}
-              <X className="h-3 w-3 opacity-60 group-hover:opacity-100" />
+              <span className="truncate">{chip.label}</span>
+              <X className="h-3 w-3 shrink-0 opacity-60 group-hover:opacity-100" />
             </button>
           ))}
         </div>
