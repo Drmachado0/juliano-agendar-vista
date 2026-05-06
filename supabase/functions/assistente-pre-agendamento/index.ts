@@ -281,7 +281,7 @@ async function escalarParaHumano(
       await supabase
         .from("agendamentos")
         .update({
-          status_crm: "AGUARDANDO HUMANO",
+          status_crm: "PRECISA_DE_HUMANO",
           status_funil: "aguardando_humano",
           bot_ultima_acao_at: new Date().toISOString(),
           observacoes_internas: obs,
@@ -298,7 +298,7 @@ async function escalarParaHumano(
         local_atendimento: "A definir",
         convenio: "Particular",
         origem: "bot_whatsapp",
-        status_crm: "AGUARDANDO HUMANO",
+        status_crm: "PRECISA_DE_HUMANO",
         status_funil: "aguardando_humano",
         bot_ultima_acao_at: new Date().toISOString(),
         observacoes_internas: obs,

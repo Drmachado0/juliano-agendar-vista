@@ -55,7 +55,7 @@ const agendamentoInsertSchema = z.object({
   aceita_primeiro_horario: z.boolean().optional(),
   aceita_contato_whatsapp_email: z.boolean().optional(),
   status_crm: z
-    .enum(["NOVO LEAD", "AGUARDANDO", "CLINICOR", "HGP", "BELÉM", "ATENDIDO"])
+    .enum(["NOVO LEAD", "AGUARDANDO", "PRECISA_DE_HUMANO", "CLINICOR", "HGP", "BELÉM", "ATENDIDO"])
     .optional()
     .default("NOVO LEAD"),
   origem: z
@@ -357,15 +357,16 @@ export async function listarAgendamentosPorStatus(): Promise<{
     if (error.message?.includes('JWT expired') || error.code === 'PGRST303') {
       await supabase.auth.signOut();
       window.location.href = '/auth';
-    return { data: { 'NOVO LEAD': [], 'AGUARDANDO': [], 'CLINICOR': [], 'HGP': [], 'BELÉM': [], 'ATENDIDO': [] }, error: new Error('Sessão expirada. Redirecionando para login...') };
+    return { data: { 'NOVO LEAD': [], 'AGUARDANDO': [], 'PRECISA_DE_HUMANO': [], 'CLINICOR': [], 'HGP': [], 'BELÉM': [], 'ATENDIDO': [] }, error: new Error('Sessão expirada. Redirecionando para login...') };
     }
     
-    return { data: { 'NOVO LEAD': [], 'AGUARDANDO': [], 'CLINICOR': [], 'HGP': [], 'BELÉM': [], 'ATENDIDO': [] }, error: new Error(error.message) };
+    return { data: { 'NOVO LEAD': [], 'AGUARDANDO': [], 'PRECISA_DE_HUMANO': [], 'CLINICOR': [], 'HGP': [], 'BELÉM': [], 'ATENDIDO': [] }, error: new Error(error.message) };
   }
 
   const grouped: Record<string, Agendamento[]> = {
     'NOVO LEAD': [],
     'AGUARDANDO': [],
+    'PRECISA_DE_HUMANO': [],
     'CLINICOR': [],
     'HGP': [],
     'BELÉM': [],

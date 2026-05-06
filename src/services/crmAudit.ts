@@ -33,6 +33,7 @@ export const ACAO_LABELS: Record<string, string> = {
 export const STATUS_CRM_OPCOES = [
   "NOVO LEAD",
   "AGUARDANDO",
+  "PRECISA_DE_HUMANO",
   "CLINICOR",
   "HGP",
   "BELÉM",

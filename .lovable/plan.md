@@ -1,66 +1,49 @@
-## Objetivo
+## Diagnóstico
 
-Reduzir ruído visual nos cards do Kanban e estabelecer uma hierarquia clara de cores: borda = urgência, local = cor de marca, origem = indicador discreto (só destaca quando NÃO é "Site"), tipo+convênio = texto neutro.
+A coluna **"Precisa de humano"** aparece vazia no Kanban porque há um conflito de nomenclatura entre o banco e o código:
 
-## Mudanças
+- Banco (`agendamentos.status_crm`) tem **6 registros** com o valor `PRECISA_DE_HUMANO` (com underscore).
+- O Kanban (`src/pages/admin/CRM.tsx`) declara a coluna como `"AGUARDANDO HUMANO"` (com espaço).
+- A edge function `assistente-pre-agendamento` grava em outro valor ainda: `"AGUARDANDO HUMANO"`.
+- O agrupador `listarAgendamentosPorStatus` (`src/services/agendamentos.ts`) só conhece `NOVO LEAD / AGUARDANDO / CLINICOR / HGP / BELÉM / ATENDIDO`. Qualquer status fora dessa lista (incluindo `PRECISA_DE_HUMANO`) é silenciosamente descartado.
 
-### 1. `src/components/admin/KanbanCard.tsx`
+Resultado: os 6 leads que precisam de atendimento humano somem do CRM.
 
-**1.1 Nova paleta de Local (consolidada com a marca Navy/Gold + Teal)**
-- Clinicor – Paragominas → **teal** (era azul)
-- Hospital Geral de Paragominas → **âmbar** (era roxo)
-- Belém (IOB / Vitria) → **violet** (era âmbar)
+Auditando as demais colunas:
+- `NOVO LEAD`, `CLINICOR`, `HGP`, `BELÉM`, `ATENDIDO` → consistentes entre banco, schema zod, agrupador e UI.
+- `AGUARDANDO` → usado pela welcome flow, ok.
+- Falta no zod schema (`agendamentoInsertSchema`) e no array `STATUS_CRM_VALIDOS` em `crmAudit.ts` o status de "humano".
 
-Resultado: Local deixa de competir com a borda lateral de urgência (verde/amarelo/vermelho) e com o badge de origem.
+## Solução
 
-**1.2 Origem vira chip no canto superior direito (estilo selo "Teste")**
-- Renderizado **apenas quando o grupo não é `site`** (default → invisível, removendo ruído de ~80% dos cards).
-- Aparece como mini-chip absoluto no `-top-1.5 -right-1.5`, igual o selo "Teste".
-- Quando há AMBOS sandbox e origem-não-site, o de origem fica deslocado para a esquerda (`right: 60px` aprox.) para não sobrepor.
-- Cores discretas (paleta sóbria): n8n=violet, WhatsApp=emerald, Meta=pink, Outro=cinza.
-- Tooltip mantém origem bruta (ex.: "Origem: mcp (n8n / Bot)").
+Padronizar como **`PRECISA_DE_HUMANO`** (valor já presente no banco — evita migration de dados) em todos os pontos do código.
 
-**1.3 Remover badge de Origem da linha de badges**
-A linha agora terá só: **Local** (colorido) + **Tipo · Convênio** como texto inline neutro.
+### Arquivos a alterar
 
-**1.4 Tipo + Convênio viram texto inline**
-Substituir os 2 badges neutros por uma linha de texto pequena com separador "·":
-```
-Consulta · Particular
-```
-Em vez de dois badges. Mantém leitura mas economiza espaço vertical e reduz ruído.
+1. **`src/pages/admin/CRM.tsx`**
+   - Trocar `status: "AGUARDANDO HUMANO"` → `"PRECISA_DE_HUMANO"` no array `columns`.
+   - Trocar a chave `"AGUARDANDO HUMANO": []` → `"PRECISA_DE_HUMANO": []` no `useState` inicial.
 
-### 2. `src/lib/origemLead.ts`
-Ajustar `ORIGEM_BADGE_CLASSES` para um tom mais sóbrio adequado ao chip flutuante (fundo sólido suave + texto branco em modo escuro), padrão similar ao selo "Teste" laranja:
-- n8n: `bg-violet-500 text-white`
-- whatsapp: `bg-emerald-500 text-white`
-- meta: `bg-pink-500 text-white`
-- outro: `bg-muted-foreground text-background`
-- site: (não usado — não renderiza)
+2. **`src/services/agendamentos.ts`**
+   - Adicionar `"PRECISA_DE_HUMANO"` ao enum zod (`agendamentoInsertSchema.status_crm`).
+   - Adicionar `'PRECISA_DE_HUMANO': []` aos dois objetos `grouped` retornados (caminho normal e fallback de erro/JWT).
 
-Manter as cores antigas (versão "soft" com /15) em uma constante separada `ORIGEM_BADGE_SOFT_CLASSES` caso seja útil em outros lugares (filtros, legenda).
+3. **`src/services/crmAudit.ts`**
+   - Adicionar `"PRECISA_DE_HUMANO"` ao array `STATUS_CRM_VALIDOS`.
 
-### 3. `src/components/admin/CRMLegenda.tsx`
-Atualizar a legenda das cores de Local para refletir a nova paleta (teal/âmbar/violet).
+4. **`supabase/functions/assistente-pre-agendamento/index.ts`**
+   - Trocar as 2 ocorrências de `status_crm: "AGUARDANDO HUMANO"` → `"PRECISA_DE_HUMANO"`.
 
-## Mockup do card depois
+5. **`src/components/admin/CRMLegenda.tsx`** (se a coluna estiver listada lá com cor)
+   - Verificar e atualizar referência para "Precisa de humano" / `PRECISA_DE_HUMANO`.
 
-```
-                              [🤖 n8n]   ← só aparece se origem ≠ site
-┃ Cleiton Gustavo Conceição D.
-┃ 📞 91985291927
-┃ ┌────────────────────┐
-┃ │ 📅 22/04/26 ⏰ 14:00│
-┃ └────────────────────┘
-┃ [HGP]   Consulta · Particular
-┃ 👤 22/04/26  ⏱ 13d  🔔
-┃ ✈ BV · Enviada
-┃ ─────────────────────
-┃ 💬 🕐 ⚡ 🧪 👁 Detalhes
-```
+### Revisão de consistência das outras colunas
 
-## O que NÃO muda
-- Borda lateral de urgência (verde/amarelo/vermelho) — continua sendo o único elemento "gritante".
-- Selo "Teste" laranja no canto.
-- Filtros, ordenação, ações e tooltips dos detalhes.
-- Mapeamento `getOrigemGrupo` e o filtro de Origem do CRMFilters.
+Não há outros mismatches no banco (todos os demais status estão alinhados). Vou apenas:
+- Confirmar que a ordem das colunas do Kanban faz sentido para o funil: `NOVO LEAD → AGUARDANDO → PRECISA_DE_HUMANO → CLINICOR / HGP / BELÉM → ATENDIDO`.
+- Manter a cor `bg-rose-500` (vermelha = atenção urgente) para "Precisa de humano", o que combina com o sentido da coluna.
+
+### Validação após o fix
+
+- Recarregar `/admin/crm` e confirmar que os 6 cards aparecem na coluna "Precisa de humano".
+- Conferir que drag-and-drop para/dessa coluna funciona (passa pela validação `STATUS_CRM_VALIDOS`).
