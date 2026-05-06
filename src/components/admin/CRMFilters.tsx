@@ -145,7 +145,7 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
     filters.ordenacao !== "data_asc" ||
     filters.sandbox !== "reais";
 
-  const activeChips: { label: string; clear: () => void }[] = [];
+  const activeChips: { label: string; colorClass?: string; clear: () => void }[] = [];
   if (filters.local) {
     const grupo = getLocalGrupo(filters.local);
     activeChips.push({
