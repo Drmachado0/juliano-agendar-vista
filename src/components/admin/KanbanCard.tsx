@@ -221,6 +221,32 @@ const KanbanCard = ({
         )}>
           {agendamento.convenio === "Outro" ? agendamento.convenio_outro : agendamento.convenio}
         </Badge>
+        {(() => {
+          const grupo = getOrigemGrupo(agendamento.origem);
+          const Icon = ORIGEM_ICONS[grupo];
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "font-medium border",
+                    isComfortable ? "text-[11px] px-2 py-0.5" : "text-[10px] px-1.5 py-0.5",
+                    ORIGEM_BADGE_CLASSES[grupo]
+                  )}
+                >
+                  <Icon className="h-2.5 w-2.5 mr-1" />
+                  {ORIGEM_LABELS[grupo]}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-xs">
+                  Origem: {agendamento.origem || "—"} ({ORIGEM_LABELS[grupo]})
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          );
+        })()}
       </div>
 
       {/* Meta info: contato + indicadores em uma linha */}
