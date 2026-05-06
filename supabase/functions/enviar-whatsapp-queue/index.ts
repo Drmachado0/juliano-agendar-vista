@@ -210,7 +210,7 @@ serve(async (req: Request): Promise<Response> => {
         message: userMessage,
         elapsed: `${elapsed}ms`
       }),
-      { status: evolutionResponse.status >= 400 && evolutionResponse.status < 500 ? 400 : 500, 
+      { status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
 
@@ -225,7 +225,7 @@ serve(async (req: Request): Promise<Response> => {
         message: "Erro interno. Tente novamente.",
         elapsed: `${elapsed}ms`
       }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 });
