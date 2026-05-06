@@ -272,7 +272,19 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {locais.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                {locais.map((o) => {
+                  const grupo = o.value === "all" ? null : getLocalGrupo(o.value);
+                  return (
+                    <SelectItem key={o.value} value={o.value}>
+                      <span className="flex items-center gap-2">
+                        {grupo && (
+                          <span className={cn("inline-block h-2 w-2 rounded-full", LOCAL_DOT_CLASSES[grupo])} />
+                        )}
+                        {o.label}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
