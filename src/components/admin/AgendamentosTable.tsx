@@ -104,9 +104,13 @@ const AgendamentosTable = ({ agendamentos, onViewDetails, onSendWhatsApp, onEdit
                   <span className="text-sm">{agendamento.tipo_atendimento}</span>
                 </TableCell>
                 <TableCell>
-                  <span className="text-sm truncate max-w-[150px] block">
-                    {agendamento.local_atendimento}
-                  </span>
+                  <Badge
+                    variant="outline"
+                    className={cn("text-[11px] font-medium border", getLocalBadgeClasses(agendamento.local_atendimento))}
+                    title={agendamento.local_atendimento}
+                  >
+                    {LOCAL_SHORT_LABELS[getLocalGrupo(agendamento.local_atendimento)]}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <span className="text-sm">
