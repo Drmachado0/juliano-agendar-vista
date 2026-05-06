@@ -51,38 +51,31 @@ export const listarMensagensPorAgendamento = async (
   telefone?: string
 ): Promise<{ data: MensagemWhatsApp[]; error: Error | null }> => {
   try {
-    // First try by agendamento_id
-    let query = supabase
-      .from("mensagens_whatsapp")
-      .select("*")
-      .eq("agendamento_id", agendamentoId)
-      .order("created_at", { ascending: true });
+    const last8 = telefone ? normalizePhone(telefone) : null;
 
-    const { data, error } = await query;
-    if (error) throw error;
-
-    // If we have a phone number, also fetch messages by phone that might not be linked
-    if (telefone) {
-      const last8 = normalizePhone(telefone);
-      const { data: phoneMsgs, error: phoneError } = await supabase
+    const [byAgendamento, byPhone] = await Promise.all([
+      supabase
         .from("mensagens_whatsapp")
         .select("*")
-        .ilike("telefone", `%${last8}%`)
-        .is("agendamento_id", null)
-        .order("created_at", { ascending: true });
+        .eq("agendamento_id", agendamentoId),
+      last8
+        ? supabase
+            .from("mensagens_whatsapp")
+            .select("*")
+            .ilike("telefone", `%${last8}%`)
+        : Promise.resolve({ data: [] as any[], error: null }),
+    ]);
 
-      if (!phoneError && phoneMsgs && phoneMsgs.length > 0) {
-        // Merge and deduplicate
-        const allMsgs = [...(data || []), ...phoneMsgs];
-        const uniqueMsgs = allMsgs.filter(
-          (msg, index, self) => index === self.findIndex((m) => m.id === msg.id)
-        );
-        uniqueMsgs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        return { data: uniqueMsgs as MensagemWhatsApp[], error: null };
-      }
-    }
+    if (byAgendamento.error) throw byAgendamento.error;
+    if ((byPhone as any).error) throw (byPhone as any).error;
 
-    return { data: (data as MensagemWhatsApp[]) || [], error: null };
+    const all = [...(byAgendamento.data || []), ...((byPhone as any).data || [])];
+    const unique = Array.from(new Map(all.map((m: any) => [m.id, m])).values());
+    unique.sort(
+      (a: any, b: any) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    return { data: unique as MensagemWhatsApp[], error: null };
   } catch (error) {
     console.error("Erro ao listar mensagens:", error);
     return { data: [], error: error as Error };
