@@ -1,49 +1,46 @@
-## Problema
+## Objetivo
 
-1. **Tela treme ao usar filtros** — quando um `Select` (Radix) abre, ele bloqueia o scroll do `body` e remove a barra de rolagem, fazendo todo o conteúdo "saltar" alguns pixels para a direita e voltar ao fechar. Combinado com o re-render do Kanban filtrado, dá a sensação de tremor.
-2. **Painel de filtros ocupa muito espaço** — sempre visível com 6 colunas + barra superior, consumindo altura útil acima do Kanban.
+Permitir identificar visualmente de onde veio cada lead/agendamento (n8n, WhatsApp, Site, Meta Ads etc.) direto no card do Kanban, e filtrar a coluna por origem.
 
-## Solução
+## Mapeamento de origens
 
-### 1. Estabilizar a largura da página (fim do tremor)
+Valores existentes hoje na tabela `agendamentos.origem`: `site`, `mcp`, `whatsapp`, `whatsapp_manual`, `fb`, `ig`, `soak_test_2`.
 
-Em `src/index.css`, reservar espaço permanente para a scrollbar:
+Agrupamento exibido na UI:
 
-```css
-html {
-  scrollbar-gutter: stable;
-}
-```
+| Grupo (UI) | Valores no banco | Cor do badge |
+|---|---|---|
+| Site | `site` | azul |
+| n8n / Bot | `mcp` | violeta |
+| WhatsApp | `whatsapp`, `whatsapp_manual` | verde |
+| Meta Ads | `fb`, `ig` | rosa |
+| Outro | qualquer outro (ex.: `soak_test_2`) | cinza |
 
-Isso impede que abrir/fechar Selects, Dialogs e Drawers altere a largura do conteúdo. Resolve o tremor em todo o admin, não só no CRM.
+Helper centralizado em `src/lib/origemLead.ts` exportando:
+- `type OrigemGrupo = 'site' | 'n8n' | 'whatsapp' | 'meta' | 'outro'`
+- `getOrigemGrupo(origem?: string | null): OrigemGrupo`
+- `ORIGEM_LABELS` e `ORIGEM_BADGE_CLASSES` (cores Tailwind no padrão dos outros badges do card).
 
-### 2. Tornar o painel de filtros recolhível
+## Mudanças
 
-Em `src/components/admin/CRMFilters.tsx`:
+### 1. `src/lib/origemLead.ts` (novo)
+Funções e constantes de mapeamento descritas acima.
 
-- Adicionar estado `collapsed` persistido em `localStorage` com chave `crm:filters:collapsed:v1` (default: **recolhido**, para liberar espaço imediatamente).
-- Cabeçalho do painel passa a mostrar:
-  - Ícone + "Filtros" + contador `X/Y` (já existe).
-  - **Resumo dos filtros ativos** como chips inline quando recolhido (ex.: "Local: Clinicor", "Período: Hoje"), com `X` para remover individualmente.
-  - Botão "Limpar" (já existe, só quando há filtros).
-  - **Botão chevron** à direita para expandir/recolher (`ChevronDown`/`ChevronUp`).
-  - Toda a linha do cabeçalho fica clicável para alternar.
-- Grid de inputs (busca + 4 selects + ordenação) só renderiza quando expandido, com transição suave de altura.
-- Sandbox segmented continua visível no cabeçalho (afeta o que aparece no Kanban e o usuário precisa ver sempre).
-- Busca rápida: manter o input de busca **sempre visível** no cabeçalho (compacto, ~240px) mesmo recolhido — é o filtro mais usado.
+### 2. `src/components/admin/KanbanCard.tsx`
+- Adicionar um badge pequeno na linha de badges existente (logo após o local), usando `ORIGEM_LABELS[grupo]` e cor de `ORIGEM_BADGE_CLASSES[grupo]`.
+- Tooltip mostrando a origem bruta (ex.: "Origem: mcp (n8n / Bot)").
+- Ícone discreto por grupo (Globe/site, Bot/n8n, MessageCircle/whatsapp, Megaphone/meta).
 
-### 3. Pequenos ajustes de estabilidade
+### 3. `src/components/admin/CRMFilters.tsx`
+- Adicionar campo `origem?: OrigemGrupo` em `CrmFilters`.
+- Novo `Select` "Origem" no grid expandido com opções: Todas, Site, n8n / Bot, WhatsApp, Meta Ads, Outro.
+- Novo chip ativo "Origem: …" quando recolhido.
+- Incluir `origem` em `hasActive`.
 
-- Adicionar `min-h-0` no container do Kanban para evitar reflow vertical quando o painel colapsa.
-- Garantir `transition-[max-height]` suave (200ms) no bloco expansível para a animação não parecer brusca.
+### 4. `src/pages/admin/CRM.tsx`
+- Aplicar filtro: `if (filters.origem && getOrigemGrupo(a.origem) !== filters.origem) return false;`
+- Persistência já é automática (filtros salvos em localStorage).
 
-## Arquivos afetados
-
-- `src/index.css` — adicionar `scrollbar-gutter: stable`.
-- `src/components/admin/CRMFilters.tsx` — refatorar para recolhível com chips de filtros ativos e busca sempre visível.
-
-## Resultado esperado
-
-- Nenhum salto horizontal ao abrir Selects, modais ou drawers em qualquer página do admin.
-- CRM abre com filtros recolhidos por padrão, mostrando só cabeçalho + busca + chips dos filtros ativos, devolvendo ~120px de altura para o Kanban.
-- Estado de recolhido fica salvo entre sessões.
+## Observações
+- Não muda schema; apenas leitura do campo `origem` que já existe.
+- Mantém densidade compacta/confortável já implementada.

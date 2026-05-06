@@ -4,12 +4,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle, CheckCircle2, UserPlus, Timer, Send, XCircle, Loader2, FlaskConical, CheckCheck, Eye as EyeIcon, History } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle, CheckCircle2, UserPlus, Timer, Send, XCircle, Loader2, FlaskConical, CheckCheck, Eye as EyeIcon, History, Globe, Bot, Megaphone, MessageSquare, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { BoasVindasInfo } from "@/hooks/useBoasVindasStatus";
 import HistoricoConversaModal from "./HistoricoConversaModal";
 import { useDensity } from "@/hooks/useDensity";
+import { getOrigemGrupo, ORIGEM_LABELS, ORIGEM_BADGE_CLASSES, type OrigemGrupo } from "@/lib/origemLead";
+
+const ORIGEM_ICONS: Record<OrigemGrupo, typeof Globe> = {
+  site: Globe,
+  n8n: Bot,
+  whatsapp: MessageSquare,
+  meta: Megaphone,
+  outro: HelpCircle,
+};
 
 interface KanbanCardProps {
   agendamento: Agendamento;
@@ -212,6 +221,32 @@ const KanbanCard = ({
         )}>
           {agendamento.convenio === "Outro" ? agendamento.convenio_outro : agendamento.convenio}
         </Badge>
+        {(() => {
+          const grupo = getOrigemGrupo(agendamento.origem);
+          const Icon = ORIGEM_ICONS[grupo];
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "font-medium border",
+                    isComfortable ? "text-[11px] px-2 py-0.5" : "text-[10px] px-1.5 py-0.5",
+                    ORIGEM_BADGE_CLASSES[grupo]
+                  )}
+                >
+                  <Icon className="h-2.5 w-2.5 mr-1" />
+                  {ORIGEM_LABELS[grupo]}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-xs">
+                  Origem: {agendamento.origem || "—"} ({ORIGEM_LABELS[grupo]})
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          );
+        })()}
       </div>
 
       {/* Meta info: contato + indicadores em uma linha */}

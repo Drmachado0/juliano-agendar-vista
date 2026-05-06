@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Search, X, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useDensity } from "@/hooks/useDensity";
 import { cn } from "@/lib/utils";
+import { ORIGEM_FILTER_OPTIONS, ORIGEM_LABELS, type OrigemGrupo } from "@/lib/origemLead";
 
 export type CrmPeriodo = "todos" | "hoje" | "7dias" | "mes" | "atrasados" | "sem_data";
 export type CrmOrdenacao = "data_asc" | "data_desc" | "created_desc" | "created_asc";
@@ -16,6 +17,7 @@ export interface CrmFilters {
   local?: string;
   tipo?: string;
   convenio?: string;
+  origem?: OrigemGrupo;
   periodo: CrmPeriodo;
   ordenacao: CrmOrdenacao;
   sandbox: CrmSandboxFiltro;
@@ -136,6 +138,7 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
     !!filters.local ||
     !!filters.tipo ||
     !!filters.convenio ||
+    !!filters.origem ||
     filters.periodo !== "todos" ||
     filters.ordenacao !== "data_asc" ||
     filters.sandbox !== "reais";
@@ -147,6 +150,8 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
     activeChips.push({ label: `Tipo: ${filters.tipo}`, clear: () => onChange({ ...filters, tipo: undefined }) });
   if (filters.convenio)
     activeChips.push({ label: `Convênio: ${filters.convenio}`, clear: () => onChange({ ...filters, convenio: undefined }) });
+  if (filters.origem)
+    activeChips.push({ label: `Origem: ${ORIGEM_LABELS[filters.origem]}`, clear: () => onChange({ ...filters, origem: undefined }) });
   if (filters.periodo !== "todos") {
     const p = periodos.find((x) => x.value === filters.periodo)?.label ?? filters.periodo;
     activeChips.push({ label: `Período: ${p}`, clear: () => onChange({ ...filters, periodo: "todos" }) });
@@ -251,7 +256,7 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
       {!collapsed && (
         <div
           className={cn(
-            "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 mt-3",
+            "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 mt-3",
             isComfortable
               ? "gap-3 [&_button[role=combobox]]:h-10 [&_input]:h-10"
               : "gap-2.5 [&_button[role=combobox]]:h-9 [&_input]:h-9"
@@ -292,6 +297,24 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {convenios.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Origem</Label>
+            <Select
+              value={filters.origem || "all"}
+              onValueChange={(v) =>
+                onChange({ ...filters, origem: v === "all" ? undefined : (v as OrigemGrupo) })
+              }
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as origens</SelectItem>
+                {ORIGEM_FILTER_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

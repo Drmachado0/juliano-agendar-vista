@@ -21,6 +21,7 @@ import { DensityProvider } from "@/hooks/useDensity";
 import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
 import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
 import { useNavigate } from "react-router-dom";
+import { getOrigemGrupo } from "@/lib/origemLead";
 
 const TAB_STORAGE_KEY = "crm:tab:v1";
 
@@ -57,6 +58,7 @@ function aplicarFiltrosEOrdenacao(
     if (filters.local && a.local_atendimento !== filters.local) return false;
     if (filters.tipo && a.tipo_atendimento !== filters.tipo) return false;
     if (filters.convenio && a.convenio !== filters.convenio) return false;
+    if (filters.origem && getOrigemGrupo((a as any).origem) !== filters.origem) return false;
 
     if (buscaNorm) {
       const nome = (a.nome_completo || "").toLowerCase();
