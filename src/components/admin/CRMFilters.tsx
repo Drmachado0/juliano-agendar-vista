@@ -4,6 +4,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Search, X, Filter } from "lucide-react";
+import { useDensity } from "@/hooks/useDensity";
+import { cn } from "@/lib/utils";
 
 export type CrmPeriodo = "todos" | "hoje" | "7dias" | "mes" | "atrasados" | "sem_data";
 export type CrmOrdenacao = "data_asc" | "data_desc" | "created_desc" | "created_asc";
@@ -82,6 +84,7 @@ const sandboxOpcoes: { value: CrmSandboxFiltro; label: string }[] = [
 
 const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFiltersProps) => {
   // Debounce da busca
+  const { isComfortable } = useDensity();
   const [buscaLocal, setBuscaLocal] = useState(filters.busca);
   useEffect(() => {
     setBuscaLocal(filters.busca);
@@ -103,7 +106,7 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
     filters.sandbox !== "reais";
 
   return (
-    <div className="bg-card rounded-xl border border-border/70 p-3 space-y-3">
+    <div className={cn("bg-card rounded-xl border border-border/70 space-y-3", isComfortable ? "p-4" : "p-3")}>
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 text-foreground">
           <Filter className="h-3.5 w-3.5 text-muted-foreground" />
@@ -147,7 +150,12 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2.5 [&_button[role=combobox]]:h-9 [&_input]:h-9">
+      <div className={cn(
+        "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6",
+        isComfortable
+          ? "gap-3 [&_button[role=combobox]]:h-10 [&_input]:h-10"
+          : "gap-2.5 [&_button[role=combobox]]:h-9 [&_input]:h-9"
+      )}>
         {/* Busca */}
         <div className="lg:col-span-2 space-y-1.5">
           <Label className="text-xs text-muted-foreground">Buscar</Label>
