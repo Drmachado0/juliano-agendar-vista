@@ -146,14 +146,24 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
     filters.sandbox !== "reais";
 
   const activeChips: { label: string; clear: () => void }[] = [];
-  if (filters.local)
-    activeChips.push({ label: `Local: ${filters.local}`, clear: () => onChange({ ...filters, local: undefined }) });
+  if (filters.local) {
+    const grupo = getLocalGrupo(filters.local);
+    activeChips.push({
+      label: `Local: ${LOCAL_SHORT_LABELS[grupo]}`,
+      colorClass: LOCAL_BADGE_SOFT_CLASSES[grupo],
+      clear: () => onChange({ ...filters, local: undefined }),
+    });
+  }
   if (filters.tipo)
     activeChips.push({ label: `Tipo: ${filters.tipo}`, clear: () => onChange({ ...filters, tipo: undefined }) });
   if (filters.convenio)
     activeChips.push({ label: `Convênio: ${filters.convenio}`, clear: () => onChange({ ...filters, convenio: undefined }) });
   if (filters.origem)
-    activeChips.push({ label: `Origem: ${ORIGEM_LABELS[filters.origem]}`, clear: () => onChange({ ...filters, origem: undefined }) });
+    activeChips.push({
+      label: `Origem: ${ORIGEM_LABELS[filters.origem]}`,
+      colorClass: ORIGEM_BADGE_SOFT_CLASSES[filters.origem],
+      clear: () => onChange({ ...filters, origem: undefined }),
+    });
   if (filters.periodo !== "todos") {
     const p = periodos.find((x) => x.value === filters.periodo)?.label ?? filters.periodo;
     activeChips.push({ label: `Período: ${p}`, clear: () => onChange({ ...filters, periodo: "todos" }) });
