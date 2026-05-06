@@ -566,6 +566,10 @@ const AdminCRM = () => {
         </div>
 
         {/* Filtros */}
+        {/* Legenda dos cards */}
+        <CRMLegenda />
+
+        {/* Filtros */}
         <CRMFilters
           filters={filters}
           onChange={setFilters}
