@@ -327,7 +327,19 @@ const CRMFilters = ({ filters, onChange, totalFiltrado, totalGeral }: CRMFilters
               <SelectContent>
                 <SelectItem value="all">Todas as origens</SelectItem>
                 {ORIGEM_FILTER_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  <SelectItem key={o.value} value={o.value}>
+                    <span className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] font-medium px-1.5 py-0 border",
+                          ORIGEM_BADGE_SOFT_CLASSES[o.value]
+                        )}
+                      >
+                        {o.label}
+                      </Badge>
+                    </span>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
