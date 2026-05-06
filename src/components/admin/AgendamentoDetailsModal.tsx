@@ -33,6 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { getLocalBadgeClasses, LOCAL_SHORT_LABELS, getLocalGrupo } from "@/lib/localAtendimento";
+import { getOrigemGrupo, ORIGEM_LABELS, ORIGEM_BADGE_SOFT_CLASSES } from "@/lib/origemLead";
 
 interface AgendamentoDetailsModalProps {
   agendamento: Agendamento | null;
