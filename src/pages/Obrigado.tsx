@@ -1,25 +1,66 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { CheckCircle, MessageCircle, MapPin, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
-import { safeDataLayerPush } from "@/lib/trackingGuard";
 
 const Obrigado = () => {
   const { trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
+  const trackingFiredRef = useRef(false);
+
   useEffect(() => {
-    // Não disparar conversões aqui — /agendamento já disparou no submit
-    // (Lead/Schedule/CompleteRegistration/google_ads_conversion com event_id = leadId,
-    //  fazendo dedup com Meta CAPI server-side). Disparar de novo aqui = double-count
-    //  em Ads Manager + Google Ads.
-    // Empurra apenas pageview pra analytics (GA4/GTM), respeitando consent.
-    safeDataLayerPush({
-      event: 'thank_you_page_view',
-      page_path: '/obrigado',
-      page_type: 'agendamento_confirmado',
+    if (trackingFiredRef.current) return;
+    trackingFiredRef.current = true;
+
+    if (typeof window === "undefined") return;
+
+    window.dataLayer = window.dataLayer || [];
+
+    const eventId =
+      window.crypto && window.crypto.randomUUID
+        ? window.crypto.randomUUID()
+        : `agendamento_${Date.now()}`;
+
+    window.dataLayer.push({
+      event: "thank_you_page_view",
+      page_path: "/obrigado",
+      page_type: "agendamento_confirmado",
+      conversion_value: 300,
+      currency: "BRL",
+      event_id: eventId,
+    });
+
+    window.dataLayer.push({
+      event: "google_ads_conversion",
+      send_to: "AW-436492720/tUOICNX06JwcELCzkdAB",
+      value: 300,
+      currency: "BRL",
+      page_path: "/obrigado",
+      page_type: "agendamento_confirmado",
+      event_id: eventId,
+    });
+
+    window.dataLayer.push({
+      event: "meta_lead",
+      meta_event_name: "Lead",
+      value: 300,
+      currency: "BRL",
+      page_path: "/obrigado",
+      page_type: "agendamento_confirmado",
+      event_id: eventId,
+    });
+
+    window.dataLayer.push({
+      event: "meta_complete_registration",
+      meta_event_name: "CompleteRegistration",
+      value: 300,
+      currency: "BRL",
+      page_path: "/obrigado",
+      page_type: "agendamento_confirmado",
+      event_id: eventId,
     });
   }, []);
 
