@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
+import { safeDataLayerPush } from "@/lib/trackingGuard";
+
+const DEDUP_STORAGE_KEY = "obrigado_tracking_fired_v1";
 
 const Obrigado = () => {
   const { trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
@@ -17,14 +20,21 @@ const Obrigado = () => {
 
     if (typeof window === "undefined") return;
 
-    window.dataLayer = window.dataLayer || [];
+    // Persist dedup across reloads in same session — evita múltiplas conversões
+    // se o usuário recarregar /obrigado.
+    try {
+      if (window.sessionStorage?.getItem(DEDUP_STORAGE_KEY)) return;
+      window.sessionStorage?.setItem(DEDUP_STORAGE_KEY, "1");
+    } catch {
+      /* sessionStorage indisponível — segue sem persistência */
+    }
 
     const eventId =
-      window.crypto && window.crypto.randomUUID
+      window.crypto && typeof window.crypto.randomUUID === "function"
         ? window.crypto.randomUUID()
         : `agendamento_${Date.now()}`;
 
-    window.dataLayer.push({
+    safeDataLayerPush({
       event: "thank_you_page_view",
       page_path: "/obrigado",
       page_type: "agendamento_confirmado",
@@ -33,7 +43,7 @@ const Obrigado = () => {
       event_id: eventId,
     });
 
-    window.dataLayer.push({
+    safeDataLayerPush({
       event: "google_ads_conversion",
       send_to: "AW-436492720/tUOICNX06JwcELCzkdAB",
       value: 300,
@@ -43,7 +53,7 @@ const Obrigado = () => {
       event_id: eventId,
     });
 
-    window.dataLayer.push({
+    safeDataLayerPush({
       event: "meta_lead",
       meta_event_name: "Lead",
       value: 300,
@@ -53,7 +63,7 @@ const Obrigado = () => {
       event_id: eventId,
     });
 
-    window.dataLayer.push({
+    safeDataLayerPush({
       event: "meta_complete_registration",
       meta_event_name: "CompleteRegistration",
       value: 300,
