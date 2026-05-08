@@ -608,13 +608,13 @@ const Agendamento = () => {
                     <Star key={i} className="h-5 w-5 fill-accent text-accent" />
                   ))}
                   <span className="ml-2 text-sm font-semibold text-foreground">5.0/5</span>
-                  <span className="text-xs text-muted-foreground">(200+ avaliações)</span>
+                  <span className="text-xs text-muted-foreground">(100+ avaliações)</span>
                 </div>
 
                 <img
                   src={drJulianoHero}
                   alt="Dr. Juliano Machado, oftalmologista"
-                  className="mb-4 h-48 w-full rounded-lg object-cover"
+                  className="mb-4 h-64 w-full rounded-lg object-cover object-top"
                   loading="lazy"
                 />
 
