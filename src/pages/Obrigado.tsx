@@ -1,77 +1,105 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { CheckCircle, MessageCircle, MapPin, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
-import { safeDataLayerPush } from "@/lib/trackingGuard";
 
 const DEDUP_STORAGE_KEY = "obrigado_tracking_fired_v1";
 
 const Obrigado = () => {
   const { trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
-  const trackingFiredRef = useRef(false);
 
   useEffect(() => {
-    if (trackingFiredRef.current) return;
-    trackingFiredRef.current = true;
+    const fireObrigadoTracking = () => {
+      if (typeof window === "undefined") return;
 
-    if (typeof window === "undefined") return;
+      try {
+        if (window.sessionStorage?.getItem(DEDUP_STORAGE_KEY)) return;
+      } catch {
+        /* sessionStorage indisponível — segue */
+      }
 
-    // Persist dedup across reloads in same session — evita múltiplas conversões
-    // se o usuário recarregar /obrigado.
-    try {
-      if (window.sessionStorage?.getItem(DEDUP_STORAGE_KEY)) return;
-      window.sessionStorage?.setItem(DEDUP_STORAGE_KEY, "1");
-    } catch {
-      /* sessionStorage indisponível — segue sem persistência */
+      let hasConsent = false;
+      try {
+        const raw = window.localStorage?.getItem("lgpd-consent");
+        const consent = raw ? JSON.parse(raw) : null;
+        hasConsent = !!(consent && (consent.analytics || consent.marketing));
+      } catch {
+        hasConsent = false;
+      }
+
+      // Sem consentimento ainda — não dispara e NÃO marca como fired,
+      // para retentar quando o usuário aceitar cookies.
+      if (!hasConsent) return;
+
+      (window as any).dataLayer = (window as any).dataLayer || [];
+
+      const eventId =
+        window.crypto && typeof window.crypto.randomUUID === "function"
+          ? window.crypto.randomUUID()
+          : `agendamento_${Date.now()}`;
+
+      (window as any).dataLayer.push({
+        event: "thank_you_page_view",
+        page_path: "/obrigado",
+        page_type: "agendamento_confirmado",
+        conversion_value: 300,
+        currency: "BRL",
+        event_id: eventId,
+        meta_event_id: eventId,
+      });
+
+      (window as any).dataLayer.push({
+        event: "google_ads_conversion",
+        send_to: "AW-436492720/tUOICNX06JwcELCzkdAB",
+        value: 300,
+        currency: "BRL",
+        page_path: "/obrigado",
+        page_type: "agendamento_confirmado",
+        event_id: eventId,
+        meta_event_id: eventId,
+      });
+
+      (window as any).dataLayer.push({
+        event: "meta_lead",
+        meta_event_name: "Lead",
+        value: 300,
+        currency: "BRL",
+        page_path: "/obrigado",
+        page_type: "agendamento_confirmado",
+        event_id: eventId,
+        meta_event_id: eventId,
+      });
+
+      (window as any).dataLayer.push({
+        event: "meta_complete_registration",
+        meta_event_name: "CompleteRegistration",
+        value: 300,
+        currency: "BRL",
+        page_path: "/obrigado",
+        page_type: "agendamento_confirmado",
+        event_id: eventId,
+        meta_event_id: eventId,
+      });
+
+      try {
+        window.sessionStorage?.setItem(DEDUP_STORAGE_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+    };
+
+    fireObrigadoTracking();
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("lgpd-consent-changed", fireObrigadoTracking);
+      return () => {
+        window.removeEventListener("lgpd-consent-changed", fireObrigadoTracking);
+      };
     }
-
-    const eventId =
-      window.crypto && typeof window.crypto.randomUUID === "function"
-        ? window.crypto.randomUUID()
-        : `agendamento_${Date.now()}`;
-
-    safeDataLayerPush({
-      event: "thank_you_page_view",
-      page_path: "/obrigado",
-      page_type: "agendamento_confirmado",
-      conversion_value: 300,
-      currency: "BRL",
-      event_id: eventId,
-    });
-
-    safeDataLayerPush({
-      event: "google_ads_conversion",
-      send_to: "AW-436492720/tUOICNX06JwcELCzkdAB",
-      value: 300,
-      currency: "BRL",
-      page_path: "/obrigado",
-      page_type: "agendamento_confirmado",
-      event_id: eventId,
-    });
-
-    safeDataLayerPush({
-      event: "meta_lead",
-      meta_event_name: "Lead",
-      value: 300,
-      currency: "BRL",
-      page_path: "/obrigado",
-      page_type: "agendamento_confirmado",
-      event_id: eventId,
-    });
-
-    safeDataLayerPush({
-      event: "meta_complete_registration",
-      meta_event_name: "CompleteRegistration",
-      value: 300,
-      currency: "BRL",
-      page_path: "/obrigado",
-      page_type: "agendamento_confirmado",
-      event_id: eventId,
-    });
   }, []);
 
   return (
