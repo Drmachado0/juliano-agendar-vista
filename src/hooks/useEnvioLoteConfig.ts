@@ -203,6 +203,9 @@ export function useEnvioLoteConfig() {
     resetarConfiguracoes,
 
     // Constantes exportadas
+    // Limites dinâmicos (DB) + fallbacks
+    limiteSessao,
+    limiteDiario,
     LIMITE_SESSAO,
     LIMITE_DIARIO,
     CONFIG_PADRAO,
