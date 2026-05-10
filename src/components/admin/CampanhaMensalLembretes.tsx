@@ -141,6 +141,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
   const [campanha, setCampanha] = useState<CampanhaRow | null>(null);
   const [remessas, setRemessas] = useState<RemessaRow[]>([]);
   const [pacientes, setPacientes] = useState<PacienteCampanhaRow[]>([]);
+  const [janelas, setJanelas] = useState<JanelaAtendimento[]>([]);
 
   // Para gerar plano (antes de criar)
   const [previewElegiveis, setPreviewElegiveis] = useState<
