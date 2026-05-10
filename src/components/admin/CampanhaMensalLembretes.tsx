@@ -90,7 +90,7 @@ function mascararNome(nome: string): string {
   if (partes.length === 1) return partes[0] || "";
   return `${partes[0]} ${partes.slice(1).map((p) => `${p[0]}.`).join(" ")}`;
 }
-function dividirEmRemessas(total: number, n = NUMERO_REMESSAS): number[] {
+function dividirEmRemessas(total: number, n = NUMERO_REMESSAS_MAX): number[] {
   const base = Math.floor(total / n);
   const resto = total % n;
   return Array.from({ length: n }, (_, i) => base + (i < resto ? 1 : 0));
