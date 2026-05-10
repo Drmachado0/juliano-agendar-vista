@@ -1172,6 +1172,50 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
               </div>
             </div>
 
+            {/* Resumo por janela de atendimento */}
+            {janelas.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold flex items-center gap-2">
+                  <CalendarRange className="h-4 w-4 text-primary" />
+                  Janelas de atendimento
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {janelas.map((j) => {
+                    const r = remessas.find((rm) => rm.numero_remessa === j.numero_janela);
+                    const ps = r ? pacientesDaRemessa(r.id) : [];
+                    const pendentes = ps.filter((p) => p.status === "pendente").length;
+                    const enviados = ps.filter((p) => p.status === "enviado").length;
+                    const falhas = ps.filter((p) => p.status === "falha").length;
+                    const ignorados = ps.filter((p) => p.status === "ignorado").length;
+                    return (
+                      <div key={j.id} className="p-3 rounded-lg border bg-card text-sm space-y-1">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium">Janela {j.numero_janela}</p>
+                          {r && (
+                            <Badge variant="outline" className={cn("text-xs", corStatus(r.status))}>
+                              {STATUS_LABEL[r.status]}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Atendimento: {formatarData(j.data_inicio)} → {formatarData(j.data_fim)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Envio sugerido: <strong>{formatarData(j.data_envio_sugerida)}</strong>
+                        </p>
+                        <div className="grid grid-cols-4 gap-1 text-xs pt-1">
+                          <span>Pend: {pendentes}</span>
+                          <span className="text-emerald-600">Env: {enviados}</span>
+                          <span className="text-red-600">Falh: {falhas}</span>
+                          <span className="text-muted-foreground">Ign: {ignorados}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Plano de remessas */}
             <div className="space-y-2" data-testid="lembretes-plano-remessas">
               {[...remessas]
