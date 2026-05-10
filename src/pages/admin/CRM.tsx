@@ -608,7 +608,7 @@ const AdminCRM = () => {
           </div>
         ) : (
           <div className="flex gap-4 overflow-x-auto pb-6 kanban-scroll">
-            {columns.map((column) => (
+            {visibleColumns.map((column) => (
               <div
                 key={column.status}
                 onDragEnter={() => handleDragEnter(column.status)}
