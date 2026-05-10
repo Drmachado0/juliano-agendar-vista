@@ -326,7 +326,11 @@ serve(async (req) => {
     if (req.method === "GET" && path === "/status-campanha") {
       const { data, error } = await admin.from("vw_status_campanha_atual").select("*").maybeSingle();
       if (error) return json({ error: error.message }, 500);
-      return json({ data, request_id });
+      const { data: janelas, error: errJ } = await admin
+        .from("vw_status_janelas_atual")
+        .select("*");
+      if (errJ) return json({ error: errJ.message }, 500);
+      return json({ data, janelas: janelas ?? [], request_id });
     }
 
     // ----- PAUSAR -----
@@ -476,6 +480,67 @@ serve(async (req) => {
         Math.min(limite, pre.cfg.limite_sessao),
       );
       return json(result);
+    }
+
+    // ----- EXECUTAR JANELA (todas remessas vinculadas a uma janela) -----
+    if (req.method === "POST" && path === "/executar-janela") {
+      const body = await req.json().catch(() => ({}));
+      const janela_atendimento_id = body?.janela_atendimento_id;
+      const limite = Math.max(1, Math.min(parseInt(body?.limite ?? "10", 10) || 10, 100));
+
+      if (!janela_atendimento_id) {
+        return json({ error: "janela_atendimento_id obrigatorio" }, 400);
+      }
+
+      const pre = await preCheck(admin);
+      if (!pre.ok) {
+        await logEnvio(admin, {
+          status: "bloqueado",
+          motivo: pre.motivo,
+          request_id,
+          payload: { janela_atendimento_id },
+        });
+        return json(
+          {
+            request_id,
+            ok: false,
+            bloqueado: true,
+            motivo_bloqueio: pre.motivo,
+            processados: 0,
+            enviados: 0,
+            falhas: 0,
+            ignorados: 0,
+          },
+          pre.status ?? 423,
+        );
+      }
+
+      const { data: remessas, error: errR } = await admin
+        .from("lembretes_campanha_remessas")
+        .select("id")
+        .eq("janela_atendimento_id", janela_atendimento_id);
+      if (errR) return json({ error: errR.message }, 500);
+
+      const remessaIds = (remessas as any[] | null)?.map((r) => r.id) ?? [];
+      if (remessaIds.length === 0) {
+        return json({ request_id, ok: true, mensagem: "nenhuma remessa para esta janela" });
+      }
+
+      const { data: pacientes } = await admin
+        .from("lembretes_campanha_pacientes")
+        .select("*")
+        .in("remessa_id", remessaIds)
+        .eq("status", "pendente")
+        .limit(limite);
+
+      const result = await processarPacientes(
+        admin,
+        (pacientes as any[]) || [],
+        pre.cfg,
+        request_id,
+        Math.min(limite, pre.cfg.limite_sessao),
+      );
+      return json({ ...result, janela_atendimento_id });
     }
 
     return json({ error: "not_found", path }, 404);
