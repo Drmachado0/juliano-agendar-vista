@@ -481,10 +481,21 @@ const AdminCRM = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <DensityToggle />
             <EvolutionStatusBadge />
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/60">
-              <Wifi className="h-3 w-3 text-emerald-500" />
-              <span className="tabular-nums">{ultimaAtualizacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
+            <Badge
+              variant="outline"
+              className={cn(
+                "gap-1.5 font-medium",
+                liveStatus === 'SUBSCRIBED' && "border-emerald-500/40 text-emerald-400",
+                liveStatus === 'CONNECTING' && "border-amber-500/40 text-amber-400 animate-pulse",
+                (liveStatus === 'CLOSED' || liveStatus === 'CHANNEL_ERROR' || liveStatus === 'TIMED_OUT') && "border-rose-500/40 text-rose-400"
+              )}
+              title={`Realtime: ${liveStatus}`}
+            >
+              <span className="size-2 rounded-full bg-current" />
+              {liveStatus === 'SUBSCRIBED' ? 'ao vivo' :
+               liveStatus === 'CONNECTING' ? 'conectando…' :
+               liveStatus === 'CLOSED' ? 'desconectado' : 'erro'}
+            </Badge>
             <Button
               variant="outline"
               size="sm"
