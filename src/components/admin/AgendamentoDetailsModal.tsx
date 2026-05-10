@@ -111,6 +111,22 @@ const AgendamentoDetailsModal = ({ agendamento, isOpen, onClose, onUpdate }: Age
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  const [tab, setTab] = useState<ModalTab>(() => {
+    try {
+      const v = sessionStorage.getItem(TAB_STORAGE_KEY);
+      if (v === "consulta" || v === "historico" || v === "mensagens" || v === "auditoria") return v;
+    } catch {/* ignore */}
+    return "resumo";
+  });
+  const [mensagens, setMensagens] = useState<MensagemRow[]>([]);
+  const [loadingMensagens, setLoadingMensagens] = useState(false);
+  const [auditoria, setAuditoria] = useState<CrmAuditEntry[]>([]);
+  const [loadingAuditoria, setLoadingAuditoria] = useState(false);
+
+  useEffect(() => {
+    try { sessionStorage.setItem(TAB_STORAGE_KEY, tab); } catch {/* ignore */}
+  }, [tab]);
+
   // Update local state when agendamento changes
   useEffect(() => {
     if (agendamento) {
@@ -133,6 +149,42 @@ const AgendamentoDetailsModal = ({ agendamento, isOpen, onClose, onUpdate }: Age
       fetchDecryptedObservacoes();
     }
   }, [agendamento]);
+
+  // Fetch mensagens when tab "mensagens" is opened
+  useEffect(() => {
+    if (!agendamento || !isOpen || tab !== "mensagens") return;
+    let cancel = false;
+    setLoadingMensagens(true);
+    (async () => {
+      const { data, error } = await supabase
+        .from("mensagens_whatsapp")
+        .select("id, direcao, conteudo, created_at, status_envio")
+        .eq("agendamento_id", agendamento.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (!cancel) {
+        if (!error && data) setMensagens(data as MensagemRow[]);
+        setLoadingMensagens(false);
+      }
+    })();
+    return () => { cancel = true; };
+  }, [agendamento, isOpen, tab]);
+
+  // Fetch auditoria when tab "auditoria" is opened
+  useEffect(() => {
+    if (!agendamento || !isOpen || tab !== "auditoria") return;
+    let cancel = false;
+    setLoadingAuditoria(true);
+    (async () => {
+      const { data } = await listarAuditCrm({ agendamentoId: agendamento.id, limit: 50 });
+      if (!cancel) {
+        setAuditoria(data);
+        setLoadingAuditoria(false);
+      }
+    })();
+    return () => { cancel = true; };
+  }, [agendamento, isOpen, tab]);
+
 
   if (!agendamento) return null;
 
