@@ -554,6 +554,7 @@ const Lembretes = () => {
 
       setEstadoEnvio('enviando');
 
+      const tInicio = Date.now();
       try {
         let resultado;
         
@@ -564,6 +565,8 @@ const Lembretes = () => {
           resultado = await enviarMensagemWhatsApp(lembrete.telefone, mensagem);
         }
         
+        const latencia = Date.now() - tInicio;
+
         if (resultado.success) {
           sucessos++;
           await marcarLembreteEnviado(lembrete.id);
@@ -578,6 +581,18 @@ const Lembretes = () => {
             tipo_mensagem: "lembrete",
             status_envio: "enviado",
           });
+
+          // Log persistente
+          registrarLogEnvioLembrete({
+            agente: "manual",
+            status: "sucesso",
+            telefone: lembrete.telefone,
+            nome: lembrete.nome,
+            mensagem_renderizada: mensagem,
+            lembrete_id: lembrete.id,
+            latencia_ms: latencia,
+            payload: { delay, com_imagem: !!imagemBase64 },
+          });
           
           setLogsEnvio(prev => [{
             timestamp: new Date(),
@@ -589,6 +604,17 @@ const Lembretes = () => {
           }, ...prev]);
         } else {
           falhas++;
+          registrarLogEnvioLembrete({
+            agente: "manual",
+            status: "falha",
+            motivo: resultado.error || "Erro desconhecido",
+            telefone: lembrete.telefone,
+            nome: lembrete.nome,
+            mensagem_renderizada: mensagem,
+            lembrete_id: lembrete.id,
+            latencia_ms: latencia,
+            payload: { delay, com_imagem: !!imagemBase64 },
+          });
           setLogsEnvio(prev => [{
             timestamp: new Date(),
             telefone: lembrete.telefone,
@@ -601,6 +627,17 @@ const Lembretes = () => {
         }
       } catch (error: any) {
         falhas++;
+        registrarLogEnvioLembrete({
+          agente: "manual",
+          status: "falha",
+          motivo: error?.message || "exception",
+          telefone: lembrete.telefone,
+          nome: lembrete.nome,
+          mensagem_renderizada: mensagem,
+          lembrete_id: lembrete.id,
+          latencia_ms: Date.now() - tInicio,
+          payload: { delay, com_imagem: !!imagemBase64, exception: true },
+        });
         setLogsEnvio(prev => [{
           timestamp: new Date(),
           telefone: lembrete.telefone,
