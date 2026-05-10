@@ -154,7 +154,12 @@ const Lembretes = () => {
     gerarDelayAleatorio,
     gerarPausaAleatoria,
     resetarConfiguracoes,
+    limiteSessao: LIMITE_SESSAO,
+    limiteDiario: LIMITE_DIARIO,
   } = useEnvioLoteConfig();
+
+  // Configuração global de envio (status_global, janelas, blackout)
+  const { podeEnviarAgora } = useConfiguracoesEnvio();
 
   const [configAvancadaAberta, setConfigAvancadaAberta] = useState(false);
 
