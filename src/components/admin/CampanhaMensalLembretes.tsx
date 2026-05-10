@@ -1432,7 +1432,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                 {formatarMesAno(anoRef, mesRef)}
               </p>
               <p>
-                <strong>Remessa:</strong> {remessaSelecionadaObj.numero_remessa} de {NUMERO_REMESSAS}
+                <strong>Remessa:</strong> {remessaSelecionadaObj.numero_remessa} de {remessas.length}
               </p>
               <p>
                 <strong>Data programada:</strong> {formatarData(remessaSelecionadaObj.data_programada)}
