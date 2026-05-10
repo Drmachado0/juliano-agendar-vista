@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { LembreteAnual } from "./lembretesAnuais";
+import { listarJanelasMes } from "./janelasAtendimento";
 
 export type StatusRemessa =
   | "agendada"
@@ -67,7 +68,7 @@ export interface PacienteCampanhaRow {
   ultimo_envio_em: string | null;
 }
 
-const DIAS_REMESSAS = [1, 2, 15, 16];
+// DIAS_REMESSAS removido — agora as remessas são derivadas de janelas_atendimento_lembretes
 
 export async function buscarCampanha(ano: number, mes1a12: number) {
   const { data, error } = await supabase
@@ -110,12 +111,13 @@ interface CriarPlanoArgs {
   ano: number;
   mes1a12: number; // 1..12
   pacientes: Array<LembreteAnual & { inconsistente_data?: boolean }>;
-  quantidades?: number[]; // override modo manual; senão divisão balanceada
+  quantidades?: number[]; // override modo manual; senão divisão balanceada (length deve corresponder ao número de janelas)
 }
 
 /**
  * Congela um plano de campanha. Se já existir uma campanha para o mês, lança erro.
- * Use `recriarPlano` para sobrescrever.
+ * Requer pelo menos 1 janela de atendimento cadastrada para o mês.
+ * Cada janela vira UMA remessa (numero_remessa = numero_janela).
  */
 export async function criarPlanoCampanha({ ano, mes1a12, pacientes, quantidades }: CriarPlanoArgs) {
   const existente = await buscarCampanha(ano, mes1a12);
@@ -123,7 +125,30 @@ export async function criarPlanoCampanha({ ano, mes1a12, pacientes, quantidades 
     throw new Error("Já existe uma campanha para este mês. Exclua-a antes de gerar um novo plano.");
   }
 
-  const inconsistencias = pacientes.filter((p) => p.inconsistente_data).length;
+  const janelas = await listarJanelasMes(ano, mes1a12);
+  if (janelas.length === 0) {
+    throw new Error(
+      "Cadastre pelo menos uma janela de atendimento para o mês antes de gerar a campanha.",
+    );
+  }
+
+  // Ordenação canônica dos pacientes (data_proximo_lembrete asc, created_at asc, nome asc)
+  const ordenados = [...pacientes].sort((a, b) => {
+    const dA = a.data_proximo_lembrete || "9999-12-31";
+    const dB = b.data_proximo_lembrete || "9999-12-31";
+    if (dA !== dB) return dA < dB ? -1 : 1;
+    const cA = a.created_at || "";
+    const cB = b.created_at || "";
+    if (cA !== cB) return cA < cB ? -1 : 1;
+    return (a.nome || "").localeCompare(b.nome || "", "pt-BR");
+  });
+
+  const tamanhos =
+    quantidades && quantidades.length === janelas.length
+      ? quantidades
+      : dividirEmRemessas(ordenados.length, janelas.length);
+
+  const inconsistencias = ordenados.filter((p) => p.inconsistente_data).length;
 
   const { data: campanha, error: e1 } = await supabase
     .from("lembretes_campanhas" as any)
@@ -131,7 +156,7 @@ export async function criarPlanoCampanha({ ano, mes1a12, pacientes, quantidades 
       ano_referencia: ano,
       mes_referencia: mes1a12,
       status: "planejada",
-      total_elegivel: pacientes.length,
+      total_elegivel: ordenados.length,
       inconsistencias,
     })
     .select()
@@ -139,21 +164,20 @@ export async function criarPlanoCampanha({ ano, mes1a12, pacientes, quantidades 
   if (e1) throw e1;
 
   const camp = campanha as unknown as CampanhaRow;
-  const tamanhos = quantidades ?? dividirEmRemessas(pacientes.length);
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
 
-  const remessasInsert = DIAS_REMESSAS.map((dia, i) => {
-    const dataProg = new Date(ano, mes1a12 - 1, dia);
+  const remessasInsert = janelas.map((j) => {
+    const dataProg = new Date(j.data_envio_sugerida + "T00:00:00");
     let status: StatusRemessa = "agendada";
-    if (dataProg.getTime() === hoje.getTime()) status = "disponivel";
-    else if (dataProg < hoje) status = "disponivel";
+    if (dataProg <= hoje) status = "disponivel";
     return {
       campanha_id: camp.id,
-      numero_remessa: i + 1,
-      data_programada: dataProg.toISOString().split("T")[0],
+      numero_remessa: j.numero_janela,
+      data_programada: j.data_envio_sugerida,
+      janela_atendimento_id: j.id,
       status,
-      quantidade_planejada: tamanhos[i] || 0,
+      quantidade_planejada: tamanhos[j.numero_janela - 1] || 0,
     };
   });
 
@@ -167,18 +191,18 @@ export async function criarPlanoCampanha({ ano, mes1a12, pacientes, quantidades 
     (a, b) => a.numero_remessa - b.numero_remessa,
   );
 
-  // Distribui pacientes
+  // Distribui pacientes nas janelas (ordem canônica → fatias por tamanho)
   let cursor = 0;
   const pacientesInsert: Array<Partial<PacienteCampanhaRow>> = [];
-  for (let i = 0; i < remessasRows.length; i++) {
-    const qtd = tamanhos[i] || 0;
-    const slice = pacientes.slice(cursor, cursor + qtd);
+  for (const r of remessasRows) {
+    const qtd = tamanhos[r.numero_remessa - 1] || 0;
+    const slice = ordenados.slice(cursor, cursor + qtd);
     cursor += qtd;
     for (const p of slice) {
       pacientesInsert.push({
         campanha_id: camp.id,
-        remessa_id: remessasRows[i].id,
-        numero_remessa: i + 1,
+        remessa_id: r.id,
+        numero_remessa: r.numero_remessa,
         lembrete_id: p.id,
         nome: p.nome,
         telefone: p.telefone,

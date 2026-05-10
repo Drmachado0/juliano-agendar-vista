@@ -60,8 +60,13 @@ import {
   type StatusPaciente,
 } from "@/services/campanhasLembretes";
 
-const NUMERO_REMESSAS = 4;
-const DIAS_REMESSAS = [1, 2, 15, 16] as const;
+import {
+  listarJanelasMes,
+  type JanelaAtendimento,
+} from "@/services/janelasAtendimento";
+import JanelasAtendimentoCard from "@/components/admin/JanelasAtendimentoCard";
+
+const NUMERO_REMESSAS_MAX = 2;
 
 const MESES_PT = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -85,7 +90,7 @@ function mascararNome(nome: string): string {
   if (partes.length === 1) return partes[0] || "";
   return `${partes[0]} ${partes.slice(1).map((p) => `${p[0]}.`).join(" ")}`;
 }
-function dividirEmRemessas(total: number, n = NUMERO_REMESSAS): number[] {
+function dividirEmRemessas(total: number, n = NUMERO_REMESSAS_MAX): number[] {
   const base = Math.floor(total / n);
   const resto = total % n;
   return Array.from({ length: n }, (_, i) => base + (i < resto ? 1 : 0));
@@ -136,6 +141,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
   const [campanha, setCampanha] = useState<CampanhaRow | null>(null);
   const [remessas, setRemessas] = useState<RemessaRow[]>([]);
   const [pacientes, setPacientes] = useState<PacienteCampanhaRow[]>([]);
+  const [janelas, setJanelas] = useState<JanelaAtendimento[]>([]);
 
   // Para gerar plano (antes de criar)
   const [previewElegiveis, setPreviewElegiveis] = useState<
@@ -206,7 +212,11 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
     async (ano: number, mes0: number) => {
       setCarregando(true);
       try {
-        const camp = await buscarCampanha(ano, mes0 + 1);
+        const [camp, js] = await Promise.all([
+          buscarCampanha(ano, mes0 + 1),
+          listarJanelasMes(ano, mes0 + 1).catch(() => []),
+        ]);
+        setJanelas(js);
         if (camp) {
           const { remessas: rs, pacientes: ps } = await buscarRemessasComPacientes(camp.id);
           setCampanha(camp);
@@ -422,16 +432,16 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
 
   // ====== Selecionar remessa de hoje ======
   const selecionarRemessaHoje = () => {
-    const dia = new Date().getDate();
-    const idx = DIAS_REMESSAS.indexOf(dia as any);
-    if (idx === -1) {
+    const hojeIso = new Date().toISOString().slice(0, 10);
+    const r = remessas.find((x) => x.data_programada === hojeIso);
+    if (!r) {
       toast({
         title: "Sem remessa hoje",
         description: "Hoje não há remessa programada. Você pode selecionar manualmente.",
       });
       return;
     }
-    setRemessaSelecionada(idx + 1);
+    setRemessaSelecionada(r.numero_remessa);
   };
 
   // ====== Iniciar envio (regular) ======
@@ -739,7 +749,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
               Campanha mensal de lembretes
             </CardTitle>
             <CardDescription>
-              Envio parcelado em 4 remessas (dias {DIAS_REMESSAS.join(", ")}) — plano persistido e auditável
+              Envio dividido conforme as janelas de atendimento cadastradas — plano persistido e auditável
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -919,7 +929,8 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                 {/* Cartões por remessa */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                   {qtdManual.map((q, i) => {
-                    const dataProg = new Date(anoRef, mesRef, DIAS_REMESSAS[i]);
+                    const j = janelas[i];
+                    const dataProg = j ? new Date(j.data_envio_sugerida + "T00:00:00") : new Date(anoRef, mesRef, 1);
                     const restanteAtual = previewElegiveis.length - totalManual;
                     const maxPermitido = q + Math.max(restanteAtual, 0);
                     return (
@@ -1425,7 +1436,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                 {formatarMesAno(anoRef, mesRef)}
               </p>
               <p>
-                <strong>Remessa:</strong> {remessaSelecionadaObj.numero_remessa} de {NUMERO_REMESSAS}
+                <strong>Remessa:</strong> {remessaSelecionadaObj.numero_remessa} de {remessas.length}
               </p>
               <p>
                 <strong>Data programada:</strong> {formatarData(remessaSelecionadaObj.data_programada)}

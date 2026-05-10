@@ -924,6 +924,45 @@ export type Database = {
         }
         Relationships: []
       }
+      janelas_atendimento_lembretes: {
+        Row: {
+          ano_referencia: number
+          created_at: string
+          data_envio_sugerida: string
+          data_fim: string
+          data_inicio: string
+          id: string
+          mes_referencia: number
+          numero_janela: number
+          observacao: string | null
+          updated_at: string
+        }
+        Insert: {
+          ano_referencia: number
+          created_at?: string
+          data_envio_sugerida: string
+          data_fim: string
+          data_inicio: string
+          id?: string
+          mes_referencia: number
+          numero_janela: number
+          observacao?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ano_referencia?: number
+          created_at?: string
+          data_envio_sugerida?: string
+          data_fim?: string
+          data_inicio?: string
+          id?: string
+          mes_referencia?: number
+          numero_janela?: number
+          observacao?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lembretes_anuais: {
         Row: {
           created_at: string | null
@@ -1045,6 +1084,13 @@ export type Database = {
             referencedRelation: "lembretes_campanha_remessas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lembretes_campanha_pacientes_remessa_id_fkey"
+            columns: ["remessa_id"]
+            isOneToOne: false
+            referencedRelation: "vw_status_janelas_atual"
+            referencedColumns: ["remessa_id"]
+          },
         ]
       }
       lembretes_campanha_remessas: {
@@ -1058,6 +1104,7 @@ export type Database = {
           id: string
           ignorados: number
           inicio_em: string | null
+          janela_atendimento_id: string | null
           motivo_bloqueio: string | null
           numero_remessa: number
           processados: number
@@ -1075,6 +1122,7 @@ export type Database = {
           id?: string
           ignorados?: number
           inicio_em?: string | null
+          janela_atendimento_id?: string | null
           motivo_bloqueio?: string | null
           numero_remessa: number
           processados?: number
@@ -1092,6 +1140,7 @@ export type Database = {
           id?: string
           ignorados?: number
           inicio_em?: string | null
+          janela_atendimento_id?: string | null
           motivo_bloqueio?: string | null
           numero_remessa?: number
           processados?: number
@@ -1106,6 +1155,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "lembretes_campanhas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lembretes_campanha_remessas_janela_atendimento_id_fkey"
+            columns: ["janela_atendimento_id"]
+            isOneToOne: false
+            referencedRelation: "janelas_atendimento_lembretes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lembretes_campanha_remessas_janela_atendimento_id_fkey"
+            columns: ["janela_atendimento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_status_janelas_atual"
+            referencedColumns: ["janela_id"]
           },
         ]
       }
@@ -1860,6 +1923,26 @@ export type Database = {
           total_falhas: number | null
           total_ignorados: number | null
           ultimo_envio_at: string | null
+        }
+        Relationships: []
+      }
+      vw_status_janelas_atual: {
+        Row: {
+          ano_referencia: number | null
+          data_envio_sugerida: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          data_programada: string | null
+          janela_id: string | null
+          mes_referencia: number | null
+          numero_janela: number | null
+          observacao: string | null
+          pacientes_enviados: number | null
+          pacientes_falhas: number | null
+          pacientes_ignorados: number | null
+          pacientes_pendentes: number | null
+          remessa_id: string | null
+          remessa_status: string | null
         }
         Relationships: []
       }
