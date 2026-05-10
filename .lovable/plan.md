@@ -175,7 +175,7 @@ Tudo o que se segue usa os nomes reais.
 | POST | `/executar-remessa` | `{ campanha_id, numero_remessa, limite? }` → processa pacientes daquela remessa |
 
 ### Segurança
-- Header obrigatório: `x-hermes-secret` (mantido por compat com o agente n8n já configurado) **ou** `x-runner-secret` — comparar com `LEMBRETES_RUNNER_SECRET` via `crypto.timingSafeEqual`.
+- Header obrigatório: `x-lembretes-secret` — comparado com `LEMBRETES_RUNNER_SECRET` via `crypto.timingSafeEqual`.
 - Sem secret ou inválido → 401.
 - CORS: liberado só para JSON (sem credenciais; é server-to-server).
 
@@ -235,7 +235,7 @@ Após Fase 4 concluída, atualizar `mem://index.md`:
 
 ```text
 ┌────────────────────────────────────────────────────────────┐
-│ Agente n8n  ──(x-hermes-secret)──>  lembretes-runner        │
+│ Agente n8n  ──(x-lembretes-secret)──>  lembretes-runner    │
 │                                          │                  │
 │                                          ▼                  │
 │                              [configuracoes_envio]          │

@@ -1,7 +1,8 @@
 // Edge Function: lembretes-runner
 // API segura para o agente externo (n8n) operar campanhas de lembretes anuais.
-// Auth: header x-hermes-secret (compat) ou x-runner-secret comparado a
-//   LEMBRETES_RUNNER_SECRET (preferido) ou HERMES_WEBHOOK_SECRET (fallback).
+// Auth: header x-lembretes-secret comparado a LEMBRETES_RUNNER_SECRET via timingSafeEqual.
+// NOTA HISTÓRICA: o antigo bot copiloto "Hermes" foi REMOVIDO em 2026-04-29 e
+// NÃO deve ser recriado. Esta função é exclusiva do módulo de Lembretes Anuais.
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
@@ -13,7 +14,7 @@ import {
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-hermes-secret, x-runner-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-lembretes-secret",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
@@ -31,14 +32,8 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 function checkSecret(req: Request): boolean {
-  const provided =
-    req.headers.get("x-hermes-secret") ||
-    req.headers.get("x-runner-secret") ||
-    "";
-  const expected =
-    Deno.env.get("LEMBRETES_RUNNER_SECRET") ||
-    Deno.env.get("HERMES_WEBHOOK_SECRET") ||
-    "";
+  const provided = req.headers.get("x-lembretes-secret") || "";
+  const expected = Deno.env.get("LEMBRETES_RUNNER_SECRET") || "";
   if (!provided || !expected) return false;
   return timingSafeEqual(provided, expected);
 }
