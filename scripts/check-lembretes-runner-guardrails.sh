@@ -35,7 +35,7 @@ if ! command -v rg >/dev/null 2>&1; then
 fi
 
 echo "🔎 Auditando runtime code para referências proibidas..."
-HITS=$(rg -n -E "$PATTERNS" "${ROOTS[@]}" "${EXCLUDES[@]}" || true)
+HITS=$(rg -n -e "$PATTERNS" "${ROOTS[@]}" "${EXCLUDES[@]}" || true)
 
 if [[ -n "$HITS" ]]; then
   echo "❌ Guardrail falhou. Referências proibidas encontradas em runtime code:"
