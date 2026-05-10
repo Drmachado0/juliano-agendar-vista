@@ -484,10 +484,29 @@ const Lembretes = () => {
       }
     }
 
+    // Pré-check global (status_global, janela, blackout) — fail-safe pausado
+    const pode = podeEnviarAgora();
+    if (!pode.ok) {
+      toast({ title: "Envio bloqueado", description: pode.motivo, variant: "destructive" });
+      await registrarLogEnvioLembrete({
+        agente: "manual",
+        status: "bloqueado",
+        motivo: pode.motivo,
+        payload: { origem: "Lembretes/enviarEmLote", total: lembretesParaEnviar.length },
+      });
+      return;
+    }
+
     const validacao = validarLimitesEnvio();
     if (!validacao.permitido) {
       toast({ title: "Bloqueado", description: validacao.motivo, variant: "destructive" });
       setEstadoEnvio('interrompido_limite');
+      await registrarLogEnvioLembrete({
+        agente: "manual",
+        status: "bloqueado",
+        motivo: validacao.motivo,
+        payload: { origem: "Lembretes/enviarEmLote", total: lembretesParaEnviar.length },
+      });
       return;
     }
 
