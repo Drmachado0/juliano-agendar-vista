@@ -326,7 +326,11 @@ serve(async (req) => {
     if (req.method === "GET" && path === "/status-campanha") {
       const { data, error } = await admin.from("vw_status_campanha_atual").select("*").maybeSingle();
       if (error) return json({ error: error.message }, 500);
-      return json({ data, request_id });
+      const { data: janelas, error: errJ } = await admin
+        .from("vw_status_janelas_atual")
+        .select("*");
+      if (errJ) return json({ error: errJ.message }, 500);
+      return json({ data, janelas: janelas ?? [], request_id });
     }
 
     // ----- PAUSAR -----
