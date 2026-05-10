@@ -32,14 +32,8 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 function checkSecret(req: Request): boolean {
-  const provided =
-    req.headers.get("x-hermes-secret") ||
-    req.headers.get("x-runner-secret") ||
-    "";
-  const expected =
-    Deno.env.get("LEMBRETES_RUNNER_SECRET") ||
-    Deno.env.get("HERMES_WEBHOOK_SECRET") ||
-    "";
+  const provided = req.headers.get("x-lembretes-secret") || "";
+  const expected = Deno.env.get("LEMBRETES_RUNNER_SECRET") || "";
   if (!provided || !expected) return false;
   return timingSafeEqual(provided, expected);
 }
