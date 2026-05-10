@@ -41,13 +41,18 @@ export async function registrarLogEnvioLembrete(
   payload: RegistrarLogPayload
 ): Promise<{ id: string | null; error: string | null }> {
   try {
+    // Remove chaves null/undefined para casar com TablesInsert (campos opcionais não-nuláveis).
+    const clean: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(payload)) {
+      if (v !== null && v !== undefined) clean[k] = v;
+    }
     const { data, error } = await supabase
       .from("logs_envio_lembrete")
-      .insert(payload)
+      .insert(clean as never)
       .select("id")
       .single();
     if (error) throw error;
-    return { id: data?.id ?? null, error: null };
+    return { id: (data as { id: string } | null)?.id ?? null, error: null };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erro ao registrar log";
     console.error("[logsEnvioLembrete] erro ao registrar:", e);
