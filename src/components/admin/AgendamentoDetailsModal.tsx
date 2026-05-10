@@ -416,6 +416,93 @@ const AgendamentoDetailsModal = ({ agendamento, isOpen, onClose, onUpdate }: Age
             </div>
           </div>
 
+          {/* Origem & Tracking */}
+          {(() => {
+            const a = agendamento as any;
+            const trackingFields: Array<[string, string | null | undefined]> = [
+              ['Origem', a.origem],
+              ['utm_source', a.utm_source],
+              ['utm_medium', a.utm_medium],
+              ['utm_campaign', a.utm_campaign],
+              ['utm_content', a.utm_content],
+              ['utm_term', a.utm_term],
+              ['fbclid', a.fbclid],
+              ['gclid', a.gclid],
+              ['gbraid', a.gbraid],
+              ['wbraid', a.wbraid],
+              ['referrer', a.referrer],
+            ];
+            const hasAny = trackingFields.some(([, v]) => !!v) || !!a.landing_page;
+            if (!hasAny) return null;
+            return (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-foreground">Origem & Tracking</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 bg-muted/50 p-4 rounded-lg text-sm">
+                    {trackingFields.map(([label, value]) =>
+                      value ? (
+                        <div key={label} className="break-words">
+                          <span className="text-muted-foreground">{label}: </span>
+                          <span className="font-mono text-xs">{value}</span>
+                        </div>
+                      ) : null
+                    )}
+                    {a.landing_page && (
+                      <div className="md:col-span-2 break-words">
+                        <span className="text-muted-foreground">landing_page: </span>
+                        <a
+                          href={a.landing_page}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-mono text-xs text-primary hover:underline"
+                        >
+                          {a.landing_page}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+
+          {/* Última conversa (vinda da view vw_crm_kanban quando disponível) */}
+          {(() => {
+            const a = agendamento as any;
+            if (!a.ultima_msg) return null;
+            const dt = a.ultima_msg_at ? new Date(a.ultima_msg_at) : null;
+            const diffMs = dt ? Date.now() - dt.getTime() : 0;
+            const min = Math.floor(diffMs / 60000);
+            const rel =
+              !dt ? '' :
+              min < 1 ? 'agora há pouco' :
+              min < 60 ? `há ${min} min` :
+              min < 60 * 24 ? `há ${Math.floor(min / 60)} h` :
+              `há ${Math.floor(min / (60 * 24))} d`;
+            const preview = String(a.ultima_msg).slice(0, 120);
+            return (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-foreground">Última conversa</h3>
+                  <div className="bg-muted/50 p-4 rounded-lg text-sm space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Badge variant="outline" className="font-mono">
+                        {a.ultima_msg_direcao === 'IN' ? '← recebida' : '→ enviada'}
+                      </Badge>
+                      <span>{rel}</span>
+                    </div>
+                    <p className="text-foreground">
+                      {preview}
+                      {a.ultima_msg.length > 120 ? '…' : ''}
+                    </p>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+
           <Separator />
 
           {/* Preferences */}
