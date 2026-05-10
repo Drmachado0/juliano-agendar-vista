@@ -161,6 +161,13 @@ const AdminCRM = () => {
   const isFetchingRef = useRef(false);
   const columnsManager = useKanbanColumnsConfig();
   const visibleColumns = columnsManager.orderedVisibleColumns;
+  const [mostrarVazias, setMostrarVazias] = useState<boolean>(() => {
+    try { return localStorage.getItem("crm:kanban:show-empty:v1") === "1"; } catch { return false; }
+  });
+  const [expandidasManualmente, setExpandidasManualmente] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    try { localStorage.setItem("crm:kanban:show-empty:v1", mostrarVazias ? "1" : "0"); } catch { /* ignore */ }
+  }, [mostrarVazias]);
 
   const [filters, setFilters] = useState<CrmFilters>(() => loadFilters());
   const [tab, setTab] = useState<"kanban" | "contatos">(() => {
