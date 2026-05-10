@@ -68,7 +68,7 @@ export interface PacienteCampanhaRow {
   ultimo_envio_em: string | null;
 }
 
-const DIAS_REMESSAS = [1, 2, 15, 16];
+// DIAS_REMESSAS removido — agora as remessas são derivadas de janelas_atendimento_lembretes
 
 export async function buscarCampanha(ano: number, mes1a12: number) {
   const { data, error } = await supabase
