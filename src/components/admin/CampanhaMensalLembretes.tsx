@@ -887,7 +887,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-xs text-muted-foreground">
                     Distribua os <strong>{previewElegiveis.length}</strong> pacientes elegíveis
-                    entre as 4 remessas.
+                    entre as <strong>{Math.max(janelas.length, 1)}</strong> janela(s).
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     <Button
@@ -896,7 +896,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                       variant="outline"
                       className="h-7 text-xs"
                       onClick={() => {
-                        setQtdManual(dividirEmRemessas(previewElegiveis.length));
+                        setQtdManual(dividirEmRemessas(previewElegiveis.length, Math.max(janelas.length, 1)));
                         setConfirmaParcial(false);
                       }}
                     >
