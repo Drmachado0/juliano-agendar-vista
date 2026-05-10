@@ -214,10 +214,14 @@ const AdminCRM = () => {
     }
   };
 
+  const liveStatus = useCrmKanbanLive();
+
   useEffect(() => {
     fetchAgendamentos();
 
-    // Realtime: atualiza automaticamente quando agendamentos mudam (cron, drag de outro admin, etc.)
+    // Realtime: invalida o estado local sempre que houver mudança em agendamentos,
+    // mensagens ou audit log. (O hook useCrmKanbanLive já cuida da view nova;
+    // aqui mantemos refetch direto do estado legado.)
     const channel = supabase
       .channel('crm-agendamentos-changes')
       .on(
@@ -227,14 +231,17 @@ const AdminCRM = () => {
           fetchAgendamentos(true);
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'mensagens_whatsapp' },
+        () => {
+          fetchAgendamentos(true);
+        }
+      )
       .subscribe();
-
-    // Polling de fallback a cada 60s
-    const interval = setInterval(() => fetchAgendamentos(true), 60000);
 
     return () => {
       supabase.removeChannel(channel);
-      clearInterval(interval);
     };
   }, []);
 
