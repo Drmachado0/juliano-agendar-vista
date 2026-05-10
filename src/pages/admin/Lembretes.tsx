@@ -43,7 +43,9 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from "recharts";
-import { useEnvioLoteConfig, LIMITE_SESSAO, LIMITE_DIARIO } from "@/hooks/useEnvioLoteConfig";
+import { useEnvioLoteConfig } from "@/hooks/useEnvioLoteConfig";
+import { useConfiguracoesEnvio } from "@/hooks/useConfiguracoesEnvio";
+import { registrarLogEnvioLembrete } from "@/services/logsEnvioLembrete";
 import { gerarMensagemVariadaLembrete } from "@/lib/variacaoMensagensLembrete";
 
 interface LogEnvio {
@@ -152,7 +154,12 @@ const Lembretes = () => {
     gerarDelayAleatorio,
     gerarPausaAleatoria,
     resetarConfiguracoes,
+    limiteSessao: LIMITE_SESSAO,
+    limiteDiario: LIMITE_DIARIO,
   } = useEnvioLoteConfig();
+
+  // Configuração global de envio (status_global, janelas, blackout)
+  const { podeEnviarAgora } = useConfiguracoesEnvio();
 
   const [configAvancadaAberta, setConfigAvancadaAberta] = useState(false);
 
@@ -477,10 +484,29 @@ const Lembretes = () => {
       }
     }
 
+    // Pré-check global (status_global, janela, blackout) — fail-safe pausado
+    const pode = podeEnviarAgora();
+    if (!pode.ok) {
+      toast({ title: "Envio bloqueado", description: pode.motivo, variant: "destructive" });
+      await registrarLogEnvioLembrete({
+        agente: "manual",
+        status: "bloqueado",
+        motivo: pode.motivo,
+        payload: { origem: "Lembretes/enviarEmLote", total: lembretesParaEnviar.length },
+      });
+      return;
+    }
+
     const validacao = validarLimitesEnvio();
     if (!validacao.permitido) {
       toast({ title: "Bloqueado", description: validacao.motivo, variant: "destructive" });
       setEstadoEnvio('interrompido_limite');
+      await registrarLogEnvioLembrete({
+        agente: "manual",
+        status: "bloqueado",
+        motivo: validacao.motivo,
+        payload: { origem: "Lembretes/enviarEmLote", total: lembretesParaEnviar.length },
+      });
       return;
     }
 
@@ -528,6 +554,7 @@ const Lembretes = () => {
 
       setEstadoEnvio('enviando');
 
+      const tInicio = Date.now();
       try {
         let resultado;
         
@@ -538,6 +565,8 @@ const Lembretes = () => {
           resultado = await enviarMensagemWhatsApp(lembrete.telefone, mensagem);
         }
         
+        const latencia = Date.now() - tInicio;
+
         if (resultado.success) {
           sucessos++;
           await marcarLembreteEnviado(lembrete.id);
@@ -552,6 +581,18 @@ const Lembretes = () => {
             tipo_mensagem: "lembrete",
             status_envio: "enviado",
           });
+
+          // Log persistente
+          registrarLogEnvioLembrete({
+            agente: "manual",
+            status: "sucesso",
+            telefone: lembrete.telefone,
+            nome: lembrete.nome,
+            mensagem_renderizada: mensagem,
+            lembrete_id: lembrete.id,
+            latencia_ms: latencia,
+            payload: { delay, com_imagem: !!imagemBase64 },
+          });
           
           setLogsEnvio(prev => [{
             timestamp: new Date(),
@@ -563,6 +604,17 @@ const Lembretes = () => {
           }, ...prev]);
         } else {
           falhas++;
+          registrarLogEnvioLembrete({
+            agente: "manual",
+            status: "falha",
+            motivo: resultado.error || "Erro desconhecido",
+            telefone: lembrete.telefone,
+            nome: lembrete.nome,
+            mensagem_renderizada: mensagem,
+            lembrete_id: lembrete.id,
+            latencia_ms: latencia,
+            payload: { delay, com_imagem: !!imagemBase64 },
+          });
           setLogsEnvio(prev => [{
             timestamp: new Date(),
             telefone: lembrete.telefone,
@@ -575,6 +627,17 @@ const Lembretes = () => {
         }
       } catch (error: any) {
         falhas++;
+        registrarLogEnvioLembrete({
+          agente: "manual",
+          status: "falha",
+          motivo: error?.message || "exception",
+          telefone: lembrete.telefone,
+          nome: lembrete.nome,
+          mensagem_renderizada: mensagem,
+          lembrete_id: lembrete.id,
+          latencia_ms: Date.now() - tInicio,
+          payload: { delay, com_imagem: !!imagemBase64, exception: true },
+        });
         setLogsEnvio(prev => [{
           timestamp: new Date(),
           telefone: lembrete.telefone,

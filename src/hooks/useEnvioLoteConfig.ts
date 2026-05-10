@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { useConfiguracoesEnvio } from "@/hooks/useConfiguracoesEnvio";
 
-// ===== CONSTANTES DE SEGURANÇA (Hard Rules - NÃO EDITÁVEIS) =====
+// ===== FALLBACKS DE SEGURANÇA (usados quando DB indisponível) =====
+// Os valores reais agora vêm de configuracoes_envio (tabela singleton).
 export const LIMITE_SESSAO = 40;
 export const LIMITE_DIARIO = 100;
 export const HORARIO_INICIO_PADRAO = 9;
@@ -37,7 +39,11 @@ const CONFIG_PADRAO: EnvioLoteConfig = {
 const STORAGE_KEY = "envio_lote_config_avancada";
 
 export function useEnvioLoteConfig() {
-  // Intervalos aleatórios
+  // Limites dinâmicos vindos da tabela configuracoes_envio (com fallback seguro)
+  const { cfg } = useConfiguracoesEnvio();
+  const limiteSessao = cfg?.limite_sessao ?? LIMITE_SESSAO;
+  const limiteDiario = cfg?.limite_diario ?? LIMITE_DIARIO;
+
   const [intervaloMin, setIntervaloMin] = useState(CONFIG_PADRAO.intervaloMin);
   const [intervaloMax, setIntervaloMax] = useState(CONFIG_PADRAO.intervaloMax);
 
@@ -126,17 +132,17 @@ export function useEnvioLoteConfig() {
       }
     }
 
-    if (enviosSessao >= LIMITE_SESSAO) {
+    if (enviosSessao >= limiteSessao) {
       return {
         permitido: false,
-        motivo: `Limite de ${LIMITE_SESSAO} mensagens por sessão atingido`,
+        motivo: `Limite de ${limiteSessao} mensagens por sessão atingido`,
       };
     }
 
-    if (enviosDiarios >= LIMITE_DIARIO) {
+    if (enviosDiarios >= limiteDiario) {
       return {
         permitido: false,
-        motivo: `Limite diário de ${LIMITE_DIARIO} mensagens atingido`,
+        motivo: `Limite diário de ${limiteDiario} mensagens atingido`,
       };
     }
 
@@ -197,6 +203,9 @@ export function useEnvioLoteConfig() {
     resetarConfiguracoes,
 
     // Constantes exportadas
+    // Limites dinâmicos (DB) + fallbacks
+    limiteSessao,
+    limiteDiario,
     LIMITE_SESSAO,
     LIMITE_DIARIO,
     CONFIG_PADRAO,
