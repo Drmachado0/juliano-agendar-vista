@@ -48,6 +48,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     
     { href: "/admin/relatorios", label: "Relatórios", icon: FileBarChart },
     { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
+    { href: "/admin/configuracoes/webhooks", label: "Webhooks (n8n)", icon: Webhook },
     { href: "/admin/auditoria-tracking", label: "Auditoria Tracking", icon: ShieldCheck },
     { href: "/admin/logs", label: "Logs do Sistema", icon: ScrollText },
     { href: "/admin/lgpd", label: "LGPD / Privacidade", icon: Shield },
