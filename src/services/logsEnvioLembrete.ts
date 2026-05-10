@@ -18,7 +18,7 @@ export interface LogEnvioLembrete {
   paciente_campanha_id: string | null;
   latencia_ms: number | null;
   request_id: string | null;
-  payload: any;
+  payload: Record<string, unknown> | null;
 }
 
 export interface RegistrarLogPayload {
@@ -34,23 +34,29 @@ export interface RegistrarLogPayload {
   paciente_campanha_id?: string | null;
   latencia_ms?: number | null;
   request_id?: string | null;
-  payload?: Record<string, any> | null;
+  payload?: Record<string, unknown> | null;
 }
 
 export async function registrarLogEnvioLembrete(
   payload: RegistrarLogPayload
 ): Promise<{ id: string | null; error: string | null }> {
   try {
+    // Remove chaves null/undefined para casar com TablesInsert (campos opcionais não-nuláveis).
+    const clean: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(payload)) {
+      if (v !== null && v !== undefined) clean[k] = v;
+    }
     const { data, error } = await supabase
-      .from("logs_envio_lembrete" as any)
-      .insert(payload as any)
+      .from("logs_envio_lembrete")
+      .insert(clean as never)
       .select("id")
       .single();
     if (error) throw error;
-    return { id: (data as any)?.id ?? null, error: null };
-  } catch (e: any) {
+    return { id: (data as { id: string } | null)?.id ?? null, error: null };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Erro ao registrar log";
     console.error("[logsEnvioLembrete] erro ao registrar:", e);
-    return { id: null, error: e.message || "Erro ao registrar log" };
+    return { id: null, error: msg };
   }
 }
 
@@ -66,7 +72,7 @@ export async function listarLogsEnvioLembrete(
 ): Promise<{ data: LogEnvioLembrete[] | null; error: string | null }> {
   try {
     let q = supabase
-      .from("logs_envio_lembrete" as any)
+      .from("logs_envio_lembrete")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(Math.min(Math.max(filtros.limit ?? 50, 1), 500));
@@ -78,8 +84,9 @@ export async function listarLogsEnvioLembrete(
     const { data, error } = await q;
     if (error) throw error;
     return { data: (data as unknown as LogEnvioLembrete[]) || [], error: null };
-  } catch (e: any) {
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Erro ao listar logs";
     console.error("[logsEnvioLembrete] erro ao listar:", e);
-    return { data: null, error: e.message || "Erro ao listar logs" };
+    return { data: null, error: msg };
   }
 }

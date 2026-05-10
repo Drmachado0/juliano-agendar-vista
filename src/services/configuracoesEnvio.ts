@@ -32,7 +32,7 @@ export async function buscarConfiguracoesEnvio(): Promise<{
 }> {
   try {
     const { data, error } = await supabase
-      .from("configuracoes_envio" as any)
+      .from("configuracoes_envio")
       .select("*")
       .eq("id", true)
       .maybeSingle();
@@ -40,9 +40,10 @@ export async function buscarConfiguracoesEnvio(): Promise<{
     if (error) throw error;
     if (!data) return { data: null, error: "Singleton não encontrado" };
     return { data: data as unknown as ConfiguracoesEnvio, error: null };
-  } catch (e: any) {
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Erro ao buscar configurações";
     console.error("[configuracoesEnvio] erro ao buscar:", e);
-    return { data: null, error: e.message || "Erro ao buscar configurações" };
+    return { data: null, error: msg };
   }
 }
 
@@ -63,14 +64,15 @@ export async function atualizarConfiguracoesEnvio(
   try {
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
-      .from("configuracoes_envio" as any)
+      .from("configuracoes_envio")
       .update({ ...payload, updated_by: user?.id ?? null })
       .eq("id", true);
     if (error) throw error;
     return { success: true, error: null };
-  } catch (e: any) {
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Erro ao salvar configurações";
     console.error("[configuracoesEnvio] erro ao atualizar:", e);
-    return { success: false, error: e.message || "Erro ao salvar configurações" };
+    return { success: false, error: msg };
   }
 }
 
