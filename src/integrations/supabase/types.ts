@@ -350,6 +350,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bot_assistente_log_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_crm_kanban"
+            referencedColumns: ["agendamento_id"]
+          },
+          {
+            foreignKeyName: "bot_assistente_log_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_crm_kanban_all"
+            referencedColumns: ["agendamento_id"]
+          },
+          {
             foreignKeyName: "bot_assistente_log_mensagem_id_fkey"
             columns: ["mensagem_id"]
             isOneToOne: false
@@ -507,6 +521,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "conversation_intents_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_crm_kanban"
+            referencedColumns: ["agendamento_id"]
+          },
+          {
+            foreignKeyName: "conversation_intents_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_crm_kanban_all"
+            referencedColumns: ["agendamento_id"]
+          },
+          {
             foreignKeyName: "conversation_intents_mensagem_id_fkey"
             columns: ["mensagem_id"]
             isOneToOne: false
@@ -567,7 +595,51 @@ export type Database = {
             referencedRelation: "pacientes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "crm_audit_log_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_crm_kanban"
+            referencedColumns: ["agendamento_id"]
+          },
+          {
+            foreignKeyName: "crm_audit_log_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_crm_kanban_all"
+            referencedColumns: ["agendamento_id"]
+          },
         ]
+      }
+      crm_webhook_endpoints: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          event: string
+          secret: string | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          event: string
+          secret?: string | null
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          event?: string
+          secret?: string | null
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
       }
       disponibilidade_especifica: {
         Row: {
@@ -1119,6 +1191,20 @@ export type Database = {
             referencedRelation: "pacientes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "mensagens_whatsapp_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_crm_kanban"
+            referencedColumns: ["agendamento_id"]
+          },
+          {
+            foreignKeyName: "mensagens_whatsapp_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_crm_kanban_all"
+            referencedColumns: ["agendamento_id"]
+          },
         ]
       }
       profiles: {
@@ -1492,6 +1578,154 @@ export type Database = {
         }
         Relationships: []
       }
+      vw_crm_kanban: {
+        Row: {
+          agendamento_id: string | null
+          bot_ativo: boolean | null
+          bot_pausado_ate: string | null
+          clinica_id: string | null
+          clinica_nome: string | null
+          coluna_kanban: string | null
+          confirmacao_enviada: boolean | null
+          confirmation_status: string | null
+          convenio: string | null
+          convenio_outro: string | null
+          created_at: string | null
+          data_agendamento: string | null
+          data_nascimento: string | null
+          detalhe_exame_ou_cirurgia: string | null
+          email: string | null
+          fbc: string | null
+          fbclid: string | null
+          fbp: string | null
+          gclid: string | null
+          hora_agendamento: string | null
+          is_sandbox: boolean | null
+          landing_page: string | null
+          nome: string | null
+          origem: string | null
+          profissional_id: string | null
+          profissional_nome: string | null
+          referrer: string | null
+          servico_id: string | null
+          servico_nome: string | null
+          status_crm: string | null
+          status_funil: string | null
+          telefone: string | null
+          tipo_atendimento: string | null
+          total_mensagens: number | null
+          ultima_msg: string | null
+          ultima_msg_at: string | null
+          ultima_msg_direcao: string | null
+          ultima_msg_lida: boolean | null
+          unidade: string | null
+          updated_at: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          valor_convenio: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamentos_clinica_id_fkey"
+            columns: ["clinica_id"]
+            isOneToOne: false
+            referencedRelation: "clinicas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_profissional_id_fkey"
+            columns: ["profissional_id"]
+            isOneToOne: false
+            referencedRelation: "profissionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_servico_id_fkey"
+            columns: ["servico_id"]
+            isOneToOne: false
+            referencedRelation: "servicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_crm_kanban_all: {
+        Row: {
+          agendamento_id: string | null
+          bot_ativo: boolean | null
+          bot_pausado_ate: string | null
+          clinica_id: string | null
+          clinica_nome: string | null
+          coluna_kanban: string | null
+          confirmacao_enviada: boolean | null
+          confirmation_status: string | null
+          convenio: string | null
+          convenio_outro: string | null
+          created_at: string | null
+          data_agendamento: string | null
+          data_nascimento: string | null
+          detalhe_exame_ou_cirurgia: string | null
+          email: string | null
+          fbc: string | null
+          fbclid: string | null
+          fbp: string | null
+          gclid: string | null
+          hora_agendamento: string | null
+          is_sandbox: boolean | null
+          is_sandbox_raw: boolean | null
+          landing_page: string | null
+          nome: string | null
+          origem: string | null
+          profissional_id: string | null
+          profissional_nome: string | null
+          referrer: string | null
+          sandbox_reason: string | null
+          servico_id: string | null
+          servico_nome: string | null
+          status_crm: string | null
+          status_funil: string | null
+          telefone: string | null
+          tipo_atendimento: string | null
+          total_mensagens: number | null
+          ultima_msg: string | null
+          ultima_msg_at: string | null
+          ultima_msg_direcao: string | null
+          ultima_msg_lida: boolean | null
+          unidade: string | null
+          updated_at: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          valor_convenio: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamentos_clinica_id_fkey"
+            columns: ["clinica_id"]
+            isOneToOne: false
+            referencedRelation: "clinicas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_profissional_id_fkey"
+            columns: ["profissional_id"]
+            isOneToOne: false
+            referencedRelation: "profissionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_servico_id_fkey"
+            columns: ["servico_id"]
+            isOneToOne: false
+            referencedRelation: "servicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       apagar_dados_paciente: {
@@ -1548,6 +1782,12 @@ export type Database = {
         }
         Returns: string
       }
+      crm_disparar_lembretes_d1: { Args: never; Returns: number }
+      crm_emit_event: {
+        Args: { p_body: Json; p_event: string }
+        Returns: number
+      }
+      crm_ingest_lead: { Args: { payload: Json }; Returns: Json }
       decrypt_sensitive_data: {
         Args: { encrypted_data: string }
         Returns: string
