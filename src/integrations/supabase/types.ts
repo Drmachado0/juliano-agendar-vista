@@ -432,6 +432,45 @@ export type Database = {
         }
         Relationships: []
       }
+      configuracoes_envio: {
+        Row: {
+          blackout_dates: string[]
+          id: boolean
+          janela_fim: string
+          janela_inicio: string
+          limite_diario: number
+          limite_sessao: number
+          motivo_bloqueio: string | null
+          status_global: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          blackout_dates?: string[]
+          id?: boolean
+          janela_fim?: string
+          janela_inicio?: string
+          limite_diario?: number
+          limite_sessao?: number
+          motivo_bloqueio?: string | null
+          status_global?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          blackout_dates?: string[]
+          id?: boolean
+          janela_fim?: string
+          janela_inicio?: string
+          limite_diario?: number
+          limite_sessao?: number
+          motivo_bloqueio?: string | null
+          status_global?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       convenios: {
         Row: {
           ativo: boolean | null
@@ -935,11 +974,14 @@ export type Database = {
           id: string
           inconsistente_data: boolean
           lembrete_id: string
+          lock_token: string | null
+          lock_until: string | null
           motivo_falha: string | null
           motivo_ignorado: string | null
           nome: string
           numero_remessa: number
           primeiro_nome: string | null
+          processado_por: string | null
           remessa_id: string
           status: string
           telefone: string
@@ -953,11 +995,14 @@ export type Database = {
           id?: string
           inconsistente_data?: boolean
           lembrete_id: string
+          lock_token?: string | null
+          lock_until?: string | null
           motivo_falha?: string | null
           motivo_ignorado?: string | null
           nome: string
           numero_remessa: number
           primeiro_nome?: string | null
+          processado_por?: string | null
           remessa_id: string
           status?: string
           telefone: string
@@ -971,11 +1016,14 @@ export type Database = {
           id?: string
           inconsistente_data?: boolean
           lembrete_id?: string
+          lock_token?: string | null
+          lock_until?: string | null
           motivo_falha?: string | null
           motivo_ignorado?: string | null
           nome?: string
           numero_remessa?: number
           primeiro_nome?: string | null
+          processado_por?: string | null
           remessa_id?: string
           status?: string
           telefone?: string
@@ -1130,6 +1178,60 @@ export type Database = {
           created_at?: string
           id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      logs_envio_lembrete: {
+        Row: {
+          agente: string
+          campanha_id: string | null
+          created_at: string
+          id: string
+          latencia_ms: number | null
+          lembrete_id: string | null
+          mensagem_renderizada: string | null
+          motivo: string | null
+          nome: string | null
+          paciente_campanha_id: string | null
+          payload: Json | null
+          remessa_id: string | null
+          request_id: string | null
+          status: string
+          telefone: string | null
+        }
+        Insert: {
+          agente: string
+          campanha_id?: string | null
+          created_at?: string
+          id?: string
+          latencia_ms?: number | null
+          lembrete_id?: string | null
+          mensagem_renderizada?: string | null
+          motivo?: string | null
+          nome?: string | null
+          paciente_campanha_id?: string | null
+          payload?: Json | null
+          remessa_id?: string | null
+          request_id?: string | null
+          status: string
+          telefone?: string | null
+        }
+        Update: {
+          agente?: string
+          campanha_id?: string | null
+          created_at?: string
+          id?: string
+          latencia_ms?: number | null
+          lembrete_id?: string | null
+          mensagem_renderizada?: string | null
+          motivo?: string | null
+          nome?: string | null
+          paciente_campanha_id?: string | null
+          payload?: Json | null
+          remessa_id?: string | null
+          request_id?: string | null
+          status?: string
+          telefone?: string | null
         }
         Relationships: []
       }
@@ -1726,6 +1828,41 @@ export type Database = {
           },
         ]
       }
+      vw_status_campanha_atual: {
+        Row: {
+          ano_referencia: number | null
+          blackout_dates: string[] | null
+          bloqueados_hoje: number | null
+          campanha_id: string | null
+          campanha_status: string | null
+          data_atual: string | null
+          enviados_hoje: number | null
+          falhas_hoje: number | null
+          gerado_em: string | null
+          ignorados_hoje: number | null
+          janela_fim: string | null
+          janela_inicio: string | null
+          limite_diario: number | null
+          limite_sessao: number | null
+          mes_referencia: number | null
+          motivo_bloqueio: string | null
+          pacientes_enviados: number | null
+          pacientes_falhas: number | null
+          pacientes_ignorados: number | null
+          pacientes_pendentes: number | null
+          proxima_remessa_data: string | null
+          proxima_remessa_id: string | null
+          proxima_remessa_numero: number | null
+          proxima_remessa_status: string | null
+          status_global: string | null
+          total_elegivel: number | null
+          total_enviados: number | null
+          total_falhas: number | null
+          total_ignorados: number | null
+          ultimo_envio_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       apagar_dados_paciente: {
@@ -1757,6 +1894,14 @@ export type Database = {
           nome: string
           phone_number: string
         }[]
+      }
+      claim_paciente_campanha: {
+        Args: {
+          p_paciente_id: string
+          p_processador: string
+          p_ttl_seconds?: number
+        }
+        Returns: string
       }
       criar_agendamento: {
         Args: {
@@ -2011,6 +2156,10 @@ export type Database = {
           msg_in: number
           msg_out: number
         }[]
+      }
+      release_paciente_campanha: {
+        Args: { p_lock_token: string; p_paciente_id: string }
+        Returns: boolean
       }
       set_agendamento_sandbox: {
         Args: {
