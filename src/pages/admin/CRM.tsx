@@ -23,6 +23,9 @@ import DensityToggle from "@/components/admin/DensityToggle";
 import { DensityProvider } from "@/hooks/useDensity";
 import KanbanColumnsManager from "@/components/admin/KanbanColumnsManager";
 import { useKanbanColumnsConfig } from "@/hooks/useKanbanColumnsConfig";
+import CRMQuickChips from "@/components/admin/CRMQuickChips";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
 import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
 import { useNavigate } from "react-router-dom";
@@ -158,6 +161,13 @@ const AdminCRM = () => {
   const isFetchingRef = useRef(false);
   const columnsManager = useKanbanColumnsConfig();
   const visibleColumns = columnsManager.orderedVisibleColumns;
+  const [mostrarVazias, setMostrarVazias] = useState<boolean>(() => {
+    try { return localStorage.getItem("crm:kanban:show-empty:v1") === "1"; } catch { return false; }
+  });
+  const [expandidasManualmente, setExpandidasManualmente] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    try { localStorage.setItem("crm:kanban:show-empty:v1", mostrarVazias ? "1" : "0"); } catch { /* ignore */ }
+  }, [mostrarVazias]);
 
   const [filters, setFilters] = useState<CrmFilters>(() => loadFilters());
   const [tab, setTab] = useState<"kanban" | "contatos">(() => {
@@ -448,7 +458,7 @@ const AdminCRM = () => {
                 <LayoutGrid className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground leading-tight">CRM Kanban</h1>
+                <h1 className="text-2xl font-bold text-foreground leading-tight">Jornada do Paciente</h1>
                 <p className="text-xs text-muted-foreground">Acompanhamento de pacientes — Oftalmologia</p>
               </div>
             </div>

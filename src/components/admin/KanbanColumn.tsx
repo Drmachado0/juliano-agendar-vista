@@ -19,6 +19,8 @@ interface KanbanColumnProps {
   onDrop: (e: React.DragEvent, status: string) => void;
   isDragOver?: boolean;
   boasVindasMap?: Record<string, BoasVindasInfo>;
+  collapsed?: boolean;
+  onExpand?: (status: string) => void;
 }
 
 const KanbanColumn = ({
@@ -35,8 +37,39 @@ const KanbanColumn = ({
   onDrop,
   isDragOver,
   boasVindasMap,
+  collapsed,
+  onExpand,
 }: KanbanColumnProps) => {
   const { isComfortable } = useDensity();
+
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        onClick={() => onExpand?.(status)}
+        onDragOver={onDragOver}
+        onDrop={(e) => onDrop(e, status)}
+        title={`${title} (vazia) — clique para expandir`}
+        className={cn(
+          "shrink-0 w-11 bg-muted/20 rounded-2xl border border-border/60 hover:border-primary/40 hover:bg-muted/40 transition-all flex flex-col items-center justify-between py-3 cursor-pointer group",
+          "min-h-[200px]",
+          isDragOver && "bg-primary/10 ring-2 ring-primary/40 border-primary/30"
+        )}
+      >
+        <div className={cn("w-2 h-2 rounded-full shrink-0", color)} />
+        <div
+          className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors whitespace-nowrap"
+          style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+        >
+          {title}
+        </div>
+        <span className="text-[10px] font-medium text-muted-foreground bg-card border border-border/60 px-1.5 py-0.5 rounded-full tabular-nums">
+          0
+        </span>
+      </button>
+    );
+  }
+
   return (
     <div
       className={cn(

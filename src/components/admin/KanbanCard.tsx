@@ -134,15 +134,12 @@ const KanbanCard = ({
         <TooltipTrigger asChild>
           <div className="space-y-0.5 cursor-help">
             <div className={cn(
-              "font-semibold text-foreground truncate",
-              isComfortable ? "text-[15px] leading-snug" : "text-sm leading-tight"
+              "font-semibold text-foreground truncate tracking-tight",
+              isComfortable ? "text-lg leading-snug" : "text-base leading-tight"
             )}>
               {agendamento.nome_completo}
             </div>
-            <div className={cn(
-              "flex items-center gap-1.5 text-muted-foreground",
-              isComfortable ? "text-sm" : "text-xs"
-            )}>
+            <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground/80">
               <Phone className="h-3 w-3 flex-shrink-0" />
               <span className="truncate">{agendamento.telefone_whatsapp}</span>
             </div>
