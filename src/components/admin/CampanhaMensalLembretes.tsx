@@ -778,7 +778,13 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                 data-testid="lembretes-gerar-plano"
                 size="sm"
                 onClick={previewCarregado ? gerarPlano : carregarPreviewElegiveis}
-                disabled={carregando || enviando || (previewCarregado && !podeGerar)}
+                disabled={
+                  carregando ||
+                  enviando ||
+                  (previewCarregado && !podeGerar) ||
+                  (previewCarregado && janelas.length === 0)
+                }
+                title={janelas.length === 0 ? "Cadastre as janelas de atendimento do mês antes de gerar a campanha" : undefined}
               >
                 {carregando ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
