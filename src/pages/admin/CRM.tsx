@@ -21,6 +21,8 @@ import CRMFilters, { CrmFilters, DEFAULT_CRM_FILTERS } from "@/components/admin/
 import CRMLegenda from "@/components/admin/CRMLegenda";
 import DensityToggle from "@/components/admin/DensityToggle";
 import { DensityProvider } from "@/hooks/useDensity";
+import KanbanColumnsManager from "@/components/admin/KanbanColumnsManager";
+import { useKanbanColumnsConfig } from "@/hooks/useKanbanColumnsConfig";
 import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
 import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
 import { useNavigate } from "react-router-dom";
@@ -129,15 +131,8 @@ function aplicarFiltrosEOrdenacao(
   return result;
 }
 
-const columns = [
-  { status: "NOVO LEAD", title: "Novo Lead", color: "bg-emerald-500" },
-  { status: "PRECISA_DE_HUMANO", title: "Precisa de humano", color: "bg-rose-500" },
-  { status: "AGUARDANDO", title: "Aguardando", color: "bg-yellow-500" },
-  { status: "CLINICOR", title: "Clinicor", color: "bg-blue-500" },
-  { status: "HGP", title: "HGP", color: "bg-purple-500" },
-  { status: "BELÉM", title: "Belém", color: "bg-amber-500" },
-  { status: "ATENDIDO", title: "Atendido", color: "bg-gray-500" },
-];
+// Definição padrão das colunas vive em useKanbanColumnsConfig (DEFAULT_COLUMNS).
+// Aqui usamos o hook para suportar reordenação e ocultar colunas via UI.
 
 const AdminCRM = () => {
   const [agendamentosPorStatus, setAgendamentosPorStatus] = useState<Record<string, Agendamento[]>>({
@@ -161,6 +156,8 @@ const AdminCRM = () => {
   const [auditOpen, setAuditOpen] = useState(false);
   const [duplicadosOpen, setDuplicadosOpen] = useState(false);
   const isFetchingRef = useRef(false);
+  const columnsManager = useKanbanColumnsConfig();
+  const visibleColumns = columnsManager.orderedVisibleColumns;
 
   const [filters, setFilters] = useState<CrmFilters>(() => loadFilters());
   const [tab, setTab] = useState<"kanban" | "contatos">(() => {
@@ -480,6 +477,7 @@ const AdminCRM = () => {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <DensityToggle />
+            <KanbanColumnsManager manager={columnsManager} />
             <EvolutionStatusBadge />
             <Badge
               variant="outline"
@@ -611,7 +609,7 @@ const AdminCRM = () => {
           </div>
         ) : (
           <div className="flex gap-4 overflow-x-auto pb-6 kanban-scroll">
-            {columns.map((column) => (
+            {visibleColumns.map((column) => (
               <div
                 key={column.status}
                 onDragEnter={() => handleDragEnter(column.status)}
