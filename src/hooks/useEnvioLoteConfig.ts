@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { useConfiguracoesEnvio } from "@/hooks/useConfiguracoesEnvio";
 
-// ===== CONSTANTES DE SEGURANÇA (Hard Rules - NÃO EDITÁVEIS) =====
+// ===== FALLBACKS DE SEGURANÇA (usados quando DB indisponível) =====
+// Os valores reais agora vêm de configuracoes_envio (tabela singleton).
 export const LIMITE_SESSAO = 40;
 export const LIMITE_DIARIO = 100;
 export const HORARIO_INICIO_PADRAO = 9;
