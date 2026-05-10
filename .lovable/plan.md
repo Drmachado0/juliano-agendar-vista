@@ -235,7 +235,7 @@ Após Fase 4 concluída, atualizar `mem://index.md`:
 
 ```text
 ┌────────────────────────────────────────────────────────────┐
-│ Agente n8n  ──(x-hermes-secret)──>  lembretes-runner        │
+│ Agente n8n  ──(x-lembretes-secret)──>  lembretes-runner    │
 │                                          │                  │
 │                                          ▼                  │
 │                              [configuracoes_envio]          │
