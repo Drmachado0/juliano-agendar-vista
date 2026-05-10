@@ -744,7 +744,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
               Campanha mensal de lembretes
             </CardTitle>
             <CardDescription>
-              Envio parcelado em 4 remessas (dias {DIAS_REMESSAS.join(", ")}) — plano persistido e auditável
+              Envio dividido conforme as janelas de atendimento cadastradas — plano persistido e auditável
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
