@@ -810,8 +810,24 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* Janelas de atendimento do mês — sempre no topo */}
+        <JanelasAtendimentoCard
+          ano={anoRef}
+          mes1a12={mesRef + 1}
+          onChange={(js) => setJanelas(js)}
+        />
+
+        {!campanha && janelas.length === 0 && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Cadastre as janelas de atendimento do mês antes de gerar a campanha.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Sem campanha + sem preview */}
-        {!campanha && !previewCarregado && !carregando && (
+        {!campanha && !previewCarregado && !carregando && janelas.length > 0 && (
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
