@@ -342,7 +342,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
 
       setPreviewElegiveis(validos);
       setPreviewCarregado(true);
-      setQtdManual(dividirEmRemessas(validos.length));
+      setQtdManual(dividirEmRemessas(validos.length, Math.max(janelas.length, 1)));
 
       if (removidosDedup > 0 || removidos12m > 0) {
         toast({
