@@ -132,17 +132,17 @@ export function useEnvioLoteConfig() {
       }
     }
 
-    if (enviosSessao >= LIMITE_SESSAO) {
+    if (enviosSessao >= limiteSessao) {
       return {
         permitido: false,
-        motivo: `Limite de ${LIMITE_SESSAO} mensagens por sessão atingido`,
+        motivo: `Limite de ${limiteSessao} mensagens por sessão atingido`,
       };
     }
 
-    if (enviosDiarios >= LIMITE_DIARIO) {
+    if (enviosDiarios >= limiteDiario) {
       return {
         permitido: false,
-        motivo: `Limite diário de ${LIMITE_DIARIO} mensagens atingido`,
+        motivo: `Limite diário de ${limiteDiario} mensagens atingido`,
       };
     }
 
