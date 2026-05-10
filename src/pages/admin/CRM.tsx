@@ -458,7 +458,7 @@ const AdminCRM = () => {
                 <LayoutGrid className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground leading-tight">CRM Kanban</h1>
+                <h1 className="text-2xl font-bold text-foreground leading-tight">Jornada do Paciente</h1>
                 <p className="text-xs text-muted-foreground">Acompanhamento de pacientes — Oftalmologia</p>
               </div>
             </div>
