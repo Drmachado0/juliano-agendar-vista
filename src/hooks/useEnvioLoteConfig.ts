@@ -39,7 +39,11 @@ const CONFIG_PADRAO: EnvioLoteConfig = {
 const STORAGE_KEY = "envio_lote_config_avancada";
 
 export function useEnvioLoteConfig() {
-  // Intervalos aleatórios
+  // Limites dinâmicos vindos da tabela configuracoes_envio (com fallback seguro)
+  const { cfg } = useConfiguracoesEnvio();
+  const limiteSessao = cfg?.limite_sessao ?? LIMITE_SESSAO;
+  const limiteDiario = cfg?.limite_diario ?? LIMITE_DIARIO;
+
   const [intervaloMin, setIntervaloMin] = useState(CONFIG_PADRAO.intervaloMin);
   const [intervaloMax, setIntervaloMax] = useState(CONFIG_PADRAO.intervaloMax);
 
