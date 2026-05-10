@@ -99,3 +99,6 @@ verify_jwt = false
 [functions.registrar-mensagem-in-n8n]
 verify_jwt = false
 
+[functions.lembretes-runner]
+verify_jwt = false
+
