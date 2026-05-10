@@ -21,6 +21,8 @@ import CRMFilters, { CrmFilters, DEFAULT_CRM_FILTERS } from "@/components/admin/
 import CRMLegenda from "@/components/admin/CRMLegenda";
 import DensityToggle from "@/components/admin/DensityToggle";
 import { DensityProvider } from "@/hooks/useDensity";
+import KanbanColumnsManager from "@/components/admin/KanbanColumnsManager";
+import { useKanbanColumnsConfig } from "@/hooks/useKanbanColumnsConfig";
 import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
 import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
 import { useNavigate } from "react-router-dom";
