@@ -477,6 +477,7 @@ const AdminCRM = () => {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <DensityToggle />
+            <KanbanColumnsManager manager={columnsManager} />
             <EvolutionStatusBadge />
             <Badge
               variant="outline"
