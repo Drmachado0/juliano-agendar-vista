@@ -1,7 +1,8 @@
 // Edge Function: lembretes-runner
 // API segura para o agente externo (n8n) operar campanhas de lembretes anuais.
-// Auth: header x-hermes-secret (compat) ou x-runner-secret comparado a
-//   LEMBRETES_RUNNER_SECRET (preferido) ou HERMES_WEBHOOK_SECRET (fallback).
+// Auth: header x-lembretes-secret comparado a LEMBRETES_RUNNER_SECRET via timingSafeEqual.
+// NOTA HISTÓRICA: o antigo bot copiloto "Hermes" foi REMOVIDO em 2026-04-29 e
+// NÃO deve ser recriado. Esta função é exclusiva do módulo de Lembretes Anuais.
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
