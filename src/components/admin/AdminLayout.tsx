@@ -2,7 +2,7 @@ import { ReactNode, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Calendar, LayoutGrid, LogOut, Menu, X, BarChart3, MessageCircle, CalendarDays, CalendarOff, Users, Settings, Star, Bell, ShieldCheck, ScrollText, Bot, Shield, FileBarChart } from "lucide-react";
+import { Calendar, LayoutGrid, LogOut, Menu, X, BarChart3, MessageCircle, CalendarDays, CalendarOff, Users, Settings, Star, Bell, ShieldCheck, ScrollText, Bot, Shield, FileBarChart, Webhook } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import drLogo from "@/assets/dr-juliano-logo.webp";
