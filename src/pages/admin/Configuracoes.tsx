@@ -59,6 +59,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 import TwoFactorSetup from "@/components/admin/TwoFactorSetup";
 import TemplatesWhatsAppTab from "@/components/admin/TemplatesWhatsAppTab";
+import EnvioConfigCard from "@/components/admin/EnvioConfigCard";
 import { sincronizarAvaliacoesManualmente } from "@/services/avaliacoesGoogle";
 
 export default function Configuracoes() {
@@ -535,7 +536,7 @@ export default function Configuracoes() {
         </div>
 
         <Tabs defaultValue="clinicas" className="w-full">
-          <TabsList className="grid w-full max-w-3xl grid-cols-7">
+          <TabsList className="grid w-full max-w-4xl grid-cols-8">
             <TabsTrigger value="clinicas" className="gap-2 text-xs sm:text-sm">
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Clínicas</span>
@@ -564,10 +565,18 @@ export default function Configuracoes() {
               <Bot className="h-4 w-4" />
               <span className="hidden sm:inline">Bot</span>
             </TabsTrigger>
+            <TabsTrigger value="envios" className="gap-2 text-xs sm:text-sm">
+              <Zap className="h-4 w-4" />
+              <span className="hidden sm:inline">Envios</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="bot" className="mt-6">
             <BotConfigCard />
+          </TabsContent>
+
+          <TabsContent value="envios" className="mt-6">
+            <EnvioConfigCard />
           </TabsContent>
 
 
