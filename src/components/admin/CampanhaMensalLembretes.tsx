@@ -212,7 +212,11 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
     async (ano: number, mes0: number) => {
       setCarregando(true);
       try {
-        const camp = await buscarCampanha(ano, mes0 + 1);
+        const [camp, js] = await Promise.all([
+          buscarCampanha(ano, mes0 + 1),
+          listarJanelasMes(ano, mes0 + 1).catch(() => []),
+        ]);
+        setJanelas(js);
         if (camp) {
           const { remessas: rs, pacientes: ps } = await buscarRemessasComPacientes(camp.id);
           setCampanha(camp);
