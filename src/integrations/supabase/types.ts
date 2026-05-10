@@ -1607,6 +1607,7 @@ export type Database = {
           profissional_id: string | null
           profissional_nome: string | null
           referrer: string | null
+          sandbox_reason: string | null
           servico_id: string | null
           servico_nome: string | null
           status_crm: string | null
@@ -1674,7 +1675,6 @@ export type Database = {
           gclid: string | null
           hora_agendamento: string | null
           is_sandbox: boolean | null
-          is_sandbox_raw: boolean | null
           landing_page: string | null
           nome: string | null
           origem: string | null

@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm, reprocessarBoasVindas, buscarAgendamento, marcarSandbox } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
-import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, Wifi, History, Copy, Contact } from "lucide-react";
+import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, History, Copy, Contact } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { useCrmKanbanLive } from "@/hooks/useCrmKanbanLive";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
@@ -211,10 +214,14 @@ const AdminCRM = () => {
     }
   };
 
+  const liveStatus = useCrmKanbanLive();
+
   useEffect(() => {
     fetchAgendamentos();
 
-    // Realtime: atualiza automaticamente quando agendamentos mudam (cron, drag de outro admin, etc.)
+    // Realtime: invalida o estado local sempre que houver mudança em agendamentos,
+    // mensagens ou audit log. (O hook useCrmKanbanLive já cuida da view nova;
+    // aqui mantemos refetch direto do estado legado.)
     const channel = supabase
       .channel('crm-agendamentos-changes')
       .on(
@@ -224,14 +231,17 @@ const AdminCRM = () => {
           fetchAgendamentos(true);
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'mensagens_whatsapp' },
+        () => {
+          fetchAgendamentos(true);
+        }
+      )
       .subscribe();
-
-    // Polling de fallback a cada 60s
-    const interval = setInterval(() => fetchAgendamentos(true), 60000);
 
     return () => {
       supabase.removeChannel(channel);
-      clearInterval(interval);
     };
   }, []);
 
@@ -471,10 +481,21 @@ const AdminCRM = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <DensityToggle />
             <EvolutionStatusBadge />
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/60">
-              <Wifi className="h-3 w-3 text-emerald-500" />
-              <span className="tabular-nums">{ultimaAtualizacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
+            <Badge
+              variant="outline"
+              className={cn(
+                "gap-1.5 font-medium",
+                liveStatus === 'SUBSCRIBED' && "border-emerald-500/40 text-emerald-400",
+                liveStatus === 'CONNECTING' && "border-amber-500/40 text-amber-400 animate-pulse",
+                (liveStatus === 'CLOSED' || liveStatus === 'CHANNEL_ERROR' || liveStatus === 'TIMED_OUT') && "border-rose-500/40 text-rose-400"
+              )}
+              title={`Realtime: ${liveStatus}`}
+            >
+              <span className="size-2 rounded-full bg-current" />
+              {liveStatus === 'SUBSCRIBED' ? 'ao vivo' :
+               liveStatus === 'CONNECTING' ? 'conectando…' :
+               liveStatus === 'CLOSED' ? 'desconectado' : 'erro'}
+            </Badge>
             <Button
               variant="outline"
               size="sm"
