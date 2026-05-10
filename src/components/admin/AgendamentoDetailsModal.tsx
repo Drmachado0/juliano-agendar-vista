@@ -7,33 +7,52 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Agendamento, atualizarStatusCrm, atualizarObservacoes, buscarObservacoesDecrypted, excluirAgendamento } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
+import { listarAuditCrm, ACAO_LABELS, type CrmAuditEntry } from "@/services/crmAudit";
 import { toast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  User, 
-  Phone, 
-  Mail, 
-  CreditCard, 
-  Check, 
-  Bell, 
-  Loader2, 
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  User,
+  Phone,
+  Mail,
+  CreditCard,
+  Check,
+  Bell,
+  Loader2,
   MessageSquare,
   CheckCircle,
   XCircle,
   AlertTriangle,
   RefreshCw,
-  Trash2
+  Trash2,
+  PhoneCall,
+  FileText,
+  History,
+  ShieldCheck,
+  Zap,
+  ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { getLocalBadgeClasses, LOCAL_SHORT_LABELS, getLocalGrupo } from "@/lib/localAtendimento";
 import { getOrigemGrupo, ORIGEM_LABELS, ORIGEM_BADGE_SOFT_CLASSES } from "@/lib/origemLead";
+
+const TAB_STORAGE_KEY = "crm:modal:tab";
+type ModalTab = "resumo" | "consulta" | "historico" | "mensagens" | "auditoria";
+
+interface MensagemRow {
+  id: string;
+  direcao: string;
+  conteudo: string;
+  created_at: string;
+  status_envio: string | null;
+}
 
 interface AgendamentoDetailsModalProps {
   agendamento: Agendamento | null;
