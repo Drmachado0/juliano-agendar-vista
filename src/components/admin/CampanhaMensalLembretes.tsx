@@ -876,7 +876,7 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                 onCheckedChange={(v) => {
                   setModoManual(v);
                   setConfirmaParcial(false);
-                  if (v) setQtdManual(dividirEmRemessas(previewElegiveis.length));
+                  if (v) setQtdManual(dividirEmRemessas(previewElegiveis.length, Math.max(janelas.length, 1)));
                 }}
               />
             </div>
