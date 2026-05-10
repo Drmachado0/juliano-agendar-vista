@@ -131,15 +131,8 @@ function aplicarFiltrosEOrdenacao(
   return result;
 }
 
-const columns = [
-  { status: "NOVO LEAD", title: "Novo Lead", color: "bg-emerald-500" },
-  { status: "PRECISA_DE_HUMANO", title: "Precisa de humano", color: "bg-rose-500" },
-  { status: "AGUARDANDO", title: "Aguardando", color: "bg-yellow-500" },
-  { status: "CLINICOR", title: "Clinicor", color: "bg-blue-500" },
-  { status: "HGP", title: "HGP", color: "bg-purple-500" },
-  { status: "BELÉM", title: "Belém", color: "bg-amber-500" },
-  { status: "ATENDIDO", title: "Atendido", color: "bg-gray-500" },
-];
+// Definição padrão das colunas vive em useKanbanColumnsConfig (DEFAULT_COLUMNS).
+// Aqui usamos o hook para suportar reordenação e ocultar colunas via UI.
 
 const AdminCRM = () => {
   const [agendamentosPorStatus, setAgendamentosPorStatus] = useState<Record<string, Agendamento[]>>({
