@@ -373,6 +373,14 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
       await carregarPreviewElegiveis();
       return;
     }
+    if (janelas.length === 0) {
+      toast({
+        title: "Cadastre as janelas de atendimento",
+        description: "É preciso cadastrar pelo menos uma janela do mês antes de gerar a campanha.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!podeGerar) {
       if (manualExcede) {
         toast({
