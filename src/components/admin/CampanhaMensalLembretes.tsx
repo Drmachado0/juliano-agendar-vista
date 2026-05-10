@@ -60,8 +60,13 @@ import {
   type StatusPaciente,
 } from "@/services/campanhasLembretes";
 
-const NUMERO_REMESSAS = 4;
-const DIAS_REMESSAS = [1, 2, 15, 16] as const;
+import {
+  listarJanelasMes,
+  type JanelaAtendimento,
+} from "@/services/janelasAtendimento";
+import JanelasAtendimentoCard from "@/components/admin/JanelasAtendimentoCard";
+
+const NUMERO_REMESSAS_MAX = 2;
 
 const MESES_PT = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
