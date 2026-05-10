@@ -14,13 +14,13 @@ export type KanbanColumnConfigItem = {
 const STORAGE_KEY = "crm:kanban-columns:v1";
 
 export const DEFAULT_COLUMNS: KanbanColumnDef[] = [
-  { status: "NOVO LEAD", title: "Novo Lead", color: "bg-emerald-500" },
-  { status: "PRECISA_DE_HUMANO", title: "Precisa de humano", color: "bg-rose-500" },
-  { status: "AGUARDANDO", title: "Aguardando", color: "bg-yellow-500" },
+  { status: "NOVO LEAD", title: "Novo contato", color: "bg-emerald-500" },
+  { status: "PRECISA_DE_HUMANO", title: "Aguarda recepção", color: "bg-rose-500" },
+  { status: "AGUARDANDO", title: "Em análise", color: "bg-yellow-500" },
   { status: "CLINICOR", title: "Clinicor", color: "bg-blue-500" },
   { status: "HGP", title: "HGP", color: "bg-purple-500" },
   { status: "BELÉM", title: "Belém", color: "bg-amber-500" },
-  { status: "ATENDIDO", title: "Atendido", color: "bg-gray-500" },
+  { status: "ATENDIDO", title: "Concluído", color: "bg-gray-500" },
 ];
 
 function loadConfig(): KanbanColumnConfigItem[] {
