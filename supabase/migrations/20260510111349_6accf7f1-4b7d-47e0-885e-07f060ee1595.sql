@@ -1,0 +1,1 @@
+ALTER VIEW public.vw_status_campanha_atual SET (security_invoker = on);
