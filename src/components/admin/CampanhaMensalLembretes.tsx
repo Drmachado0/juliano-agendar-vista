@@ -924,7 +924,8 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
                 {/* Cartões por remessa */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                   {qtdManual.map((q, i) => {
-                    const dataProg = new Date(anoRef, mesRef, DIAS_REMESSAS[i]);
+                    const j = janelas[i];
+                    const dataProg = j ? new Date(j.data_envio_sugerida + "T00:00:00") : new Date(anoRef, mesRef, 1);
                     const restanteAtual = previewElegiveis.length - totalManual;
                     const maxPermitido = q + Math.max(restanteAtual, 0);
                     return (
