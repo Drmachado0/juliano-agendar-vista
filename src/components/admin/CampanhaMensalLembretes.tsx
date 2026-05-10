@@ -427,16 +427,16 @@ const CampanhaMensalLembretes = ({ onAfterEnvio }: Props) => {
 
   // ====== Selecionar remessa de hoje ======
   const selecionarRemessaHoje = () => {
-    const dia = new Date().getDate();
-    const idx = DIAS_REMESSAS.indexOf(dia as any);
-    if (idx === -1) {
+    const hojeIso = new Date().toISOString().slice(0, 10);
+    const r = remessas.find((x) => x.data_programada === hojeIso);
+    if (!r) {
       toast({
         title: "Sem remessa hoje",
         description: "Hoje não há remessa programada. Você pode selecionar manualmente.",
       });
       return;
     }
-    setRemessaSelecionada(idx + 1);
+    setRemessaSelecionada(r.numero_remessa);
   };
 
   // ====== Iniciar envio (regular) ======
