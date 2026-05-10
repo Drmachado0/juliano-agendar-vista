@@ -156,6 +156,8 @@ const AdminCRM = () => {
   const [auditOpen, setAuditOpen] = useState(false);
   const [duplicadosOpen, setDuplicadosOpen] = useState(false);
   const isFetchingRef = useRef(false);
+  const columnsManager = useKanbanColumnsConfig();
+  const visibleColumns = columnsManager.orderedVisibleColumns;
 
   const [filters, setFilters] = useState<CrmFilters>(() => loadFilters());
   const [tab, setTab] = useState<"kanban" | "contatos">(() => {
