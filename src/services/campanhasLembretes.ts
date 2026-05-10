@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { LembreteAnual } from "./lembretesAnuais";
+import { listarJanelasMes } from "./janelasAtendimento";
 
 export type StatusRemessa =
   | "agendada"
