@@ -11,6 +11,7 @@ const corsHeaders = {
 
 const BodySchema = z.object({
   telefone_whatsapp: z.string().min(8),
+  formato: z.enum(["completo", "compacto"]).optional().default("completo"),
 });
 
 function json(body: unknown, status = 200) {
@@ -20,7 +21,7 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function emptyResponse(telefone: string) {
+function emptyResponseCompleto(telefone: string) {
   return {
     paciente: null,
     agendamento_ativo: null,
@@ -31,11 +32,52 @@ function emptyResponse(telefone: string) {
   };
 }
 
+// Remove chaves null/undefined/"" recursivamente em objetos planos
+function stripNulls<T extends Record<string, any>>(obj: T): Partial<T> {
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === null || v === undefined || v === "") continue;
+    out[k] = v;
+  }
+  return out as Partial<T>;
+}
+
+function calcularIdade(dataNasc: string | null): number | null {
+  if (!dataNasc) return null;
+  const d = new Date(dataNasc);
+  if (isNaN(d.getTime())) return null;
+  // Hora atual em America/Belem (UTC-3, sem DST)
+  const agora = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  let idade = agora.getUTCFullYear() - d.getUTCFullYear();
+  const m = agora.getUTCMonth() - d.getUTCMonth();
+  if (m < 0 || (m === 0 && agora.getUTCDate() < d.getUTCDate())) idade--;
+  return idade >= 0 && idade < 130 ? idade : null;
+}
+
+function diasAte(dataAg: string | null): number | null {
+  if (!dataAg) return null;
+  // Belém UTC-3
+  const agoraBelem = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  const hoje = Date.UTC(
+    agoraBelem.getUTCFullYear(),
+    agoraBelem.getUTCMonth(),
+    agoraBelem.getUTCDate(),
+  );
+  const [y, mo, d] = dataAg.split("-").map(Number);
+  if (!y || !mo || !d) return null;
+  const alvo = Date.UTC(y, mo - 1, d);
+  return Math.round((alvo - hoje) / 86400000);
+}
+
+function truncar(s: string | null | undefined, n: number): string {
+  if (!s) return "";
+  return s.length > n ? s.slice(0, n) + "…" : s;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
-  // Auth: aceita N8N_SHARED_SECRET (padrão atual) ou LOVABLE_N8N_SECRET (alias)
   const secret =
     Deno.env.get("N8N_SHARED_SECRET") ?? Deno.env.get("LOVABLE_N8N_SECRET");
   const provided = req.headers.get("x-n8n-secret");
@@ -56,8 +98,10 @@ serve(async (req) => {
   }
 
   const telefoneInput = parsed.data.telefone_whatsapp;
+  const formato = parsed.data.formato;
   const norm = telefoneInput.replace(/\D/g, "");
   const last8 = norm.slice(-8);
+  const geradoEm = new Date().toISOString();
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -65,10 +109,13 @@ serve(async (req) => {
   );
 
   if (last8.length < 8) {
-    return json(emptyResponse(norm));
+    return json(
+      formato === "compacto"
+        ? { conhecido: false, telefone_normalizado: norm, gerado_em: geradoEm }
+        : emptyResponseCompleto(norm),
+    );
   }
 
-  // Busca agendamento mais recente por telefone (match por últimos 8 dígitos)
   const { data: candidatos, error: selErr } = await supabase
     .from("agendamentos")
     .select(
@@ -79,7 +126,11 @@ serve(async (req) => {
 
   if (selErr) {
     console.error("Erro buscando agendamentos:", selErr);
-    return json(emptyResponse(norm));
+    return json(
+      formato === "compacto"
+        ? { conhecido: false, telefone_normalizado: norm, gerado_em: geradoEm }
+        : emptyResponseCompleto(norm),
+    );
   }
 
   const agendamentoMaisRecente = (candidatos ?? [])
@@ -94,14 +145,74 @@ serve(async (req) => {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     })[0];
 
-  // Últimas 10 mensagens — telefone armazenado já normalizado (ver registrar-mensagem-in-n8n)
+  const limMsgs = formato === "compacto" ? 6 : 10;
   const { data: msgsRaw } = await supabase
     .from("mensagens_whatsapp")
     .select("tipo_mensagem, conteudo, created_at, direcao, telefone")
     .ilike("telefone", `%${last8}`)
     .order("created_at", { ascending: false })
-    .limit(10);
+    .limit(limMsgs);
 
+  // ---------- COMPACTO ----------
+  if (formato === "compacto") {
+    const ultimas_mensagens_resumo = (msgsRaw ?? []).map((m: any) => ({
+      de: (m.direcao ?? "").toString().toLowerCase() === "out" ? "leticia" : "paciente",
+      quando: m.created_at,
+      texto: truncar(m.conteudo, 200),
+    }));
+
+    if (!agendamentoMaisRecente) {
+      const resp: Record<string, any> = {
+        conhecido: false,
+        telefone_normalizado: norm,
+        gerado_em: geradoEm,
+      };
+      if (ultimas_mensagens_resumo.length) {
+        resp.ultimas_mensagens_resumo = ultimas_mensagens_resumo;
+      }
+      return json(resp);
+    }
+
+    const a: any = agendamentoMaisRecente;
+    const conv =
+      a.convenio === "Outro" && a.convenio_outro ? a.convenio_outro : a.convenio;
+    const primeiroNome = (a.nome_completo ?? "").trim().split(/\s+/)[0] || null;
+
+    const paciente = stripNulls({
+      primeiro_nome: primeiroNome,
+      nome_completo: a.nome_completo ?? null,
+      convenio: conv ?? null,
+      tipo_atendimento: a.tipo_atendimento ?? null,
+      local: a.local_atendimento ?? null,
+      idade: calcularIdade(a.data_nascimento),
+    });
+
+    const agendamento_ativo = a.data_agendamento
+      ? stripNulls({
+          id: a.id,
+          data: a.data_agendamento,
+          hora: a.hora_agendamento,
+          status: a.status_funil ?? null,
+          dias_ate: diasAte(a.data_agendamento),
+        })
+      : null;
+
+    const resp: Record<string, any> = stripNulls({
+      conhecido: true,
+      paciente: Object.keys(paciente).length ? paciente : null,
+      agendamento_ativo,
+      estado_atendimento: a.estado_atendimento ?? "novo",
+      status_crm: a.status_crm ?? null,
+      telefone_normalizado: norm,
+      gerado_em: geradoEm,
+    });
+    if (ultimas_mensagens_resumo.length) {
+      resp.ultimas_mensagens_resumo = ultimas_mensagens_resumo;
+    }
+    return json(resp);
+  }
+
+  // ---------- COMPLETO (compat: igual ao comportamento anterior) ----------
   const ultimas_mensagens = (msgsRaw ?? []).map((m: any) => ({
     tipo: m.tipo_mensagem ?? "whatsapp",
     conteudo: m.conteudo,
@@ -110,10 +221,7 @@ serve(async (req) => {
   }));
 
   if (!agendamentoMaisRecente) {
-    return json({
-      ...emptyResponse(norm),
-      ultimas_mensagens,
-    });
+    return json({ ...emptyResponseCompleto(norm), ultimas_mensagens });
   }
 
   const a: any = agendamentoMaisRecente;
