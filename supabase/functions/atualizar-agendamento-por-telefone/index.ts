@@ -93,6 +93,7 @@ serve(async (req) => {
     "local_atendimento",
     "detalhe_exame_ou_cirurgia",
     "data_nascimento",
+    "estado_atendimento",
   ];
   for (const k of passthrough) {
     if (body[k] !== undefined && body[k] !== null && String(body[k]).length > 0) {
