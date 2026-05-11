@@ -99,13 +99,19 @@ async function logEnvio(admin: ReturnType<typeof makeAdmin>, payload: Record<str
 }
 
 async function countEnviadosHoje(admin: ReturnType<typeof makeAdmin>): Promise<number> {
-  const hoje = new Date();
-  hoje.setUTCHours(0, 0, 0, 0);
+  // Início do dia local em America/Belem (UTC-3) convertido para UTC real.
+  // Ex.: 00:00 BRT == 03:00 UTC do mesmo dia civil em Belém.
+  const belem = nowInBelem();
+  const ano = belem.getUTCFullYear();
+  const mes = belem.getUTCMonth();
+  const dia = belem.getUTCDate();
+  // 00:00 BRT = 03:00 UTC
+  const inicioDiaUtc = new Date(Date.UTC(ano, mes, dia, 3, 0, 0, 0));
   const { count } = await admin
     .from("logs_envio_lembrete")
     .select("*", { count: "exact", head: true })
     .eq("status", "sucesso")
-    .gte("created_at", hoje.toISOString());
+    .gte("created_at", inicioDiaUtc.toISOString());
   return count || 0;
 }
 
