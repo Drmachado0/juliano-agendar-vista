@@ -436,6 +436,8 @@ export type Database = {
         Row: {
           blackout_dates: string[]
           id: boolean
+          intervalo_max_segundos: number
+          intervalo_min_segundos: number
           janela_fim: string
           janela_inicio: string
           limite_diario: number
@@ -448,6 +450,8 @@ export type Database = {
         Insert: {
           blackout_dates?: string[]
           id?: boolean
+          intervalo_max_segundos?: number
+          intervalo_min_segundos?: number
           janela_fim?: string
           janela_inicio?: string
           limite_diario?: number
@@ -460,6 +464,8 @@ export type Database = {
         Update: {
           blackout_dates?: string[]
           id?: boolean
+          intervalo_max_segundos?: number
+          intervalo_min_segundos?: number
           janela_fim?: string
           janela_inicio?: string
           limite_diario?: number
@@ -1249,6 +1255,8 @@ export type Database = {
           agente: string
           campanha_id: string | null
           created_at: string
+          delay_antes_ms: number | null
+          delay_depois_ms: number | null
           id: string
           latencia_ms: number | null
           lembrete_id: string | null
@@ -1260,12 +1268,17 @@ export type Database = {
           remessa_id: string | null
           request_id: string | null
           status: string
+          status_global_no_envio: string | null
           telefone: string | null
+          variacao_id: string | null
+          variacao_nome: string | null
         }
         Insert: {
           agente: string
           campanha_id?: string | null
           created_at?: string
+          delay_antes_ms?: number | null
+          delay_depois_ms?: number | null
           id?: string
           latencia_ms?: number | null
           lembrete_id?: string | null
@@ -1277,12 +1290,17 @@ export type Database = {
           remessa_id?: string | null
           request_id?: string | null
           status: string
+          status_global_no_envio?: string | null
           telefone?: string | null
+          variacao_id?: string | null
+          variacao_nome?: string | null
         }
         Update: {
           agente?: string
           campanha_id?: string | null
           created_at?: string
+          delay_antes_ms?: number | null
+          delay_depois_ms?: number | null
           id?: string
           latencia_ms?: number | null
           lembrete_id?: string | null
@@ -1294,7 +1312,10 @@ export type Database = {
           remessa_id?: string | null
           request_id?: string | null
           status?: string
+          status_global_no_envio?: string | null
           telefone?: string | null
+          variacao_id?: string | null
+          variacao_nome?: string | null
         }
         Relationships: []
       }
@@ -1609,6 +1630,39 @@ export type Database = {
           tipo?: string
           updated_at?: string | null
           variaveis_disponiveis?: string[] | null
+        }
+        Relationships: []
+      }
+      templates_whatsapp_variacoes: {
+        Row: {
+          ativo: boolean
+          conteudo: string
+          created_at: string
+          id: string
+          nome: string
+          peso: number
+          template_tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          conteudo: string
+          created_at?: string
+          id?: string
+          nome: string
+          peso?: number
+          template_tipo: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          conteudo?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          peso?: number
+          template_tipo?: string
+          updated_at?: string
         }
         Relationships: []
       }
