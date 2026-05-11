@@ -576,8 +576,9 @@ export default function Configuracoes() {
             <BotConfigCard />
           </TabsContent>
 
-          <TabsContent value="envios" className="mt-6">
+          <TabsContent value="envios" className="mt-6 space-y-6">
             <EnvioConfigCard />
+            <VariacoesLembreteAnualCard />
           </TabsContent>
 
 
