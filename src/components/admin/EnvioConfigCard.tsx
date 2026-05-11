@@ -30,6 +30,8 @@ export default function EnvioConfigCard() {
   const [motivoBloqueio, setMotivoBloqueio] = useState<string>("");
   const [blackoutInput, setBlackoutInput] = useState<string>("");
   const [blackoutDates, setBlackoutDates] = useState<string[]>([]);
+  const [intervaloMin, setIntervaloMin] = useState<number>(75);
+  const [intervaloMax, setIntervaloMax] = useState<number>(210);
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
@@ -41,6 +43,8 @@ export default function EnvioConfigCard() {
     setStatusGlobal(cfg.status_global);
     setMotivoBloqueio(cfg.motivo_bloqueio ?? "");
     setBlackoutDates(cfg.blackout_dates ?? []);
+    setIntervaloMin(cfg.intervalo_min_segundos ?? 75);
+    setIntervaloMax(cfg.intervalo_max_segundos ?? 210);
   }, [cfg?.updated_at]);
 
   function adicionarBlackout() {
@@ -70,6 +74,14 @@ export default function EnvioConfigCard() {
       toast.error("Motivo é obrigatório quando status = bloqueado");
       return;
     }
+    if (intervaloMin < 30) {
+      toast.error("Intervalo mínimo deve ser >= 30 segundos");
+      return;
+    }
+    if (intervaloMax < intervaloMin) {
+      toast.error("Intervalo máximo deve ser maior ou igual ao mínimo");
+      return;
+    }
     setSalvando(true);
     const { success, error } = await atualizarConfiguracoesEnvio({
       limite_sessao: limiteSessao,
@@ -79,6 +91,8 @@ export default function EnvioConfigCard() {
       status_global: statusGlobal,
       motivo_bloqueio: statusGlobal === "bloqueado" ? motivoBloqueio.trim() : null,
       blackout_dates: blackoutDates,
+      intervalo_min_segundos: intervaloMin,
+      intervalo_max_segundos: intervaloMax,
     });
     setSalvando(false);
     if (success) {
@@ -236,6 +250,35 @@ export default function EnvioConfigCard() {
               ))}
             </div>
           )}
+        </div>
+
+        <div className="space-y-2 border-t pt-4">
+          <Label className="text-base">Intervalo aleatório entre envios</Label>
+          <p className="text-xs text-muted-foreground">
+            O runner aguarda um tempo aleatório entre o mínimo e o máximo antes de cada
+            próximo envio. Usado para reduzir padrão robótico e risco de bloqueio.
+            Recomendado: mínimo ≥ 60s, ideal entre 90s e 240s.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label className="text-xs">Mínimo (segundos)</Label>
+              <Input
+                type="number"
+                min={30}
+                value={intervaloMin}
+                onChange={(e) => setIntervaloMin(parseInt(e.target.value || "0", 10))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Máximo (segundos)</Label>
+              <Input
+                type="number"
+                min={intervaloMin}
+                value={intervaloMax}
+                onChange={(e) => setIntervaloMax(parseInt(e.target.value || "0", 10))}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end pt-2">
