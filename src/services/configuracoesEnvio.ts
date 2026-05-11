@@ -62,6 +62,8 @@ export async function atualizarConfiguracoesEnvio(
       | "status_global"
       | "motivo_bloqueio"
       | "blackout_dates"
+      | "intervalo_min_segundos"
+      | "intervalo_max_segundos"
     >
   >
 ): Promise<{ success: boolean; error: string | null }> {
