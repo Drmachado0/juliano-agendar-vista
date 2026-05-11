@@ -70,15 +70,20 @@ export default function EnvioConfigCard() {
       toast.error("Janela início deve ser menor que janela fim");
       return;
     }
+    const STATUS_VALIDOS: StatusGlobalEnvio[] = ["ativo", "pausado", "bloqueado"];
+    if (!STATUS_VALIDOS.includes(statusGlobal)) {
+      toast.error('Status global inválido. Use "ativo", "pausado" ou "bloqueado".');
+      return;
+    }
     if (statusGlobal === "bloqueado" && !motivoBloqueio.trim()) {
       toast.error("Motivo é obrigatório quando status = bloqueado");
       return;
     }
-    if (intervaloMin < 30) {
+    if (!Number.isFinite(intervaloMin) || intervaloMin < 30) {
       toast.error("Intervalo mínimo deve ser >= 30 segundos");
       return;
     }
-    if (intervaloMax < intervaloMin) {
+    if (!Number.isFinite(intervaloMax) || intervaloMax < intervaloMin) {
       toast.error("Intervalo máximo deve ser maior ou igual ao mínimo");
       return;
     }

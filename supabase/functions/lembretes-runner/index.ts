@@ -53,13 +53,21 @@ function nowInBelem(): Date {
   return new Date(utc - 3 * 60 * 60 * 1000);
 }
 
+function parseHmsToMinutes(value: string, fallback: number): number {
+  const parts = String(value || "").split(":");
+  const h = parseInt(parts[0] ?? "", 10);
+  const m = parseInt(parts[1] ?? "", 10);
+  if (Number.isNaN(h)) return fallback;
+  return h * 60 + (Number.isNaN(m) ? 0 : m);
+}
+
 function dentroDaJanela(cfg: any, agora: Date): boolean {
-  const horaAtual = agora.getUTCHours() + agora.getUTCMinutes() / 60;
-  const [hi] = String(cfg.janela_inicio || "09:00").split(":");
-  const [hf] = String(cfg.janela_fim || "18:00").split(":");
-  const ini = parseInt(hi, 10) || 9;
-  const fim = parseInt(hf, 10) || 18;
-  return horaAtual >= ini && horaAtual < fim;
+  // `agora` é um Date já deslocado para America/Belem (UTC-3).
+  // Os getters UTC* retornam, portanto, hora/minuto locais de Belém.
+  const minutosAgora = agora.getUTCHours() * 60 + agora.getUTCMinutes();
+  const ini = parseHmsToMinutes(cfg.janela_inicio || "09:00", 9 * 60);
+  const fim = parseHmsToMinutes(cfg.janela_fim || "18:00", 18 * 60);
+  return minutosAgora >= ini && minutosAgora < fim;
 }
 
 function isBlackoutHoje(cfg: any, hoje: Date): boolean {
@@ -91,13 +99,19 @@ async function logEnvio(admin: ReturnType<typeof makeAdmin>, payload: Record<str
 }
 
 async function countEnviadosHoje(admin: ReturnType<typeof makeAdmin>): Promise<number> {
-  const hoje = new Date();
-  hoje.setUTCHours(0, 0, 0, 0);
+  // Início do dia local em America/Belem (UTC-3) convertido para UTC real.
+  // Ex.: 00:00 BRT == 03:00 UTC do mesmo dia civil em Belém.
+  const belem = nowInBelem();
+  const ano = belem.getUTCFullYear();
+  const mes = belem.getUTCMonth();
+  const dia = belem.getUTCDate();
+  // 00:00 BRT = 03:00 UTC
+  const inicioDiaUtc = new Date(Date.UTC(ano, mes, dia, 3, 0, 0, 0));
   const { count } = await admin
     .from("logs_envio_lembrete")
     .select("*", { count: "exact", head: true })
     .eq("status", "sucesso")
-    .gte("created_at", hoje.toISOString());
+    .gte("created_at", inicioDiaUtc.toISOString());
   return count || 0;
 }
 
