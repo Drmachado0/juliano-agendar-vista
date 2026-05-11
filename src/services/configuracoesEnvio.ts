@@ -10,6 +10,8 @@ export interface ConfiguracoesEnvio {
   status_global: StatusGlobalEnvio;
   motivo_bloqueio: string | null;
   blackout_dates: string[]; // YYYY-MM-DD
+  intervalo_min_segundos: number;
+  intervalo_max_segundos: number;
   updated_at: string;
   updated_by: string | null;
 }
@@ -22,6 +24,8 @@ export const CONFIG_FALLBACK: ConfiguracoesEnvio = {
   status_global: "pausado", // fail-safe: nunca libera envio se algo der errado
   motivo_bloqueio: "Configuração indisponível (fallback de segurança)",
   blackout_dates: [],
+  intervalo_min_segundos: 75,
+  intervalo_max_segundos: 210,
   updated_at: new Date().toISOString(),
   updated_by: null,
 };
