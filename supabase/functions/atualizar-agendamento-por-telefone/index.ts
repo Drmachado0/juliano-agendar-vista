@@ -17,6 +17,7 @@ const BodySchema = z.object({
   detalhe_exame_ou_cirurgia: z.string().max(500).optional(),
   observacoes_internas: z.string().max(2000).optional(),
   data_nascimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  estado_atendimento: z.string().max(60).optional(),
 });
 
 function json(body: unknown, status = 200) {
@@ -92,6 +93,7 @@ serve(async (req) => {
     "local_atendimento",
     "detalhe_exame_ou_cirurgia",
     "data_nascimento",
+    "estado_atendimento",
   ];
   for (const k of passthrough) {
     if (body[k] !== undefined && body[k] !== null && String(body[k]).length > 0) {

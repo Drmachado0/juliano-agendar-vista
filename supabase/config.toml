@@ -102,3 +102,6 @@ verify_jwt = false
 [functions.lembretes-runner]
 verify_jwt = false
 
+[functions.buscar-contexto-paciente]
+verify_jwt = false
+
