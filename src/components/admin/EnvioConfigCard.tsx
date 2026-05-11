@@ -252,6 +252,35 @@ export default function EnvioConfigCard() {
           )}
         </div>
 
+        <div className="space-y-2 border-t pt-4">
+          <Label className="text-base">Intervalo aleatório entre envios</Label>
+          <p className="text-xs text-muted-foreground">
+            O runner aguarda um tempo aleatório entre o mínimo e o máximo antes de cada
+            próximo envio. Usado para reduzir padrão robótico e risco de bloqueio.
+            Recomendado: mínimo ≥ 60s, ideal entre 90s e 240s.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label className="text-xs">Mínimo (segundos)</Label>
+              <Input
+                type="number"
+                min={30}
+                value={intervaloMin}
+                onChange={(e) => setIntervaloMin(parseInt(e.target.value || "0", 10))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Máximo (segundos)</Label>
+              <Input
+                type="number"
+                min={intervaloMin}
+                value={intervaloMax}
+                onChange={(e) => setIntervaloMax(parseInt(e.target.value || "0", 10))}
+              />
+            </div>
+          </div>
+        </div>
+
         <div className="flex justify-end pt-2">
           <Button onClick={handleSalvar} disabled={salvando} className="gap-2">
             {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
