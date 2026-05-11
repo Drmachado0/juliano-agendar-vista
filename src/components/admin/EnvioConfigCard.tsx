@@ -30,6 +30,8 @@ export default function EnvioConfigCard() {
   const [motivoBloqueio, setMotivoBloqueio] = useState<string>("");
   const [blackoutInput, setBlackoutInput] = useState<string>("");
   const [blackoutDates, setBlackoutDates] = useState<string[]>([]);
+  const [intervaloMin, setIntervaloMin] = useState<number>(75);
+  const [intervaloMax, setIntervaloMax] = useState<number>(210);
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
@@ -41,6 +43,8 @@ export default function EnvioConfigCard() {
     setStatusGlobal(cfg.status_global);
     setMotivoBloqueio(cfg.motivo_bloqueio ?? "");
     setBlackoutDates(cfg.blackout_dates ?? []);
+    setIntervaloMin(cfg.intervalo_min_segundos ?? 75);
+    setIntervaloMax(cfg.intervalo_max_segundos ?? 210);
   }, [cfg?.updated_at]);
 
   function adicionarBlackout() {
