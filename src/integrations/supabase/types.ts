@@ -36,6 +36,7 @@ export type Database = {
           data_nascimento: string | null
           detalhe_exame_ou_cirurgia: string | null
           email: string | null
+          estado_atendimento: string
           fbc: string | null
           fbclid: string | null
           fbp: string | null
@@ -90,6 +91,7 @@ export type Database = {
           data_nascimento?: string | null
           detalhe_exame_ou_cirurgia?: string | null
           email?: string | null
+          estado_atendimento?: string
           fbc?: string | null
           fbclid?: string | null
           fbp?: string | null
@@ -144,6 +146,7 @@ export type Database = {
           data_nascimento?: string | null
           detalhe_exame_ou_cirurgia?: string | null
           email?: string | null
+          estado_atendimento?: string
           fbc?: string | null
           fbclid?: string | null
           fbp?: string | null
