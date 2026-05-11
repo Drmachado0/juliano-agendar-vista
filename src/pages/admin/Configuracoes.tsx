@@ -60,6 +60,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import TwoFactorSetup from "@/components/admin/TwoFactorSetup";
 import TemplatesWhatsAppTab from "@/components/admin/TemplatesWhatsAppTab";
 import EnvioConfigCard from "@/components/admin/EnvioConfigCard";
+import VariacoesLembreteAnualCard from "@/components/admin/VariacoesLembreteAnualCard";
 import { sincronizarAvaliacoesManualmente } from "@/services/avaliacoesGoogle";
 
 export default function Configuracoes() {
