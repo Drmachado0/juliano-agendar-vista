@@ -41,6 +41,8 @@ function checkSecret(req: Request): boolean {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+const MAX_FALHAS_CONSECUTIVAS = 3;
+
 function makeAdmin() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 }
@@ -137,6 +139,52 @@ async function preCheck(admin: ReturnType<typeof makeAdmin>): Promise<PreCheck> 
   return { ok: true, cfg };
 }
 
+interface Variacao {
+  id: string;
+  nome: string;
+  conteudo: string;
+  peso: number;
+}
+
+async function carregarVariacoes(
+  admin: ReturnType<typeof makeAdmin>,
+  tipo: string,
+): Promise<Variacao[]> {
+  const { data } = await admin
+    .from("templates_whatsapp_variacoes")
+    .select("id,nome,conteudo,peso")
+    .eq("template_tipo", tipo)
+    .eq("ativo", true);
+  return (data as Variacao[] | null) ?? [];
+}
+
+const FALLBACK_VARIACAO: Variacao = {
+  id: "00000000-0000-0000-0000-000000000000",
+  nome: "fallback",
+  conteudo:
+    "Olá, {{nome}}! 👋\n\nJá faz cerca de 1 ano desde sua última consulta oftalmológica conosco. Manter os exames em dia é importante para a saúde dos seus olhos. 👀\n\nGostaria de agendar seu retorno?\n\n📱 Agende pelo nosso site:\n👉 https://drjulianomachado.com/agendamento\n\nAtenciosamente,\nDr. Juliano Machado\nOftalmologia",
+  peso: 1,
+};
+
+function escolherVariacao(variacoes: Variacao[], lastId: string | null): Variacao {
+  if (variacoes.length === 0) return FALLBACK_VARIACAO;
+  // Tira a última usada para evitar repetição imediata, se houver alternativa
+  const candidatas = variacoes.length > 1 && lastId
+    ? variacoes.filter((v) => v.id !== lastId)
+    : variacoes;
+  const totalPeso = candidatas.reduce((s, v) => s + Math.max(1, v.peso || 1), 0);
+  let r = Math.random() * totalPeso;
+  for (const v of candidatas) {
+    r -= Math.max(1, v.peso || 1);
+    if (r <= 0) return v;
+  }
+  return candidatas[candidatas.length - 1];
+}
+
+function renderTemplate(tpl: string, dados: Record<string, string>): string {
+  return tpl.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => dados[k] ?? "");
+}
+
 interface ProcessResult {
   request_id: string;
   ok: boolean;
@@ -147,12 +195,13 @@ interface ProcessResult {
   bloqueado: boolean;
   motivo_bloqueio: string | null;
   duracao_ms: number;
+  parado_por_falhas?: boolean;
 }
 
 async function processarPacientes(
   admin: ReturnType<typeof makeAdmin>,
   pacientes: any[],
-  cfg: any,
+  cfgInicial: any,
   request_id: string,
   limiteSessao: number,
 ): Promise<ProcessResult> {
@@ -161,11 +210,24 @@ async function processarPacientes(
   let enviados = 0;
   let falhas = 0;
   let ignorados = 0;
+  let parado_por_falhas = false;
+  let falhasConsecutivas = 0;
 
   const enviadosHojeInicial = await countEnviadosHoje(admin);
-  let restanteDiario = Math.max(0, cfg.limite_diario - enviadosHojeInicial);
+  let restanteDiario = Math.max(0, cfgInicial.limite_diario - enviadosHojeInicial);
 
-  for (const pac of pacientes) {
+  const tipoTemplate = "lembrete_anual";
+  const variacoes = await carregarVariacoes(admin, tipoTemplate);
+  let ultimaVariacaoId: string | null = null;
+
+  // Limites de intervalo (com fallback seguro)
+  const intMin = Math.max(30, Number(cfgInicial.intervalo_min_segundos ?? 75));
+  const intMaxRaw = Number(cfgInicial.intervalo_max_segundos ?? 210);
+  const intMax = Math.max(intMin, intMaxRaw);
+
+  for (let i = 0; i < pacientes.length; i++) {
+    const pac = pacientes[i];
+
     if (processados >= limiteSessao) break;
     if (restanteDiario <= 0) {
       await logEnvio(admin, {
@@ -177,9 +239,28 @@ async function processarPacientes(
         remessa_id: pac.remessa_id,
         paciente_campanha_id: pac.id,
         request_id,
+        status_global_no_envio: cfgInicial.status_global,
       });
       ignorados++;
       continue;
+    }
+
+    // Re-checar status_global a cada paciente para honrar pausas em tempo real
+    const reCheck = await preCheck(admin);
+    if (!reCheck.ok) {
+      await logEnvio(admin, {
+        status: "bloqueado",
+        motivo: reCheck.motivo,
+        telefone: pac.telefone,
+        nome: pac.nome,
+        campanha_id: pac.campanha_id,
+        remessa_id: pac.remessa_id,
+        paciente_campanha_id: pac.id,
+        request_id,
+        status_global_no_envio: reCheck.cfg?.status_global ?? null,
+      });
+      ignorados++;
+      break;
     }
 
     // claim lock
@@ -204,15 +285,15 @@ async function processarPacientes(
       continue;
     }
 
-    const tStart = Date.now();
-    const mensagem =
-      `Olá, ${pac.primeiro_nome || pac.nome || "paciente"}! 👋\n\n` +
-      `Já faz cerca de 1 ano desde sua última consulta oftalmológica conosco. ` +
-      `Manter os exames em dia é importante para a saúde dos seus olhos. 👀\n\n` +
-      `Gostaria de agendar seu retorno?\n\n` +
-      `📱 Agende pelo nosso site:\n👉 https://drjulianomachado.com/agendamento\n\n` +
-      `Atenciosamente,\nDr. Juliano Machado\nOftalmologia`;
+    const variacao = escolherVariacao(variacoes, ultimaVariacaoId);
+    ultimaVariacaoId = variacao.id;
 
+    const mensagem = renderTemplate(variacao.conteudo, {
+      nome: pac.primeiro_nome || pac.nome || "paciente",
+      primeiro_nome: pac.primeiro_nome || pac.nome || "paciente",
+    });
+
+    const tStart = Date.now();
     let success = false;
     let errMsg: string | null = null;
     let result: any = null;
@@ -227,6 +308,12 @@ async function processarPacientes(
     const latencia = Date.now() - tStart;
     const normalized = normalizePhoneNumber(pac.telefone);
 
+    // delay aleatório (será aplicado depois deste envio se houver próximo)
+    const delayDepoisMs =
+      i < pacientes.length - 1 && processados + 1 < limiteSessao && restanteDiario - 1 > 0
+        ? (intMin + Math.floor(Math.random() * (intMax - intMin + 1))) * 1000
+        : 0;
+
     await logEnvio(admin, {
       status: success ? "sucesso" : "falha",
       motivo: success ? null : errMsg,
@@ -240,6 +327,11 @@ async function processarPacientes(
       latencia_ms: latencia,
       request_id,
       payload: result ? sanitizePayload({ response: result.sanitizedResponse ?? null }) : null,
+      variacao_id: variacao.id !== FALLBACK_VARIACAO.id ? variacao.id : null,
+      variacao_nome: variacao.nome,
+      delay_antes_ms: 0,
+      delay_depois_ms: delayDepoisMs,
+      status_global_no_envio: reCheck.cfg?.status_global ?? cfgInicial.status_global,
     });
 
     // Update paciente status
@@ -270,14 +362,26 @@ async function processarPacientes(
     if (success) {
       enviados++;
       restanteDiario--;
+      falhasConsecutivas = 0;
     } else {
       falhas++;
+      falhasConsecutivas++;
+      if (falhasConsecutivas >= MAX_FALHAS_CONSECUTIVAS) {
+        parado_por_falhas = true;
+        await logEnvio(admin, {
+          status: "bloqueado",
+          motivo: `parado_falhas_consecutivas:${falhasConsecutivas}`,
+          request_id,
+          campanha_id: pac.campanha_id,
+          remessa_id: pac.remessa_id,
+          status_global_no_envio: reCheck.cfg?.status_global ?? null,
+        });
+        break;
+      }
     }
 
-    // delay anti-spam aleatório 45-120s entre envios
-    if (processados < pacientes.length && processados < limiteSessao && restanteDiario > 0) {
-      const delay = 45_000 + Math.floor(Math.random() * 75_000);
-      await new Promise((r) => setTimeout(r, delay));
+    if (delayDepoisMs > 0) {
+      await new Promise((r) => setTimeout(r, delayDepoisMs));
     }
   }
 
@@ -291,6 +395,7 @@ async function processarPacientes(
     bloqueado: false,
     motivo_bloqueio: null,
     duracao_ms: Date.now() - t0,
+    parado_por_falhas,
   };
 }
 
@@ -369,6 +474,7 @@ serve(async (req) => {
           status: "bloqueado",
           motivo: pre.motivo,
           request_id,
+          status_global_no_envio: pre.cfg?.status_global ?? null,
         });
         return json(
           {
@@ -385,7 +491,6 @@ serve(async (req) => {
         );
       }
 
-      // Buscar próxima remessa com status agendada/em_andamento e data <= hoje
       const hoje = new Date().toISOString().slice(0, 10);
       const { data: remessa } = await admin
         .from("lembretes_campanha_remessas")
@@ -435,6 +540,7 @@ serve(async (req) => {
           motivo: pre.motivo,
           campanha_id,
           request_id,
+          status_global_no_envio: pre.cfg?.status_global ?? null,
         });
         return json(
           {
@@ -477,7 +583,7 @@ serve(async (req) => {
       return json(result);
     }
 
-    // ----- EXECUTAR JANELA (todas remessas vinculadas a uma janela) -----
+    // ----- EXECUTAR JANELA -----
     if (req.method === "POST" && path === "/executar-janela") {
       const body = await req.json().catch(() => ({}));
       const janela_atendimento_id = body?.janela_atendimento_id;
@@ -494,6 +600,7 @@ serve(async (req) => {
           motivo: pre.motivo,
           request_id,
           payload: { janela_atendimento_id },
+          status_global_no_envio: pre.cfg?.status_global ?? null,
         });
         return json(
           {
