@@ -74,6 +74,14 @@ export default function EnvioConfigCard() {
       toast.error("Motivo é obrigatório quando status = bloqueado");
       return;
     }
+    if (intervaloMin < 30) {
+      toast.error("Intervalo mínimo deve ser >= 30 segundos");
+      return;
+    }
+    if (intervaloMax < intervaloMin) {
+      toast.error("Intervalo máximo deve ser maior ou igual ao mínimo");
+      return;
+    }
     setSalvando(true);
     const { success, error } = await atualizarConfiguracoesEnvio({
       limite_sessao: limiteSessao,
@@ -83,6 +91,8 @@ export default function EnvioConfigCard() {
       status_global: statusGlobal,
       motivo_bloqueio: statusGlobal === "bloqueado" ? motivoBloqueio.trim() : null,
       blackout_dates: blackoutDates,
+      intervalo_min_segundos: intervaloMin,
+      intervalo_max_segundos: intervaloMax,
     });
     setSalvando(false);
     if (success) {
