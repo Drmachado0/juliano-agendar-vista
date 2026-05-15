@@ -26,6 +26,7 @@ interface DisponibilidadeSemanal {
   intervalo_minutos: number;
   ativo: boolean;
   clinica_id: string | null;
+  nome: string | null;
 }
 
 interface DisponibilidadeEspecifica {
