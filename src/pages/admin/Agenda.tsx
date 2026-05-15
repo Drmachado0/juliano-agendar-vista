@@ -13,14 +13,18 @@ import { listarClinicas, Clinica } from "@/services/clinicas";
 import { listarServicos, Servico, getDuracaoPadrao } from "@/services/servicos";
 import { gerarSlots, listarAgendamentosDia, listarBloqueiosDia, montarGradeAgenda, SlotAgenda, verificarDiaAtivo } from "@/services/agenda";
 import { Agendamento } from "@/services/agendamentos";
-import { Bloqueio } from "@/services/disponibilidade";
+import { buscarDataAberta, fecharDia, listarModelosHorario, ModeloHorario, DataAberta } from "@/services/disponibilidade";
 import { AgendaSlot } from "@/components/admin/AgendaSlot";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
 import { NovoAgendamentoAdminModal } from "@/components/admin/NovoAgendamentoAdminModal";
+import { DiaFechadoCard } from "@/components/admin/DiaFechadoCard";
+import { AbrirDiaModal } from "@/components/admin/AbrirDiaModal";
+import { ResumoDiaAberto } from "@/components/admin/ResumoDiaAberto";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { pullGoogleCalendarEvents, PullRange } from "@/services/googleCalendar";
 import { toast } from "@/hooks/use-toast";
+import { toast as sonner } from "sonner";
 
 export default function Agenda() {
   const { user } = useAuth();
@@ -31,7 +35,12 @@ export default function Agenda() {
   const [slots, setSlots] = useState<SlotAgenda[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncingGoogle, setSyncingGoogle] = useState(false);
-  
+
+  // Dia aberto?
+  const [dataAberta, setDataAberta] = useState<DataAberta | null>(null);
+  const [modeloAplicado, setModeloAplicado] = useState<ModeloHorario | null>(null);
+  const [abrirDiaOpen, setAbrirDiaOpen] = useState(false);
+
   // Modals
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [novoModalOpen, setNovoModalOpen] = useState(false);
@@ -55,10 +64,10 @@ export default function Agenda() {
       listarClinicas(),
       listarServicos()
     ]);
-    
+
     setClinicas(clinicasRes.data);
     setServicos(servicosRes.data);
-    
+
     if (clinicasRes.data.length > 0) {
       setSelectedClinicaId(clinicasRes.data[0].id);
     }
@@ -67,45 +76,68 @@ export default function Agenda() {
 
   async function carregarAgenda() {
     const dataFormatada = format(selectedDate, 'yyyy-MM-dd');
-    
-    const [agendamentosRes, bloqueiosRes, diaDisp] = await Promise.all([
+
+    // 1. O dia está aberto para esta clínica?
+    const aberta = await buscarDataAberta(selectedClinicaId, dataFormatada);
+    setDataAberta(aberta);
+
+    if (!aberta) {
+      setSlots([]);
+      setModeloAplicado(null);
+      return;
+    }
+
+    // 2. Resolver horários (modelo OU campos próprios)
+    let horaInicio = aberta.hora_inicio;
+    let horaFim = aberta.hora_fim;
+    let intervalo = aberta.intervalo_minutos;
+    let modelo: ModeloHorario | null = null;
+
+    if (aberta.modelo_id) {
+      const modelos = await listarModelosHorario(selectedClinicaId);
+      modelo = modelos.find((m) => m.id === aberta.modelo_id) ?? null;
+      if (modelo) {
+        horaInicio = horaInicio ?? modelo.hora_inicio;
+        horaFim = horaFim ?? modelo.hora_fim;
+        intervalo = intervalo ?? modelo.intervalo_minutos;
+      }
+    }
+    setModeloAplicado(modelo);
+
+    if (!horaInicio || !horaFim) {
+      setSlots([]);
+      return;
+    }
+
+    // 3. Carregar agendamentos + bloqueios e montar grade
+    const [agendamentosRes, bloqueiosRes] = await Promise.all([
       listarAgendamentosDia(dataFormatada, selectedClinicaId),
       listarBloqueiosDia(dataFormatada, selectedClinicaId),
-      verificarDiaAtivo(selectedDate, selectedClinicaId)
     ]);
 
-    const duracaoPadrao = getDuracaoPadrao();
-    const slotsBase = gerarSlots(duracaoPadrao, 8, 18);
+    const [hi] = horaInicio.split(":").map(Number);
+    const [hf] = horaFim.split(":").map(Number);
+    const slotsBase = gerarSlots(intervalo ?? 30, hi, hf);
     const gradeAgenda = montarGradeAgenda(
       slotsBase,
       agendamentosRes.data,
       bloqueiosRes.data,
       selectedDate,
-      diaDisp.ativo,
-      diaDisp.horaInicio,
-      diaDisp.horaFim
+      true,
+      horaInicio,
+      horaFim
     );
-
     setSlots(gradeAgenda);
   }
 
-  function handleSlotClick(slot: SlotAgenda) {
-    if (slot.status === 'ocupado' && slot.agendamento) {
-      setSelectedAgendamento(slot.agendamento);
-      setDetailsModalOpen(true);
-    } else if (slot.status === 'livre') {
-      setSelectedSlotHora(slot.horaFormatada);
-      setNovoModalOpen(true);
+  async function handleFecharDia() {
+    if (!confirm("Fechar este dia removerá a disponibilidade aberta. Continuar?")) return;
+    const { error } = await fecharDia(selectedClinicaId, format(selectedDate, "yyyy-MM-dd"));
+    if (error) {
+      sonner.error("Erro ao fechar o dia");
+      return;
     }
-  }
-
-  function handleNovoAgendamentoCriado() {
-    setNovoModalOpen(false);
-    carregarAgenda();
-  }
-
-  function handleAgendamentoAtualizado() {
-    setDetailsModalOpen(false);
+    sonner.success("Dia fechado");
     carregarAgenda();
   }
 
