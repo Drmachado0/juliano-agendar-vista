@@ -15,6 +15,7 @@ import { ptBR } from "date-fns/locale";
 import { listarClinicas, Clinica } from "@/services/clinicas";
 import { useBloqueios, Bloqueio, getTipoBloqueioLabel, getTipoBloqueioColor } from "@/hooks/useBloqueios";
 import { BloqueioModal } from "@/components/admin/BloqueioModal";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -26,6 +27,7 @@ interface DisponibilidadeSemanal {
   intervalo_minutos: number;
   ativo: boolean;
   clinica_id: string | null;
+  nome: string | null;
 }
 
 interface DisponibilidadeEspecifica {
@@ -188,20 +190,57 @@ export default function Disponibilidade() {
             hora_inicio: disp.hora_inicio,
             hora_fim: disp.hora_fim,
             intervalo_minutos: disp.intervalo_minutos,
-            ativo: disp.ativo
+            ativo: disp.ativo,
+            nome: disp.nome,
           })
           .eq('id', disp.id);
         
         if (error) throw error;
       }
-      toast.success('Disponibilidade semanal salva com sucesso!');
+      toast.success('Modelos salvos com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      toast.error('Erro ao salvar disponibilidade');
+      toast.error('Erro ao salvar modelos');
     } finally {
       setSavingSemanal(false);
     }
   }
+
+  // Aplicar modelo a uma data
+  const [aplicarModeloOpen, setAplicarModeloOpen] = useState(false);
+  const [modeloAplicar, setModeloAplicar] = useState<DisponibilidadeSemanal | null>(null);
+  const [dataAplicar, setDataAplicar] = useState("");
+
+  function abrirAplicarModelo(modelo: DisponibilidadeSemanal) {
+    setModeloAplicar(modelo);
+    setDataAplicar("");
+    setAplicarModeloOpen(true);
+  }
+
+  async function confirmarAplicarModelo() {
+    if (!modeloAplicar || !dataAplicar) {
+      toast.error("Selecione uma data");
+      return;
+    }
+    const { error } = await supabase.from("disponibilidade_especifica").insert({
+      clinica_id: selectedClinicaId,
+      data: dataAplicar,
+      modelo_id: modeloAplicar.id,
+      disponivel: true,
+    } as any);
+    if (error) {
+      if ((error as any).code === "23505") {
+        toast.error("Já existe uma data aberta para este dia");
+      } else {
+        toast.error("Erro ao aplicar modelo");
+      }
+      return;
+    }
+    toast.success("Modelo aplicado — dia aberto");
+    setAplicarModeloOpen(false);
+    carregarDisponibilidadeEspecifica(selectedClinicaId);
+  }
+
 
   async function adicionarDisponibilidadeEspecifica() {
     if (!novaEspecifica.data) {
@@ -364,22 +403,27 @@ export default function Disponibilidade() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Horários Padrão da Semana</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Modelos de horários
+                  <Badge variant="outline" className="text-xs">Template</Badge>
+                </CardTitle>
                 <CardDescription>
-                  Configure os horários de atendimento para cada dia da semana nesta clínica.
+                  Modelos são apenas <strong>templates reutilizáveis</strong> de horário (ex.: "Clinicor manhã").
+                  Eles <strong>não abrem o dia sozinhos</strong> — para abrir uma data, use o botão
+                  "Aplicar a uma data" abaixo ou abra direto pela tela da Agenda.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {disponibilidadeSemanal.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">
-                    Carregando disponibilidade...
+                    Carregando modelos...
                   </p>
                 ) : (
                   disponibilidadeSemanal.map((disp) => {
                     const diaInfo = DIAS_SEMANA.find(d => d.value === disp.dia_semana);
                     return (
-                      <div 
-                        key={disp.id} 
+                      <div
+                        key={disp.id}
                         className={`flex flex-wrap items-center gap-4 p-4 rounded-lg border ${disp.ativo ? 'bg-card' : 'bg-muted/50'}`}
                       >
                         <div className="flex items-center gap-3 w-40">
@@ -391,9 +435,19 @@ export default function Disponibilidade() {
                             {diaInfo?.label}
                           </span>
                         </div>
-                        
+
                         {disp.ativo && (
                           <>
+                            <div className="flex items-center gap-2 min-w-[200px] flex-1">
+                              <Label className="text-sm text-muted-foreground whitespace-nowrap">Nome:</Label>
+                              <Input
+                                type="text"
+                                placeholder={`Ex.: ${diaInfo?.label} padrão`}
+                                value={disp.nome ?? ""}
+                                onChange={(e) => updateSemanalField(disp.id, 'nome', e.target.value)}
+                                className="flex-1"
+                              />
+                            </div>
                             <div className="flex items-center gap-2">
                               <Label className="text-sm text-muted-foreground">Início:</Label>
                               <Input
@@ -433,16 +487,25 @@ export default function Disponibilidade() {
                                 </SelectContent>
                               </Select>
                             </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => abrirAplicarModelo(disp)}
+                              className="gap-2 ml-auto"
+                            >
+                              <CalendarDays className="h-4 w-4" />
+                              Aplicar a uma data
+                            </Button>
                           </>
                         )}
                       </div>
                     );
                   })
                 )}
-                
+
                 <Button onClick={salvarDisponibilidadeSemanal} disabled={savingSemanal || disponibilidadeSemanal.length === 0} className="gap-2">
                   <Save className="h-4 w-4" />
-                  {savingSemanal ? 'Salvando...' : 'Salvar Alterações'}
+                  {savingSemanal ? 'Salvando...' : 'Salvar modelos'}
                 </Button>
               </CardContent>
             </Card>
@@ -751,6 +814,37 @@ export default function Disponibilidade() {
         bloqueio={selectedBloqueio}
         initialDate={selectedDate}
       />
+
+      {/* Aplicar modelo a uma data */}
+      <Dialog open={aplicarModeloOpen} onOpenChange={setAplicarModeloOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Aplicar modelo a uma data</DialogTitle>
+            <DialogDescription>
+              {modeloAplicar?.nome ||
+                `${DIAS_SEMANA.find(d => d.value === modeloAplicar?.dia_semana)?.label} — ${modeloAplicar?.hora_inicio?.slice(0,5)}–${modeloAplicar?.hora_fim?.slice(0,5)}`}
+              {" · "}{modeloAplicar?.intervalo_minutos} min
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Data para abrir</Label>
+            <Input
+              type="date"
+              value={dataAplicar}
+              onChange={(e) => setDataAplicar(e.target.value)}
+              min={format(new Date(), "yyyy-MM-dd")}
+            />
+            <p className="text-xs text-muted-foreground">
+              Isto cria uma data aberta para esta clínica usando os horários do modelo.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAplicarModeloOpen(false)}>Cancelar</Button>
+            <Button onClick={confirmarAplicarModelo}>Aplicar e abrir dia</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </AdminLayout>
   );
 }
