@@ -13,14 +13,18 @@ import { listarClinicas, Clinica } from "@/services/clinicas";
 import { listarServicos, Servico, getDuracaoPadrao } from "@/services/servicos";
 import { gerarSlots, listarAgendamentosDia, listarBloqueiosDia, montarGradeAgenda, SlotAgenda, verificarDiaAtivo } from "@/services/agenda";
 import { Agendamento } from "@/services/agendamentos";
-import { Bloqueio } from "@/services/disponibilidade";
+import { buscarDataAberta, fecharDia, listarModelosHorario, ModeloHorario, DataAberta } from "@/services/disponibilidade";
 import { AgendaSlot } from "@/components/admin/AgendaSlot";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
 import { NovoAgendamentoAdminModal } from "@/components/admin/NovoAgendamentoAdminModal";
+import { DiaFechadoCard } from "@/components/admin/DiaFechadoCard";
+import { AbrirDiaModal } from "@/components/admin/AbrirDiaModal";
+import { ResumoDiaAberto } from "@/components/admin/ResumoDiaAberto";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { pullGoogleCalendarEvents, PullRange } from "@/services/googleCalendar";
 import { toast } from "@/hooks/use-toast";
+import { toast as sonner } from "sonner";
 
 export default function Agenda() {
   const { user } = useAuth();
@@ -31,7 +35,12 @@ export default function Agenda() {
   const [slots, setSlots] = useState<SlotAgenda[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncingGoogle, setSyncingGoogle] = useState(false);
-  
+
+  // Dia aberto?
+  const [dataAberta, setDataAberta] = useState<DataAberta | null>(null);
+  const [modeloAplicado, setModeloAplicado] = useState<ModeloHorario | null>(null);
+  const [abrirDiaOpen, setAbrirDiaOpen] = useState(false);
+
   // Modals
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [novoModalOpen, setNovoModalOpen] = useState(false);
@@ -55,10 +64,10 @@ export default function Agenda() {
       listarClinicas(),
       listarServicos()
     ]);
-    
+
     setClinicas(clinicasRes.data);
     setServicos(servicosRes.data);
-    
+
     if (clinicasRes.data.length > 0) {
       setSelectedClinicaId(clinicasRes.data[0].id);
     }
@@ -67,26 +76,69 @@ export default function Agenda() {
 
   async function carregarAgenda() {
     const dataFormatada = format(selectedDate, 'yyyy-MM-dd');
-    
-    const [agendamentosRes, bloqueiosRes, diaDisp] = await Promise.all([
+
+    // 1. O dia está aberto para esta clínica?
+    const aberta = await buscarDataAberta(selectedClinicaId, dataFormatada);
+    setDataAberta(aberta);
+
+    if (!aberta) {
+      setSlots([]);
+      setModeloAplicado(null);
+      return;
+    }
+
+    // 2. Resolver horários (modelo OU campos próprios)
+    let horaInicio = aberta.hora_inicio;
+    let horaFim = aberta.hora_fim;
+    let intervalo = aberta.intervalo_minutos;
+    let modelo: ModeloHorario | null = null;
+
+    if (aberta.modelo_id) {
+      const modelos = await listarModelosHorario(selectedClinicaId);
+      modelo = modelos.find((m) => m.id === aberta.modelo_id) ?? null;
+      if (modelo) {
+        horaInicio = horaInicio ?? modelo.hora_inicio;
+        horaFim = horaFim ?? modelo.hora_fim;
+        intervalo = intervalo ?? modelo.intervalo_minutos;
+      }
+    }
+    setModeloAplicado(modelo);
+
+    if (!horaInicio || !horaFim) {
+      setSlots([]);
+      return;
+    }
+
+    // 3. Carregar agendamentos + bloqueios e montar grade
+    const [agendamentosRes, bloqueiosRes] = await Promise.all([
       listarAgendamentosDia(dataFormatada, selectedClinicaId),
       listarBloqueiosDia(dataFormatada, selectedClinicaId),
-      verificarDiaAtivo(selectedDate, selectedClinicaId)
     ]);
 
-    const duracaoPadrao = getDuracaoPadrao();
-    const slotsBase = gerarSlots(duracaoPadrao, 8, 18);
+    const [hi] = horaInicio.split(":").map(Number);
+    const [hf] = horaFim.split(":").map(Number);
+    const slotsBase = gerarSlots(intervalo ?? 30, hi, hf);
     const gradeAgenda = montarGradeAgenda(
       slotsBase,
       agendamentosRes.data,
       bloqueiosRes.data,
       selectedDate,
-      diaDisp.ativo,
-      diaDisp.horaInicio,
-      diaDisp.horaFim
+      true,
+      horaInicio,
+      horaFim
     );
-
     setSlots(gradeAgenda);
+  }
+
+  async function handleFecharDia() {
+    if (!confirm("Fechar este dia removerá a disponibilidade aberta. Continuar?")) return;
+    const { error } = await fecharDia(selectedClinicaId, format(selectedDate, "yyyy-MM-dd"));
+    if (error) {
+      sonner.error("Erro ao fechar o dia");
+      return;
+    }
+    sonner.success("Dia fechado");
+    carregarAgenda();
   }
 
   function handleSlotClick(slot: SlotAgenda) {
@@ -253,41 +305,68 @@ export default function Agenda() {
           </CardContent>
         </Card>
 
-        {/* Legenda */}
-        <div className="flex flex-wrap gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-green-100 border border-green-300"></div>
-            <span className="text-sm text-muted-foreground">Livre</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-blue-100 border border-blue-300"></div>
-            <span className="text-sm text-muted-foreground">Ocupado</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-red-100 border border-red-300"></div>
-            <span className="text-sm text-muted-foreground">Bloqueado</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-gray-100 border border-gray-300"></div>
-            <span className="text-sm text-muted-foreground">Passado</span>
-          </div>
-        </div>
+        {!dataAberta ? (
+          <DiaFechadoCard
+            data={selectedDate}
+            clinicaNome={selectedClinica?.nome || ""}
+            onAbrir={() => setAbrirDiaOpen(true)}
+          />
+        ) : (
+          <>
+            <ResumoDiaAberto
+              clinicaNome={selectedClinica?.nome || ""}
+              modeloNome={modeloAplicado?.nome ?? null}
+              slots={slots}
+              onFechar={handleFecharDia}
+            />
 
-        {/* Grade de Horários */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-2">
-              {slots.map((slot, index) => (
-                <AgendaSlot
-                  key={`${slot.horaFormatada}-${index}`}
-                  slot={slot}
-                  onClick={() => handleSlotClick(slot)}
-                />
-              ))}
+            {/* Legenda */}
+            <div className="flex flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-green-100 border border-green-300"></div>
+                <span className="text-sm text-muted-foreground">Livre</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-blue-100 border border-blue-300"></div>
+                <span className="text-sm text-muted-foreground">Ocupado</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-red-100 border border-red-300"></div>
+                <span className="text-sm text-muted-foreground">Bloqueado</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-gray-100 border border-gray-300"></div>
+                <span className="text-sm text-muted-foreground">Passado</span>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Grade de Horários */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="space-y-2">
+                  {slots.map((slot, index) => (
+                    <AgendaSlot
+                      key={`${slot.horaFormatada}-${index}`}
+                      slot={slot}
+                      onClick={() => handleSlotClick(slot)}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
+
+      {/* Modal Abrir Dia */}
+      <AbrirDiaModal
+        open={abrirDiaOpen}
+        onClose={() => setAbrirDiaOpen(false)}
+        onSuccess={carregarAgenda}
+        clinicaId={selectedClinicaId}
+        clinicaNome={selectedClinica?.nome || ""}
+        data={selectedDate}
+      />
 
       {/* Modal de Detalhes */}
       {selectedAgendamento && (

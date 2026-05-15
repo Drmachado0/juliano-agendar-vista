@@ -699,6 +699,7 @@ export type Database = {
           hora_inicio: string | null
           id: string
           intervalo_minutos: number | null
+          modelo_id: string | null
           motivo: string | null
           updated_at: string | null
         }
@@ -711,6 +712,7 @@ export type Database = {
           hora_inicio?: string | null
           id?: string
           intervalo_minutos?: number | null
+          modelo_id?: string | null
           motivo?: string | null
           updated_at?: string | null
         }
@@ -723,6 +725,7 @@ export type Database = {
           hora_inicio?: string | null
           id?: string
           intervalo_minutos?: number | null
+          modelo_id?: string | null
           motivo?: string | null
           updated_at?: string | null
         }
@@ -732,6 +735,13 @@ export type Database = {
             columns: ["clinica_id"]
             isOneToOne: false
             referencedRelation: "clinicas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disponibilidade_especifica_modelo_id_fkey"
+            columns: ["modelo_id"]
+            isOneToOne: false
+            referencedRelation: "disponibilidade_semanal"
             referencedColumns: ["id"]
           },
         ]
@@ -746,6 +756,7 @@ export type Database = {
           hora_inicio: string
           id: string
           intervalo_minutos: number
+          nome: string | null
           updated_at: string | null
         }
         Insert: {
@@ -757,6 +768,7 @@ export type Database = {
           hora_inicio: string
           id?: string
           intervalo_minutos?: number
+          nome?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -768,6 +780,7 @@ export type Database = {
           hora_inicio?: string
           id?: string
           intervalo_minutos?: number
+          nome?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2092,6 +2105,21 @@ export type Database = {
       encrypt_sensitive_data: { Args: { plain_text: string }; Returns: string }
       encrypt_totp_secret: { Args: { plain_secret: string }; Returns: string }
       exportar_dados_paciente: { Args: { p_telefone: string }; Returns: Json }
+      get_available_days: {
+        Args: { p_clinica_id: string; p_month: number; p_year: number }
+        Returns: {
+          data: string
+          slots_livres: number
+          total_slots: number
+        }[]
+      }
+      get_available_slots: {
+        Args: { p_clinica_id: string; p_data: string }
+        Returns: {
+          hora: string
+          status: string
+        }[]
+      }
       get_leads_sem_boas_vindas: {
         Args: { p_cutoff_minutes?: number }
         Returns: {
@@ -2102,6 +2130,13 @@ export type Database = {
           nome_completo: string
           telefone_whatsapp: string
           tipo_atendimento: string
+        }[]
+      }
+      get_next_available_slot: {
+        Args: { p_clinica_id: string; p_from?: string }
+        Returns: {
+          data: string
+          hora: string
         }[]
       }
       get_observacoes_decrypted: {
