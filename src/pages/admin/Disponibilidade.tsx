@@ -317,19 +317,25 @@ export default function Disponibilidade() {
           <p className="text-muted-foreground">Configure horários de atendimento e bloqueios</p>
         </div>
 
-        <Tabs defaultValue="semanal" className="space-y-6">
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm text-muted-foreground">
+          <strong className="text-foreground">Regra:</strong> dias sem uma <em>data aberta</em> ativa
+          ficam fechados, mesmo que existam modelos semanais cadastrados. Modelos servem apenas como
+          template para abrir um dia rapidamente. Bloqueios são exceções dentro de dias já abertos.
+        </div>
+
+        <Tabs defaultValue="especifica" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="semanal" className="gap-2">
-              <Clock className="h-4 w-4" />
-              Horários Semanais
-            </TabsTrigger>
             <TabsTrigger value="especifica" className="gap-2">
               <CalendarDays className="h-4 w-4" />
-              Datas Especiais
+              Datas abertas
+            </TabsTrigger>
+            <TabsTrigger value="semanal" className="gap-2">
+              <Clock className="h-4 w-4" />
+              Modelos de horários
             </TabsTrigger>
             <TabsTrigger value="bloqueios" className="gap-2">
               <Calendar className="h-4 w-4" />
-              Bloqueios por Clínica
+              Bloqueios / Exceções
             </TabsTrigger>
           </TabsList>
 
