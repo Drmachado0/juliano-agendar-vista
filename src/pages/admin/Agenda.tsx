@@ -305,41 +305,68 @@ export default function Agenda() {
           </CardContent>
         </Card>
 
-        {/* Legenda */}
-        <div className="flex flex-wrap gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-green-100 border border-green-300"></div>
-            <span className="text-sm text-muted-foreground">Livre</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-blue-100 border border-blue-300"></div>
-            <span className="text-sm text-muted-foreground">Ocupado</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-red-100 border border-red-300"></div>
-            <span className="text-sm text-muted-foreground">Bloqueado</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-gray-100 border border-gray-300"></div>
-            <span className="text-sm text-muted-foreground">Passado</span>
-          </div>
-        </div>
+        {!dataAberta ? (
+          <DiaFechadoCard
+            data={selectedDate}
+            clinicaNome={selectedClinica?.nome || ""}
+            onAbrir={() => setAbrirDiaOpen(true)}
+          />
+        ) : (
+          <>
+            <ResumoDiaAberto
+              clinicaNome={selectedClinica?.nome || ""}
+              modeloNome={modeloAplicado?.nome ?? null}
+              slots={slots}
+              onFechar={handleFecharDia}
+            />
 
-        {/* Grade de Horários */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-2">
-              {slots.map((slot, index) => (
-                <AgendaSlot
-                  key={`${slot.horaFormatada}-${index}`}
-                  slot={slot}
-                  onClick={() => handleSlotClick(slot)}
-                />
-              ))}
+            {/* Legenda */}
+            <div className="flex flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-green-100 border border-green-300"></div>
+                <span className="text-sm text-muted-foreground">Livre</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-blue-100 border border-blue-300"></div>
+                <span className="text-sm text-muted-foreground">Ocupado</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-red-100 border border-red-300"></div>
+                <span className="text-sm text-muted-foreground">Bloqueado</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-gray-100 border border-gray-300"></div>
+                <span className="text-sm text-muted-foreground">Passado</span>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Grade de Horários */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="space-y-2">
+                  {slots.map((slot, index) => (
+                    <AgendaSlot
+                      key={`${slot.horaFormatada}-${index}`}
+                      slot={slot}
+                      onClick={() => handleSlotClick(slot)}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
+
+      {/* Modal Abrir Dia */}
+      <AbrirDiaModal
+        open={abrirDiaOpen}
+        onClose={() => setAbrirDiaOpen(false)}
+        onSuccess={carregarAgenda}
+        clinicaId={selectedClinicaId}
+        clinicaNome={selectedClinica?.nome || ""}
+        data={selectedDate}
+      />
 
       {/* Modal de Detalhes */}
       {selectedAgendamento && (
