@@ -402,22 +402,27 @@ export default function Disponibilidade() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Horários Padrão da Semana</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Modelos de horários
+                  <Badge variant="outline" className="text-xs">Template</Badge>
+                </CardTitle>
                 <CardDescription>
-                  Configure os horários de atendimento para cada dia da semana nesta clínica.
+                  Modelos são apenas <strong>templates reutilizáveis</strong> de horário (ex.: "Clinicor manhã").
+                  Eles <strong>não abrem o dia sozinhos</strong> — para abrir uma data, use o botão
+                  "Aplicar a uma data" abaixo ou abra direto pela tela da Agenda.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {disponibilidadeSemanal.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">
-                    Carregando disponibilidade...
+                    Carregando modelos...
                   </p>
                 ) : (
                   disponibilidadeSemanal.map((disp) => {
                     const diaInfo = DIAS_SEMANA.find(d => d.value === disp.dia_semana);
                     return (
-                      <div 
-                        key={disp.id} 
+                      <div
+                        key={disp.id}
                         className={`flex flex-wrap items-center gap-4 p-4 rounded-lg border ${disp.ativo ? 'bg-card' : 'bg-muted/50'}`}
                       >
                         <div className="flex items-center gap-3 w-40">
@@ -429,9 +434,19 @@ export default function Disponibilidade() {
                             {diaInfo?.label}
                           </span>
                         </div>
-                        
+
                         {disp.ativo && (
                           <>
+                            <div className="flex items-center gap-2 min-w-[200px] flex-1">
+                              <Label className="text-sm text-muted-foreground whitespace-nowrap">Nome:</Label>
+                              <Input
+                                type="text"
+                                placeholder={`Ex.: ${diaInfo?.label} padrão`}
+                                value={disp.nome ?? ""}
+                                onChange={(e) => updateSemanalField(disp.id, 'nome', e.target.value)}
+                                className="flex-1"
+                              />
+                            </div>
                             <div className="flex items-center gap-2">
                               <Label className="text-sm text-muted-foreground">Início:</Label>
                               <Input
@@ -471,16 +486,25 @@ export default function Disponibilidade() {
                                 </SelectContent>
                               </Select>
                             </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => abrirAplicarModelo(disp)}
+                              className="gap-2 ml-auto"
+                            >
+                              <CalendarDays className="h-4 w-4" />
+                              Aplicar a uma data
+                            </Button>
                           </>
                         )}
                       </div>
                     );
                   })
                 )}
-                
+
                 <Button onClick={salvarDisponibilidadeSemanal} disabled={savingSemanal || disponibilidadeSemanal.length === 0} className="gap-2">
                   <Save className="h-4 w-4" />
-                  {savingSemanal ? 'Salvando...' : 'Salvar Alterações'}
+                  {savingSemanal ? 'Salvando...' : 'Salvar modelos'}
                 </Button>
               </CardContent>
             </Card>
