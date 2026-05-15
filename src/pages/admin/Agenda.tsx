@@ -141,6 +141,26 @@ export default function Agenda() {
     carregarAgenda();
   }
 
+  function handleSlotClick(slot: SlotAgenda) {
+    if (slot.status === 'ocupado' && slot.agendamento) {
+      setSelectedAgendamento(slot.agendamento);
+      setDetailsModalOpen(true);
+    } else if (slot.status === 'livre') {
+      setSelectedSlotHora(slot.horaFormatada);
+      setNovoModalOpen(true);
+    }
+  }
+
+  function handleNovoAgendamentoCriado() {
+    setNovoModalOpen(false);
+    carregarAgenda();
+  }
+
+  function handleAgendamentoAtualizado() {
+    setDetailsModalOpen(false);
+    carregarAgenda();
+  }
+
   async function handleSyncGoogle(range: PullRange = "default") {
     if (!user?.id) return;
     setSyncingGoogle(true);
