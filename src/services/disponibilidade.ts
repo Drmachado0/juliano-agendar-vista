@@ -189,6 +189,112 @@ export function getTipoBloqueioLabel(tipo: TipoBloqueio): string {
   return labels[tipo] || tipo;
 }
 
+// ─────────────────────────────────────────────
+// "Datas abertas" e "Modelos de horário"
+// ─────────────────────────────────────────────
+
+export interface ModeloHorario {
+  id: string;
+  clinica_id: string | null;
+  dia_semana: number;
+  hora_inicio: string;
+  hora_fim: string;
+  intervalo_minutos: number;
+  ativo: boolean;
+  nome: string | null;
+}
+
+export interface DataAberta {
+  id: string;
+  clinica_id: string;
+  data: string;
+  hora_inicio: string | null;
+  hora_fim: string | null;
+  intervalo_minutos: number | null;
+  modelo_id: string | null;
+  disponivel: boolean;
+  motivo: string | null;
+}
+
+export async function listarModelosHorario(clinicaId: string): Promise<ModeloHorario[]> {
+  const { data, error } = await supabase
+    .from("disponibilidade_semanal")
+    .select("*")
+    .eq("clinica_id", clinicaId)
+    .eq("ativo", true)
+    .order("dia_semana");
+  if (error) {
+    console.error("listarModelosHorario:", error);
+    return [];
+  }
+  return (data as ModeloHorario[]) || [];
+}
+
+export async function buscarDataAberta(
+  clinicaId: string,
+  data: string
+): Promise<DataAberta | null> {
+  const { data: rows, error } = await supabase
+    .from("disponibilidade_especifica")
+    .select("*")
+    .eq("clinica_id", clinicaId)
+    .eq("data", data)
+    .eq("disponivel", true)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) {
+    console.error("buscarDataAberta:", error);
+    return null;
+  }
+  return ((rows?.[0] as unknown) as DataAberta) || null;
+}
+
+export async function abrirDiaManual(input: {
+  clinicaId: string;
+  data: string;
+  horaInicio: string;
+  horaFim: string;
+  intervaloMinutos: number;
+  motivo?: string | null;
+}): Promise<{ error: Error | null }> {
+  const { error } = await supabase.from("disponibilidade_especifica").insert({
+    clinica_id: input.clinicaId,
+    data: input.data,
+    hora_inicio: input.horaInicio,
+    hora_fim: input.horaFim,
+    intervalo_minutos: input.intervaloMinutos,
+    disponivel: true,
+    motivo: input.motivo || null,
+  });
+  return { error: error as any };
+}
+
+export async function abrirDiaComModelo(input: {
+  clinicaId: string;
+  data: string;
+  modeloId: string;
+}): Promise<{ error: Error | null }> {
+  const { error } = await supabase.from("disponibilidade_especifica").insert({
+    clinica_id: input.clinicaId,
+    data: input.data,
+    modelo_id: input.modeloId,
+    disponivel: true,
+  } as any);
+  return { error: error as any };
+}
+
+export async function fecharDia(
+  clinicaId: string,
+  data: string
+): Promise<{ error: Error | null }> {
+  const { error } = await supabase
+    .from("disponibilidade_especifica")
+    .delete()
+    .eq("clinica_id", clinicaId)
+    .eq("data", data);
+  return { error: error as any };
+}
+
 export function getTipoBloqueioColor(tipo: TipoBloqueio): string {
   const colors: Record<TipoBloqueio, string> = {
     'dia_inteiro': 'bg-red-100 text-red-800 border-red-200',
