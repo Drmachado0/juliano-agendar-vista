@@ -189,20 +189,57 @@ export default function Disponibilidade() {
             hora_inicio: disp.hora_inicio,
             hora_fim: disp.hora_fim,
             intervalo_minutos: disp.intervalo_minutos,
-            ativo: disp.ativo
+            ativo: disp.ativo,
+            nome: disp.nome,
           })
           .eq('id', disp.id);
         
         if (error) throw error;
       }
-      toast.success('Disponibilidade semanal salva com sucesso!');
+      toast.success('Modelos salvos com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      toast.error('Erro ao salvar disponibilidade');
+      toast.error('Erro ao salvar modelos');
     } finally {
       setSavingSemanal(false);
     }
   }
+
+  // Aplicar modelo a uma data
+  const [aplicarModeloOpen, setAplicarModeloOpen] = useState(false);
+  const [modeloAplicar, setModeloAplicar] = useState<DisponibilidadeSemanal | null>(null);
+  const [dataAplicar, setDataAplicar] = useState("");
+
+  function abrirAplicarModelo(modelo: DisponibilidadeSemanal) {
+    setModeloAplicar(modelo);
+    setDataAplicar("");
+    setAplicarModeloOpen(true);
+  }
+
+  async function confirmarAplicarModelo() {
+    if (!modeloAplicar || !dataAplicar) {
+      toast.error("Selecione uma data");
+      return;
+    }
+    const { error } = await supabase.from("disponibilidade_especifica").insert({
+      clinica_id: selectedClinicaId,
+      data: dataAplicar,
+      modelo_id: modeloAplicar.id,
+      disponivel: true,
+    } as any);
+    if (error) {
+      if ((error as any).code === "23505") {
+        toast.error("Já existe uma data aberta para este dia");
+      } else {
+        toast.error("Erro ao aplicar modelo");
+      }
+      return;
+    }
+    toast.success("Modelo aplicado — dia aberto");
+    setAplicarModeloOpen(false);
+    carregarDisponibilidadeEspecifica(selectedClinicaId);
+  }
+
 
   async function adicionarDisponibilidadeEspecifica() {
     if (!novaEspecifica.data) {
