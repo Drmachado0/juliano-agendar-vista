@@ -15,6 +15,7 @@ import { ptBR } from "date-fns/locale";
 import { listarClinicas, Clinica } from "@/services/clinicas";
 import { useBloqueios, Bloqueio, getTipoBloqueioLabel, getTipoBloqueioColor } from "@/hooks/useBloqueios";
 import { BloqueioModal } from "@/components/admin/BloqueioModal";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
