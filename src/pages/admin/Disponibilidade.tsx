@@ -813,6 +813,37 @@ export default function Disponibilidade() {
         bloqueio={selectedBloqueio}
         initialDate={selectedDate}
       />
+
+      {/* Aplicar modelo a uma data */}
+      <Dialog open={aplicarModeloOpen} onOpenChange={setAplicarModeloOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Aplicar modelo a uma data</DialogTitle>
+            <DialogDescription>
+              {modeloAplicar?.nome ||
+                `${DIAS_SEMANA.find(d => d.value === modeloAplicar?.dia_semana)?.label} — ${modeloAplicar?.hora_inicio?.slice(0,5)}–${modeloAplicar?.hora_fim?.slice(0,5)}`}
+              {" · "}{modeloAplicar?.intervalo_minutos} min
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Data para abrir</Label>
+            <Input
+              type="date"
+              value={dataAplicar}
+              onChange={(e) => setDataAplicar(e.target.value)}
+              min={format(new Date(), "yyyy-MM-dd")}
+            />
+            <p className="text-xs text-muted-foreground">
+              Isto cria uma data aberta para esta clínica usando os horários do modelo.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAplicarModeloOpen(false)}>Cancelar</Button>
+            <Button onClick={confirmarAplicarModelo}>Aplicar e abrir dia</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </AdminLayout>
   );
 }
