@@ -1,141 +1,106 @@
-## Objetivo
+## Refatoração: Agenda baseada em "datas abertas"
 
-Fazer o agente Letícia (n8n) começar cada turno **já sabendo quem é o paciente**, sem precisar chamar tools para descobrir. Para isso:
+### Conceito novo
 
-1. Adicionar um modo "snapshot compacto" na edge function `buscar-contexto-paciente` (otimizado para caber no system prompt).
-2. Documentar o fluxo n8n que chama essa function antes do agente AI e injeta o JSON no system message.
-
-Nada disso muda comportamento do site — é só backend (edge function) + orientação de configuração do n8n.
+A regra de ouro passa a ser: **sem `disponibilidade_especifica` ativa para a clínica/data, o dia é fechado** — mesmo que exista `disponibilidade_semanal` cadastrada. A grade semanal vira apenas **modelo/template** para abrir dias rapidamente.
 
 ---
 
-## Parte 1 — Ajustes em `buscar-contexto-paciente`
+### 1. Banco de dados (migrations)
 
-### 1.1 Aceitar parâmetro `formato`
+**a) `disponibilidade_semanal` vira "modelos de horário"**
+- Adicionar coluna `nome text` (ex.: "Clinicor manhã", "HGP tarde") — opcional, fallback gerado.
+- Adicionar `is_template boolean default true` (semântica: nunca abre agenda sozinho).
+- Manter `dia_semana` apenas como sugestão visual de quando aplicar.
+- (Sem breaking change na estrutura — só uso lógico muda.)
 
-Body novo:
-```json
-{
-  "telefone_whatsapp": "5591999999999",
-  "formato": "completo" | "compacto"   // default: "completo" (mantém compat)
-}
+**b) `disponibilidade_especifica` ganha vínculo com modelo**
+- Adicionar `modelo_id uuid` referenciando `disponibilidade_semanal(id)` (opcional).
+- Quando `modelo_id` preenchido, herda `hora_inicio/hora_fim/intervalo_minutos` do modelo (se os próprios campos da disp_especifica estiverem nulos).
+
+**c) RPCs novas (SECURITY DEFINER, públicas para o agendamento online)**
+
+```
+get_available_days(p_month int, p_year int, p_clinica_id uuid)
+  → TABLE(data date, total_slots int, slots_livres int)
+  Considera: disp_especifica.disponivel=true para a data,
+             desconta agendamentos e bloqueios.
+
+get_available_slots(p_data date, p_clinica_id uuid)
+  → TABLE(hora time, status text)  -- 'livre' | 'ocupado' | 'bloqueado'
+  Resolve modelo→horários, aplica bloqueios e agendamentos.
+
+get_next_available_slot(p_clinica_id uuid, p_from date default current_date)
+  → TABLE(data date, hora time)
 ```
 
-### 1.2 Quando `formato = "compacto"`
-
-Retornar payload otimizado para prompt (campos curtos, sem nulls, sem ruído):
-
-```json
-{
-  "conhecido": true,
-  "paciente": {
-    "primeiro_nome": "Maria",
-    "nome_completo": "Maria Silva",
-    "convenio": "Unimed",
-    "tipo_atendimento": "Consulta",
-    "local": "Belém (IOB / Vitria)",
-    "idade": 42
-  },
-  "agendamento_ativo": {
-    "id": "uuid",
-    "data": "2026-05-20",
-    "hora": "14:30",
-    "status": "agendado",
-    "dias_ate": 9
-  },
-  "estado_atendimento": "novo",
-  "status_crm": "NOVO LEAD",
-  "ultimas_mensagens_resumo": [
-    { "de": "paciente", "quando": "2026-05-11T14:02:00Z", "texto": "Boa tarde..." },
-    { "de": "leticia",  "quando": "2026-05-11T14:03:00Z", "texto": "Olá! ..." }
-  ],
-  "telefone_normalizado": "5591999999999",
-  "gerado_em": "2026-05-11T22:00:00Z"
-}
-```
-
-Regras do compacto:
-- Remove qualquer chave com valor `null` / vazio.
-- `idade` calculada a partir de `data_nascimento` (se houver).
-- `dias_ate` calculado a partir de `data_agendamento` em `America/Belem`.
-- Últimas mensagens limitadas a 6 (não 10), texto truncado em 200 chars.
-- Quando paciente não existe: `{ "conhecido": false, "telefone_normalizado": "...", "gerado_em": "..." }`.
-
-### 1.3 Manter `formato = "completo"` exatamente como está hoje (não quebra n8n existente nem outras integrações).
+Todas em America/Belem para "data passada".
 
 ---
 
-## Parte 2 — Configuração do n8n (documentação para o usuário)
+### 2. Backend (services)
 
-Fluxo recomendado por mensagem recebida:
-
-```text
-[Webhook WhatsApp]
-       │
-       ▼
-[HTTP Request: buscar-contexto-paciente  formato=compacto]
-       │  → salva resposta em {{$json.contexto_paciente}}
-       ▼
-[AI Agent (Letícia)]
-   system prompt =
-     <prompt base da Letícia>
-     ---
-     CONTEXTO DO PACIENTE (snapshot atual, gerado pelo backend):
-     ```json
-     {{ JSON.stringify($json.contexto_paciente) }}
-     ```
-     Use esse contexto como verdade. Só chame tools se precisar
-     ALTERAR algo (atualizar agendamento, mudar status CRM, etc).
-   user message = mensagem recebida do paciente
-       │
-       ▼
-[resto do fluxo: registrar-mensagem-in-n8n, enviar-whatsapp, etc.]
-```
-
-Pontos importantes a destacar na doc:
-- O snapshot é **por turno**: chama de novo a cada mensagem nova (estado pode ter mudado).
-- Se `conhecido = false`, a Letícia deve se apresentar e pedir nome/contexto.
-- Tools de **leitura** (ex.: `buscar-contexto-paciente`, `mcp-agendamento` listar horários) continuam disponíveis caso o agente precise de algo fora do snapshot.
-- Tools de **escrita** (`atualizar-agendamento-por-telefone`, `atualizar-status-crm`) continuam exatamente iguais.
+Substituir lógica de `src/services/disponibilidadePublica.ts` e parte de `src/services/agenda.ts` para chamar as RPCs em vez de montar grade no frontend. Manter assinaturas dos serviços públicos para não quebrar `CalendarGrid`, `TimeSlotPicker`, etc.
 
 ---
 
-## Parte 3 — Detalhes técnicos
+### 3. UI Admin — `/admin/agenda` (visão diária)
 
-- Arquivo a editar: `supabase/functions/buscar-contexto-paciente/index.ts`
-  - Adicionar `formato: z.enum(["completo","compacto"]).optional().default("completo")` no `BodySchema`.
-  - Extrair montagem de resposta atual em `buildCompleto(...)`.
-  - Criar `buildCompacto(...)` com as regras da seção 1.2 + helper `stripNulls`.
-  - Calcular `idade` e `dias_ate` em `America/Belem`.
-  - Truncar texto de mensagens (200 chars) e limitar a 6.
-- Sem mudanças de schema no banco.
-- Sem mudanças no frontend.
-- `verify_jwt = false` já está no `config.toml` para essa função.
-- Auth segue por header `x-n8n-secret`.
+Quando o dia **não tem `disponibilidade_especifica` ativa** para a clínica selecionada:
+- Esconder a grade longa de slots bloqueados.
+- Mostrar **card centralizado**: "Dia fechado para atendimento em {Clínica}".
+- Botões:
+  - **Abrir este dia** (abre modal pedindo hora_inicio/fim/intervalo).
+  - **Abrir usando modelo** (dropdown com modelos da clínica → cria `disp_especifica` herdando do modelo).
 
----
-
-## Parte 4 — Como validar (sem n8n)
-
-`curl` direto para conferir o snapshot compacto:
-
-```bash
-curl -X POST \
-  https://cnpifhaszbonwlqruwnn.supabase.co/functions/v1/buscar-contexto-paciente \
-  -H "Content-Type: application/json" \
-  -H "x-n8n-secret: $N8N_SHARED_SECRET" \
-  -d '{"telefone_whatsapp":"5591XXXXXXXX","formato":"compacto"}'
-```
-
-Esperado:
-- Paciente conhecido → JSON enxuto pronto para colar em system prompt.
-- Paciente desconhecido → `{ "conhecido": false, ... }`.
-- `formato` ausente ou `"completo"` → resposta antiga, idêntica à de hoje.
+Quando o dia **está aberto**, mostrar **header de resumo** acima da grade:
+- Status: Aberto • Clínica • Modelo aplicado (se houver) • Total / Livres / Ocupados / Bloqueados.
+- Ações: "Fechar dia" (deleta/desativa disp_especifica), "Trocar modelo".
 
 ---
 
-## Fora do escopo
+### 4. UI Admin — `/admin/disponibilidade` (refator com abas)
 
-- Não vou mexer no n8n (não tenho acesso ao workflow); entrego a edge function pronta + instruções de configuração.
-- Não vou criar página de admin para isso.
-- Não vou alterar tools de escrita existentes.
+Novo `<Tabs>`:
+- **Datas abertas** — lista/calendário de `disponibilidade_especifica` ativas, com filtro por clínica/mês. CRUD completo.
+- **Modelos de horários** — CRUD da `disponibilidade_semanal` (rebatizada na UI). Botão "Aplicar modelo a uma data".
+- **Bloqueios / Exceções** — CRUD de `bloqueios_agenda`, com aviso: "use apenas para fechar intervalo dentro de um dia já aberto".
+
+---
+
+### 5. Front público (calendário do paciente)
+
+`CalendarGrid` e `disponibilidadePublica.listarDatasComSlotsDisponiveis` passam a chamar `get_available_days`. Reduz de N+1 queries para 1 chamada por mês. Comportamento visível idêntico, exceto que **dias sem disp_especifica nunca aparecem como disponíveis** (era a regra confusa atual).
+
+---
+
+### Arquivos afetados
+
+- `supabase/migrations/<novo>.sql` — colunas + 3 RPCs.
+- `src/services/disponibilidadePublica.ts` — reescrita usando RPCs.
+- `src/services/agenda.ts` — `montarGradeAgenda` passa a delegar para RPC; mantém shape `SlotAgenda`.
+- `src/services/disponibilidade.ts` — adicionar helpers `abrirDataComModelo`, `fecharData`.
+- `src/pages/admin/Agenda.tsx` — novo card "dia fechado" + header de resumo.
+- `src/pages/admin/Disponibilidade.tsx` — refator com `<Tabs>` (3 abas).
+- Componentes novos:
+  - `src/components/admin/DiaFechadoCard.tsx`
+  - `src/components/admin/AbrirDiaModal.tsx`
+  - `src/components/admin/ResumoDiaAberto.tsx`
+
+---
+
+### Fora de escopo
+
+- Não mexer em `bot_config`, lembretes, WhatsApp, n8n.
+- Não mudar tabela `agendamentos`.
+- Não migrar dados existentes de `disponibilidade_semanal` (continua usável como modelo).
+
+### Plano de validação
+
+1. Rodar migrations.
+2. Testar RPCs via `supabase--read_query` com clínica real.
+3. Abrir `/admin/agenda` num dia sem disp_especifica → ver card "fechado".
+4. Clicar "Abrir usando modelo" → grade aparece.
+5. Calendário público (`/agendamento`) → mês exibe só dias abertos.
+
+Posso prosseguir?
