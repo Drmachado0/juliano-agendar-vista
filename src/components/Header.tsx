@@ -127,11 +127,11 @@ const Header = () => {
           {/* Mobile Actions */}
           <div className="flex md:hidden items-center gap-1.5">
             <a
-              href="https://wa.me/5591936180476"
+              href="https://wa.me/559184043477"
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => {
-                trackWhatsAppClick('https://wa.me/5591936180476', 'WhatsApp Header', 'whatsapp_header', 'header_top');
+                trackWhatsAppClick('https://wa.me/559184043477', 'WhatsApp Header', 'whatsapp_header', 'header_top');
                 trackMetaContact('WhatsApp');
               }}
               className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"

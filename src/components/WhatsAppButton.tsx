@@ -47,7 +47,7 @@ const WhatsAppButton = () => {
   const [show, setShow] = useState(false);
   const [pulseReady, setPulseReady] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
-  const whatsappUrl = "https://wa.me/5591936180476?text=Ol%C3%A1%21%20Gostaria%20de%20agendar%20uma%20consulta%20oftalmol%C3%B3gica%20com%20o%20Dr.%20Juliano%20Machado.";
+  const whatsappUrl = "https://wa.me/559184043477?text=Ol%C3%A1%21%20Gostaria%20de%20agendar%20uma%20consulta%20oftalmol%C3%B3gica%20com%20o%20Dr.%20Juliano%20Machado.";
 
   useEffect(() => {
     const showTimer = setTimeout(() => setShow(true), 3000);
