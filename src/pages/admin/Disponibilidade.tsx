@@ -624,7 +624,9 @@ export default function Disponibilidade() {
                       <div 
                         key={disp.id} 
                         className={`flex items-center justify-between p-3 rounded-lg border ${
-                          disp.disponivel ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                          disp.disponivel
+                            ? 'bg-green-500/10 border-green-500/30 text-foreground'
+                            : 'bg-destructive/10 border-destructive/30 text-foreground'
                         }`}
                       >
                         <div className="flex items-center gap-4">
