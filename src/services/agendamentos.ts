@@ -373,10 +373,26 @@ export async function listarAgendamentosPorStatus(): Promise<{
     'ATENDIDO': []
   };
 
+  // Hoje em formato YYYY-MM-DD (local)
+  const _h = new Date();
+  const hojeISO = `${_h.getFullYear()}-${String(_h.getMonth() + 1).padStart(2, '0')}-${String(_h.getDate()).padStart(2, '0')}`;
+  const autoConcluirIds: string[] = [];
+
   (data || []).forEach((agendamento) => {
     const statusFunil = (agendamento as any).status_funil || 'agendado';
-    const status = agendamento.status_crm || 'NOVO LEAD';
-    
+    let status = agendamento.status_crm || 'NOVO LEAD';
+
+    // Auto-conclusão: se data_agendamento já passou (anterior a hoje), move para ATENDIDO
+    if (
+      agendamento.data_agendamento &&
+      agendamento.data_agendamento < hojeISO &&
+      status !== 'ATENDIDO'
+    ) {
+      autoConcluirIds.push(agendamento.id);
+      status = 'ATENDIDO';
+      (agendamento as any).status_crm = 'ATENDIDO';
+    }
+
     // Leads incompletos: respeitar status_crm quando já atualizado
     if (statusFunil === 'lead' && status === 'NOVO LEAD') {
       grouped['NOVO LEAD'].push(agendamento as Agendamento);
@@ -386,6 +402,31 @@ export async function listarAgendamentosPorStatus(): Promise<{
       grouped[status].push(agendamento as Agendamento);
     }
   });
+
+  // Persistir em background (fire-and-forget) para manter banco consistente
+  if (autoConcluirIds.length > 0) {
+    void (async () => {
+      try {
+        await supabase
+          .from('agendamentos')
+          .update({ status_crm: 'ATENDIDO' })
+          .in('id', autoConcluirIds);
+        await Promise.allSettled(
+          autoConcluirIds.map((id) =>
+            supabase.rpc('registrar_crm_audit', {
+              p_agendamento_id: id,
+              p_acao: 'auto_concluido_por_data',
+              p_status_anterior: null,
+              p_status_novo: 'ATENDIDO',
+              p_detalhes: { motivo: 'data_agendamento < hoje' } as any,
+            })
+          )
+        );
+      } catch (e) {
+        console.warn('Falha ao persistir auto-conclusão:', e);
+      }
+    })();
+  }
 
   // Ordenar cada coluna: cards COM data primeiro (mais próxima → mais distante),
   // depois cards SEM data por created_at descendente (mais recente primeiro).
