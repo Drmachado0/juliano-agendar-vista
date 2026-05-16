@@ -115,12 +115,12 @@ const InsuranceSection = () => {
                   </Button>
                 </Link>
                 <a
-                  href="https://wa.me/5591936180476?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consulta%20com%20o%20Dr.%20Juliano%20Machado."
+                  href="https://wa.me/559184043477?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consulta%20com%20o%20Dr.%20Juliano%20Machado."
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => {
                     trackWhatsAppClick(
-                      'https://wa.me/5591936180476?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consulta%20com%20o%20Dr.%20Juliano%20Machado.',
+                      'https://wa.me/559184043477?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consulta%20com%20o%20Dr.%20Juliano%20Machado.',
                       'Falar no WhatsApp',
                       'whatsapp_convenios_cta',
                       'convenios_section'
