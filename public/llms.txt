@@ -1,0 +1,9 @@
+# Dr. Juliano Machado — Oftalmologista
+
+> Site oficial do Dr. Juliano Machado, médico oftalmologista (CRM-PA 15253) com mais de 13 anos de experiência, atendendo em Paragominas e Belém (PA). Catarata, pterígio, glaucoma, retina, OCT e campo visual. Agendamento online com confirmação por WhatsApp.
+
+## Pages
+
+- [Início](/): Apresentação do Dr. Juliano Machado, procedimentos, locais de atendimento, convênios e depoimentos.
+- [Agendar Consulta](/agendamento): Formulário online para agendar consulta, retorno, exame ou cirurgia.
+- [Política de Privacidade](/politica-de-privacidade): Como o site coleta e protege dados pessoais (LGPD).
