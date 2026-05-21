@@ -15,9 +15,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Agendamento, AgendamentoFilters as Filters, listarAgendamentos, excluirAgendamento } from "@/services/agendamentos";
+import { Agendamento, AgendamentoFilters as Filters, listarAgendamentos, excluirAgendamento, excluirAgendamentosEmLote } from "@/services/agendamentos";
 import { toast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Calendar, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, RefreshCw, Trash2, X } from "lucide-react";
 
 const AdminAgendamentos = () => {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
@@ -33,6 +33,9 @@ const AdminAgendamentos = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [agendamentoToDelete, setAgendamentoToDelete] = useState<Agendamento | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const fetchAgendamentos = async () => {
     setLoading(true);
@@ -110,6 +113,48 @@ const AdminAgendamentos = () => {
     setAgendamentoToDelete(null);
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    const pageIds = agendamentos.map((a) => a.id);
+    const allOnPageSelected = pageIds.every((id) => selectedIds.includes(id));
+    if (allOnPageSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])));
+    }
+  };
+
+  const clearSelection = () => setSelectedIds([]);
+
+  const handleConfirmBulkDelete = async () => {
+    if (!selectedIds.length) return;
+    setBulkDeleting(true);
+    const { deleted, error } = await excluirAgendamentosEmLote(selectedIds);
+    setBulkDeleting(false);
+    setBulkDeleteOpen(false);
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir os agendamentos selecionados.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Excluídos",
+      description: `${deleted} agendamento${deleted !== 1 ? "s" : ""} excluído${deleted !== 1 ? "s" : ""} com sucesso.`,
+    });
+    setSelectedIds([]);
+    fetchAgendamentos();
+  };
+
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
@@ -139,6 +184,29 @@ const AdminAgendamentos = () => {
           onClearFilters={handleClearFilters}
         />
 
+        {/* Bulk selection toolbar */}
+        {selectedIds.length > 0 && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+            <p className="text-sm text-foreground">
+              <strong>{selectedIds.length}</strong> selecionado{selectedIds.length !== 1 ? "s" : ""}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={clearSelection}>
+                <X className="h-4 w-4 mr-1" />
+                Limpar
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setBulkDeleteOpen(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Excluir selecionados
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Table */}
         <AgendamentosTable
           agendamentos={agendamentos}
@@ -147,7 +215,11 @@ const AdminAgendamentos = () => {
           onEdit={handleEdit}
           onDelete={handleDeleteClick}
           loading={loading}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+          onToggleSelectAll={toggleSelectAll}
         />
+
 
         {/* Pagination */}
         {totalPages > 1 && (
@@ -211,6 +283,27 @@ const AdminAgendamentos = () => {
               className="bg-red-600 hover:bg-red-700"
             >
               {deleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir {selectedIds.length} agendamento{selectedIds.length !== 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Também serão removidas as mensagens de WhatsApp vinculadas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmBulkDelete}
+              disabled={bulkDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {bulkDeleting ? "Excluindo..." : `Excluir ${selectedIds.length}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
