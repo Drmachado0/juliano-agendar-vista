@@ -165,10 +165,14 @@ export function montarGradeAgenda(
       };
     }
 
-    // Verificar se o slot está fora do horário de funcionamento do dia
+    // Verificar se o slot está fora do horário de funcionamento do dia.
+    // Normaliza para HH:MM porque o Postgres retorna time como "HH:MM:SS" e a
+    // comparação string "08:00" < "08:00:00" daria true por engano.
     if (horaInicioDisp && horaFimDisp) {
       const slotTime = slot.horaFormatada;
-      if (slotTime < horaInicioDisp || slotTime >= horaFimDisp) {
+      const ini = horaInicioDisp.slice(0, 5);
+      const fim = horaFimDisp.slice(0, 5);
+      if (slotTime < ini || slotTime >= fim) {
         return {
           hora: String(slot.hora),
           minuto: slot.minuto,
