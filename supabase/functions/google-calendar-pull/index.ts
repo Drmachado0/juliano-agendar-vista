@@ -373,6 +373,14 @@ async function pullForUser(
           result.conflicts++;
         }
 
+        // Eventos do Google Calendar sem telefone real (ex.: marcadores "Almoço",
+        // "Belém", "SUS") não são leads de paciente. Marcamos como
+        // BLOQUEIO/AGENDA para que ocupem o horário na agenda mas NÃO apareçam
+        // no CRM Kanban.
+        const semTelefoneReal = parsed.telefone_whatsapp === "0000000000";
+        const statusCrm = semTelefoneReal ? "BLOQUEIO/AGENDA" : "NOVO LEAD";
+        const statusFunil = semTelefoneReal ? "bloqueio" : "agendado";
+
         const insertPayload: Record<string, unknown> = {
           nome_completo: parsed.nome_completo,
           telefone_whatsapp: parsed.telefone_whatsapp,
@@ -382,8 +390,8 @@ async function pullForUser(
           convenio: parsed.convenio,
           data_agendamento: parsed.data_agendamento,
           hora_agendamento: parsed.hora_agendamento,
-          status_crm: "NOVO LEAD",
-          status_funil: "agendado",
+          status_crm: statusCrm,
+          status_funil: statusFunil,
           origem: "google_calendar",
           google_calendar_event_id: ev.id,
           google_calendar_etag: ev.etag,
@@ -391,6 +399,7 @@ async function pullForUser(
         };
         if (defaultClinicaId) insertPayload.clinica_id = defaultClinicaId;
         if (observacoesConflito) insertPayload.observacoes_internas = observacoesConflito;
+
 
         const { error: insErr } = await supabase
           .from("agendamentos")
