@@ -576,6 +576,28 @@ export async function excluirAgendamento(id: string): Promise<{ error: Error | n
   return { error: null };
 }
 
+// Bulk delete agendamentos
+export async function excluirAgendamentosEmLote(
+  ids: string[]
+): Promise<{ deleted: number; error: Error | null }> {
+  if (!ids.length) return { deleted: 0, error: null };
+
+  // First delete related messages
+  await supabase.from('mensagens_whatsapp').delete().in('agendamento_id', ids);
+
+  const { error, count } = await supabase
+    .from('agendamentos')
+    .delete({ count: 'exact' })
+    .in('id', ids);
+
+  if (error) {
+    console.error('Erro ao excluir agendamentos em lote:', error);
+    return { deleted: 0, error: new Error(error.message) };
+  }
+
+  return { deleted: count ?? ids.length, error: null };
+}
+
 // Update agendamento (for editing)
 export async function atualizarAgendamento(
   id: string,
