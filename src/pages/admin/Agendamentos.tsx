@@ -184,6 +184,29 @@ const AdminAgendamentos = () => {
           onClearFilters={handleClearFilters}
         />
 
+        {/* Bulk selection toolbar */}
+        {selectedIds.length > 0 && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+            <p className="text-sm text-foreground">
+              <strong>{selectedIds.length}</strong> selecionado{selectedIds.length !== 1 ? "s" : ""}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={clearSelection}>
+                <X className="h-4 w-4 mr-1" />
+                Limpar
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setBulkDeleteOpen(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Excluir selecionados
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Table */}
         <AgendamentosTable
           agendamentos={agendamentos}
@@ -192,7 +215,11 @@ const AdminAgendamentos = () => {
           onEdit={handleEdit}
           onDelete={handleDeleteClick}
           loading={loading}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+          onToggleSelectAll={toggleSelectAll}
         />
+
 
         {/* Pagination */}
         {totalPages > 1 && (
