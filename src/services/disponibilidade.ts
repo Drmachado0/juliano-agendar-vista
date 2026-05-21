@@ -249,6 +249,18 @@ export async function buscarDataAberta(
   return ((rows?.[0] as unknown) as DataAberta) || null;
 }
 
+async function limparBloqueiosDiaInteiro(clinicaId: string, data: string) {
+  // Ao abrir um dia, removemos bloqueios "dia_inteiro"/"feriado" que estariam
+  // sobrescrevendo todos os slots. Bloqueios granulares (intervalo,
+  // ausencia_profissional) são mantidos.
+  await supabase
+    .from("bloqueios_agenda")
+    .delete()
+    .eq("clinica_id", clinicaId)
+    .eq("data", data)
+    .in("tipo_bloqueio", ["dia_inteiro", "feriado"]);
+}
+
 export async function abrirDiaManual(input: {
   clinicaId: string;
   data: string;
@@ -257,6 +269,7 @@ export async function abrirDiaManual(input: {
   intervaloMinutos: number;
   motivo?: string | null;
 }): Promise<{ error: Error | null }> {
+  await limparBloqueiosDiaInteiro(input.clinicaId, input.data);
   const { error } = await supabase.from("disponibilidade_especifica").insert({
     clinica_id: input.clinicaId,
     data: input.data,
@@ -274,6 +287,7 @@ export async function abrirDiaComModelo(input: {
   data: string;
   modeloId: string;
 }): Promise<{ error: Error | null }> {
+  await limparBloqueiosDiaInteiro(input.clinicaId, input.data);
   const { error } = await supabase.from("disponibilidade_especifica").insert({
     clinica_id: input.clinicaId,
     data: input.data,

@@ -1,60 +1,65 @@
-## Objetivo
+# Por que todos os horários aparecem "Bloqueados" após Abrir dia
 
-Mover automaticamente para a coluna **Concluído** (`ATENDIDO`) qualquer agendamento cuja `data_agendamento` seja anterior a hoje, independente da coluna em que está.
+Investigação no banco e em `src/services/agenda.ts` (linhas 168-192) mostra duas causas combinadas:
 
-## Regra
+## Causa 1 (principal) — bloqueio "dia inteiro" persiste após reabrir
 
-- Se `data_agendamento < hoje` (compara data, ignora hora) e `status_crm != 'ATENDIDO'` → tratar como `ATENDIDO`.
-- Vale para qualquer coluna (NOVO LEAD, AGUARDANDO, CLINICOR, HGP, BELÉM, PRECISA_DE_HUMANO).
-- Cards sem data continuam onde estão.
+Quando aplicamos o **Bloco 3** do SQL de junho, inserimos em `bloqueios_agenda` um registro `tipo_bloqueio='dia_inteiro'` para **todos os dias fora da agenda oficial** (inclui 25/jun).
 
-## Implementação
+A função `Abrir dia` (`abrirDiaManual` / `abrirDiaComModelo` em `src/services/disponibilidade.ts:252-284`) apenas insere em `disponibilidade_especifica`. **Não remove o bloqueio dia_inteiro existente.**
 
-### 1. Reclassificação na origem (`src/services/agendamentos.ts`)
+Em `montarGradeAgenda` (`src/services/agenda.ts:183-192`), qualquer bloqueio `dia_inteiro` ou `feriado` sobrescreve o slot como "bloqueado". Resultado: dia abre, mas o bloqueio antigo continua mascarando os 13 slots.
 
-Na função que agrupa por status (`agruparPorStatusCrm`), antes do `grouped[status].push(...)`:
+## Causa 2 (secundária) — slot 08:00 mostra "Fora do horário"
 
-```text
-hoje = data local de hoje (YYYY-MM-DD)
-se agendamento.data_agendamento && agendamento.data_agendamento < hoje:
-    status_efetivo = 'ATENDIDO'
-senão:
-    status_efetivo = status_crm
+`disponibilidade_especifica.hora_inicio` é coluna `time` no Postgres e retorna `"08:00:00"`. Os slots gerados têm `horaFormatada = "08:00"`. A comparação string `"08:00" < "08:00:00"` é **true** (lexicográfica), então o primeiro slot é marcado como "Fora do horário de atendimento" (`agenda.ts:171`).
+
+---
+
+# Plano de correção
+
+## 1. `abrirDiaManual` e `abrirDiaComModelo` removem bloqueios dia_inteiro/feriado
+
+Em `src/services/disponibilidade.ts`, antes do `insert` em `disponibilidade_especifica`, executar:
+
+```ts
+await supabase
+  .from("bloqueios_agenda")
+  .delete()
+  .eq("clinica_id", input.clinicaId)
+  .eq("data", input.data)
+  .in("tipo_bloqueio", ["dia_inteiro", "feriado"]);
 ```
 
-Assim a UI já mostra na coluna Concluído sem precisar de migração de dados.
+Justificativa: abrir um dia implica que ele não está mais "fechado por padrão". Bloqueios de **intervalo** ou **ausência de profissional** são mantidos (granulares).
 
-### 2. Persistência em background (mesma função)
+## 2. Normalizar comparação de horário em `montarGradeAgenda`
 
-Coletar IDs reclassificados e disparar `UPDATE agendamentos SET status_crm='ATENDIDO' WHERE id IN (...)` fire-and-forget. Garante que webhooks/n8n e relatórios fiquem consistentes ao longo do tempo, sem bloquear a UI.
+Em `src/services/agenda.ts:169-180`, comparar usando os 5 primeiros caracteres para evitar o problema `"HH:MM"` vs `"HH:MM:SS"`:
 
-- Registrar via `crmAudit` com `acao='auto_concluido_por_data'` para manter rastreabilidade.
-- Pular cards que já estão em `ATENDIDO`.
-
-### 3. Backfill único
-
-Rodar uma vez, via ferramenta de dados, para histórico:
-
-```sql
-UPDATE agendamentos
-SET status_crm = 'ATENDIDO'
-WHERE data_agendamento < CURRENT_DATE
-  AND status_crm <> 'ATENDIDO';
+```ts
+const ini = horaInicioDisp.slice(0,5);
+const fim = horaFimDisp.slice(0,5);
+if (slotTime < ini || slotTime >= fim) { ... }
 ```
 
-### 4. Ajustes finos no CRM
+## 3. Limpar manualmente os 22 bloqueios dia_inteiro já existentes para 25/jun
 
-- `src/pages/admin/CRM.tsx` linha 94 (filtro "atrasados"): já exclui `ATENDIDO`, segue válido — sem mudança.
-- Drag-and-drop manual continua funcionando normalmente; usuário pode tirar de Concluído se errar.
+Como o usuário já clicou em "Abrir dia" para 25/jun da Clinicor antes da correção, rodar um `DELETE` único para esse dia/clínica em `bloqueios_agenda` (`tipo_bloqueio IN ('dia_inteiro','feriado')`) para que a agenda já apareça correta sem ter que refazer a abertura.
 
-## Fora do escopo
+Os demais 21 dias bloqueados de junho permanecem intactos — só serão limpos quando/se o admin abrir cada um.
 
-- Cron job no banco: a reclassificação no fetch + backfill resolve. Se quiser cron diário no futuro, fica como evolução.
-- Mexer em `status_funil`, lembretes, n8n, ou outras colunas além do CRM.
+## 4. Validação
 
-## Validação
+Após aplicar:
+- Recarregar a Agenda em 25/jun → esperado: 13 slots **livres** (não bloqueados).
+- Slot 08:00 deve aparecer como **Livre**, não como "Fora do horário".
+- Dias 04/jun (fora da lista oficial e sem abertura manual) devem continuar bloqueados.
 
-1. Abrir `/admin/crm` com um card cuja data seja ontem em outra coluna → deve aparecer em **Concluído** e a coluna anterior fica sem ele.
-2. Recarregar e conferir no banco que `status_crm` foi atualizado.
-3. Card de hoje permanece na coluna original.
-4. Card sem data permanece onde estava.
+## Arquivos afetados
+
+- `src/services/disponibilidade.ts` — adicionar delete de bloqueios em `abrirDiaManual` e `abrirDiaComModelo`.
+- `src/services/agenda.ts` — normalizar slice(0,5) na comparação de janela.
+- 1 operação SQL pontual em `bloqueios_agenda` para 25/jun Clinicor.
+
+Nenhuma mudança de schema. Memória `agenda-datas-abertas` continua válida (bloqueios são exceções; abrir dia agora limpa exceção de dia inteiro automaticamente — vou anotar isso na memória após implementar).
