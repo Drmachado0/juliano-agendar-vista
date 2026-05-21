@@ -18,6 +18,10 @@ export default function PoliticaPrivacidade() {
           content="Política de Privacidade e tratamento de dados pessoais do site Dr. Juliano Machado, em conformidade com a LGPD."
         />
         <link rel="canonical" href="https://drjulianomachado.com/politica-de-privacidade" />
+        <meta property="og:title" content="Política de Privacidade · Dr. Juliano Machado" />
+        <meta property="og:description" content="Como o site Dr. Juliano Machado coleta, utiliza e protege seus dados pessoais, em conformidade com a LGPD." />
+        <meta property="og:url" content="https://drjulianomachado.com/politica-de-privacidade" />
+        <meta property="og:type" content="article" />
         <meta name="robots" content="index, follow" />
       </Helmet>
 

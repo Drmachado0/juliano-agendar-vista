@@ -17,6 +17,10 @@ const Index = () => {
     "name": "Dr. Juliano Machado",
     "description": "Oftalmologista especializado em catarata, pterígio, exames de campo visual e OCT. Atendimento em Paragominas e Belém.",
     "medicalSpecialty": "Ophthalmology",
+    "url": "https://drjulianomachado.com",
+    "image": "https://drjulianomachado.com/og-image.jpg",
+    "telephone": "+559184043477",
+    "priceRange": "$$",
     "address": [
       {
         "@type": "PostalAddress",
@@ -33,32 +37,34 @@ const Index = () => {
         "addressCountry": "BR"
       }
     ],
-    "telephone": "+559184043477",
-    "url": "https://drjulianomachado.com",
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": "5.0",
-      "reviewCount": "100"
-    }
+      "bestRating": "5",
+      "ratingCount": "100"
+    },
+    "sameAs": [
+      "https://www.instagram.com/drjulianomachado.oftalmo/"
+    ]
   };
 
   return (
     <>
       <Helmet>
-        <title>Dr. Juliano Machado · Oftalmologista — Paragominas e Belém | Agendar Consulta</title>
+        <title>Oftalmologista em Paragominas e Belém | Dr. Juliano Machado</title>
         <meta
           name="description"
-          content="Consulta com oftalmologista em Paragominas e Belém. Dr. Juliano Machado — 13+ anos, nota 5.0 no Google, 6.000+ pacientes. Catarata, pterígio, glaucoma. Agende online."
+          content="Oftalmologista em Paragominas e Belém. Dr. Juliano Machado, 13+ anos, nota 5.0. Catarata, pterígio, glaucoma. Agende sua consulta online."
         />
         <meta
           name="keywords"
           content="oftalmologista Paragominas, oftalmologista Belém, catarata, pterígio, OCT, campo visual, Dr. Juliano Machado, agendar consulta oftalmologista"
         />
-        <link rel="canonical" href="https://drjulianomachado.com" />
+        <link rel="canonical" href="https://drjulianomachado.com/" />
         <meta property="og:title" content="Dr. Juliano Machado – Oftalmologista em Paragominas e Belém" />
         <meta property="og:description" content="Agende sua consulta oftalmológica. +13 anos de experiência. Cirurgia de catarata, pterígio, exames e mais." />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://drjulianomachado.com" />
+        <meta property="og:url" content="https://drjulianomachado.com/" />
         <meta name="robots" content="index, follow" />
         <script type="application/ld+json">
           {JSON.stringify(structuredData)}

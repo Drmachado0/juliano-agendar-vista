@@ -110,6 +110,12 @@ const Obrigado = () => {
           name="description"
           content="Seu agendamento com o Dr. Juliano Machado foi confirmado com sucesso."
         />
+        <link rel="canonical" href="https://drjulianomachado.com/obrigado" />
+        <meta property="og:title" content="Agendamento Confirmado | Dr. Juliano Machado" />
+        <meta property="og:description" content="Confirmação do seu agendamento com o Dr. Juliano Machado, oftalmologista em Paragominas e Belém." />
+        <meta property="og:url" content="https://drjulianomachado.com/obrigado" />
+        <meta property="og:type" content="website" />
+        <meta name="robots" content="noindex, follow" />
       </Helmet>
 
       <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12"

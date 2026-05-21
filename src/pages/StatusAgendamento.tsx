@@ -160,6 +160,11 @@ export default function StatusAgendamentoPage() {
         <title>Status do Agendamento · Dr. Juliano Machado</title>
         <meta name="robots" content="noindex, nofollow" />
         <meta name="description" content="Acompanhe o status do seu agendamento na clínica do Dr. Juliano Machado." />
+        <link rel="canonical" href={`https://drjulianomachado.com/status-agendamento/${id ?? ""}`} />
+        <meta property="og:title" content="Status do Agendamento · Dr. Juliano Machado" />
+        <meta property="og:description" content="Acompanhe em tempo real o status da sua consulta com o Dr. Juliano Machado." />
+        <meta property="og:url" content={`https://drjulianomachado.com/status-agendamento/${id ?? ""}`} />
+        <meta property="og:type" content="website" />
       </Helmet>
 
       <header className="border-b border-border bg-card/50 backdrop-blur">
