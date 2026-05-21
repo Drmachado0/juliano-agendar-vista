@@ -287,7 +287,6 @@ const AdminAgendamentos = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      </AlertDialog>
 
       <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
         <AlertDialogContent>
