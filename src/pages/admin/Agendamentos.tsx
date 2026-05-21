@@ -33,6 +33,9 @@ const AdminAgendamentos = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [agendamentoToDelete, setAgendamentoToDelete] = useState<Agendamento | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const fetchAgendamentos = async () => {
     setLoading(true);
