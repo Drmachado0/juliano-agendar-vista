@@ -113,6 +113,48 @@ const AdminAgendamentos = () => {
     setAgendamentoToDelete(null);
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    const pageIds = agendamentos.map((a) => a.id);
+    const allOnPageSelected = pageIds.every((id) => selectedIds.includes(id));
+    if (allOnPageSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])));
+    }
+  };
+
+  const clearSelection = () => setSelectedIds([]);
+
+  const handleConfirmBulkDelete = async () => {
+    if (!selectedIds.length) return;
+    setBulkDeleting(true);
+    const { deleted, error } = await excluirAgendamentosEmLote(selectedIds);
+    setBulkDeleting(false);
+    setBulkDeleteOpen(false);
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir os agendamentos selecionados.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Excluídos",
+      description: `${deleted} agendamento${deleted !== 1 ? "s" : ""} excluído${deleted !== 1 ? "s" : ""} com sucesso.`,
+    });
+    setSelectedIds([]);
+    fetchAgendamentos();
+  };
+
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
