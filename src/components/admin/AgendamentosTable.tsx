@@ -199,7 +199,8 @@ const AgendamentosTable = ({ agendamentos, onViewDetails, onSendWhatsApp, onEdit
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       </div>
