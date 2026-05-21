@@ -27,7 +27,11 @@ const statusColors: Record<string, string> = {
   "HGP": "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
 };
 
-const AgendamentosTable = ({ agendamentos, onViewDetails, onSendWhatsApp, onEdit, onDelete, loading }: AgendamentosTableProps) => {
+const AgendamentosTable = ({ agendamentos, onViewDetails, onSendWhatsApp, onEdit, onDelete, loading, selectedIds = [], onToggleSelect, onToggleSelectAll }: AgendamentosTableProps) => {
+  const selectionEnabled = Boolean(onToggleSelect && onToggleSelectAll);
+  const allSelected = selectionEnabled && agendamentos.length > 0 && agendamentos.every((a) => selectedIds.includes(a.id));
+  const someSelected = selectionEnabled && agendamentos.some((a) => selectedIds.includes(a.id)) && !allSelected;
+
   if (loading) {
     return (
       <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -55,6 +59,15 @@ const AgendamentosTable = ({ agendamentos, onViewDetails, onSendWhatsApp, onEdit
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
+              {selectionEnabled && (
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                    onCheckedChange={() => onToggleSelectAll?.()}
+                    aria-label="Selecionar todos"
+                  />
+                </TableHead>
+              )}
               <TableHead className="font-semibold">Paciente</TableHead>
               <TableHead className="font-semibold">Telefone</TableHead>
               <TableHead className="font-semibold">Data/Hora</TableHead>
@@ -66,8 +79,27 @@ const AgendamentosTable = ({ agendamentos, onViewDetails, onSendWhatsApp, onEdit
             </TableRow>
           </TableHeader>
           <TableBody>
-            {agendamentos.map((agendamento) => (
-              <TableRow key={agendamento.id} className={cn("hover:bg-muted/30", agendamento.is_sandbox && "bg-orange-500/5")}>
+            {agendamentos.map((agendamento) => {
+              const isSelected = selectedIds.includes(agendamento.id);
+              return (
+              <TableRow
+                key={agendamento.id}
+                data-state={isSelected ? "selected" : undefined}
+                className={cn(
+                  "hover:bg-muted/30",
+                  agendamento.is_sandbox && "bg-orange-500/5",
+                  isSelected && "bg-primary/5"
+                )}
+              >
+                {selectionEnabled && (
+                  <TableCell className="w-10">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => onToggleSelect?.(agendamento.id)}
+                      aria-label={`Selecionar ${agendamento.nome_completo}`}
+                    />
+                  </TableCell>
+                )}
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span>{agendamento.nome_completo}</span>
