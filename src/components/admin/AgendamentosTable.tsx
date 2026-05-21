@@ -2,6 +2,7 @@ import { Agendamento } from "@/services/agendamentos";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, MessageCircle, Phone, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -15,6 +16,9 @@ interface AgendamentosTableProps {
   onEdit: (agendamento: Agendamento) => void;
   onDelete: (agendamento: Agendamento) => void;
   loading?: boolean;
+  selectedIds?: string[];
+  onToggleSelect?: (id: string) => void;
+  onToggleSelectAll?: () => void;
 }
 
 const statusColors: Record<string, string> = {
