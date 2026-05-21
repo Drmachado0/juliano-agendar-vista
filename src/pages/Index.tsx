@@ -17,6 +17,10 @@ const Index = () => {
     "name": "Dr. Juliano Machado",
     "description": "Oftalmologista especializado em catarata, pterígio, exames de campo visual e OCT. Atendimento em Paragominas e Belém.",
     "medicalSpecialty": "Ophthalmology",
+    "url": "https://drjulianomachado.com",
+    "image": "https://drjulianomachado.com/og-image.jpg",
+    "telephone": "+559184043477",
+    "priceRange": "$$",
     "address": [
       {
         "@type": "PostalAddress",
@@ -33,13 +37,15 @@ const Index = () => {
         "addressCountry": "BR"
       }
     ],
-    "telephone": "+559184043477",
-    "url": "https://drjulianomachado.com",
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": "5.0",
-      "reviewCount": "100"
-    }
+      "bestRating": "5",
+      "ratingCount": "100"
+    },
+    "sameAs": [
+      "https://www.instagram.com/drjulianomachado.oftalmo/"
+    ]
   };
 
   return (
