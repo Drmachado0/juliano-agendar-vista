@@ -15,9 +15,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Agendamento, AgendamentoFilters as Filters, listarAgendamentos, excluirAgendamento } from "@/services/agendamentos";
+import { Agendamento, AgendamentoFilters as Filters, listarAgendamentos, excluirAgendamento, excluirAgendamentosEmLote } from "@/services/agendamentos";
 import { toast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Calendar, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, RefreshCw, Trash2, X } from "lucide-react";
 
 const AdminAgendamentos = () => {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
