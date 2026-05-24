@@ -154,6 +154,15 @@ Deno.serve(async (req) => {
         const phoneClean = lead.telefone_whatsapp.replace(/\D/g, '');
         const normalizedPhone = normalizePhoneNumber(phoneClean);
 
+        // GUARD #0: rate-limit anti-loop (telefone)
+        const rl = await podeEnviarOutbound(supabase, phoneClean, [LIMITES_PADRAO.boas_vindas]);
+        if (!rl.ok) {
+          console.warn(`[boas-vindas] 🚫 Rate limit ${normalizedPhone} lead ${lead.id}: ${rl.motivo}`);
+          await logarBloqueioRateLimit(supabase, 'enviar-boas-vindas-lead', phoneClean, lead.id, rl);
+          falhas++;
+          continue;
+        }
+
         // GUARD #1: cache de verificações WhatsApp — se sabemos que o número
         // não tem WhatsApp, não tenta enviar (evita HTTP 400 da Evolution).
         const numeroInvalido = await isKnownInvalidWhatsapp(supabase, phoneClean);
