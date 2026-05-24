@@ -135,6 +135,14 @@ serve(async (req) => {
           agendamento.local_atendimento
         );
 
+        // Rate-limit anti-loop
+        const rl = await podeEnviarOutbound(supabase, agendamento.telefone_whatsapp, [LIMITES_PADRAO.confirmacao]);
+        if (!rl.ok) {
+          console.warn(`[Confirmação] 🚫 Rate limit ${agendamento.id}: ${rl.motivo}`);
+          await logarBloqueioRateLimit(supabase, 'enviar-confirmacao-whatsapp', agendamento.telefone_whatsapp, agendamento.id, rl);
+          continue;
+        }
+
         // Enviar mensagem via Evolution API
         const result = await sendWhatsappTextMessage(agendamento.telefone_whatsapp, message);
 
