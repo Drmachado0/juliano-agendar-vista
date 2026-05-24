@@ -10,6 +10,8 @@ import {
   sanitizePayload,
 } from '../_shared/evolutionApiClient.ts';
 import { isBotPaused, isKnownInvalidWhatsapp } from '../_shared/whatsappGuards.ts';
+import { podeEnviarOutbound, LIMITES_PADRAO, logarBloqueioRateLimit } from '../_shared/rateLimitOutbound.ts';
+import { envioAutomaticoLiberado } from '../_shared/envioStatusGlobal.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,6 +49,15 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const killSwitch = await envioAutomaticoLiberado(supabase);
+    if (!killSwitch.liberado) {
+      console.warn(`[Confirmação] 🛑 Bloqueado pelo kill switch: ${killSwitch.motivo}`);
+      return new Response(
+        JSON.stringify({ blocked: true, reason: killSwitch.motivo }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Calcular janela de tempo: agendamentos entre agora e 24h no futuro
     const now = new Date();
@@ -133,6 +144,14 @@ serve(async (req) => {
           agendamento.hora_agendamento,
           agendamento.local_atendimento
         );
+
+        // Rate-limit anti-loop
+        const rl = await podeEnviarOutbound(supabase, agendamento.telefone_whatsapp, [LIMITES_PADRAO.confirmacao]);
+        if (!rl.ok) {
+          console.warn(`[Confirmação] 🚫 Rate limit ${agendamento.id}: ${rl.motivo}`);
+          await logarBloqueioRateLimit(supabase, 'enviar-confirmacao-whatsapp', agendamento.telefone_whatsapp, agendamento.id, rl);
+          continue;
+        }
 
         // Enviar mensagem via Evolution API
         const result = await sendWhatsappTextMessage(agendamento.telefone_whatsapp, message);

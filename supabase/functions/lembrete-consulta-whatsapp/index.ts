@@ -3,6 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { gerarMensagemDoTemplate, formatarData, formatarHora } from "../_shared/templateRenderer.ts";
 import { sendWhatsappTextMessage, normalizePhoneNumber, sanitizePayload } from "../_shared/evolutionApiClient.ts";
 import { isBotPaused, isKnownInvalidWhatsapp } from "../_shared/whatsappGuards.ts";
+import { podeEnviarOutbound, LIMITES_PADRAO, logarBloqueioRateLimit } from "../_shared/rateLimitOutbound.ts";
+import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,6 +38,15 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const killSwitch = await envioAutomaticoLiberado(supabase);
+    if (!killSwitch.liberado) {
+      console.warn(`[lembrete-consulta] 🛑 Bloqueado pelo kill switch: ${killSwitch.motivo}`);
+      return new Response(JSON.stringify({ blocked: true, reason: killSwitch.motivo }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Buscar consultas de amanhã
     const tomorrow = new Date();
@@ -111,6 +122,15 @@ serve(async (req) => {
           tipo_atendimento: agendamento.tipo_atendimento,
           link_status: `https://drjulianomachado.com/status/${agendamento.id}`,
         });
+
+        // Rate-limit anti-loop
+        const rl = await podeEnviarOutbound(supabase, agendamento.telefone_whatsapp, [LIMITES_PADRAO.lembrete_24h]);
+        if (!rl.ok) {
+          console.warn(`[lembrete-consulta] 🚫 Rate limit ${agendamento.id}: ${rl.motivo}`);
+          await logarBloqueioRateLimit(supabase, 'lembrete-consulta-whatsapp', agendamento.telefone_whatsapp, agendamento.id, rl);
+          pulados++;
+          continue;
+        }
 
         // Item #2: usa cliente compartilhado (sanitização + status mapeado)
         const result = await sendWhatsappTextMessage(agendamento.telefone_whatsapp, mensagem);

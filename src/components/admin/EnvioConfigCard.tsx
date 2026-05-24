@@ -7,7 +7,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Save, AlertTriangle, ShieldAlert, CheckCircle2, X } from "lucide-react";
+import { Loader2, Save, AlertTriangle, ShieldAlert, CheckCircle2, X, OctagonAlert } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
   useConfiguracoesEnvio,
@@ -108,6 +119,31 @@ export default function EnvioConfigCard() {
     }
   }
 
+  async function handlePanico() {
+    setSalvando(true);
+    const motivo = `PARADA DE EMERGÊNCIA acionada em ${new Date().toLocaleString("pt-BR")}`;
+    const { success, error } = await atualizarConfiguracoesEnvio({
+      limite_sessao: limiteSessao,
+      limite_diario: limiteDiario,
+      janela_inicio: janelaInicio + ":00",
+      janela_fim: janelaFim + ":00",
+      status_global: "bloqueado",
+      motivo_bloqueio: motivo,
+      blackout_dates: blackoutDates,
+      intervalo_min_segundos: intervaloMin,
+      intervalo_max_segundos: intervaloMax,
+    });
+    setSalvando(false);
+    if (success) {
+      setStatusGlobal("bloqueado");
+      setMotivoBloqueio(motivo);
+      toast.success("🛑 Envios automáticos BLOQUEADOS imediatamente");
+      invalidate();
+    } else {
+      toast.error(error || "Erro ao bloquear envios");
+    }
+  }
+
   const statusBadge =
     statusGlobal === "ativo" ? (
       <Badge className="bg-green-600 hover:bg-green-600">
@@ -134,7 +170,33 @@ export default function EnvioConfigCard() {
               externo (lembretes-runner). Aplica-se a envios manuais e automáticos.
             </CardDescription>
           </div>
-          {statusBadge}
+          <div className="flex items-center gap-2">
+            {statusBadge}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" className="gap-2" disabled={salvando}>
+                  <OctagonAlert className="h-4 w-4" /> Parar tudo agora
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Parada de emergência</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Isso vai <strong>bloquear imediatamente</strong> todos os envios
+                    automáticos (boas-vindas, confirmações, lembretes 24h, lembretes anuais).
+                    Mensagens manuais individuais continuam funcionando.
+                    Para retomar, mude o status global de volta para "Ativo".
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handlePanico} className="bg-destructive hover:bg-destructive/90">
+                    Sim, parar tudo
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">

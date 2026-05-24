@@ -2,6 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendWhatsappTextMessage, normalizePhoneNumber, sanitizePayload } from "../_shared/evolutionApiClient.ts";
 import { buscarTemplate, renderizarTemplate } from "../_shared/templateRenderer.ts";
 import { isKnownInvalidWhatsapp } from "../_shared/whatsappGuards.ts";
+import { podeEnviarOutbound, LIMITES_PADRAO, logarBloqueioRateLimit } from "../_shared/rateLimitOutbound.ts";
+import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -58,6 +60,16 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // KILL SWITCH: se admin acionou "Parar tudo agora", bloqueia envios automáticos.
+    const killSwitch = await envioAutomaticoLiberado(supabase);
+    if (!killSwitch.liberado) {
+      console.warn(`[boas-vindas] 🛑 Bloqueado pelo kill switch: ${killSwitch.motivo}`);
+      return new Response(
+        JSON.stringify({ processed: 0, skipped: 0, total_pending: 0, blocked: true, reason: killSwitch.motivo }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Modo manual (admin) processa lote maior; cron mantém lote menor
     const fetchLimit = isAdmin ? 100 : 50;
@@ -152,6 +164,15 @@ Deno.serve(async (req) => {
 
         const phoneClean = lead.telefone_whatsapp.replace(/\D/g, '');
         const normalizedPhone = normalizePhoneNumber(phoneClean);
+
+        // GUARD #0: rate-limit anti-loop (telefone)
+        const rl = await podeEnviarOutbound(supabase, phoneClean, [LIMITES_PADRAO.boas_vindas]);
+        if (!rl.ok) {
+          console.warn(`[boas-vindas] 🚫 Rate limit ${normalizedPhone} lead ${lead.id}: ${rl.motivo}`);
+          await logarBloqueioRateLimit(supabase, 'enviar-boas-vindas-lead', phoneClean, lead.id, rl);
+          falhas++;
+          continue;
+        }
 
         // GUARD #1: cache de verificações WhatsApp — se sabemos que o número
         // não tem WhatsApp, não tenta enviar (evita HTTP 400 da Evolution).
