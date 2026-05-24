@@ -20,11 +20,14 @@ export async function envioAutomaticoLiberado(
       return { liberado: true, status: "desconhecido" };
     }
     const status = data.status_global as string;
-    if (status === "bloqueado" || status === "pausado") {
+    // Apenas "bloqueado" trava envios transacionais (acionado pelo botão de pânico).
+    // "pausado" é o default seguro do módulo de lembretes anuais e não deve impedir
+    // boas-vindas, confirmações e lembretes 24h.
+    if (status === "bloqueado") {
       return {
         liberado: false,
         status,
-        motivo: data.motivo_bloqueio ?? `Status global = ${status}`,
+        motivo: data.motivo_bloqueio ?? "Envios bloqueados pelo administrador",
       };
     }
     return { liberado: true, status };
