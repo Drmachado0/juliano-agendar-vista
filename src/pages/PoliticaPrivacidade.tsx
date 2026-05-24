@@ -67,12 +67,12 @@ export default function PoliticaPrivacidade() {
                 <br />
                 Contato:{" "}
                 <a
-                  href="https://wa.me/5591984800864"
+                  href="https://wa.me/5591980690617"
                   className="text-primary hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  WhatsApp +55 (91) 98480-0864
+                  WhatsApp +55 (91) 98069-0617
                 </a>
                 .
               </p>
@@ -82,12 +82,12 @@ export default function PoliticaPrivacidade() {
               <p>
                 Solicitações relativas a dados pessoais podem ser enviadas pelo WhatsApp{" "}
                 <a
-                  href="https://wa.me/5591984800864"
+                  href="https://wa.me/5591980690617"
                   className="text-primary hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  +55 (91) 98480-0864
+                  +55 (91) 98069-0617
                 </a>
                 , identificando o assunto como “LGPD”.
               </p>
@@ -172,12 +172,12 @@ export default function PoliticaPrivacidade() {
               <p className="mt-2">
                 Para exercer qualquer direito, entre em contato pelo{" "}
                 <a
-                  href="https://wa.me/5591984800864"
+                  href="https://wa.me/5591980690617"
                   className="text-primary hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  WhatsApp +55 (91) 98480-0864
+                  WhatsApp +55 (91) 98069-0617
                 </a>
                 .
               </p>
