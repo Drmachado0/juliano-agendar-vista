@@ -312,12 +312,20 @@ async function processarPacientes(
     let success = false;
     let errMsg: string | null = null;
     let result: any = null;
-    try {
-      result = await sendWhatsappTextMessage(pac.telefone, mensagem);
-      success = !!result.success;
-      if (!success) errMsg = result.errorMessage || "envio_falhou";
-    } catch (e: any) {
-      errMsg = e?.message || "exception";
+
+    // Rate-limit anti-loop (1 lembrete por 7 dias por telefone)
+    const rl = await podeEnviarOutbound(supabase, pac.telefone, [LIMITES_PADRAO.lembrete_anual]);
+    if (!rl.ok) {
+      errMsg = `rate_limit_block: ${rl.motivo}`;
+      await logarBloqueioRateLimit(supabase, 'lembretes-runner', pac.telefone, null, rl);
+    } else {
+      try {
+        result = await sendWhatsappTextMessage(pac.telefone, mensagem);
+        success = !!result.success;
+        if (!success) errMsg = result.errorMessage || "envio_falhou";
+      } catch (e: any) {
+        errMsg = e?.message || "exception";
+      }
     }
 
     const latencia = Date.now() - tStart;
