@@ -170,7 +170,33 @@ export default function EnvioConfigCard() {
               externo (lembretes-runner). Aplica-se a envios manuais e automáticos.
             </CardDescription>
           </div>
-          {statusBadge}
+          <div className="flex items-center gap-2">
+            {statusBadge}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" className="gap-2" disabled={salvando}>
+                  <OctagonAlert className="h-4 w-4" /> Parar tudo agora
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Parada de emergência</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Isso vai <strong>bloquear imediatamente</strong> todos os envios
+                    automáticos (boas-vindas, confirmações, lembretes 24h, lembretes anuais).
+                    Mensagens manuais individuais continuam funcionando.
+                    Para retomar, mude o status global de volta para "Ativo".
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handlePanico} className="bg-destructive hover:bg-destructive/90">
+                    Sim, parar tudo
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
