@@ -61,6 +61,16 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // KILL SWITCH: se admin acionou "Parar tudo agora", bloqueia envios automáticos.
+    const killSwitch = await envioAutomaticoLiberado(supabase);
+    if (!killSwitch.liberado) {
+      console.warn(`[boas-vindas] 🛑 Bloqueado pelo kill switch: ${killSwitch.motivo}`);
+      return new Response(
+        JSON.stringify({ processed: 0, skipped: 0, total_pending: 0, blocked: true, reason: killSwitch.motivo }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Modo manual (admin) processa lote maior; cron mantém lote menor
     const fetchLimit = isAdmin ? 100 : 50;
     const processLimit = isAdmin ? 30 : 10;
