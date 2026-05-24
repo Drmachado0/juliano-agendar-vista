@@ -39,6 +39,15 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const killSwitch = await envioAutomaticoLiberado(supabase);
+    if (!killSwitch.liberado) {
+      console.warn(`[lembrete-consulta] 🛑 Bloqueado pelo kill switch: ${killSwitch.motivo}`);
+      return new Response(JSON.stringify({ blocked: true, reason: killSwitch.motivo }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Buscar consultas de amanhã
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
