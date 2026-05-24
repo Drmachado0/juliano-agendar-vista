@@ -87,11 +87,11 @@ const Footer = () => {
             <h4 className="text-foreground font-semibold text-sm mb-4 font-sans border-b border-primary/20 pb-2 inline-block">Contato</h4>
             <div className="space-y-3">
               <a
-                href="https://wa.me/559184043477"
+                href="https://wa.me/5591984800864"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
-                  trackWhatsAppClick('https://wa.me/559184043477', '(91) 93618-0476', 'whatsapp_footer_contact', 'footer_contact');
+                  trackWhatsAppClick('https://wa.me/5591984800864', '(91) 93618-0476', 'whatsapp_footer_contact', 'footer_contact');
                   trackMetaContact('WhatsApp');
                 }}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
@@ -170,11 +170,11 @@ const Footer = () => {
               <Instagram className="w-4 h-4" />
             </a>
             <a
-              href="https://wa.me/559184043477"
+              href="https://wa.me/5591984800864"
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => {
-                trackWhatsAppClick('https://wa.me/559184043477', 'WhatsApp Footer Social', 'whatsapp_footer_social', 'footer_social');
+                trackWhatsAppClick('https://wa.me/5591984800864', 'WhatsApp Footer Social', 'whatsapp_footer_social', 'footer_social');
                 trackMetaContact('WhatsApp');
               }}
               className="text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-300"

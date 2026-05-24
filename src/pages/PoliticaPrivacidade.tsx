@@ -67,7 +67,7 @@ export default function PoliticaPrivacidade() {
                 <br />
                 Contato:{" "}
                 <a
-                  href="https://wa.me/559184043477"
+                  href="https://wa.me/5591984800864"
                   className="text-primary hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -82,7 +82,7 @@ export default function PoliticaPrivacidade() {
               <p>
                 Solicitações relativas a dados pessoais podem ser enviadas pelo WhatsApp{" "}
                 <a
-                  href="https://wa.me/559184043477"
+                  href="https://wa.me/5591984800864"
                   className="text-primary hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -172,7 +172,7 @@ export default function PoliticaPrivacidade() {
               <p className="mt-2">
                 Para exercer qualquer direito, entre em contato pelo{" "}
                 <a
-                  href="https://wa.me/559184043477"
+                  href="https://wa.me/5591984800864"
                   className="text-primary hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
