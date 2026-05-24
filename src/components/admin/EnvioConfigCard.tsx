@@ -97,6 +97,26 @@ export default function EnvioConfigCard() {
     if (!Number.isFinite(intervaloMax) || intervaloMax < intervaloMin) {
       toast.error("Intervalo máximo deve ser maior ou igual ao mínimo");
       return;
+    }
+    setSalvando(true);
+    const { success, error } = await atualizarConfiguracoesEnvio({
+      limite_sessao: limiteSessao,
+      limite_diario: limiteDiario,
+      janela_inicio: janelaInicio + ":00",
+      janela_fim: janelaFim + ":00",
+      status_global: statusGlobal,
+      motivo_bloqueio: statusGlobal === "bloqueado" ? motivoBloqueio.trim() : null,
+      blackout_dates: blackoutDates,
+      intervalo_min_segundos: intervaloMin,
+      intervalo_max_segundos: intervaloMax,
+    });
+    setSalvando(false);
+    if (success) {
+      toast.success("Configurações salvas");
+      invalidate();
+    } else {
+      toast.error(error || "Erro ao salvar");
+    }
   }
 
   async function handlePanico() {
@@ -121,26 +141,6 @@ export default function EnvioConfigCard() {
       invalidate();
     } else {
       toast.error(error || "Erro ao bloquear envios");
-    }
-  }
-    setSalvando(true);
-    const { success, error } = await atualizarConfiguracoesEnvio({
-      limite_sessao: limiteSessao,
-      limite_diario: limiteDiario,
-      janela_inicio: janelaInicio + ":00",
-      janela_fim: janelaFim + ":00",
-      status_global: statusGlobal,
-      motivo_bloqueio: statusGlobal === "bloqueado" ? motivoBloqueio.trim() : null,
-      blackout_dates: blackoutDates,
-      intervalo_min_segundos: intervaloMin,
-      intervalo_max_segundos: intervaloMax,
-    });
-    setSalvando(false);
-    if (success) {
-      toast.success("Configurações salvas");
-      invalidate();
-    } else {
-      toast.error(error || "Erro ao salvar");
     }
   }
 
