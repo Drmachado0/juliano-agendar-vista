@@ -97,7 +97,32 @@ export default function EnvioConfigCard() {
     if (!Number.isFinite(intervaloMax) || intervaloMax < intervaloMin) {
       toast.error("Intervalo máximo deve ser maior ou igual ao mínimo");
       return;
+  }
+
+  async function handlePanico() {
+    setSalvando(true);
+    const motivo = `PARADA DE EMERGÊNCIA acionada em ${new Date().toLocaleString("pt-BR")}`;
+    const { success, error } = await atualizarConfiguracoesEnvio({
+      limite_sessao: limiteSessao,
+      limite_diario: limiteDiario,
+      janela_inicio: janelaInicio + ":00",
+      janela_fim: janelaFim + ":00",
+      status_global: "bloqueado",
+      motivo_bloqueio: motivo,
+      blackout_dates: blackoutDates,
+      intervalo_min_segundos: intervaloMin,
+      intervalo_max_segundos: intervaloMax,
+    });
+    setSalvando(false);
+    if (success) {
+      setStatusGlobal("bloqueado");
+      setMotivoBloqueio(motivo);
+      toast.success("🛑 Envios automáticos BLOQUEADOS imediatamente");
+      invalidate();
+    } else {
+      toast.error(error || "Erro ao bloquear envios");
     }
+  }
     setSalvando(true);
     const { success, error } = await atualizarConfiguracoesEnvio({
       limite_sessao: limiteSessao,
