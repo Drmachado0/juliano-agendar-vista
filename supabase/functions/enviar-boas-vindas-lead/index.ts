@@ -3,6 +3,7 @@ import { sendWhatsappTextMessage, normalizePhoneNumber, sanitizePayload } from "
 import { buscarTemplate, renderizarTemplate } from "../_shared/templateRenderer.ts";
 import { isKnownInvalidWhatsapp } from "../_shared/whatsappGuards.ts";
 import { podeEnviarOutbound, LIMITES_PADRAO, logarBloqueioRateLimit } from "../_shared/rateLimitOutbound.ts";
+import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
