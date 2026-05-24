@@ -113,6 +113,15 @@ serve(async (req) => {
           link_status: `https://drjulianomachado.com/status/${agendamento.id}`,
         });
 
+        // Rate-limit anti-loop
+        const rl = await podeEnviarOutbound(supabase, agendamento.telefone_whatsapp, [LIMITES_PADRAO.lembrete_24h]);
+        if (!rl.ok) {
+          console.warn(`[lembrete-consulta] 🚫 Rate limit ${agendamento.id}: ${rl.motivo}`);
+          await logarBloqueioRateLimit(supabase, 'lembrete-consulta-whatsapp', agendamento.telefone_whatsapp, agendamento.id, rl);
+          pulados++;
+          continue;
+        }
+
         // Item #2: usa cliente compartilhado (sanitização + status mapeado)
         const result = await sendWhatsappTextMessage(agendamento.telefone_whatsapp, mensagem);
         const normalizedPhone = normalizePhoneNumber(agendamento.telefone_whatsapp);
