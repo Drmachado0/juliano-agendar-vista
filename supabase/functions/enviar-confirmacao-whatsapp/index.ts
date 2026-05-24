@@ -10,6 +10,7 @@ import {
   sanitizePayload,
 } from '../_shared/evolutionApiClient.ts';
 import { isBotPaused, isKnownInvalidWhatsapp } from '../_shared/whatsappGuards.ts';
+import { podeEnviarOutbound, LIMITES_PADRAO, logarBloqueioRateLimit } from '../_shared/rateLimitOutbound.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
