@@ -1,65 +1,45 @@
-# Por que todos os horários aparecem "Bloqueados" após Abrir dia
+## Causa raiz
 
-Investigação no banco e em `src/services/agenda.ts` (linhas 168-192) mostra duas causas combinadas:
+Os logs mostram que o lead `5591981620082` recebeu várias mensagens "boas-vindas" porque a função `enviar-boas-vindas-lead` está num **loop de reenvio**:
 
-## Causa 1 (principal) — bloqueio "dia inteiro" persiste após reabrir
+1. A Evolution aceita a mensagem (HTTP 200), mas sem confirmação clara (sem `messageId` ou status `PENDING`).
+2. O código tenta gravar em `mensagens_whatsapp` com `status_envio = 'pendente'`.
+3. A **check constraint** `mensagens_whatsapp_status_envio_check` só aceita: `enviado | entregue | lido | erro | recebida` — **não aceita `pendente`**.
+4. O INSERT falha → não fica registro de envio para esse lead.
+5. A dedup (RPC `get_leads_sem_boas_vindas` + query direta) usa `NOT EXISTS` em `mensagens_whatsapp` por `agendamento_id` + `tipo_mensagem='boas_vindas'`.
+6. Como não tem registro, o lead é elegível de novo no próximo cron → **mensagem disparada de novo, repetidamente**.
 
-Quando aplicamos o **Bloco 3** do SQL de junho, inserimos em `bloqueios_agenda` um registro `tipo_bloqueio='dia_inteiro'` para **todos os dias fora da agenda oficial** (inclui 25/jun).
-
-A função `Abrir dia` (`abrirDiaManual` / `abrirDiaComModelo` em `src/services/disponibilidade.ts:252-284`) apenas insere em `disponibilidade_especifica`. **Não remove o bloqueio dia_inteiro existente.**
-
-Em `montarGradeAgenda` (`src/services/agenda.ts:183-192`), qualquer bloqueio `dia_inteiro` ou `feriado` sobrescreve o slot como "bloqueado". Resultado: dia abre, mas o bloqueio antigo continua mascarando os 13 slots.
-
-## Causa 2 (secundária) — slot 08:00 mostra "Fora do horário"
-
-`disponibilidade_especifica.hora_inicio` é coluna `time` no Postgres e retorna `"08:00:00"`. Os slots gerados têm `horaFormatada = "08:00"`. A comparação string `"08:00" < "08:00:00"` é **true** (lexicográfica), então o primeiro slot é marcado como "Fora do horário de atendimento" (`agenda.ts:171`).
-
----
-
-# Plano de correção
-
-## 1. `abrirDiaManual` e `abrirDiaComModelo` removem bloqueios dia_inteiro/feriado
-
-Em `src/services/disponibilidade.ts`, antes do `insert` em `disponibilidade_especifica`, executar:
-
-```ts
-await supabase
-  .from("bloqueios_agenda")
-  .delete()
-  .eq("clinica_id", input.clinicaId)
-  .eq("data", input.data)
-  .in("tipo_bloqueio", ["dia_inteiro", "feriado"]);
+Log que comprova:
+```
+[Evolution API] Mensagem aceita pelo servidor
+[boas-vindas] ⏳ Pendente (sem ack) 5591981620082 ... mantém NOVO LEAD
+[boas-vindas] Falha ao persistir mensagem ... violates check constraint "mensagens_whatsapp_status_envio_check"
 ```
 
-Justificativa: abrir um dia implica que ele não está mais "fechado por padrão". Bloqueios de **intervalo** ou **ausência de profissional** são mantidos (granulares).
+## Correção
 
-## 2. Normalizar comparação de horário em `montarGradeAgenda`
+### 1. Migration — permitir `pendente` na constraint
+Drop + recriar `mensagens_whatsapp_status_envio_check` para aceitar:
+`enviado | entregue | lido | erro | recebida | pendente`.
 
-Em `src/services/agenda.ts:169-180`, comparar usando os 5 primeiros caracteres para evitar o problema `"HH:MM"` vs `"HH:MM:SS"`:
+Assim o INSERT em status pendente persiste, a dedup funciona e o lead **não é repescado**.
 
-```ts
-const ini = horaInicioDisp.slice(0,5);
-const fim = horaFimDisp.slice(0,5);
-if (slotTime < ini || slotTime >= fim) { ... }
-```
+### 2. Reforço anti-duplicidade em `supabase/functions/enviar-boas-vindas-lead/index.ts`
+Mesmo com a constraint corrigida, blindar contra corrida (cron + chamada manual rodando juntos):
 
-## 3. Limpar manualmente os 22 bloqueios dia_inteiro já existentes para 25/jun
+- **Antes do `sendWhatsappTextMessage`**, fazer um INSERT "claim" em `mensagens_whatsapp` com `status_envio='pendente'`, `conteudo=''` placeholder, dentro de try/catch — se já existir registro (via segunda checagem ou unique), pular.
+- Adicionar **unique index parcial** `mensagens_whatsapp_boas_vindas_unique` em `(agendamento_id)` WHERE `tipo_mensagem='boas_vindas' AND direcao='OUT'`. Isso garante no banco que cada lead só recebe **uma única** boas-vindas, mesmo com concorrência.
+- Depois do envio, fazer `UPDATE` do mesmo registro com o status real (`enviado/entregue/erro/pendente`) + `mensagem_externa_id` + `payload`.
+- Se o INSERT inicial falhar por conflito do unique → log e `continue` (já existe envio).
 
-Como o usuário já clicou em "Abrir dia" para 25/jun da Clinicor antes da correção, rodar um `DELETE` único para esse dia/clínica em `bloqueios_agenda` (`tipo_bloqueio IN ('dia_inteiro','feriado')`) para que a agenda já apareça correta sem ter que refazer a abertura.
-
-Os demais 21 dias bloqueados de junho permanecem intactos — só serão limpos quando/se o admin abrir cada um.
-
-## 4. Validação
-
-Após aplicar:
-- Recarregar a Agenda em 25/jun → esperado: 13 slots **livres** (não bloqueados).
-- Slot 08:00 deve aparecer como **Livre**, não como "Fora do horário".
-- Dias 04/jun (fora da lista oficial e sem abertura manual) devem continuar bloqueados.
+### 3. Limpeza de leads afetados
+Migration adicional: para leads que estão `NOVO LEAD` + `status_funil='lead'` e que **já têm pelo menos uma mensagem OUT de boas_vindas em `mensagens_whatsapp`** (mesmo que não persistida agora — vamos identificar pelos múltiplos envios recentes via logs/telefone), garantir que o estado fique coerente. Para o lead `5591981620082` especificamente, registrar uma entrada manual em `mensagens_whatsapp` com `status_envio='enviado'` e `tipo_mensagem='boas_vindas'` para travar futuros envios.
 
 ## Arquivos afetados
 
-- `src/services/disponibilidade.ts` — adicionar delete de bloqueios em `abrirDiaManual` e `abrirDiaComModelo`.
-- `src/services/agenda.ts` — normalizar slice(0,5) na comparação de janela.
-- 1 operação SQL pontual em `bloqueios_agenda` para 25/jun Clinicor.
+- `supabase/migrations/<novo>.sql` — atualizar check constraint + criar unique index parcial + seed manual de dedup para leads que já receberam.
+- `supabase/functions/enviar-boas-vindas-lead/index.ts` — padrão "claim → enviar → update", tratamento de conflito do unique.
 
-Nenhuma mudança de schema. Memória `agenda-datas-abertas` continua válida (bloqueios são exceções; abrir dia agora limpa exceção de dia inteiro automaticamente — vou anotar isso na memória após implementar).
+## Resultado esperado
+
+Cada lead recebe **exatamente uma** mensagem de boas-vindas. Falhas reais vão para `PRECISA_DE_HUMANO`. Status `pendente` é persistido e respeitado pelo dedup, eliminando o loop.

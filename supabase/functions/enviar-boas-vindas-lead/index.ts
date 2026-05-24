@@ -181,13 +181,36 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // CLAIM ANTECIPADO: insere placeholder 'pendente' ANTES de chamar Evolution.
+        // Unique index parcial mensagens_whatsapp_boas_vindas_unique garante que
+        // SOMENTE UM envio por agendamento_id ocorre, mesmo com execução concorrente.
+        const { data: claim, error: claimError } = await supabase
+          .from('mensagens_whatsapp')
+          .insert({
+            agendamento_id: lead.id,
+            telefone: normalizedPhone,
+            direcao: 'OUT',
+            conteudo: mensagem,
+            tipo_mensagem: 'boas_vindas',
+            status_envio: 'pendente',
+          })
+          .select('id')
+          .single();
+
+        if (claimError) {
+          // 23505 = unique_violation → já existe envio, pulamos com segurança
+          if ((claimError as any).code === '23505') {
+            console.log(`[boas-vindas] ⏭️  lead ${lead.id} já possui boas_vindas — skip (claim conflict)`);
+            continue;
+          }
+          console.error(`[boas-vindas] Falha no claim do lead ${lead.id}:`, claimError.message);
+          falhas++;
+          continue;
+        }
+
+        const claimId = claim?.id;
         const resultado = await sendWhatsappTextMessage(phoneClean, mensagem);
 
-
-        // Determina status_envio confiável a partir do resultado
-        // - confirmed=true (enviado/entregue/lido) → grava status correspondente
-        // - HTTP ok mas sem mensagem_externa_id ou status PENDING → 'pendente' (NÃO promove card)
-        // - HTTP error / exceção → 'erro' (move para PRECISA_DE_HUMANO)
         let statusEnvio: 'enviado' | 'entregue' | 'lido' | 'pendente' | 'erro';
         let confirmadoEntrega = false;
 
@@ -198,29 +221,26 @@ Deno.serve(async (req) => {
           statusEnvio = resultado.deliveryStatus ?? 'enviado';
           confirmadoEntrega = true;
         } else {
-          // HTTP 2xx mas sem confirmação clara da Evolution (PENDING, sem messageId, etc.)
           statusEnvio = 'pendente';
           confirmadoEntrega = false;
         }
 
-        // Persiste a mensagem OUT em mensagens_whatsapp (sempre, mesmo se erro/pendente)
-        const { error: insertMsgError } = await supabase.from('mensagens_whatsapp').insert({
-          agendamento_id: lead.id,
-          telefone: normalizedPhone,
-          direcao: 'OUT',
-          conteudo: mensagem,
-          tipo_mensagem: 'boas_vindas',
-          status_envio: statusEnvio,
-          mensagem_externa_id: resultado.messageId || null,
-          error_message: resultado.errorMessage || null,
-          payload: sanitizePayload({
-            evolution_status: resultado.evolutionStatus ?? null,
-            response: resultado.sanitizedResponse ?? null,
-          }) as any,
-        });
+        // Atualiza o claim com o resultado real (NÃO insere de novo — dedup garantida)
+        const { error: updateMsgError } = await supabase
+          .from('mensagens_whatsapp')
+          .update({
+            status_envio: statusEnvio,
+            mensagem_externa_id: resultado.messageId || null,
+            error_message: resultado.errorMessage || null,
+            payload: sanitizePayload({
+              evolution_status: resultado.evolutionStatus ?? null,
+              response: resultado.sanitizedResponse ?? null,
+            }) as any,
+          })
+          .eq('id', claimId);
 
-        if (insertMsgError) {
-          console.error(`[boas-vindas] Falha ao persistir mensagem do lead ${lead.id}:`, insertMsgError.message);
+        if (updateMsgError) {
+          console.error(`[boas-vindas] Falha ao atualizar mensagem do lead ${lead.id}:`, updateMsgError.message);
         }
 
         if (confirmadoEntrega) {
