@@ -4,6 +4,7 @@ import { gerarMensagemDoTemplate, formatarData, formatarHora } from "../_shared/
 import { sendWhatsappTextMessage, normalizePhoneNumber, sanitizePayload } from "../_shared/evolutionApiClient.ts";
 import { isBotPaused, isKnownInvalidWhatsapp } from "../_shared/whatsappGuards.ts";
 import { podeEnviarOutbound, LIMITES_PADRAO, logarBloqueioRateLimit } from "../_shared/rateLimitOutbound.ts";
+import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
