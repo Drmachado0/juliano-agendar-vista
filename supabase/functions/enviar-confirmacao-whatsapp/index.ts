@@ -50,6 +50,15 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    const killSwitch = await envioAutomaticoLiberado(supabase);
+    if (!killSwitch.liberado) {
+      console.warn(`[Confirmação] 🛑 Bloqueado pelo kill switch: ${killSwitch.motivo}`);
+      return new Response(
+        JSON.stringify({ blocked: true, reason: killSwitch.motivo }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Calcular janela de tempo: agendamentos entre agora e 24h no futuro
     const now = new Date();
     const futureLimit = new Date(now.getTime() + CONFIRMATION_HOURS_BEFORE * 60 * 60 * 1000);
