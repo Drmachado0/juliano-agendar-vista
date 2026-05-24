@@ -119,7 +119,7 @@ function formatarHora(h: string): string {
   return h.slice(0, 5);
 }
 
-const WHATSAPP_NUMBER = "5591984800864";
+const WHATSAPP_NUMBER = "5591980690617";
 
 export default function StatusAgendamentoPage() {
   const { id } = useParams<{ id: string }>();
