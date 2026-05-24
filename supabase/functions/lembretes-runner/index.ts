@@ -11,6 +11,7 @@ import {
   normalizePhoneNumber,
   sanitizePayload,
 } from "../_shared/evolutionApiClient.ts";
+import { podeEnviarOutbound, LIMITES_PADRAO, logarBloqueioRateLimit } from "../_shared/rateLimitOutbound.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
