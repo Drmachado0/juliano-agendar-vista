@@ -72,7 +72,7 @@ export default function PoliticaPrivacidade() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  WhatsApp +55 (91) 93618-0476
+                  WhatsApp +55 (91) 98480-0864
                 </a>
                 .
               </p>
@@ -87,7 +87,7 @@ export default function PoliticaPrivacidade() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  +55 (91) 93618-0476
+                  +55 (91) 98480-0864
                 </a>
                 , identificando o assunto como “LGPD”.
               </p>
@@ -177,7 +177,7 @@ export default function PoliticaPrivacidade() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  WhatsApp +55 (91) 93618-0476
+                  WhatsApp +55 (91) 98480-0864
                 </a>
                 .
               </p>

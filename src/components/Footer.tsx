@@ -91,13 +91,13 @@ const Footer = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
-                  trackWhatsAppClick('https://wa.me/5591984800864', '(91) 93618-0476', 'whatsapp_footer_contact', 'footer_contact');
+                  trackWhatsAppClick('https://wa.me/5591984800864', '(91) 98480-0864', 'whatsapp_footer_contact', 'footer_contact');
                   trackMetaContact('WhatsApp');
                 }}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <MessageCircle className="w-4 h-4 text-primary" />
-                (91) 93618-0476
+                (91) 98480-0864
               </a>
               <a
                 href="https://www.instagram.com/drjulianomachado.oftalmo/"
