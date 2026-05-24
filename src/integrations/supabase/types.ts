@@ -2253,6 +2253,15 @@ export type Database = {
         }
         Returns: string
       }
+      pode_enviar_outbound: {
+        Args: {
+          p_janela_minutos: number
+          p_max_msgs: number
+          p_telefone: string
+          p_tipo: string
+        }
+        Returns: boolean
+      }
       preview_dados_paciente: { Args: { p_telefone: string }; Returns: Json }
       reativar_bot_agendamento: {
         Args: { p_agendamento_id: string }
