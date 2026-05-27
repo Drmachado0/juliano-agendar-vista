@@ -374,6 +374,40 @@ const Avaliacoes = () => {
     }
   };
 
+  // Exportar lista de pacientes carregados como CSV
+  const exportarCsvPacientes = () => {
+    if (pacientesLote.length === 0) {
+      toast({ title: "Lista vazia", description: "Busque pacientes antes de exportar.", variant: "destructive" });
+      return;
+    }
+    const headers = ["nome", "primeiro_nome", "telefone", "telefone_formatado", "data_atendimento", "whatsapp_verificado"];
+    const escape = (v: any) => {
+      const s = v === null || v === undefined ? "" : String(v);
+      return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const linhas = [headers.join(",")];
+    for (const p of pacientesLote) {
+      linhas.push([
+        p.nome, p.primeiro_nome, p.telefone, p.telefone_formatado,
+        p.data_atendimento_formatada || p.data_atendimento,
+        p.whatsappVerificado ?? "",
+      ].map(escape).join(","));
+    }
+    // BOM para Excel reconhecer UTF-8
+    const blob = new Blob(["\uFEFF" + linhas.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const dataStr = dataFiltro ? format(dataFiltro, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
+    a.href = url;
+    a.download = `contatos-avaliacoes-${dataStr}.csv`;
+    document.createElement("body");
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "CSV exportado", description: `${pacientesLote.length} contato(s) exportado(s).` });
+  };
+
   // Verificar números via Evolution API
   const verificarNumerosWhatsApp = async () => {
     if (pacientesLote.length === 0) return;
