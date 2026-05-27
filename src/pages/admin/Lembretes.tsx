@@ -268,6 +268,41 @@ const Lembretes = () => {
     setLoadingLembretes(false);
   };
 
+  const exportarCsvLembretes = () => {
+    if (!lembretesPendentes || lembretesPendentes.length === 0) {
+      toast({ title: "Nada para exportar", description: "Não há lembretes na lista atual.", variant: "destructive" });
+      return;
+    }
+    const escape = (v: any) => {
+      const s = v == null ? "" : String(v);
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const headers = ["nome", "primeiro_nome", "telefone", "data_ultima_consulta", "data_proximo_lembrete", "lembrete_enviado", "origem"];
+    const linhas = lembretesPendentes.map(l => [
+      l.nome,
+      l.primeiro_nome ?? "",
+      l.telefone,
+      l.data_ultima_consulta,
+      l.data_proximo_lembrete,
+      l.lembrete_enviado ? "sim" : "nao",
+      l.origem,
+    ].map(escape).join(","));
+    const csv = "\uFEFF" + [headers.join(","), ...linhas].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const hoje = new Date().toISOString().split("T")[0];
+    a.href = url;
+    a.download = `lembretes-anuais-${hoje}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "CSV exportado", description: `${lembretesPendentes.length} contato(s) exportado(s).` });
+  };
+
+
+
   const carregarDashboard = async () => {
     setLoadingDashboard(true);
     const [geraisResult, mensaisResult] = await Promise.all([
