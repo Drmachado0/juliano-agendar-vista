@@ -13,7 +13,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarMensagemWhatsApp, enviarImagemWhatsApp } from "@/services/integracoes";
 import { GOOGLE_REVIEW_URL } from "@/lib/constants";
-import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Shuffle, Pencil, Trash2, Check, Wifi, WifiOff } from "lucide-react";
+import { Star, Send, RefreshCw, Search, Loader2, MessageCircle, CheckCircle, ImagePlus, X, Zap, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Shuffle, Pencil, Trash2, Check, Wifi, WifiOff, Download } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -372,6 +372,40 @@ const Avaliacoes = () => {
         description: "Todos os telefones já estão no formato correto.",
       });
     }
+  };
+
+  // Exportar lista de pacientes carregados como CSV
+  const exportarCsvPacientes = () => {
+    if (pacientesLote.length === 0) {
+      toast({ title: "Lista vazia", description: "Busque pacientes antes de exportar.", variant: "destructive" });
+      return;
+    }
+    const headers = ["nome", "primeiro_nome", "telefone", "telefone_formatado", "data_atendimento", "whatsapp_verificado"];
+    const escape = (v: any) => {
+      const s = v === null || v === undefined ? "" : String(v);
+      return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const linhas = [headers.join(",")];
+    for (const p of pacientesLote) {
+      linhas.push([
+        p.nome, p.primeiro_nome, p.telefone, p.telefone_formatado,
+        p.data_atendimento_formatada || p.data_atendimento,
+        p.whatsappVerificado ?? "",
+      ].map(escape).join(","));
+    }
+    // BOM para Excel reconhecer UTF-8
+    const blob = new Blob(["\uFEFF" + linhas.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const dataStr = dataFiltro ? format(dataFiltro, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
+    a.href = url;
+    a.download = `contatos-avaliacoes-${dataStr}.csv`;
+    document.createElement("body");
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "CSV exportado", description: `${pacientesLote.length} contato(s) exportado(s).` });
   };
 
   // Verificar números via Evolution API
@@ -1650,6 +1684,19 @@ const Avaliacoes = () => {
                     </Label>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    {/* Exportar CSV */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={exportarCsvPacientes}
+                      disabled={pacientesLote.length === 0}
+                      className="text-sky-600 border-sky-500/50 hover:bg-sky-500/10"
+                    >
+                      <Download className="h-3.5 w-3.5 mr-1.5" />
+                      Exportar CSV ({pacientesLote.length})
+                    </Button>
+
+
                     {/* Botão de verificação WhatsApp */}
                     <TooltipProvider>
                       <Tooltip>
