@@ -24,7 +24,7 @@ import {
 } from "@/services/lembretesAnuais";
 import { validarTelefoneBrasileiro, autocorrigirTelefone } from "@/lib/validarTelefoneBR";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, Send, RefreshCw, Loader2, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Save, Filter, CheckCircle, Calendar as CalendarIconLucide, CalendarRange, ArrowRight, BarChart3, TrendingUp, History, MessageCircle, ImagePlus, X, Shuffle, ChevronDown, ChevronUp, Eye, Zap, Pencil, Check, Trash2 } from "lucide-react";
+import { Bell, Send, RefreshCw, Loader2, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Save, Filter, CheckCircle, Calendar as CalendarIconLucide, CalendarRange, ArrowRight, BarChart3, TrendingUp, History, MessageCircle, ImagePlus, X, Shuffle, ChevronDown, ChevronUp, Eye, Zap, Pencil, Check, Trash2, Download } from "lucide-react";
 import { format, formatDistanceToNow, isPast, isWithinInterval, addDays, addMonths, eachDayOfInterval, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
