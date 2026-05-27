@@ -24,7 +24,7 @@ import {
 } from "@/services/lembretesAnuais";
 import { validarTelefoneBrasileiro, autocorrigirTelefone } from "@/lib/validarTelefoneBR";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, Send, RefreshCw, Loader2, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Save, Filter, CheckCircle, Calendar as CalendarIconLucide, CalendarRange, ArrowRight, BarChart3, TrendingUp, History, MessageCircle, ImagePlus, X, Shuffle, ChevronDown, ChevronUp, Eye, Zap, Pencil, Check, Trash2 } from "lucide-react";
+import { Bell, Send, RefreshCw, Loader2, CalendarIcon, Users, Pause, Play, XCircle, Phone, Shield, Settings2, Clock, AlertTriangle, Coffee, Save, Filter, CheckCircle, Calendar as CalendarIconLucide, CalendarRange, ArrowRight, BarChart3, TrendingUp, History, MessageCircle, ImagePlus, X, Shuffle, ChevronDown, ChevronUp, Eye, Zap, Pencil, Check, Trash2, Download } from "lucide-react";
 import { format, formatDistanceToNow, isPast, isWithinInterval, addDays, addMonths, eachDayOfInterval, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -267,6 +267,41 @@ const Lembretes = () => {
     }
     setLoadingLembretes(false);
   };
+
+  const exportarCsvLembretes = () => {
+    if (!lembretesPendentes || lembretesPendentes.length === 0) {
+      toast({ title: "Nada para exportar", description: "Não há lembretes na lista atual.", variant: "destructive" });
+      return;
+    }
+    const escape = (v: any) => {
+      const s = v == null ? "" : String(v);
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const headers = ["nome", "primeiro_nome", "telefone", "data_ultima_consulta", "data_proximo_lembrete", "lembrete_enviado", "origem"];
+    const linhas = lembretesPendentes.map(l => [
+      l.nome,
+      l.primeiro_nome ?? "",
+      l.telefone,
+      l.data_ultima_consulta,
+      l.data_proximo_lembrete,
+      l.lembrete_enviado ? "sim" : "nao",
+      l.origem,
+    ].map(escape).join(","));
+    const csv = "\uFEFF" + [headers.join(","), ...linhas].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const hoje = new Date().toISOString().split("T")[0];
+    a.href = url;
+    a.download = `lembretes-anuais-${hoje}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "CSV exportado", description: `${lembretesPendentes.length} contato(s) exportado(s).` });
+  };
+
+
 
   const carregarDashboard = async () => {
     setLoadingDashboard(true);
@@ -1590,6 +1625,16 @@ const Lembretes = () => {
                         >
                           {verificandoWhatsApp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
                           Verificar WhatsApp
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={exportarCsvLembretes}
+                          disabled={lembretesPendentes.length === 0}
+                          className="gap-2 text-sky-600 border-sky-500/50 hover:bg-sky-500/10"
+                        >
+                          <Download className="h-4 w-4" />
+                          Exportar CSV
                         </Button>
                         {contarTelefonesCorrigiveis() > 0 && (
                           <Button
