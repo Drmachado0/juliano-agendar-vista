@@ -1626,6 +1626,16 @@ const Lembretes = () => {
                           {verificandoWhatsApp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
                           Verificar WhatsApp
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={exportarCsvLembretes}
+                          disabled={lembretesPendentes.length === 0}
+                          className="gap-2 text-sky-600 border-sky-500/50 hover:bg-sky-500/10"
+                        >
+                          <Download className="h-4 w-4" />
+                          Exportar CSV
+                        </Button>
                         {contarTelefonesCorrigiveis() > 0 && (
                           <Button
                             size="sm"
