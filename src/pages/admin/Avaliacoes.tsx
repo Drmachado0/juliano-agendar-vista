@@ -1684,6 +1684,19 @@ const Avaliacoes = () => {
                     </Label>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    {/* Exportar CSV */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={exportarCsvPacientes}
+                      disabled={pacientesLote.length === 0}
+                      className="text-sky-600 border-sky-500/50 hover:bg-sky-500/10"
+                    >
+                      <Download className="h-3.5 w-3.5 mr-1.5" />
+                      Exportar CSV ({pacientesLote.length})
+                    </Button>
+
+
                     {/* Botão de verificação WhatsApp */}
                     <TooltipProvider>
                       <Tooltip>
