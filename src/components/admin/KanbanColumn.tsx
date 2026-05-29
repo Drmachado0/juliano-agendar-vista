@@ -39,6 +39,8 @@ const KanbanColumn = ({
   onDrop,
   isDragOver,
   boasVindasMap,
+  ultimasMsgsIn,
+  onRefresh,
   collapsed,
   onExpand,
 }: KanbanColumnProps) => {
