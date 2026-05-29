@@ -256,6 +256,57 @@ const KanbanCard = ({
         </TooltipContent>
       </Tooltip>
 
+      {/* Linha de status: SLA + Bot/Humano + Não qualificado */}
+      {(slaLevel === "warm" || slaLevel === "cold" || humanoAssumiu || !humanoAssumiu || naoQualificado) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {slaLevel === "warm" && horasDesdeUltimaIn != null && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border border-yellow-500/30">
+              <Snowflake className="h-2.5 w-2.5" />
+              esfriando — há {horasDesdeUltimaIn}h sem resposta
+            </span>
+          )}
+          {slaLevel === "cold" && horasDesdeUltimaIn != null && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/30">
+              <Flame className="h-2.5 w-2.5" />
+              frio — há {Math.floor(horasDesdeUltimaIn / 24)}d sem resposta
+            </span>
+          )}
+          {humanoAssumiu ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/30">
+                  <UserIcon className="h-2.5 w-2.5" />
+                  Humano assumiu
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {pausaVigente
+                  ? `Bot pausado até ${format(new Date(pausaAteMs), "dd/MM HH:mm", { locale: ptBR })}`
+                  : "Bot desativado para este lead"}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/30">
+              <Bot className="h-2.5 w-2.5" />
+              Bot atendendo
+            </span>
+          )}
+          {naoQualificado && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border/60">
+                  <Sparkles className="h-2.5 w-2.5" />
+                  não qualificado
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Lead ainda sem nome real — aguardando 1ª resposta</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      )}
+
+
+
       {/* Bloco data/hora consulta - destacado quando existir */}
       {!isLead && agendamento.data_agendamento && agendamento.hora_agendamento ? (
         <Tooltip>
