@@ -61,6 +61,8 @@ import TwoFactorSetup from "@/components/admin/TwoFactorSetup";
 import TemplatesWhatsAppTab from "@/components/admin/TemplatesWhatsAppTab";
 import EnvioConfigCard from "@/components/admin/EnvioConfigCard";
 import VariacoesLembreteAnualCard from "@/components/admin/VariacoesLembreteAnualCard";
+import ZapiStatusCard from "@/components/admin/ZapiStatusCard";
+
 import { sincronizarAvaliacoesManualmente } from "@/services/avaliacoesGoogle";
 
 export default function Configuracoes() {
@@ -537,7 +539,7 @@ export default function Configuracoes() {
         </div>
 
         <Tabs defaultValue="clinicas" className="w-full">
-          <TabsList className="grid w-full max-w-4xl grid-cols-8">
+          <TabsList className="grid w-full max-w-5xl grid-cols-9">
             <TabsTrigger value="clinicas" className="gap-2 text-xs sm:text-sm">
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Clínicas</span>
@@ -562,6 +564,10 @@ export default function Configuracoes() {
               <Link2 className="h-4 w-4" />
               <span className="hidden sm:inline">Integrações</span>
             </TabsTrigger>
+            <TabsTrigger value="zapi" className="gap-2 text-xs sm:text-sm">
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Z-API</span>
+            </TabsTrigger>
             <TabsTrigger value="bot" className="gap-2 text-xs sm:text-sm">
               <Bot className="h-4 w-4" />
               <span className="hidden sm:inline">Bot</span>
@@ -571,6 +577,11 @@ export default function Configuracoes() {
               <span className="hidden sm:inline">Envios</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="zapi" className="mt-6">
+            <ZapiStatusCard />
+          </TabsContent>
+
 
           <TabsContent value="bot" className="mt-6">
             <BotConfigCard />
