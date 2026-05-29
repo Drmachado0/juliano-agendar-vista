@@ -529,6 +529,36 @@ const KanbanCard = ({
             </TooltipTrigger>
             <TooltipContent>Disparar automação n8n</TooltipContent>
           </Tooltip>
+          {slaLevel === "cold" && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={!podeReengajar || reengajando}
+                    className={cn(
+                      "p-0 hover:bg-accent",
+                      btnSize,
+                      podeReengajar
+                        ? "text-red-500 hover:text-red-600"
+                        : "text-muted-foreground/60"
+                    )}
+                    onClick={handleReengajar}
+                  >
+                    {reengajando ? (
+                      <Loader2 className={cn(iconSize, "animate-spin")} />
+                    ) : (
+                      <Flame className={iconSize} />
+                    )}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {motivoBloqueio ? `Reengajar (${motivoBloqueio})` : "Reengajar lead frio"}
+              </TooltipContent>
+            </Tooltip>
+          )}
           {onToggleSandbox && (
             <Tooltip>
               <TooltipTrigger asChild>
