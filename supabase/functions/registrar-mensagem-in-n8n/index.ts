@@ -15,6 +15,7 @@ const BodySchema = z.object({
   mensagem_externa_id: z.string().optional(),
   tipo_mensagem: z.string().optional(),
   payload: z.record(z.unknown()).optional(),
+  nome_contato: z.string().max(200).optional(),
 });
 
 function json(body: unknown, status = 200) {
