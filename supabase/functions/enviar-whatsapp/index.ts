@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { registrarMensagemWhatsapp } from "../_shared/registrarMensagem.ts";
-import { getEvolutionConfigAsync } from "../_shared/evolutionApiClient.ts";
 
 // CORS configuration
 const corsHeaders = {
@@ -10,12 +9,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Schema validation
+// Schema validation — contrato de entrada mantido + suporte opcional a imagem
 const whatsAppRequestSchema = z.object({
-  telefone: z.string().min(10).max(15).regex(/^[\d\s\-\(\)\+]+$/),
-  mensagem: z.string().min(1).max(4096),
+  telefone: z.string().min(10).max(20).regex(/^[\d\s\-\(\)\+]+$/),
+  mensagem: z.string().min(1).max(4096).optional().default(""),
   agendamento_id: z.string().uuid().optional().nullable(),
   tipo_mensagem: z.string().optional(),
+  imagem_url: z.string().url().optional(),
+  caption: z.string().max(4096).optional(),
 });
 
 type WhatsAppRequest = z.infer<typeof whatsAppRequestSchema>;
@@ -28,61 +29,15 @@ function normalizePhone(telefone: string): string {
   return phoneFormatted;
 }
 
-function categorizeError(errorText: string, statusCode?: number): { code: string; message: string } {
-  const lowerError = errorText.toLowerCase();
-  
-  if (lowerError.includes('"exists":false') || lowerError.includes('"exists": false')) {
-    return {
-      code: "NUMBER_NOT_EXISTS",
-      message: "Número não encontrado no WhatsApp. Verifique se está correto.",
-    };
-  }
-  
-  if (lowerError.includes("not connected") || lowerError.includes("disconnected")) {
-    return {
-      code: "NOT_CONNECTED",
-      message: "WhatsApp não está conectado. Escaneie o QR Code.",
-    };
-  }
-  
-  if (statusCode === 401 || lowerError.includes("unauthorized")) {
-    return {
-      code: "AUTH_ERROR",
-      message: "Erro de autenticação com a Evolution API.",
-    };
-  }
-  
-  if (statusCode === 404 || lowerError.includes("not found")) {
-    return {
-      code: "INSTANCE_NOT_FOUND",
-      message: "Instância do WhatsApp não encontrada.",
-    };
-  }
-  
-  if (lowerError.includes("timeout") || lowerError.includes("aborted")) {
-    return {
-      code: "TIMEOUT",
-      message: "A requisição demorou muito. Tente novamente.",
-    };
-  }
-  
-  return {
-    code: "UNKNOWN_ERROR",
-    message: "Erro ao enviar mensagem. Tente novamente.",
-  };
-}
-
 serve(async (req: Request): Promise<Response> => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   const startTime = Date.now();
-  console.log("[enviar-whatsapp] === NOVA REQUISIÇÃO (Simplificado) ===");
+  console.log("[enviar-whatsapp] === NOVA REQUISIÇÃO (Z-API) ===");
 
   try {
-    // 1. Parse and validate request
     const body = await req.json();
     const validationResult = whatsAppRequestSchema.safeParse(body);
 
@@ -90,181 +45,150 @@ serve(async (req: Request): Promise<Response> => {
       console.error("[enviar-whatsapp] Erro de validação:", validationResult.error.errors);
       return new Response(
         JSON.stringify({
+          ok: false,
           success: false,
           error: "VALIDATION_ERROR",
-          userMessage: "Dados inválidos: " + validationResult.error.errors.map(e => e.message).join(", "),
+          erro: validationResult.error.errors.map(e => e.message).join(", "),
         }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    const { telefone, mensagem, agendamento_id, tipo_mensagem }: WhatsAppRequest = validationResult.data;
+    const { telefone, mensagem, agendamento_id, tipo_mensagem, imagem_url, caption }: WhatsAppRequest = validationResult.data;
     const phoneFormatted = normalizePhone(telefone);
 
-    // Supabase admin client para registrar a mensagem (sucesso ou falha)
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // 2. Get Evolution API config (tabela com fallback p/ env vars)
-    let evolutionBaseUrl: string;
-    let evolutionToken: string;
-    let instanceName: string;
-    try {
-      const cfg = await getEvolutionConfigAsync();
-      evolutionBaseUrl = cfg.baseUrl;
-      evolutionToken = cfg.token;
-      instanceName = cfg.instance;
-    } catch (_e) {
+    // Z-API config
+    const baseUrlRaw = Deno.env.get("ZAPI_BASE_URL") ?? "https://api.z-api.io";
+    const baseUrl = baseUrlRaw.replace(/\/+$/, "");
+    const instance = Deno.env.get("ZAPI_INSTANCE");
+    const token = Deno.env.get("ZAPI_TOKEN");
+    const clientToken = Deno.env.get("ZAPI_CLIENT_TOKEN");
+
+    if (!instance || !token || !clientToken) {
+      console.error("[enviar-whatsapp] Z-API não configurada (faltam secrets)");
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "CONFIG_ERROR",
-          userMessage: "Evolution API não está configurada.",
-        }),
+        JSON.stringify({ ok: false, success: false, error: "CONFIG_ERROR", erro: "Z-API não configurada" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    console.log("[enviar-whatsapp] Config:", { baseUrl: evolutionBaseUrl, instance: instanceName, telefone: phoneFormatted });
+    const isImage = !!imagem_url;
+    const endpoint = isImage ? "send-image" : "send-text";
+    const url = `${baseUrl}/instances/${instance}/token/${token}/${endpoint}`;
+    const payload: Record<string, unknown> = isImage
+      ? { phone: phoneFormatted, image: imagem_url, caption: caption ?? mensagem ?? "" }
+      : { phone: phoneFormatted, message: mensagem };
 
-    // 3. Send message directly - NO connection check, NO retries
-    const url = `${evolutionBaseUrl}/message/sendText/${instanceName}`;
-    
-    console.log("[enviar-whatsapp] Enviando mensagem...");
-    
+    console.log("[enviar-whatsapp] Enviando via Z-API:", { endpoint, phone: phoneFormatted });
+
     const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "apikey": evolutionToken,
+        "Client-Token": clientToken,
       },
-      body: JSON.stringify({
-        number: phoneFormatted,
-        text: mensagem,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const responseText = await response.text();
     const elapsed = Date.now() - startTime;
+    let data: any;
+    try { data = JSON.parse(responseText); } catch { data = { raw: responseText }; }
 
-    console.log("[enviar-whatsapp] Resposta:", {
-      status: response.status,
-      elapsed: `${elapsed}ms`,
-      preview: responseText.substring(0, 200),
-    });
+    console.log("[enviar-whatsapp] Resposta Z-API:", { status: response.status, elapsed: `${elapsed}ms`, preview: responseText.substring(0, 300) });
 
-    // 4. Handle response
-    if (response.ok) {
-      let data: any;
+    if (!response.ok) {
+      console.error("[enviar-whatsapp] ✗ Erro Z-API:", responseText);
       try {
-        data = JSON.parse(responseText);
-      } catch {
-        data = { raw: responseText };
+        await registrarMensagemWhatsapp(supabase, {
+          telefone,
+          direcao: "OUT",
+          conteudo: isImage ? `[imagem] ${caption ?? ""}` : mensagem,
+          tipo_mensagem: (tipo_mensagem as any) ?? "manual",
+          agendamento_id: agendamento_id ?? null,
+          status_envio: "erro",
+          error_message: `[ZAPI_${response.status}] ${responseText.slice(0, 300)}`,
+        });
+      } catch (e: any) {
+        console.warn("[enviar-whatsapp] Falha ao registrar mensagem (erro) no CRM:", e?.message);
       }
-
-      console.log("[enviar-whatsapp] ✓ Mensagem enviada com sucesso");
-
-      // Registro universal — sucesso
-      await registrarMensagemWhatsapp(supabase, {
-        telefone,
-        direcao: "OUT",
-        conteudo: mensagem,
-        tipo_mensagem: (tipo_mensagem as any) ?? "manual",
-        agendamento_id: agendamento_id ?? null,
-        status_envio: "enviado",
-        mensagem_externa_id: data?.key?.id ?? null,
-        payload: data ?? null,
-      });
-
-      // Pausa automática do bot quando humano (admin) envia mensagem manual.
-      const tipoNormalizado = ((tipo_mensagem as string) ?? "manual").toLowerCase();
-      const ehManual = !tipoNormalizado || tipoNormalizado === "manual";
-      if (ehManual && agendamento_id) {
-        try {
-          const { data: cfg } = await supabase
-            .from("bot_config")
-            .select("pausa_automatica_ativa, pausa_automatica_minutos")
-            .eq("id", true)
-            .maybeSingle();
-
-          const ativa = cfg?.pausa_automatica_ativa ?? true;
-          const minutos = Math.max(1, Math.min(cfg?.pausa_automatica_minutos ?? 30, 1440));
-
-          if (ativa) {
-            const pausadoAte = new Date(Date.now() + minutos * 60_000).toISOString();
-            await supabase
-              .from("agendamentos")
-              .update({
-                bot_ativo: false,
-                bot_pausado_ate: pausadoAte,
-                bot_pausa_motivo: "humano_respondeu",
-              })
-              .eq("id", agendamento_id);
-
-            await supabase.from("crm_audit_log").insert({
-              agendamento_id,
-              acao: "bot_pausado_auto",
-              detalhes: { minutos, pausado_ate: pausadoAte, motivo: "humano_respondeu" },
-            });
-            console.log("[enviar-whatsapp] bot pausado automaticamente por", minutos, "min");
-          }
-        } catch (e: any) {
-          console.warn("[enviar-whatsapp] falha ao pausar bot (não bloqueia envio):", e?.message);
-        }
-      }
-
       return new Response(
-        JSON.stringify({
-          success: true,
-          data,
-          elapsed: `${elapsed}ms`,
-        }),
+        JSON.stringify({ ok: false, success: false, error: "ZAPI_ERROR", erro: data, elapsed: `${elapsed}ms` }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Error response
-    const errorInfo = categorizeError(responseText, response.status);
-    console.error("[enviar-whatsapp] ✗ Erro:", errorInfo.code);
+    const messageId = data?.messageId ?? data?.id ?? null;
+    console.log("[enviar-whatsapp] ✓ Mensagem enviada. messageId:", messageId);
 
-    // Registro universal — erro
-    await registrarMensagemWhatsapp(supabase, {
-      telefone,
-      direcao: "OUT",
-      conteudo: mensagem,
-      tipo_mensagem: (tipo_mensagem as any) ?? "manual",
-      agendamento_id: agendamento_id ?? null,
-      status_envio: "erro",
-      error_message: `[${errorInfo.code}] ${errorInfo.message} · ${responseText.slice(0, 300)}`,
-    });
+    // Registrar no CRM (não bloqueia em caso de falha)
+    try {
+      await registrarMensagemWhatsapp(supabase, {
+        telefone,
+        direcao: "OUT",
+        conteudo: isImage ? `[imagem] ${caption ?? ""}` : mensagem,
+        tipo_mensagem: (tipo_mensagem as any) ?? "manual",
+        agendamento_id: agendamento_id ?? null,
+        status_envio: "enviado",
+        mensagem_externa_id: messageId,
+        payload: data ?? null,
+      });
+    } catch (e: any) {
+      console.warn("[enviar-whatsapp] Falha ao registrar mensagem no CRM (não bloqueia):", e?.message);
+    }
+
+    // Pausa automática do bot quando humano (admin) envia mensagem manual
+    const tipoNormalizado = ((tipo_mensagem as string) ?? "manual").toLowerCase();
+    const ehManual = !tipoNormalizado || tipoNormalizado === "manual";
+    if (ehManual && agendamento_id) {
+      try {
+        const { data: cfg } = await supabase
+          .from("bot_config")
+          .select("pausa_automatica_ativa, pausa_automatica_minutos")
+          .eq("id", true)
+          .maybeSingle();
+
+        const ativa = cfg?.pausa_automatica_ativa ?? true;
+        const minutos = Math.max(1, Math.min(cfg?.pausa_automatica_minutos ?? 30, 1440));
+
+        if (ativa) {
+          const pausadoAte = new Date(Date.now() + minutos * 60_000).toISOString();
+          await supabase
+            .from("agendamentos")
+            .update({
+              bot_ativo: false,
+              bot_pausado_ate: pausadoAte,
+              bot_pausa_motivo: "humano_respondeu",
+            })
+            .eq("id", agendamento_id);
+
+          await supabase.from("crm_audit_log").insert({
+            agendamento_id,
+            acao: "bot_pausado_auto",
+            detalhes: { minutos, pausado_ate: pausadoAte, motivo: "humano_respondeu" },
+          });
+        }
+      } catch (e: any) {
+        console.warn("[enviar-whatsapp] falha ao pausar bot (não bloqueia envio):", e?.message);
+      }
+    }
 
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: errorInfo.code,
-        userMessage: errorInfo.message,
-        elapsed: `${elapsed}ms`,
-      }),
-      {
-        status: response.status >= 400 && response.status < 500 ? 400 : 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders }
-      }
+      JSON.stringify({ ok: true, success: true, messageId, data, elapsed: `${elapsed}ms` }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
 
   } catch (error: any) {
     const elapsed = Date.now() - startTime;
-    console.error("[enviar-whatsapp] Erro fatal:", error.message);
-
+    console.error("[enviar-whatsapp] Erro fatal:", error?.message);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: "INTERNAL_ERROR",
-        userMessage: "Erro interno. Tente novamente.",
-        elapsed: `${elapsed}ms`,
-      }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      JSON.stringify({ ok: false, success: false, error: "INTERNAL_ERROR", erro: error?.message, elapsed: `${elapsed}ms` }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 });
