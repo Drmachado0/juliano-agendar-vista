@@ -343,8 +343,31 @@ Deno.serve(async (req) => {
       .then(() => console.log("[criar-agendamento] Google Calendar sync triggered"))
       .catch((err: unknown) => console.error("[criar-agendamento] Google Calendar sync failed:", err));
 
+    // Fire-and-forget: notificar n8n sobre novo agendamento em tempo real
+    const notifyN8n = supabase.functions.invoke('notificar-n8n', {
+      body: {
+        evento: 'agendamento_criado',
+        dados_agendamento: {
+          id: data.id,
+          nome_completo: sanitizedData.nome_completo,
+          telefone_whatsapp: sanitizedData.telefone_whatsapp,
+          email: sanitizedData.email,
+          tipo_atendimento: sanitizedData.tipo_atendimento,
+          local_atendimento: sanitizedData.local_atendimento,
+          convenio: sanitizedData.convenio,
+          convenio_outro: sanitizedData.convenio_outro,
+          data_agendamento: sanitizedData.data_agendamento,
+          hora_agendamento: sanitizedData.hora_agendamento,
+          status_crm: sanitizedData.status_crm || 'NOVO LEAD',
+          origem: sanitizedData.origem || 'site',
+        },
+      },
+    }).then(() => console.log(`[criar-agendamento] n8n notificado id=${data.id}`))
+      .catch((err: unknown) => console.error('[criar-agendamento] notificar-n8n falhou:', err));
+
     // Aguarda todas sem bloquear o retorno (best-effort)
-    Promise.allSettled([notifyWhatsApp, notifyEmail, notifyCalendar, notifyMetaCapi]);
+    Promise.allSettled([notifyWhatsApp, notifyEmail, notifyCalendar, notifyMetaCapi, notifyN8n]);
+
 
     return new Response(
       JSON.stringify({ 
