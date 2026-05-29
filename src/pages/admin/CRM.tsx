@@ -390,10 +390,13 @@ const AdminCRM = () => {
     // Optimistic update
     setAgendamentosPorStatus((prev) => {
       const updated = { ...prev };
-      const col = agendamento.status_crm;
-      updated[col] = updated[col].map((a) =>
-        a.id === agendamento.id ? { ...a, is_sandbox: novoEstado, sandbox_reason: reason } : a
-      );
+      const { normalizeStatusFunil } = await import("@/hooks/useKanbanColumnsConfig");
+      const col = normalizeStatusFunil((agendamento as any).status_funil);
+      if (updated[col]) {
+        updated[col] = updated[col].map((a) =>
+          a.id === agendamento.id ? { ...a, is_sandbox: novoEstado, sandbox_reason: reason } : a
+        );
+      }
       return updated;
     });
     const { error } = await marcarSandbox(agendamento.id, novoEstado, reason);
@@ -412,31 +415,31 @@ const AdminCRM = () => {
   const allItems = Object.values(agendamentosFiltrados).flat();
   const totalItems = allItems.length;
   const totalGeralCards = Object.values(agendamentosPorStatus).reduce((s, l) => s + l.length, 0);
-  const leadsIncompletos = allItems.filter(
-    (a) => (a as any).status_funil === 'lead' || !a.data_agendamento || !a.hora_agendamento
-  ).length;
-  const agendamentosConfirmados = totalItems - leadsIncompletos;
+
+  // Métricas baseadas em status_funil (fonte única)
+  const leadsIncompletos =
+    (agendamentosFiltrados["novo"]?.length || 0) +
+    (agendamentosFiltrados["em_conversa"]?.length || 0);
+  const agendamentosConfirmados =
+    (agendamentosFiltrados["aguardando_confirmacao"]?.length || 0) +
+    (agendamentosFiltrados["agendado"]?.length || 0);
+  const atendidos = agendamentosFiltrados["compareceu"]?.length || 0;
+  const noShows = agendamentosFiltrados["faltou"]?.length || 0;
+  const emAndamento = agendamentosFiltrados["aguardando_confirmacao"]?.length || 0;
 
   // Status de boas-vindas para todos os cards visíveis (filtrados)
   const boasVindasMap = useBoasVindasStatus(allItems.map((a) => a.id));
 
-  // Estatísticas de conversão
-  const atendidos = agendamentosFiltrados['ATENDIDO']?.length || 0;
-  const emAndamento = (agendamentosFiltrados['CLINICOR']?.length || 0) +
-                      (agendamentosFiltrados['HGP']?.length || 0) +
-                      (agendamentosFiltrados['BELÉM']?.length || 0);
-
-  // Taxa de conversão: leads que viraram agendamentos confirmados
-  const totalLeadsHistorico = agendamentosConfirmados + leadsIncompletos;
-  const taxaConversao = totalLeadsHistorico > 0
-    ? Math.round((agendamentosConfirmados / totalLeadsHistorico) * 100)
-    : 0;
+  // Taxa de conversão: leads que viraram agendamentos
+  const totalLeadsHistorico = agendamentosConfirmados + leadsIncompletos + atendidos + noShows;
+  const taxaConversao =
+    totalLeadsHistorico > 0
+      ? Math.round(((agendamentosConfirmados + atendidos) / totalLeadsHistorico) * 100)
+      : 0;
 
   // Taxa de conclusão: agendados que foram atendidos
-  const totalAgendados = agendamentosConfirmados;
-  const taxaConclusao = totalAgendados > 0
-    ? Math.round((atendidos / totalAgendados) * 100)
-    : 0;
+  const denomConclusao = agendamentosConfirmados + atendidos + noShows;
+  const taxaConclusao = denomConclusao > 0 ? Math.round((atendidos / denomConclusao) * 100) : 0;
 
   return (
     <AdminLayout>
