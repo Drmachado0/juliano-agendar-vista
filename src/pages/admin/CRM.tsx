@@ -4,7 +4,7 @@ import KanbanColumn from "@/components/admin/KanbanColumn";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
 import WhatsAppModal from "@/components/admin/WhatsAppModal";
 import { Button } from "@/components/ui/button";
-import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm, reprocessarBoasVindas, buscarAgendamento, marcarSandbox } from "@/services/agendamentos";
+import { Agendamento, listarAgendamentosPorStatus, atualizarStatusFunil, reprocessarBoasVindas, buscarAgendamento, marcarSandbox, listarUltimasMensagensIn } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
 import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, History, Copy, Contact } from "lucide-react";
