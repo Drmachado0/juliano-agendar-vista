@@ -160,18 +160,42 @@ Deno.serve(async (req) => {
       })
       .select('id')
       .single();
-
-    if (error) {
-      console.error('Erro ao criar lead:', error);
-      return new Response(
-        JSON.stringify({ error: 'Erro ao criar lead', details: error.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Lead criado com sucesso:', lead.id);
-
     // Fire-and-forget Meta CAPI Lead (server-side dedup com browser via event_id = lead.id)
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim()
+      ?? req.headers.get('x-real-ip')
+      ?? '';
+    const userAgent = req.headers.get('user-agent') ?? '';
+    fireMetaCapiLead(
+      { id: lead.id, email: data.email?.trim() || null, telefone: phoneClean, nome: data.nome_completo },
+      data,
+      clientIp,
+      userAgent,
+    ).catch((e) => console.error('[criar-lead] Meta CAPI fire-and-forget error:', e));
+
+    // Fire-and-forget: notificar n8n sobre novo lead em tempo real
+    supabase.functions.invoke('notificar-n8n', {
+      body: {
+        evento: 'agendamento_criado',
+        dados_agendamento: {
+          id: lead.id,
+          nome_completo: data.nome_completo,
+          telefone_whatsapp: phoneClean,
+          email: data.email?.trim() || null,
+          data_nascimento: data.data_nascimento || null,
+          tipo_atendimento: data.tipo_atendimento,
+          detalhe_exame_ou_cirurgia: data.detalhe_exame_ou_cirurgia || null,
+          local_atendimento: data.local_atendimento,
+          convenio: data.convenio,
+          convenio_outro: data.convenio_outro || null,
+          status_crm: 'NOVO LEAD',
+          origem: data.origem || 'site',
+        },
+      },
+    })
+      .then(() => console.log(`[criar-lead] n8n notificado lead_id=${lead.id}`))
+      .catch((e) => console.error('[criar-lead] notificar-n8n falhou:', e));
+
+
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim()
       ?? req.headers.get('x-real-ip')
       ?? '';

@@ -463,7 +463,6 @@ export async function atualizarStatusCrm(
     console.error('Erro ao atualizar status CRM:', error);
     return { error: new Error(error.message) };
   }
-
   // Registrar auditoria (fire-and-forget)
   const { registrarAuditCrm } = await import('./crmAudit');
   registrarAuditCrm({
@@ -473,8 +472,18 @@ export async function atualizarStatusCrm(
     statusNovo: novoStatus,
   });
 
+  // Notificar n8n em tempo real (fire-and-forget)
+  import('./integracoes').then(({ notificarN8n }) => {
+    notificarN8n('status_crm_atualizado', {
+      id,
+      status_crm: novoStatus,
+    }).catch((err) => console.error('[atualizarStatusCrm] notificar-n8n falhou:', err));
+  });
+
   return { error: null };
 }
+
+
 
 // Reprocessar boas-vindas pendentes manualmente (admin)
 export async function reprocessarBoasVindas(): Promise<{
