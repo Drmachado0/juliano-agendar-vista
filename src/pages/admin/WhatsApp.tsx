@@ -137,10 +137,6 @@ const AdminWhatsApp = () => {
                   <Bot className="h-3 w-3" />
                   Automação ativa
                 </Badge>
-
-                  <Bot className="h-3 w-3" />
-                  Automação ativa
-                </Badge>
               ) : (
                 <Badge variant="destructive" className="gap-1">
                   <PowerOff className="h-3 w-3" />
