@@ -161,7 +161,8 @@ serve(async (req) => {
         conteudo: mensagem,
         status_envio: 'enviado',
         tipo_mensagem: 'confirmacao_automatica',
-        mensagem_externa_id: evolutionResult?.key?.id || null,
+        mensagem_externa_id: sendResult.messageId ?? evolutionResult?.key?.id ?? null,
+
       });
 
     if (msgError) {
