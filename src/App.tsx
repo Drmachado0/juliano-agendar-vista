@@ -22,7 +22,6 @@ import AdminProfissionais from "./pages/admin/Profissionais";
 import AdminConfiguracoes from "./pages/admin/Configuracoes";
 import AdminAvaliacoes from "./pages/admin/Avaliacoes";
 import AdminLembretes from "./pages/admin/Lembretes";
-import AdminConfiguracoesEvolution from "./pages/admin/ConfiguracoesEvolution";
 import AdminWebhooks from "./pages/admin/Webhooks";
 import AdminAuditoriaTracking from "./pages/admin/AuditoriaTracking";
 import AdminLogs from "./pages/admin/Logs";
@@ -69,7 +68,6 @@ const App = () => (
               <Route path="/admin/whatsapp" element={<AdminWhatsApp />} />
               
               <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
-              <Route path="/admin/configuracoes/evolution" element={<AdminConfiguracoesEvolution />} />
               <Route path="/admin/configuracoes/webhooks" element={<AdminWebhooks />} />
               <Route path="/admin/auditoria-tracking" element={<AdminAuditoriaTracking />} />
               <Route path="/admin/logs" element={<AdminLogs />} />

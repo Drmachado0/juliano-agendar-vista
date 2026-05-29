@@ -26,7 +26,6 @@ import { useKanbanColumnsConfig } from "@/hooks/useKanbanColumnsConfig";
 import CRMQuickChips from "@/components/admin/CRMQuickChips";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
 import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
 import { useNavigate } from "react-router-dom";
 import { getOrigemGrupo } from "@/lib/origemLead";
@@ -488,7 +487,6 @@ const AdminCRM = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <DensityToggle />
             <KanbanColumnsManager manager={columnsManager} />
-            <EvolutionStatusBadge />
             <Badge
               variant="outline"
               className={cn(

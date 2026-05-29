@@ -3,7 +3,6 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import WhatsAppLeadsList from "@/components/admin/WhatsAppLeadsList";
 import WhatsAppChat from "@/components/admin/WhatsAppChat";
 import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
-import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
 import { LeadComMensagens, MensagemWhatsApp, buscarAgendamentoPorTelefone } from "@/services/mensagens";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
 import { useBotGlobalStatus } from "@/hooks/useBotGlobalStatus";
@@ -133,7 +132,6 @@ const AdminWhatsApp = () => {
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <EvolutionStatusBadge />
               {botGlobalAtivo ? (
                 <Badge className="gap-1 bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40">
                   <Bot className="h-3 w-3" />

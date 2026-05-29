@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { registrarMensagemWhatsapp } from "../_shared/registrarMensagem.ts";
+import { enviarTextoZapi, enviarImagemZapi } from "../_shared/zapi.ts";
+
 
 // CORS configuration
 const corsHeaders = {
@@ -62,48 +64,18 @@ serve(async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Z-API config
-    const baseUrlRaw = Deno.env.get("ZAPI_BASE_URL") ?? "https://api.z-api.io";
-    const baseUrl = baseUrlRaw.replace(/\/+$/, "");
-    const instance = Deno.env.get("ZAPI_INSTANCE");
-    const token = Deno.env.get("ZAPI_TOKEN");
-    const clientToken = Deno.env.get("ZAPI_CLIENT_TOKEN");
-
-    if (!instance || !token || !clientToken) {
-      console.error("[enviar-whatsapp] Z-API não configurada (faltam secrets)");
-      return new Response(
-        JSON.stringify({ ok: false, success: false, error: "CONFIG_ERROR", erro: "Z-API não configurada" }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
     const isImage = !!imagem_url;
-    const endpoint = isImage ? "send-image" : "send-text";
-    const url = `${baseUrl}/instances/${instance}/token/${token}/${endpoint}`;
-    const payload: Record<string, unknown> = isImage
-      ? { phone: phoneFormatted, image: imagem_url, caption: caption ?? mensagem ?? "" }
-      : { phone: phoneFormatted, message: mensagem };
+    console.log("[enviar-whatsapp] Enviando via helper Z-API:", { isImage, phone: phoneFormatted });
 
-    console.log("[enviar-whatsapp] Enviando via Z-API:", { endpoint, phone: phoneFormatted });
+    const result = isImage
+      ? await enviarImagemZapi(phoneFormatted, imagem_url!, caption ?? mensagem ?? "")
+      : await enviarTextoZapi(phoneFormatted, mensagem);
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Client-Token": clientToken,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const responseText = await response.text();
     const elapsed = Date.now() - startTime;
-    let data: any;
-    try { data = JSON.parse(responseText); } catch { data = { raw: responseText }; }
+    console.log("[enviar-whatsapp] Resposta:", { ok: result.ok, status: result.status, elapsed: `${elapsed}ms`, messageId: result.messageId });
 
-    console.log("[enviar-whatsapp] Resposta Z-API:", { status: response.status, elapsed: `${elapsed}ms`, preview: responseText.substring(0, 300) });
-
-    if (!response.ok) {
-      console.error("[enviar-whatsapp] ✗ Erro Z-API:", responseText);
+    if (!result.ok) {
+      console.error("[enviar-whatsapp] ✗ Erro Z-API:", result.erro);
       try {
         await registrarMensagemWhatsapp(supabase, {
           telefone,
@@ -112,16 +84,19 @@ serve(async (req: Request): Promise<Response> => {
           tipo_mensagem: (tipo_mensagem as any) ?? "manual",
           agendamento_id: agendamento_id ?? null,
           status_envio: "erro",
-          error_message: `[ZAPI_${response.status}] ${responseText.slice(0, 300)}`,
+          error_message: `[ZAPI] ${result.erro ?? "Erro desconhecido"}`,
         });
       } catch (e: any) {
         console.warn("[enviar-whatsapp] Falha ao registrar mensagem (erro) no CRM:", e?.message);
       }
       return new Response(
-        JSON.stringify({ ok: false, success: false, error: "ZAPI_ERROR", erro: data, elapsed: `${elapsed}ms` }),
+        JSON.stringify({ ok: false, success: false, error: "ZAPI_ERROR", erro: result.erro, elapsed: `${elapsed}ms` }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    const messageId = result.messageId ?? null;
+    const data = result.raw ?? null;
 
     const messageId = data?.messageId ?? data?.id ?? null;
     console.log("[enviar-whatsapp] ✓ Mensagem enviada. messageId:", messageId);

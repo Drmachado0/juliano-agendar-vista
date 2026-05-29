@@ -29,10 +29,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
 import { validarTelefoneBrasileiro, autocorrigirTelefone } from "@/lib/validarTelefoneBR";
 import imagemPadraoAvaliacao from "@/assets/avaliacao-default.png";
-import { useEvolutionStatus } from "@/hooks/useEvolutionStatus";
+// Conexão WhatsApp agora é gerenciada no painel Z-API (externamente).
+
 import { useEnvioLoteConfig, LIMITE_SESSAO, LIMITE_DIARIO } from "@/hooks/useEnvioLoteConfig";
 
 interface PacienteAtendido {
@@ -165,8 +165,17 @@ Oftalmologia`;
 
 const Avaliacoes = () => {
   // Hook para status da conexão Evolution API
-  const { status: evolutionStatus, loading: evolutionLoading, reconectar, refresh: refreshEvolution } = useEvolutionStatus(true, 30000);
-  const isWhatsAppConnected = evolutionStatus?.connected ?? false;
+  // Conexão Z-API é gerenciada externamente; assumimos conectado.
+  const isWhatsAppConnected = true;
+  const evolutionLoading = false;
+  const reconectar = async (): Promise<{ success: boolean; error?: string; details?: { qrcode?: string } }> => ({
+    success: false,
+    error: "A conexão do WhatsApp agora é gerenciada no painel Z-API.",
+  });
+  const refreshEvolution = () => {};
+
+
+
   
   const [template, setTemplate] = useState(TEMPLATE_PADRAO);
   const [nomeAvulso, setNomeAvulso] = useState("");
@@ -1293,50 +1302,8 @@ const Avaliacoes = () => {
               Envie pedidos de avaliação para pacientes atendidos
             </p>
           </div>
-          <EvolutionStatusBadge />
         </div>
 
-        {/* Alert de WhatsApp Desconectado */}
-        {!evolutionLoading && !isWhatsAppConnected && (
-          <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
-            <WifiOff className="h-4 w-4" />
-            <AlertTitle>WhatsApp Desconectado</AlertTitle>
-            <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-3 mt-2">
-              <span>Não é possível verificar números ou enviar mensagens enquanto o WhatsApp estiver desconectado.</span>
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={async () => {
-                    const result = await reconectar();
-                    if (result.success) {
-                      toast({
-                        title: "Reconexão iniciada",
-                        description: "Aguarde a conexão ser restabelecida.",
-                      });
-                    } else {
-                      toast({
-                        title: "Falha na reconexão",
-                        description: result.error || "Tente novamente ou acesse as configurações.",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                  className="gap-1.5"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Reconectar
-                </Button>
-                <Button size="sm" variant="outline" asChild>
-                  <Link to="/admin/configuracoes/evolution" className="gap-1.5">
-                    <Settings2 className="h-3.5 w-3.5" />
-                    Configurações
-                  </Link>
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
 
         {/* ===== SEÇÃO: Disparo em Lote Seguro ===== */}
         <Card className="border-yellow-500/30 bg-gradient-to-r from-card to-yellow-500/5">
