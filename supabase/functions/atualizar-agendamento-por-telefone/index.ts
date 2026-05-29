@@ -62,7 +62,7 @@ serve(async (req) => {
 
   const { data: candidatos, error: selErr } = await supabase
     .from("agendamentos")
-    .select("id, telefone_whatsapp, observacoes_internas, status_crm, created_at, is_sandbox, data_agendamento")
+    .select("id, telefone_whatsapp, observacoes_internas, status_crm, status_funil, hora_agendamento, created_at, is_sandbox, data_agendamento")
     .order("created_at", { ascending: false })
     .limit(200);
 
