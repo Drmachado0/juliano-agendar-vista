@@ -29,6 +29,7 @@ import { Label } from "@/components/ui/label";
 import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
 import { useNavigate } from "react-router-dom";
 import { getOrigemGrupo } from "@/lib/origemLead";
+import { normalizeStatusFunil } from "@/hooks/useKanbanColumnsConfig";
 
 const TAB_STORAGE_KEY = "crm:tab:v1";
 
