@@ -219,6 +219,14 @@ const AdminCRM = () => {
     } else {
       setAgendamentosPorStatus(data);
       setUltimaAtualizacao(new Date());
+      // SLA: busca em lote a última mensagem IN para todos os ids visíveis
+      const allIds: string[] = [];
+      for (const k of Object.keys(data)) for (const ag of data[k]) allIds.push(ag.id);
+      if (allIds.length > 0) {
+        listarUltimasMensagensIn(allIds)
+          .then((map) => setUltimasMsgsIn(map))
+          .catch(() => { /* silent */ });
+      }
     }
   };
 
