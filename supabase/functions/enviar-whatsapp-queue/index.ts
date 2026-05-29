@@ -166,46 +166,6 @@ serve(async (req: Request): Promise<Response> => {
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
 
-    }
-
-    // Evolution API returned error - log and return error (no retry)
-    console.error("[enviar-whatsapp-queue] ✗ Falha no envio:", responseText);
-    
-    // Parse error to give user-friendly message
-    let userMessage = "Erro ao enviar mensagem";
-    const lowerResponse = responseText.toLowerCase();
-    
-    if (lowerResponse.includes('"exists":false') || lowerResponse.includes('"exists": false')) {
-      userMessage = "Número não encontrado no WhatsApp";
-    } else if (lowerResponse.includes("not connected") || lowerResponse.includes("disconnected") || lowerResponse.includes("connection closed")) {
-      userMessage = "WhatsApp desconectado. Escaneie o QR Code em /admin/configuracoes/evolution.";
-    } else if (evolutionResponse.status === 401) {
-      userMessage = "Erro de autenticação com Evolution API";
-    } else if (evolutionResponse.status === 404) {
-      userMessage = "Instância do WhatsApp não encontrada";
-    }
-
-    // Persist failure log (fire-and-forget)
-    logEnvio({
-      telefone: phoneFormatted,
-      conteudo: mensagem,
-      status: "erro",
-      campaign,
-      errorMessage: `[${evolutionResponse.status}] ${userMessage} · ${responseText.substring(0, 300)}`,
-      payload: { campaign, priority, http_status: evolutionResponse.status, elapsed_ms: elapsed, raw: responseText.substring(0, 500) },
-    });
-
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        status: "failed",
-        error: "SEND_FAILED",
-        message: userMessage,
-        elapsed: `${elapsed}ms`
-      }),
-      { status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders } }
-    );
 
   } catch (error: any) {
     const elapsed = Date.now() - startTime;
