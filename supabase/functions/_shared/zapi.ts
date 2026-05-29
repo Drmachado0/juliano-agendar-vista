@@ -149,3 +149,55 @@ export async function enviarImagemZapi(
     return { ok: false, erro: e?.message ?? "Erro desconhecido" };
   }
 }
+
+export interface ZapiPhoneExistsResult {
+  ok: boolean;
+  exists?: boolean;
+  erro?: string;
+  status?: number;
+  raw?: unknown;
+}
+
+/**
+ * Verifica se um número existe no WhatsApp via Z-API.
+ *   GET {ZAPI_BASE_URL}/instances/{ZAPI_INSTANCE}/token/{ZAPI_TOKEN}/phone-exists/{phone}
+ *   Headers: Client-Token
+ *   Resposta: { exists: boolean }
+ */
+export async function verificarNumeroZapi(
+  telefone: string,
+): Promise<ZapiPhoneExistsResult> {
+  let cfg: ZapiConfig;
+  try {
+    cfg = getZapiConfig();
+  } catch (e: any) {
+    return { ok: false, erro: e?.message ?? "Config Z-API inválida" };
+  }
+
+  const phone = normalizePhoneBR(telefone);
+  const url = `${cfg.baseUrl}/instances/${cfg.instance}/token/${cfg.token}/phone-exists/${phone}`;
+
+  try {
+    const resp = await fetch(url, {
+      method: "GET",
+      headers: { "Client-Token": cfg.clientToken },
+    });
+    const text = await resp.text();
+    let data: any;
+    try { data = JSON.parse(text); } catch { data = { raw: text }; }
+
+    if (!resp.ok) {
+      return {
+        ok: false,
+        status: resp.status,
+        erro: `HTTP ${resp.status}: ${text.slice(0, 200)}`,
+        raw: data,
+      };
+    }
+    const exists = data?.exists === true || data?.exists === "true";
+    return { ok: true, status: resp.status, exists, raw: data };
+  } catch (e: any) {
+    return { ok: false, erro: e?.message ?? "Erro desconhecido" };
+  }
+}
+
