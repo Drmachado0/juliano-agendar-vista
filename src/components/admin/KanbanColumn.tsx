@@ -19,6 +19,8 @@ interface KanbanColumnProps {
   onDrop: (e: React.DragEvent, status: string) => void;
   isDragOver?: boolean;
   boasVindasMap?: Record<string, BoasVindasInfo>;
+  ultimasMsgsIn?: Record<string, string>;
+  onRefresh?: () => void;
   collapsed?: boolean;
   onExpand?: (status: string) => void;
 }
