@@ -50,6 +50,7 @@ export type Database = {
           is_sandbox: boolean
           landing_page: string | null
           local_atendimento: string
+          motivo_status: string | null
           nome_completo: string
           observacoes_internas: string | null
           observacoes_internas_encrypted: string | null
@@ -62,6 +63,7 @@ export type Database = {
           status_funil: string | null
           telefone_whatsapp: string
           tipo_atendimento: string
+          ultimo_followup_em: string | null
           updated_at: string | null
           utm_campaign: string | null
           utm_content: string | null
@@ -105,6 +107,7 @@ export type Database = {
           is_sandbox?: boolean
           landing_page?: string | null
           local_atendimento: string
+          motivo_status?: string | null
           nome_completo: string
           observacoes_internas?: string | null
           observacoes_internas_encrypted?: string | null
@@ -117,6 +120,7 @@ export type Database = {
           status_funil?: string | null
           telefone_whatsapp: string
           tipo_atendimento: string
+          ultimo_followup_em?: string | null
           updated_at?: string | null
           utm_campaign?: string | null
           utm_content?: string | null
@@ -160,6 +164,7 @@ export type Database = {
           is_sandbox?: boolean
           landing_page?: string | null
           local_atendimento?: string
+          motivo_status?: string | null
           nome_completo?: string
           observacoes_internas?: string | null
           observacoes_internas_encrypted?: string | null
@@ -172,6 +177,7 @@ export type Database = {
           status_funil?: string | null
           telefone_whatsapp?: string
           tipo_atendimento?: string
+          ultimo_followup_em?: string | null
           updated_at?: string | null
           utm_campaign?: string | null
           utm_content?: string | null
