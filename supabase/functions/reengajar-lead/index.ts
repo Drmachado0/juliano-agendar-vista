@@ -42,12 +42,17 @@ serve(async (req) => {
 
   const { data: ag, error: selErr } = await supabase
     .from("agendamentos")
-    .select("id, telefone_whatsapp, bot_ativo, bot_pausado_ate, ultimo_followup_em")
+    .select("id, telefone_whatsapp, bot_ativo, bot_pausado_ate, ultimo_followup_em, status_funil")
     .eq("id", agendamento_id)
     .maybeSingle();
 
   if (selErr) return json({ ok: false, motivo: "erro_db", erro: selErr.message }, 500);
   if (!ag) return json({ ok: false, motivo: "agendamento_nao_encontrado" }, 404);
+
+  // Guarda 0: leads em YAG laser aguardam contato humano da equipe — bot não reengaja
+  if ((ag as any).status_funil === "yag_laser") {
+    return json({ ok: false, motivo: "yag_laser_aguarda_humano" });
+  }
 
   const agora = Date.now();
 
