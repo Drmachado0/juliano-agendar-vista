@@ -68,7 +68,6 @@ const App = () => (
               <Route path="/admin/whatsapp" element={<AdminWhatsApp />} />
               
               <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
-              <Route path="/admin/configuracoes/evolution" element={<AdminConfiguracoesEvolution />} />
               <Route path="/admin/configuracoes/webhooks" element={<AdminWebhooks />} />
               <Route path="/admin/auditoria-tracking" element={<AdminAuditoriaTracking />} />
               <Route path="/admin/logs" element={<AdminLogs />} />
