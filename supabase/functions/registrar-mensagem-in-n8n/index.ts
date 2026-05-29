@@ -187,6 +187,7 @@ serve(async (req) => {
     mensagem_id: inserted.id,
     agendamento_id: agendamentoId,
     agendamento_encontrado: !!agendamentoId,
+    lead_criado: leadCriadoAgora,
     duplicada: false,
   });
 });
