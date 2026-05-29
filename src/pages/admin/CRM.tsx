@@ -138,14 +138,15 @@ function aplicarFiltrosEOrdenacao(
 
 const AdminCRM = () => {
   const [agendamentosPorStatus, setAgendamentosPorStatus] = useState<Record<string, Agendamento[]>>({
-    "NOVO LEAD": [],
-    "PRECISA_DE_HUMANO": [],
-    "AGUARDANDO": [],
-    "CLINICOR": [],
-    "HGP": [],
-    "BELÉM": [],
-    "ATENDIDO": [],
+    "novo": [],
+    "em_conversa": [],
+    "aguardando_confirmacao": [],
+    "agendado": [],
+    "compareceu": [],
+    "faltou": [],
+    "cancelado": [],
   });
+  const [ultimasMsgsIn, setUltimasMsgsIn] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [reprocessando, setReprocessando] = useState(false);
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date>(new Date());
