@@ -24,7 +24,7 @@ export const useGoogleTag = () => {
   };
 
   const trackWhatsAppClick = (
-    linkUrl: string = 'https://wa.me/5591980690617',
+    linkUrl: string = 'https://wa.me/5591991150174',
     linkText: string = 'WhatsApp',
     buttonId: string = 'whatsapp_generic',
     buttonLocation: string = 'unknown'
@@ -41,7 +41,7 @@ export const useGoogleTag = () => {
     });
   };
 
-  const trackPhoneClick = (linkUrl: string = 'tel:+5591980690617') => {
+  const trackPhoneClick = (linkUrl: string = 'tel:+5591991150174') => {
     pushToDataLayer({
       event: 'phone_click',
       link_url: linkUrl,
