@@ -22,6 +22,7 @@ export const DEFAULT_COLUMNS: KanbanColumnDef[] = [
   { status: "compareceu", title: "🟢 Compareceu", color: "bg-green-600" },
   { status: "faltou", title: "🔴 Faltou", color: "bg-rose-500" },
   { status: "cancelado", title: "❌ Cancelado", color: "bg-gray-500" },
+  { status: "yag_laser", title: "🔆 YAG Laser — Belém", color: "bg-violet-500" },
 ];
 
 function loadConfig(): KanbanColumnConfigItem[] {
