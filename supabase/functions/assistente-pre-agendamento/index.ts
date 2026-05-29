@@ -46,31 +46,13 @@ function normalizePhoneBR(raw: string): string {
 }
 
 async function sendWhatsappText(phone: string, text: string) {
-  let baseUrl: string;
-  let instance: string;
-  let token: string;
-  try {
-    const cfg = await getEvolutionConfigAsync();
-    baseUrl = cfg.baseUrl;
-    instance = cfg.instance;
-    token = cfg.token;
-  } catch {
-    return { success: false, error: "Evolution API não configurada" };
+  const result = await sendWhatsappTextMessage(phone, text);
+  if (!result.success) {
+    return { success: false, error: result.errorMessage ?? "Falha no envio Z-API" };
   }
-
-  const url = `${baseUrl}/message/sendText/${instance}`;
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: token },
-    body: JSON.stringify({ number: normalizePhoneBR(phone), text }),
-  });
-  if (!resp.ok) {
-    const t = await resp.text();
-    return { success: false, error: `HTTP ${resp.status}: ${t.slice(0, 200)}` };
-  }
-  const data = await resp.json().catch(() => ({}));
-  return { success: true, externalId: data?.key?.id ?? null };
+  return { success: true, externalId: result.messageId ?? null };
 }
+
 
 // Classifica intenção via Lovable AI (tool calling)
 async function classificarIntencao(
