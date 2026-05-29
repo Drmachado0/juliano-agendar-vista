@@ -3,7 +3,6 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import WhatsAppLeadsList from "@/components/admin/WhatsAppLeadsList";
 import WhatsAppChat from "@/components/admin/WhatsAppChat";
 import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
-import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
 import { LeadComMensagens, MensagemWhatsApp, buscarAgendamentoPorTelefone } from "@/services/mensagens";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
 import { useBotGlobalStatus } from "@/hooks/useBotGlobalStatus";
