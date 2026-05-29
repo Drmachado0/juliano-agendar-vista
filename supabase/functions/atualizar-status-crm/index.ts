@@ -91,10 +91,10 @@ serve(async (req) => {
     agendamentoId = match.id;
   }
 
-  // Lê status atual
+  // Lê status atual (inclui status_funil para o espelhamento YAG_LASER → yag_laser)
   const { data: atual, error: getErr } = await supabase
     .from("agendamentos")
-    .select("id, status_crm")
+    .select("id, status_crm, status_funil")
     .eq("id", agendamentoId!)
     .maybeSingle();
   if (getErr) return json({ error: getErr.message }, 500);
@@ -102,8 +102,21 @@ serve(async (req) => {
 
   const statusAnterior = (atual as any).status_crm ?? null;
   const statusNovo = body.status_crm;
+  const funilAtual = ((atual as any).status_funil as string) || "novo";
 
-  if (statusAnterior === statusNovo) {
+  // Espelhamento: YAG_LASER força status_funil='yag_laser' (a menos que esteja em estado final)
+  const FINAIS = new Set(["compareceu", "faltou", "cancelado"]);
+  const updates: Record<string, unknown> = {
+    status_crm: statusNovo,
+    updated_at: new Date().toISOString(),
+  };
+  let funilPromovido: { de: string; para: string } | null = null;
+  if (statusNovo === "YAG_LASER" && funilAtual !== "yag_laser" && !FINAIS.has(funilAtual)) {
+    updates.status_funil = "yag_laser";
+    funilPromovido = { de: funilAtual, para: "yag_laser" };
+  }
+
+  if (statusAnterior === statusNovo && !funilPromovido) {
     return json({
       agendamento_id: agendamentoId,
       status_crm_anterior: statusAnterior,
@@ -114,9 +127,22 @@ serve(async (req) => {
 
   const { error: updErr } = await supabase
     .from("agendamentos")
-    .update({ status_crm: statusNovo, updated_at: new Date().toISOString() })
+    .update(updates)
     .eq("id", agendamentoId!);
   if (updErr) return json({ error: updErr.message }, 500);
+
+  if (funilPromovido) {
+    await supabase.from("crm_audit_log").insert({
+      agendamento_id: agendamentoId,
+      user_id: null,
+      user_email: "n8n@bot",
+      user_name: "n8n (bot)",
+      acao: "status_funil_promovido",
+      status_anterior: funilPromovido.de,
+      status_novo: funilPromovido.para,
+      detalhes: { motivo: "espelhamento_yag_laser", origem: "atualizar-status-crm" },
+    });
+  }
 
   await supabase.from("crm_audit_log").insert({
     agendamento_id: agendamentoId,
