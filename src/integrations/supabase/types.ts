@@ -2033,6 +2033,7 @@ export type Database = {
         Args: { p_api_token?: string; p_base_url?: string; p_instance?: string }
         Returns: Json
       }
+      auto_compareceu_vencidos: { Args: never; Returns: number }
       buscar_agendamento_por_telefone: {
         Args: { p_telefone: string }
         Returns: {
