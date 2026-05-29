@@ -257,8 +257,8 @@ async function blobToBase64(blob: Blob): Promise<string> {
 
 // n8n Webhook notification
 export async function notificarN8n(
-  evento: 'agendamento_criado' | 'status_crm_atualizado',
-  dadosAgendamento: Partial<Agendamento>
+  evento: 'agendamento_criado' | 'status_crm_atualizado' | 'status_funil_atualizado' | 'lead_reengajado',
+  dadosAgendamento: Partial<Agendamento> | Record<string, unknown>
 ): Promise<{ success: boolean; error: string | null }> {
   try {
     const { data, error } = await supabase.functions.invoke('notificar-n8n', {

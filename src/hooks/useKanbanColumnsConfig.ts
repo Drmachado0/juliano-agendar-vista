@@ -11,16 +11,17 @@ export type KanbanColumnConfigItem = {
   visible: boolean;
 };
 
-const STORAGE_KEY = "crm:kanban-columns:v1";
+// v2: agora usamos status_funil como fonte única das colunas (não mais status_crm).
+const STORAGE_KEY = "crm:kanban-columns:v2";
 
 export const DEFAULT_COLUMNS: KanbanColumnDef[] = [
-  { status: "NOVO LEAD", title: "Novo contato", color: "bg-emerald-500" },
-  { status: "PRECISA_DE_HUMANO", title: "Aguarda recepção", color: "bg-rose-500" },
-  { status: "AGUARDANDO", title: "Em análise", color: "bg-yellow-500" },
-  { status: "CLINICOR", title: "Clinicor", color: "bg-blue-500" },
-  { status: "HGP", title: "HGP", color: "bg-purple-500" },
-  { status: "BELÉM", title: "Belém", color: "bg-amber-500" },
-  { status: "ATENDIDO", title: "Concluído", color: "bg-gray-500" },
+  { status: "novo", title: "🆕 Novo Lead", color: "bg-blue-500" },
+  { status: "em_conversa", title: "💬 Em conversa", color: "bg-cyan-500" },
+  { status: "aguardando_confirmacao", title: "⏳ Aguardando confirmação", color: "bg-amber-500" },
+  { status: "agendado", title: "✅ Agendado", color: "bg-emerald-500" },
+  { status: "compareceu", title: "🟢 Compareceu", color: "bg-green-600" },
+  { status: "faltou", title: "🔴 Faltou", color: "bg-rose-500" },
+  { status: "cancelado", title: "❌ Cancelado", color: "bg-gray-500" },
 ];
 
 function loadConfig(): KanbanColumnConfigItem[] {
@@ -28,7 +29,6 @@ function loadConfig(): KanbanColumnConfigItem[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_COLUMNS.map((c) => ({ status: c.status, visible: true }));
     const parsed = JSON.parse(raw) as KanbanColumnConfigItem[];
-    // merge: keep order from saved, append any new defaults at end
     const known = new Set(parsed.map((p) => p.status));
     const merged = parsed.filter((p) => DEFAULT_COLUMNS.some((d) => d.status === p.status));
     for (const d of DEFAULT_COLUMNS) {
@@ -69,17 +69,26 @@ export function useKanbanColumnsConfig() {
     setConfig(DEFAULT_COLUMNS.map((c) => ({ status: c.status, visible: true })));
   }, []);
 
-  // Resolved ordered list of column defs (visible only) for rendering board
   const orderedVisibleColumns: KanbanColumnDef[] = config
     .filter((c) => c.visible)
     .map((c) => DEFAULT_COLUMNS.find((d) => d.status === c.status)!)
     .filter(Boolean);
 
-  // Full ordered list for the manager UI
   const orderedAllColumns = config.map((c) => ({
     ...c,
     def: DEFAULT_COLUMNS.find((d) => d.status === c.status)!,
   }));
 
   return { config, orderedVisibleColumns, orderedAllColumns, toggleVisible, move, reset };
+}
+
+// Normaliza valores legados/sinônimos de status_funil para a coluna correta.
+export function normalizeStatusFunil(raw: string | null | undefined): string {
+  const v = (raw || "").toLowerCase().trim();
+  if (!v) return "novo";
+  if (v === "lead") return "novo";
+  if (v === "confirmado") return "agendado";
+  if (v === "finalizado" || v === "atendido") return "compareceu";
+  if (v === "bloqueio") return "__hidden__";
+  return v;
 }

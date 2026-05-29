@@ -4,7 +4,7 @@ import KanbanColumn from "@/components/admin/KanbanColumn";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
 import WhatsAppModal from "@/components/admin/WhatsAppModal";
 import { Button } from "@/components/ui/button";
-import { Agendamento, listarAgendamentosPorStatus, atualizarStatusCrm, reprocessarBoasVindas, buscarAgendamento, marcarSandbox } from "@/services/agendamentos";
+import { Agendamento, listarAgendamentosPorStatus, atualizarStatusFunil, reprocessarBoasVindas, buscarAgendamento, marcarSandbox, listarUltimasMensagensIn } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
 import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, History, Copy, Contact } from "lucide-react";
@@ -29,6 +29,7 @@ import { Label } from "@/components/ui/label";
 import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
 import { useNavigate } from "react-router-dom";
 import { getOrigemGrupo } from "@/lib/origemLead";
+import { normalizeStatusFunil } from "@/hooks/useKanbanColumnsConfig";
 
 const TAB_STORAGE_KEY = "crm:tab:v1";
 
@@ -138,14 +139,15 @@ function aplicarFiltrosEOrdenacao(
 
 const AdminCRM = () => {
   const [agendamentosPorStatus, setAgendamentosPorStatus] = useState<Record<string, Agendamento[]>>({
-    "NOVO LEAD": [],
-    "PRECISA_DE_HUMANO": [],
-    "AGUARDANDO": [],
-    "CLINICOR": [],
-    "HGP": [],
-    "BELÉM": [],
-    "ATENDIDO": [],
+    "novo": [],
+    "em_conversa": [],
+    "aguardando_confirmacao": [],
+    "agendado": [],
+    "compareceu": [],
+    "faltou": [],
+    "cancelado": [],
   });
+  const [ultimasMsgsIn, setUltimasMsgsIn] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [reprocessando, setReprocessando] = useState(false);
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date>(new Date());
@@ -298,49 +300,41 @@ const AdminCRM = () => {
     e.preventDefault();
     setDragOverColumn(null);
 
-    if (!draggingAgendamento || draggingAgendamento.status_crm === newStatus) {
+    const ag = draggingAgendamento;
+    const oldStatus = ((ag as any)?.status_funil as string) || "novo";
+    if (!ag || oldStatus === newStatus) {
       setDraggingAgendamento(null);
       return;
     }
 
-    const oldStatus = draggingAgendamento.status_crm;
+    // Para cancelado/faltou pede motivo
+    let motivo: string | null = null;
+    if (newStatus === "cancelado" || newStatus === "faltou") {
+      const label = newStatus === "cancelado" ? "cancelamento" : "falta";
+      const input = window.prompt(`Motivo do ${label} (opcional):`, "");
+      motivo = input?.trim() || null;
+    }
 
     // Optimistic update
     setAgendamentosPorStatus((prev) => {
       const updated = { ...prev };
-      updated[oldStatus] = updated[oldStatus].filter((a) => a.id !== draggingAgendamento.id);
-      updated[newStatus] = [{ ...draggingAgendamento, status_crm: newStatus }, ...updated[newStatus]];
+      updated[oldStatus] = (updated[oldStatus] || []).filter((a) => a.id !== ag.id);
+      updated[newStatus] = [{ ...ag, status_funil: newStatus, motivo_status: motivo ?? (ag as any).motivo_status } as Agendamento, ...(updated[newStatus] || [])];
       return updated;
     });
 
-    // Update in database (com auditoria)
-    const { error } = await atualizarStatusCrm(draggingAgendamento.id, newStatus, oldStatus);
+    const { error } = await atualizarStatusFunil(ag.id, newStatus, oldStatus, motivo);
 
     if (error) {
-      // Revert on error
       setAgendamentosPorStatus((prev) => {
         const updated = { ...prev };
-        updated[newStatus] = updated[newStatus].filter((a) => a.id !== draggingAgendamento.id);
-        updated[oldStatus] = [draggingAgendamento, ...updated[oldStatus]];
+        updated[newStatus] = (updated[newStatus] || []).filter((a) => a.id !== ag.id);
+        updated[oldStatus] = [ag, ...(updated[oldStatus] || [])];
         return updated;
       });
-
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar o status.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "Não foi possível atualizar o status.", variant: "destructive" });
     } else {
-      toast({
-        title: "Status atualizado!",
-        description: `Movido para ${newStatus}`,
-      });
-
-      // Notify n8n about status change
-      await notificarN8n('status_crm_atualizado', {
-        ...draggingAgendamento,
-        status_crm: newStatus,
-      });
+      toast({ title: "Status atualizado!", description: `Movido para ${newStatus.replace(/_/g, " ")}` });
     }
 
     setDraggingAgendamento(null);
@@ -397,10 +391,12 @@ const AdminCRM = () => {
     // Optimistic update
     setAgendamentosPorStatus((prev) => {
       const updated = { ...prev };
-      const col = agendamento.status_crm;
-      updated[col] = updated[col].map((a) =>
-        a.id === agendamento.id ? { ...a, is_sandbox: novoEstado, sandbox_reason: reason } : a
-      );
+      const col = normalizeStatusFunil((agendamento as any).status_funil);
+      if (updated[col]) {
+        updated[col] = updated[col].map((a) =>
+          a.id === agendamento.id ? { ...a, is_sandbox: novoEstado, sandbox_reason: reason } : a
+        );
+      }
       return updated;
     });
     const { error } = await marcarSandbox(agendamento.id, novoEstado, reason);
@@ -419,31 +415,31 @@ const AdminCRM = () => {
   const allItems = Object.values(agendamentosFiltrados).flat();
   const totalItems = allItems.length;
   const totalGeralCards = Object.values(agendamentosPorStatus).reduce((s, l) => s + l.length, 0);
-  const leadsIncompletos = allItems.filter(
-    (a) => (a as any).status_funil === 'lead' || !a.data_agendamento || !a.hora_agendamento
-  ).length;
-  const agendamentosConfirmados = totalItems - leadsIncompletos;
+
+  // Métricas baseadas em status_funil (fonte única)
+  const leadsIncompletos =
+    (agendamentosFiltrados["novo"]?.length || 0) +
+    (agendamentosFiltrados["em_conversa"]?.length || 0);
+  const agendamentosConfirmados =
+    (agendamentosFiltrados["aguardando_confirmacao"]?.length || 0) +
+    (agendamentosFiltrados["agendado"]?.length || 0);
+  const atendidos = agendamentosFiltrados["compareceu"]?.length || 0;
+  const noShows = agendamentosFiltrados["faltou"]?.length || 0;
+  const emAndamento = agendamentosFiltrados["aguardando_confirmacao"]?.length || 0;
 
   // Status de boas-vindas para todos os cards visíveis (filtrados)
   const boasVindasMap = useBoasVindasStatus(allItems.map((a) => a.id));
 
-  // Estatísticas de conversão
-  const atendidos = agendamentosFiltrados['ATENDIDO']?.length || 0;
-  const emAndamento = (agendamentosFiltrados['CLINICOR']?.length || 0) +
-                      (agendamentosFiltrados['HGP']?.length || 0) +
-                      (agendamentosFiltrados['BELÉM']?.length || 0);
-
-  // Taxa de conversão: leads que viraram agendamentos confirmados
-  const totalLeadsHistorico = agendamentosConfirmados + leadsIncompletos;
-  const taxaConversao = totalLeadsHistorico > 0
-    ? Math.round((agendamentosConfirmados / totalLeadsHistorico) * 100)
-    : 0;
+  // Taxa de conversão: leads que viraram agendamentos
+  const totalLeadsHistorico = agendamentosConfirmados + leadsIncompletos + atendidos + noShows;
+  const taxaConversao =
+    totalLeadsHistorico > 0
+      ? Math.round(((agendamentosConfirmados + atendidos) / totalLeadsHistorico) * 100)
+      : 0;
 
   // Taxa de conclusão: agendados que foram atendidos
-  const totalAgendados = agendamentosConfirmados;
-  const taxaConclusao = totalAgendados > 0
-    ? Math.round((atendidos / totalAgendados) * 100)
-    : 0;
+  const denomConclusao = agendamentosConfirmados + atendidos + noShows;
+  const taxaConclusao = denomConclusao > 0 ? Math.round((atendidos / denomConclusao) * 100) : 0;
 
   return (
     <AdminLayout>
