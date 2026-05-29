@@ -80,7 +80,47 @@ serve(async (req) => {
     })[0];
 
   if (!match) {
-    return json({ error: "Agendamento não encontrado para este telefone" }, 404);
+    // UPSERT: cria um lead novo (SEM data/hora). Schema Zod já bloqueia data_agendamento/hora_agendamento.
+    const insertLead: Record<string, unknown> = {
+      nome_completo: body.nome_completo?.trim() || "Lead WhatsApp",
+      telefone_whatsapp: body.telefone_whatsapp,
+      tipo_atendimento: body.tipo_atendimento || "Consulta",
+      local_atendimento: body.local_atendimento || "A definir",
+      convenio: body.convenio || "Particular",
+      detalhe_exame_ou_cirurgia: body.detalhe_exame_ou_cirurgia ?? null,
+      data_nascimento: body.data_nascimento ?? null,
+      estado_atendimento: body.estado_atendimento || "novo",
+      status_crm: "NOVO LEAD",
+      status_funil: "novo",
+      origem: "whatsapp",
+    };
+    if (body.observacoes_internas && body.observacoes_internas.trim().length > 0) {
+      const stamp = new Date().toISOString().replace("T", " ").slice(0, 19);
+      insertLead.observacoes_internas = `[${stamp} · n8n] ${body.observacoes_internas.trim()}`;
+    }
+    const { data: novoLead, error: insErr } = await supabase
+      .from("agendamentos")
+      .insert(insertLead)
+      .select("id")
+      .single();
+    if (insErr) return json({ error: insErr.message }, 500);
+
+    await supabase.from("crm_audit_log").insert({
+      agendamento_id: novoLead.id,
+      user_id: null,
+      user_email: "n8n@bot",
+      user_name: "n8n (bot)",
+      acao: "criar_lead_por_telefone_n8n",
+      status_anterior: null,
+      status_novo: "novo",
+      detalhes: { telefone_input: body.telefone_whatsapp, campos: Object.keys(insertLead) },
+    });
+
+    return json({
+      agendamento_id: novoLead.id,
+      campos_atualizados: Object.keys(insertLead),
+      lead_criado: true,
+    });
   }
 
   const updates: Record<string, unknown> = {};

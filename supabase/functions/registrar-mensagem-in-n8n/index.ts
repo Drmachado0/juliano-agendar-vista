@@ -15,6 +15,7 @@ const BodySchema = z.object({
   mensagem_externa_id: z.string().optional(),
   tipo_mensagem: z.string().optional(),
   payload: z.record(z.unknown()).optional(),
+  nome_contato: z.string().max(200).optional(),
 });
 
 function json(body: unknown, status = 200) {
@@ -80,6 +81,44 @@ serve(async (req) => {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       })[0];
     agendamentoId = match?.id ?? null;
+  }
+
+  // 2.5) Captura de lead no 1º contato: se não existe agendamento/lead p/ esse telefone, cria um ghost lead
+  let leadCriadoAgora = false;
+  if (!agendamentoId && last8.length >= 8) {
+    const nomeContato = (body.nome_contato ?? "").trim();
+    const insertLead = {
+      nome_completo: nomeContato.length > 0 ? nomeContato : "Lead WhatsApp",
+      telefone_whatsapp: telefoneNormalizado,
+      tipo_atendimento: "Consulta",
+      local_atendimento: "A definir",
+      convenio: "Particular",
+      status_crm: "NOVO LEAD",
+      status_funil: "novo",
+      estado_atendimento: "novo",
+      origem: "whatsapp",
+    };
+    const { data: novoLead, error: leadErr } = await supabase
+      .from("agendamentos")
+      .insert(insertLead)
+      .select("id")
+      .single();
+    if (leadErr) {
+      // Race condition: outra mensagem do mesmo telefone pode ter criado o lead no mesmo instante.
+      // Re-busca antes de prosseguir; se ainda assim falhar, segue sem agendamento_id.
+      const { data: retry } = await supabase
+        .from("agendamentos")
+        .select("id, telefone_whatsapp, created_at, is_sandbox, data_agendamento")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      const m = (retry ?? []).find((a: any) =>
+        (a.telefone_whatsapp ?? "").replace(/\D/g, "").endsWith(last8),
+      );
+      agendamentoId = m?.id ?? null;
+    } else {
+      agendamentoId = novoLead.id;
+      leadCriadoAgora = true;
+    }
   }
 
   // 3) Idempotência: se mensagem_externa_id já existe, retorna duplicada
@@ -148,6 +187,7 @@ serve(async (req) => {
     mensagem_id: inserted.id,
     agendamento_id: agendamentoId,
     agendamento_encontrado: !!agendamentoId,
+    lead_criado: leadCriadoAgora,
     duplicada: false,
   });
 });
