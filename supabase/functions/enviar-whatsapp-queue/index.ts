@@ -94,65 +94,20 @@ serve(async (req: Request): Promise<Response> => {
       campaign: campaign || "default",
       priority: priority || "normal"
     });
+    // 2. Send via Z-API (helper compartilhado)
+    console.log("[enviar-whatsapp-queue] Enviando via Z-API...");
 
-    // 2. Get Evolution API config (tabela com fallback p/ env vars)
-    let evolutionBaseUrl: string;
-    let evolutionToken: string;
-    let instanceName: string;
-    try {
-      const cfg = await getEvolutionConfigAsync();
-      evolutionBaseUrl = cfg.baseUrl;
-      evolutionToken = cfg.token;
-      instanceName = cfg.instance;
-    } catch (_e) {
-      console.error("[enviar-whatsapp-queue] Configuração Evolution ausente");
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "CONFIG_ERROR",
-          message: "Evolution API não configurada" 
-        }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    console.log("[enviar-whatsapp-queue] Config:", { baseUrl: evolutionBaseUrl, instance: instanceName });
-
-    // 3. Send directly to Evolution API - NO connection check, NO retries
-    console.log("[enviar-whatsapp-queue] Enviando para Evolution API...");
-    
-    const evolutionUrl = `${evolutionBaseUrl}/message/sendText/${instanceName}`;
-    const evolutionResponse = await fetch(evolutionUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": evolutionToken,
-      },
-      body: JSON.stringify({
-        number: phoneFormatted,
-        text: mensagem,
-      }),
-    });
-
+    const sendResult = await sendWhatsappTextMessage(phoneFormatted, mensagem);
     const elapsed = Date.now() - startTime;
-    const responseText = await evolutionResponse.text();
-    
-    console.log("[enviar-whatsapp-queue] Resposta Evolution:", {
-      status: evolutionResponse.status,
+
+    console.log("[enviar-whatsapp-queue] Resposta Z-API:", {
+      success: sendResult.success,
       elapsed: `${elapsed}ms`,
-      response: responseText.substring(0, 200)
+      messageId: sendResult.messageId,
     });
 
-    // 4. Return result based on Evolution response
-    if (evolutionResponse.ok || evolutionResponse.status === 202) {
-      let responseData;
-      try {
-        responseData = JSON.parse(responseText);
-      } catch {
-        responseData = { raw: responseText };
-      }
-
-      const externalId = responseData?.key?.id || responseData?.id || null;
+    if (sendResult.success) {
+      const externalId = sendResult.messageId ?? null;
       console.log("[enviar-whatsapp-queue] ✓ Mensagem enviada com sucesso");
 
       // Persist success log (fire-and-forget)
@@ -162,18 +117,55 @@ serve(async (req: Request): Promise<Response> => {
         status: "enviado",
         campaign,
         externalId,
-        payload: { campaign, priority, elapsed_ms: elapsed },
+        payload: { campaign, priority, elapsed_ms: elapsed, response: sendResult.sanitizedResponse ?? null },
       });
 
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           status: "sent",
           messageId: externalId,
           elapsed: `${elapsed}ms`
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
+    }
+
+    // Z-API returned error - log and return error (no retry)
+    const errMsg = sendResult.errorMessage ?? "Erro desconhecido";
+    console.error("[enviar-whatsapp-queue] ✗ Falha no envio:", errMsg);
+
+    const lowerResponse = errMsg.toLowerCase();
+    let userMessage = "Erro ao enviar mensagem";
+    if (lowerResponse.includes("exists") && lowerResponse.includes("false")) {
+      userMessage = "Número não encontrado no WhatsApp";
+    } else if (lowerResponse.includes("not connected") || lowerResponse.includes("disconnected")) {
+      userMessage = "WhatsApp desconectado. Verifique a instância Z-API.";
+    } else if (lowerResponse.includes("401") || lowerResponse.includes("unauthorized")) {
+      userMessage = "Erro de autenticação com Z-API";
+    }
+
+    // Persist failure log (fire-and-forget)
+    logEnvio({
+      telefone: phoneFormatted,
+      conteudo: mensagem,
+      status: "erro",
+      campaign,
+      errorMessage: `${userMessage} · ${errMsg.slice(0, 300)}`,
+      payload: { campaign, priority, elapsed_ms: elapsed, raw: errMsg.slice(0, 500) },
+    });
+
+    return new Response(
+      JSON.stringify({
+        success: false,
+        status: "failed",
+        error: "SEND_FAILED",
+        message: userMessage,
+        elapsed: `${elapsed}ms`
+      }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    );
+
     }
 
     // Evolution API returned error - log and return error (no retry)
