@@ -29,10 +29,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { EvolutionStatusBadge } from "@/components/admin/EvolutionStatusBadge";
-import { validarTelefoneBrasileiro, autocorrigirTelefone } from "@/lib/validarTelefoneBR";
-import imagemPadraoAvaliacao from "@/assets/avaliacao-default.png";
-import { useEvolutionStatus } from "@/hooks/useEvolutionStatus";
+// Conexão WhatsApp agora é gerenciada no painel Z-API (externamente).
+// O frontend assume conectado e não chama mais funções de status/reconexão.
+
 import { useEnvioLoteConfig, LIMITE_SESSAO, LIMITE_DIARIO } from "@/hooks/useEnvioLoteConfig";
 
 interface PacienteAtendido {
