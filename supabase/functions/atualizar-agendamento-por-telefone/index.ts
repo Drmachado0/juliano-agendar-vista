@@ -152,7 +152,23 @@ serve(async (req) => {
     camposAtualizados.push("observacoes_internas");
   }
 
-  if (camposAtualizados.length === 0) {
+  // Promoção automática de status_funil (nunca rebaixa, nunca toca estados finais)
+  const FINAIS = new Set(["agendado", "compareceu", "faltou", "cancelado"]);
+  const statusAtual = ((match as any).status_funil as string) || "novo";
+  let promocao: { de: string; para: string } | null = null;
+  if (!FINAIS.has(statusAtual)) {
+    const teraData = !!(match as any).data_agendamento;
+    const teraHora = !!(match as any).hora_agendamento;
+    if (teraData && teraHora && statusAtual !== "aguardando_confirmacao") {
+      updates.status_funil = "aguardando_confirmacao";
+      promocao = { de: statusAtual, para: "aguardando_confirmacao" };
+    } else if (statusAtual === "novo") {
+      updates.status_funil = "em_conversa";
+      promocao = { de: "novo", para: "em_conversa" };
+    }
+  }
+
+  if (camposAtualizados.length === 0 && !promocao) {
     return json({ agendamento_id: match.id, campos_atualizados: [] });
   }
 
@@ -177,5 +193,23 @@ serve(async (req) => {
     detalhes: { campos_atualizados: camposAtualizados, telefone_input: body.telefone_whatsapp },
   });
 
-  return json({ agendamento_id: match.id, campos_atualizados: camposAtualizados });
+  if (promocao) {
+    await supabase.from("crm_audit_log").insert({
+      agendamento_id: match.id,
+      user_id: null,
+      user_email: "n8n@bot",
+      user_name: "n8n (bot)",
+      acao: "status_funil_promovido",
+      status_anterior: promocao.de,
+      status_novo: promocao.para,
+      detalhes: { motivo: "auto_n8n_update", telefone_input: body.telefone_whatsapp },
+    });
+  }
+
+  return json({
+    agendamento_id: match.id,
+    campos_atualizados: camposAtualizados,
+    status_funil: promocao?.para ?? statusAtual,
+    promovido: !!promocao,
+  });
 });
