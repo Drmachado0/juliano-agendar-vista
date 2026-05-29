@@ -157,12 +157,18 @@ serve(async (req) => {
   const statusAtual = ((match as any).status_funil as string) || "novo";
   let promocao: { de: string; para: string } | null = null;
   if (!FINAIS.has(statusAtual)) {
-    const teraData = !!(match as any).data_agendamento;
-    const teraHora = !!(match as any).hora_agendamento;
-    if (teraData && teraHora && statusAtual !== "aguardando_confirmacao") {
+    // 1) n8n sinalizou que está apresentando resumo para confirmação
+    if (body.estado_atendimento === "aguardando_confirmacao" && statusAtual !== "aguardando_confirmacao") {
       updates.status_funil = "aguardando_confirmacao";
       promocao = { de: statusAtual, para: "aguardando_confirmacao" };
-    } else if (statusAtual === "novo") {
+    }
+    // 2) data/hora já preenchidos (fallback de segurança)
+    else if ((match as any).data_agendamento && (match as any).hora_agendamento && statusAtual !== "aguardando_confirmacao") {
+      updates.status_funil = "aguardando_confirmacao";
+      promocao = { de: statusAtual, para: "aguardando_confirmacao" };
+    }
+    // 3) primeiro contato → em conversa
+    else if (statusAtual === "novo") {
       updates.status_funil = "em_conversa";
       promocao = { de: "novo", para: "em_conversa" };
     }
