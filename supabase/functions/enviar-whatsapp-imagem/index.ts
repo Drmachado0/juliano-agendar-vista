@@ -1,104 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { registrarMensagemWhatsapp } from "../_shared/registrarMensagem.ts";
-import { getEvolutionConfigAsync } from "../_shared/evolutionApiClient.ts";
+import { sendWhatsappImageMessage } from "../_shared/evolutionApiClient.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Check Evolution API connection status before sending
-async function checkEvolutionConnection(
-  baseUrl: string,
-  instanceName: string,
-  token: string
-): Promise<{ connected: boolean; state: string; error?: string }> {
-  try {
-    const url = `${baseUrl}/instance/connectionState/${instanceName}`;
-    console.log('Verificando conexão Evolution:', url);
-    
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'apikey': token,
-      },
-      signal: controller.signal,
-    });
-    
-    clearTimeout(timeout);
-    
-    if (!response.ok) {
-      const text = await response.text();
-      console.error('Erro ao verificar conexão:', response.status, text);
-      return { connected: false, state: 'error', error: text };
-    }
-    
-    const data = await response.json();
-    console.log('Status da conexão:', data);
-    
-    // Check connection state
-    const state = data?.instance?.state || data?.state || 'unknown';
-    const connected = state === 'open' || state === 'connected';
-    
-    return { connected, state };
-  } catch (error) {
-    console.error('Erro ao verificar conexão Evolution:', error);
-    return { 
-      connected: false, 
-      state: 'error', 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    };
-  }
-}
-
-async function sendToEvolution(
-  evolutionUrl: string,
-  token: string,
-  telefone: string,
-  media: string,
-  caption?: string
-): Promise<{ ok: boolean; status: number; data: any; text: string }> {
-  const requestBody: {
-    number: string;
-    mediatype: string;
-    media: string;
-    caption?: string;
-  } = {
-    number: telefone,
-    mediatype: 'image',
-    media: media,
-  };
-
-  if (caption) {
-    requestBody.caption = caption;
-  }
-
-  const response = await fetch(evolutionUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': token,
-    },
-    body: JSON.stringify(requestBody),
-  });
-
-  const text = await response.text();
-  let data = null;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    data = text;
-  }
-
-  return { ok: response.ok, status: response.status, data, text };
-}
-
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -125,123 +35,26 @@ serve(async (req) => {
       );
     }
 
-    // Get Evolution API configuration (tabela com fallback p/ env vars)
-    let evolutionBaseUrl: string;
-    let EVOLUTION_API_INSTANCE: string;
-    let EVOLUTION_API_TOKEN: string;
-    try {
-      const cfg = await getEvolutionConfigAsync();
-      evolutionBaseUrl = cfg.baseUrl;
-      EVOLUTION_API_INSTANCE = cfg.instance;
-      EVOLUTION_API_TOKEN = cfg.token;
-    } catch (_e) {
-      console.error('Configuração Evolution indisponível');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Configuração da Evolution API incompleta' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check connection before sending
-    console.log('=== VERIFICANDO CONEXÃO EVOLUTION ANTES DE ENVIAR ===');
-    const connectionStatus = await checkEvolutionConnection(
-      evolutionBaseUrl,
-      EVOLUTION_API_INSTANCE,
-      EVOLUTION_API_TOKEN
-    );
-
-    if (!connectionStatus.connected) {
-      console.error('WhatsApp desconectado:', connectionStatus.state);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'WhatsApp desconectado. Reconecte o WhatsApp nas configurações antes de enviar mensagens.',
-          isConnectionError: true,
-          connectionState: connectionStatus.state
-        }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Conexão OK, prosseguindo com envio...');
-
-    // Format phone number
-    let telefoneFormatado = telefone.replace(/\D/g, '');
-    if (!telefoneFormatado.startsWith('55')) {
-      telefoneFormatado = '55' + telefoneFormatado;
-    }
-
-    console.log('=== DEBUG EVOLUTION API (IMAGEM) ===');
-    console.log('Telefone formatado:', telefoneFormatado);
-    console.log('Tem imageUrl:', !!imageUrl);
-    console.log('Tem imageBase64:', !!rawImageBase64);
-    console.log('Tem caption:', !!caption);
-
-    const evolutionUrl = `${evolutionBaseUrl}/message/sendMedia/${EVOLUTION_API_INSTANCE}`;
-
-    // Clean base64 if needed
-    let imageBase64 = rawImageBase64;
-    if (rawImageBase64 && rawImageBase64.includes(';base64,')) {
-      imageBase64 = rawImageBase64.split(';base64,')[1];
-    }
-
-    // Strategy: Try URL first, fallback to base64 if URL fails
-    let result: { ok: boolean; status: number; data: any; text: string };
-    let usedMethod = '';
-
+    // Z-API aceita URL pública OU data URI base64. Priorizamos URL.
+    let imagePayload: string;
+    let usedMethod: string;
     if (imageUrl) {
-      // Try URL first
-      console.log('Tentando enviar via URL:', imageUrl.substring(0, 80) + '...');
-      result = await sendToEvolution(evolutionUrl, EVOLUTION_API_TOKEN, telefoneFormatado, imageUrl, caption);
+      imagePayload = imageUrl;
       usedMethod = 'URL';
-
-      // Check if URL method failed with connection error - fallback to base64
-      if (!result.ok && imageBase64) {
-        const errorText = result.text.toLowerCase();
-        if (errorText.includes('connection closed') || errorText.includes('timeout') || errorText.includes('fetch')) {
-          console.log('URL falhou com erro de conexão, tentando base64 como fallback...');
-          result = await sendToEvolution(evolutionUrl, EVOLUTION_API_TOKEN, telefoneFormatado, imageBase64, caption);
-          usedMethod = 'base64 (fallback)';
-        }
-      }
     } else {
-      // No URL, use base64 directly
-      console.log('Enviando via base64 (sem URL disponível)');
-      result = await sendToEvolution(evolutionUrl, EVOLUTION_API_TOKEN, telefoneFormatado, imageBase64!, caption);
+      let b64 = rawImageBase64 as string;
+      if (b64.includes(';base64,')) b64 = b64.split(';base64,')[1];
+      imagePayload = `data:image/jpeg;base64,${b64}`;
       usedMethod = 'base64';
     }
 
-    console.log('Método usado:', usedMethod);
-    console.log('Resposta Evolution:', result.status, result.text.substring(0, 200));
+    console.log('[enviar-whatsapp-imagem] Enviando via Z-API (', usedMethod, ')');
 
+    const result = await sendWhatsappImageMessage(telefone, imagePayload, caption);
     const conteudoLog = caption ? `[imagem] ${caption}` : "[imagem]";
 
-    if (!result.ok) {
-      console.error('Erro da Evolution API:', result.status, result.text);
-
-      // Check for specific error types
-      let userFriendlyError = `Erro Evolution API: ${result.status}`;
-      let isConnectionError = false;
-
-      const errorText = result.text.toLowerCase();
-      const responseMessage = result.data?.response?.message;
-
-      // Check for connection closed error
-      if (errorText.includes('connection closed') ||
-          (Array.isArray(responseMessage) && responseMessage.some((m: string) =>
-            typeof m === 'string' && m.toLowerCase().includes('connection closed')))) {
-        userFriendlyError = 'WhatsApp desconectado. Reconecte o WhatsApp nas configurações da Evolution API antes de enviar mensagens.';
-        isConnectionError = true;
-      }
-      // Check if it's a "number doesn't exist on WhatsApp" error
-      else if (responseMessage) {
-        const messages = responseMessage;
-        if (Array.isArray(messages) && messages.some((m: { exists?: boolean }) => m.exists === false)) {
-          userFriendlyError = 'Número não encontrado no WhatsApp. Verifique se o número está correto e possui WhatsApp ativo.';
-        }
-      }
-
-      // Registro universal — erro
+    if (!result.success) {
+      console.error('[enviar-whatsapp-imagem] ✗ Falha:', result.errorMessage);
       await registrarMensagemWhatsapp(supabase, {
         telefone,
         direcao: "OUT",
@@ -249,23 +62,16 @@ serve(async (req) => {
         tipo_mensagem: (tipo_mensagem as any) ?? "imagem",
         agendamento_id: agendamento_id ?? null,
         status_envio: "erro",
-        error_message: `[${result.status}] ${userFriendlyError} · ${result.text.slice(0, 300)}`,
+        error_message: `[Z-API] ${result.errorMessage ?? 'Erro desconhecido'}`,
       });
-
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: userFriendlyError,
-          details: result.text,
-          isConnectionError
-        }),
-        { status: result.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: result.errorMessage, details: result.sanitizedResponse }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Imagem enviada com sucesso via', usedMethod);
+    console.log('[enviar-whatsapp-imagem] ✓ Imagem enviada (', usedMethod, ') messageId=', result.messageId);
 
-    // Registro universal — sucesso
     await registrarMensagemWhatsapp(supabase, {
       telefone,
       direcao: "OUT",
@@ -273,17 +79,17 @@ serve(async (req) => {
       tipo_mensagem: (tipo_mensagem as any) ?? "imagem",
       agendamento_id: agendamento_id ?? null,
       status_envio: "enviado",
-      mensagem_externa_id: result.data?.key?.id ?? null,
-      payload: { method: usedMethod, imageUrl: imageUrl ?? null, response: result.data ?? null },
+      mensagem_externa_id: result.messageId ?? null,
+      payload: { method: usedMethod, imageUrl: imageUrl ?? null, response: result.sanitizedResponse ?? null },
     });
 
     return new Response(
-      JSON.stringify({ success: true, data: result.data, method: usedMethod }),
+      JSON.stringify({ success: true, messageId: result.messageId, data: result.sanitizedResponse, method: usedMethod }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: unknown) {
-    console.error('Erro ao enviar imagem WhatsApp:', error);
+    console.error('[enviar-whatsapp-imagem] Erro fatal:', error);
     const errorMessage = error instanceof Error ? error.message : 'Erro interno';
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),

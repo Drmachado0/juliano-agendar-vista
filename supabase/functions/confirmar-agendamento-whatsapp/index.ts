@@ -3,7 +3,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { gerarMensagemDoTemplate, formatarData, formatarHora } from "../_shared/templateRenderer.ts";
-import { getEvolutionConfigAsync } from "../_shared/evolutionApiClient.ts";
+import { sendWhatsappTextMessage } from "../_shared/evolutionApiClient.ts";
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -126,29 +127,9 @@ serve(async (req) => {
       );
     }
 
-    // Configurações da Evolution API (tabela com fallback p/ env vars)
-    let evolutionBaseUrl: string;
-    let evolutionToken: string;
-    let evolutionInstance: string;
-    try {
-      const cfg = await getEvolutionConfigAsync();
-      evolutionBaseUrl = cfg.baseUrl;
-      evolutionToken = cfg.token;
-      evolutionInstance = cfg.instance;
-    } catch (_e) {
-      console.error('[ConfirmarWhatsApp] Configuração Evolution indisponível');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Configuração da API WhatsApp não encontrada' 
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Formatar telefone e gerar mensagem do template
     const telefoneFormatado = formatarTelefone(agendamentoData.telefone_whatsapp);
-    
+
     // Buscar template do banco e renderizar
     const mensagem = await gerarMensagemDoTemplate('confirmacao_agendamento', {
       nome: agendamentoData.nome_completo,
@@ -159,31 +140,16 @@ serve(async (req) => {
       link_status: agendamentoId ? `https://drjulianomachado.com/status/${agendamentoId}` : undefined,
     });
 
-    console.log('[ConfirmarWhatsApp] Enviando para:', telefoneFormatado);
+    console.log('[ConfirmarWhatsApp] Enviando via Z-API para:', telefoneFormatado);
 
-    // Enviar mensagem via Evolution API
-    const baseUrlClean = evolutionBaseUrl.replace(/\/+$/, '');
-    const evolutionUrl = `${baseUrlClean}/message/sendText/${evolutionInstance}`;
-    console.log('[ConfirmarWhatsApp] Evolution URL:', evolutionUrl);
-    
-    const evolutionResponse = await fetch(evolutionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': evolutionToken,
-      },
-      body: JSON.stringify({
-        number: telefoneFormatado,
-        text: mensagem,
-      }),
-    });
+    // Enviar via Z-API (helper compartilhado)
+    const sendResult = await sendWhatsappTextMessage(telefoneFormatado, mensagem);
 
-    const evolutionResult = await evolutionResponse.json();
-    console.log('[ConfirmarWhatsApp] Resposta Evolution:', JSON.stringify(evolutionResult));
-
-    if (!evolutionResponse.ok) {
-      throw new Error(`Evolution API error: ${JSON.stringify(evolutionResult)}`);
+    if (!sendResult.success) {
+      throw new Error(`Z-API error: ${sendResult.errorMessage}`);
     }
+    const evolutionResult: any = sendResult.rawResponse ?? {};
+
 
     // Salvar mensagem no banco (sem agendamento_id se não temos)
     const { error: msgError } = await supabase
@@ -195,7 +161,8 @@ serve(async (req) => {
         conteudo: mensagem,
         status_envio: 'enviado',
         tipo_mensagem: 'confirmacao_automatica',
-        mensagem_externa_id: evolutionResult?.key?.id || null,
+        mensagem_externa_id: sendResult.messageId ?? evolutionResult?.key?.id ?? null,
+
       });
 
     if (msgError) {
