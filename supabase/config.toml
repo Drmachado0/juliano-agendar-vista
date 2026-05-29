@@ -105,3 +105,8 @@ verify_jwt = false
 [functions.buscar-contexto-paciente]
 verify_jwt = false
 
+[functions.reengajar-lead]
+verify_jwt = true
+
+
+

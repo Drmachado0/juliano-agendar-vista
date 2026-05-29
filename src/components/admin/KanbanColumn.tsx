@@ -19,6 +19,8 @@ interface KanbanColumnProps {
   onDrop: (e: React.DragEvent, status: string) => void;
   isDragOver?: boolean;
   boasVindasMap?: Record<string, BoasVindasInfo>;
+  ultimasMsgsIn?: Record<string, string>;
+  onRefresh?: () => void;
   collapsed?: boolean;
   onExpand?: (status: string) => void;
 }
@@ -37,6 +39,8 @@ const KanbanColumn = ({
   onDrop,
   isDragOver,
   boasVindasMap,
+  ultimasMsgsIn,
+  onRefresh,
   collapsed,
   onExpand,
 }: KanbanColumnProps) => {
@@ -125,6 +129,8 @@ const KanbanColumn = ({
                 onTriggerAutomation={onTriggerAutomation}
                 onToggleSandbox={onToggleSandbox}
                 boasVindas={boasVindasMap?.[agendamento.id]}
+                ultimaMsgInAt={ultimasMsgsIn?.[agendamento.id]}
+                onAfterReengajar={onRefresh}
               />
             </div>
           ))

@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Agendamento } from "@/services/agendamentos";
+import { Agendamento, reengajarLead } from "@/services/agendamentos";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { format, formatDistanceToNow, differenceInDays } from "date-fns";
+import { format, formatDistanceToNow, differenceInDays, differenceInHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle, CheckCircle2, UserPlus, Timer, Send, XCircle, Loader2, FlaskConical, CheckCheck, Eye as EyeIcon, History, Globe, Bot, Megaphone, MessageSquare, HelpCircle } from "lucide-react";
+import { toast } from "sonner";
+import { Calendar, Clock, MapPin, Phone, MessageCircle, Eye, Bell, Check, Zap, AlertTriangle, CheckCircle2, UserPlus, Timer, Send, XCircle, Loader2, FlaskConical, CheckCheck, Eye as EyeIcon, History, Globe, Bot, Megaphone, MessageSquare, HelpCircle, Snowflake, Flame, User as UserIcon, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { BoasVindasInfo } from "@/hooks/useBoasVindasStatus";
@@ -29,6 +30,8 @@ interface KanbanCardProps {
   onToggleSandbox?: (agendamento: Agendamento) => void;
   isDragging?: boolean;
   boasVindas?: BoasVindasInfo;
+  ultimaMsgInAt?: string;
+  onAfterReengajar?: () => void;
 }
 
 // Verifica se é um lead incompleto (sem data/hora de agendamento)
@@ -51,10 +54,13 @@ const KanbanCard = ({
   onToggleSandbox,
   isDragging,
   boasVindas,
+  ultimaMsgInAt,
+  onAfterReengajar,
 }: KanbanCardProps) => {
   const isLead = isLeadIncompleto(agendamento);
   const atendido = isAtendido(agendamento);
   const [historicoOpen, setHistoricoOpen] = useState(false);
+  const [reengajando, setReengajando] = useState(false);
   const { isComfortable } = useDensity();
 
   // Calcula tempo desde criação e tempo na fase atual
@@ -63,14 +69,77 @@ const KanbanCard = ({
   const diasDesdeCriacao = differenceInDays(new Date(), createdDate);
   const diasNaFase = differenceInDays(new Date(), updatedDate);
 
-  // Cor de urgência baseada em dias parado na fase (não aplicada para ATENDIDO)
-  const urgenciaColor = atendido
-    ? "border-l-muted-foreground/40"
-    : diasNaFase > 7
-    ? "border-l-red-500"
-    : diasNaFase > 2
-    ? "border-l-yellow-500"
-    : "border-l-emerald-500";
+  // SLA: tempo desde a última mensagem do PACIENTE (IN)
+  const horasDesdeUltimaIn = ultimaMsgInAt
+    ? differenceInHours(new Date(), new Date(ultimaMsgInAt))
+    : null;
+  const slaLevel: "normal" | "warm" | "cold" | null =
+    horasDesdeUltimaIn == null
+      ? null
+      : horasDesdeUltimaIn < 2
+      ? "normal"
+      : horasDesdeUltimaIn < 24
+      ? "warm"
+      : "cold";
+
+  // Cor da borda esquerda: SLA tem prioridade sobre dias na fase
+  const slaBorder =
+    slaLevel === "cold"
+      ? "border-l-red-500"
+      : slaLevel === "warm"
+      ? "border-l-yellow-500"
+      : null;
+  const urgenciaColor =
+    slaBorder ??
+    (atendido
+      ? "border-l-muted-foreground/40"
+      : diasNaFase > 7
+      ? "border-l-red-500"
+      : diasNaFase > 2
+      ? "border-l-yellow-500"
+      : "border-l-emerald-500");
+
+  // Bot vs Humano
+  const pausaAteMs = (agendamento as any).bot_pausado_ate
+    ? new Date((agendamento as any).bot_pausado_ate).getTime()
+    : 0;
+  const pausaVigente = pausaAteMs > Date.now();
+  const humanoAssumiu = (agendamento as any).bot_ativo === false || pausaVigente;
+
+  // Lead "não qualificado" (ghost): sem nome real
+  const naoQualificado =
+    !agendamento.nome_completo ||
+    agendamento.nome_completo.trim() === "" ||
+    agendamento.nome_completo.trim().toLowerCase() === "lead whatsapp";
+
+  // Reengajar
+  const ultimoFollowup = (agendamento as any).ultimo_followup_em as string | undefined;
+  const followupRecente =
+    !!ultimoFollowup &&
+    Date.now() - new Date(ultimoFollowup).getTime() < 24 * 60 * 60 * 1000;
+  const podeReengajar = slaLevel === "cold" && !humanoAssumiu && !followupRecente;
+  const motivoBloqueio = humanoAssumiu
+    ? "humano assumiu"
+    : followupRecente
+    ? "reengajado recentemente"
+    : null;
+
+  const telDigits = (agendamento.telefone_whatsapp || "").replace(/\D/g, "");
+  const waUrl = telDigits ? `https://wa.me/${telDigits}` : null;
+
+  const handleReengajar = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!podeReengajar || reengajando) return;
+    setReengajando(true);
+    const { success, error } = await reengajarLead(agendamento.id);
+    setReengajando(false);
+    if (success) {
+      toast.success("Mensagem de reengajamento enviada");
+      onAfterReengajar?.();
+    } else {
+      toast.error(error || "Não foi possível reengajar");
+    }
+  };
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -141,7 +210,20 @@ const KanbanCard = ({
             </div>
             <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground/80">
               <Phone className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate">{agendamento.telefone_whatsapp}</span>
+              {waUrl ? (
+                <a
+                  href={waUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate hover:text-emerald-600 hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                  title="Abrir conversa no WhatsApp"
+                >
+                  {agendamento.telefone_whatsapp}
+                </a>
+              ) : (
+                <span className="truncate">{agendamento.telefone_whatsapp}</span>
+              )}
             </div>
           </div>
         </TooltipTrigger>
@@ -173,6 +255,57 @@ const KanbanCard = ({
           </div>
         </TooltipContent>
       </Tooltip>
+
+      {/* Linha de status: SLA + Bot/Humano + Não qualificado */}
+      {(slaLevel === "warm" || slaLevel === "cold" || humanoAssumiu || !humanoAssumiu || naoQualificado) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {slaLevel === "warm" && horasDesdeUltimaIn != null && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border border-yellow-500/30">
+              <Snowflake className="h-2.5 w-2.5" />
+              esfriando — há {horasDesdeUltimaIn}h sem resposta
+            </span>
+          )}
+          {slaLevel === "cold" && horasDesdeUltimaIn != null && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/30">
+              <Flame className="h-2.5 w-2.5" />
+              frio — há {Math.floor(horasDesdeUltimaIn / 24)}d sem resposta
+            </span>
+          )}
+          {humanoAssumiu ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/30">
+                  <UserIcon className="h-2.5 w-2.5" />
+                  Humano assumiu
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {pausaVigente
+                  ? `Bot pausado até ${format(new Date(pausaAteMs), "dd/MM HH:mm", { locale: ptBR })}`
+                  : "Bot desativado para este lead"}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/30">
+              <Bot className="h-2.5 w-2.5" />
+              Bot atendendo
+            </span>
+          )}
+          {naoQualificado && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border/60">
+                  <Sparkles className="h-2.5 w-2.5" />
+                  não qualificado
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Lead ainda sem nome real — aguardando 1ª resposta</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      )}
+
+
 
       {/* Bloco data/hora consulta - destacado quando existir */}
       {!isLead && agendamento.data_agendamento && agendamento.hora_agendamento ? (
@@ -396,6 +529,36 @@ const KanbanCard = ({
             </TooltipTrigger>
             <TooltipContent>Disparar automação n8n</TooltipContent>
           </Tooltip>
+          {slaLevel === "cold" && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={!podeReengajar || reengajando}
+                    className={cn(
+                      "p-0 hover:bg-accent",
+                      btnSize,
+                      podeReengajar
+                        ? "text-red-500 hover:text-red-600"
+                        : "text-muted-foreground/60"
+                    )}
+                    onClick={handleReengajar}
+                  >
+                    {reengajando ? (
+                      <Loader2 className={cn(iconSize, "animate-spin")} />
+                    ) : (
+                      <Flame className={iconSize} />
+                    )}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {motivoBloqueio ? `Reengajar (${motivoBloqueio})` : "Reengajar lead frio"}
+              </TooltipContent>
+            </Tooltip>
+          )}
           {onToggleSandbox && (
             <Tooltip>
               <TooltipTrigger asChild>
