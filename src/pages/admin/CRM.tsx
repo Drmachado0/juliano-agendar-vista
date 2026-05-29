@@ -641,6 +641,8 @@ const AdminCRM = () => {
                   onDrop={handleDrop}
                   isDragOver={dragOverColumn === column.status}
                   boasVindasMap={boasVindasMap}
+                  ultimasMsgsIn={ultimasMsgsIn}
+                  onRefresh={() => fetchAgendamentos(true)}
                 />
               </div>
             ))}
