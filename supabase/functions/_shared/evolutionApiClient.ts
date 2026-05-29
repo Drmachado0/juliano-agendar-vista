@@ -181,175 +181,76 @@ export function normalizePhoneNumber(rawPhone: string): string {
  * ============================================================================
  * MIGRAÇÃO: Evolution API → Z-API
  * ============================================================================
- * Os helpers abaixo mantêm o MESMO contrato/assinatura usado pelas edge functions
- * existentes (sendWhatsappTextMessage, SendMessageResult, etc.), mas agora
- * enviam mensagens pela Z-API. Isso evita refatorações em cascata em todas
- * as funções que já consomem essa API.
+ * Mantemos a assinatura legada (sendWhatsappTextMessage, SendMessageResult)
+ * para evitar refatorações em cascata. Internamente delegamos para o helper
+ * único em ../_shared/zapi.ts.
  *
  * Receber mensagens NÃO é responsabilidade desta camada — o n8n recebe direto
  * da Z-API.
  * ============================================================================
  */
 
-interface ZapiConfig {
-  baseUrl: string;
-  instance: string;
-  token: string;
-  clientToken: string;
-}
+import { enviarTextoZapi, enviarImagemZapi } from "./zapi.ts";
 
-export function getZapiConfig(): ZapiConfig {
-  const baseUrl = (Deno.env.get('ZAPI_BASE_URL') || 'https://api.z-api.io').replace(/\/+$/, '');
-  const instance = Deno.env.get('ZAPI_INSTANCE') || '';
-  const token = Deno.env.get('ZAPI_TOKEN') || '';
-  const clientToken = Deno.env.get('ZAPI_CLIENT_TOKEN') || '';
-  if (!instance || !token || !clientToken) {
-    throw new Error('Z-API não configurada (faltam ZAPI_INSTANCE / ZAPI_TOKEN / ZAPI_CLIENT_TOKEN).');
-  }
-  return { baseUrl, instance, token, clientToken };
-}
-
-/**
- * Envia uma mensagem de TEXTO via Z-API.
- * Mantém a assinatura/contrato originais (success/messageId/deliveryStatus...).
- */
+/** Envia mensagem de TEXTO via Z-API (delega ao helper único). */
 export async function sendWhatsappTextMessage(
   phone: string,
   body: string
 ): Promise<SendMessageResult> {
-  try {
-    const cfg = getZapiConfig();
-    const normalizedPhone = normalizePhoneNumber(phone);
-    const url = `${cfg.baseUrl}/instances/${cfg.instance}/token/${cfg.token}/send-text`;
-
-    console.log(`[Z-API] send-text → ${normalizedPhone}`);
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Client-Token': cfg.clientToken,
-      },
-      body: JSON.stringify({ phone: normalizedPhone, message: body }),
-    });
-
-    const responseText = await response.text();
-    let responseData: unknown;
-    try { responseData = JSON.parse(responseText); } catch { responseData = { raw: responseText }; }
-    const sanitized = sanitizePayload(responseData);
-
-    if (!response.ok) {
-      console.error(`[Z-API] Erro HTTP ${response.status}: ${responseText.slice(0, 300)}`);
-      return {
-        success: false,
-        rawResponse: responseData,
-        sanitizedResponse: sanitized,
-        errorMessage: `HTTP ${response.status}: ${responseText.slice(0, 200)}`,
-        evolutionStatus: 'ERROR',
-        deliveryStatus: 'erro',
-        confirmed: false,
-      };
-    }
-
-    const data = (responseData && typeof responseData === 'object') ? responseData as Record<string, unknown> : {};
-    const messageId = (data.messageId as string | undefined) ?? (data.id as string | undefined);
-
-    // Z-API não retorna ACK no momento do envio; consideramos "enviado" (aceito).
-    return {
-      success: true,
-      rawResponse: responseData,
-      sanitizedResponse: sanitized,
-      messageId,
-      evolutionStatus: 'SENT',
-      deliveryStatus: 'enviado',
-      confirmed: false,
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    console.error('[Z-API] Exceção em send-text:', errorMessage);
+  const r = await enviarTextoZapi(phone, body);
+  const sanitized = sanitizePayload(r.raw);
+  if (!r.ok) {
     return {
       success: false,
-      errorMessage,
+      rawResponse: r.raw,
+      sanitizedResponse: sanitized,
+      errorMessage: r.erro,
       evolutionStatus: 'ERROR',
       deliveryStatus: 'erro',
       confirmed: false,
     };
   }
+  return {
+    success: true,
+    rawResponse: r.raw,
+    sanitizedResponse: sanitized,
+    messageId: r.messageId,
+    evolutionStatus: 'SENT',
+    deliveryStatus: 'enviado',
+    confirmed: false,
+  };
 }
 
-/**
- * Envia uma IMAGEM via Z-API.
- * `image` pode ser uma URL pública ou um data URI base64 (data:image/...;base64,XXX).
- */
+/** Envia IMAGEM via Z-API (delega ao helper único). */
 export async function sendWhatsappImageMessage(
   phone: string,
   image: string,
   caption?: string
 ): Promise<SendMessageResult> {
-  try {
-    const cfg = getZapiConfig();
-    const normalizedPhone = normalizePhoneNumber(phone);
-    const url = `${cfg.baseUrl}/instances/${cfg.instance}/token/${cfg.token}/send-image`;
-
-    // Z-API aceita URL pública ou data URI base64.
-    let imagePayload = image;
-    if (image && !image.startsWith('http') && !image.startsWith('data:')) {
-      imagePayload = `data:image/jpeg;base64,${image}`;
-    }
-
-    console.log(`[Z-API] send-image → ${normalizedPhone}`);
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Client-Token': cfg.clientToken,
-      },
-      body: JSON.stringify({ phone: normalizedPhone, image: imagePayload, caption: caption ?? '' }),
-    });
-
-    const responseText = await response.text();
-    let responseData: unknown;
-    try { responseData = JSON.parse(responseText); } catch { responseData = { raw: responseText }; }
-    const sanitized = sanitizePayload(responseData);
-
-    if (!response.ok) {
-      console.error(`[Z-API] Erro HTTP ${response.status} em send-image: ${responseText.slice(0, 300)}`);
-      return {
-        success: false,
-        rawResponse: responseData,
-        sanitizedResponse: sanitized,
-        errorMessage: `HTTP ${response.status}: ${responseText.slice(0, 200)}`,
-        evolutionStatus: 'ERROR',
-        deliveryStatus: 'erro',
-        confirmed: false,
-      };
-    }
-
-    const data = (responseData && typeof responseData === 'object') ? responseData as Record<string, unknown> : {};
-    const messageId = (data.messageId as string | undefined) ?? (data.id as string | undefined);
-
-    return {
-      success: true,
-      rawResponse: responseData,
-      sanitizedResponse: sanitized,
-      messageId,
-      evolutionStatus: 'SENT',
-      deliveryStatus: 'enviado',
-      confirmed: false,
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    console.error('[Z-API] Exceção em send-image:', errorMessage);
+  const r = await enviarImagemZapi(phone, image, caption);
+  const sanitized = sanitizePayload(r.raw);
+  if (!r.ok) {
     return {
       success: false,
-      errorMessage,
+      rawResponse: r.raw,
+      sanitizedResponse: sanitized,
+      errorMessage: r.erro,
       evolutionStatus: 'ERROR',
       deliveryStatus: 'erro',
       confirmed: false,
     };
   }
+  return {
+    success: true,
+    rawResponse: r.raw,
+    sanitizedResponse: sanitized,
+    messageId: r.messageId,
+    evolutionStatus: 'SENT',
+    deliveryStatus: 'enviado',
+    confirmed: false,
+  };
 }
+
 
 
 /**
