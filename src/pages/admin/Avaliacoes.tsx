@@ -165,8 +165,15 @@ Oftalmologia`;
 
 const Avaliacoes = () => {
   // Hook para status da conexão Evolution API
-  const { status: evolutionStatus, loading: evolutionLoading, reconectar, refresh: refreshEvolution } = useEvolutionStatus(true, 30000);
-  const isWhatsAppConnected = evolutionStatus?.connected ?? false;
+  // Conexão Z-API é gerenciada externamente; assumimos conectado.
+  const isWhatsAppConnected = true;
+  const evolutionLoading = false;
+  const reconectar = async (): Promise<{ success: boolean; error?: string }> => ({
+    success: false,
+    error: "A conexão do WhatsApp agora é gerenciada no painel Z-API.",
+  });
+  const refreshEvolution = () => {};
+
   
   const [template, setTemplate] = useState(TEMPLATE_PADRAO);
   const [nomeAvulso, setNomeAvulso] = useState("");
