@@ -55,7 +55,7 @@ const agendamentoInsertSchema = z.object({
   aceita_primeiro_horario: z.boolean().optional(),
   aceita_contato_whatsapp_email: z.boolean().optional(),
   status_crm: z
-    .enum(["NOVO LEAD", "AGUARDANDO", "PRECISA_DE_HUMANO", "CLINICOR", "HGP", "BELÉM", "ATENDIDO"])
+    .enum(["NOVO LEAD", "AGUARDANDO", "PRECISA_DE_HUMANO", "CLINICOR", "HGP", "BELÉM", "ATENDIDO", "YAG_LASER"])
     .optional()
     .default("NOVO LEAD"),
   origem: z
