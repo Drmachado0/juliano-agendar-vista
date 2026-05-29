@@ -97,8 +97,6 @@ serve(async (req: Request): Promise<Response> => {
 
     const messageId = result.messageId ?? null;
     const data = result.raw ?? null;
-
-    const messageId = data?.messageId ?? data?.id ?? null;
     console.log("[enviar-whatsapp] ✓ Mensagem enviada. messageId:", messageId);
 
     // Registrar no CRM (não bloqueia em caso de falha)
