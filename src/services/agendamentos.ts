@@ -483,7 +483,7 @@ export async function atualizarStatusCrm(
   return { error: null };
 }
 
-}
+
 
 // Reprocessar boas-vindas pendentes manualmente (admin)
 export async function reprocessarBoasVindas(): Promise<{
