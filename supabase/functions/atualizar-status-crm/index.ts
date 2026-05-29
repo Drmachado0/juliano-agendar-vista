@@ -15,6 +15,7 @@ const STATUS_VALIDOS = [
   "BELÉM",
   "PRECISA_DE_HUMANO",
   "ATENDIDO",
+  "YAG_LASER",
 ] as const;
 
 const BodySchema = z
