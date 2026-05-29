@@ -152,11 +152,18 @@ serve(async (req) => {
     camposAtualizados.push("observacoes_internas");
   }
 
-  // Promoção automática de status_funil (nunca rebaixa, nunca toca estados finais)
-  const FINAIS = new Set(["agendado", "compareceu", "faltou", "cancelado"]);
+  // Promoção automática de status_funil (nunca rebaixa, nunca toca estados finais nem yag_laser)
+  const FINAIS = new Set(["agendado", "compareceu", "faltou", "cancelado", "yag_laser"]);
   const statusAtual = ((match as any).status_funil as string) || "novo";
   let promocao: { de: string; para: string } | null = null;
-  if (!FINAIS.has(statusAtual)) {
+
+  // 0) YAG laser / limpeza de lente (Belém) — sobrescreve novo/em_conversa/aguardando_confirmacao
+  if (body.estado_atendimento === "yag_laser_belem" && statusAtual !== "yag_laser" && !["compareceu", "faltou", "cancelado"].includes(statusAtual)) {
+    updates.status_funil = "yag_laser";
+    updates.status_crm = "YAG_LASER";
+    camposAtualizados.push("status_funil", "status_crm");
+    promocao = { de: statusAtual, para: "yag_laser" };
+  } else if (!FINAIS.has(statusAtual)) {
     // 1) n8n sinalizou que está apresentando resumo para confirmação
     if (body.estado_atendimento === "aguardando_confirmacao" && statusAtual !== "aguardando_confirmacao") {
       updates.status_funil = "aguardando_confirmacao";
