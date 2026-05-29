@@ -1,10 +1,39 @@
 // ================================================================
 // supabase/functions/mcp-agendamento/index.ts
-// Versão corrigida — sem @supabase/mcp-utils, compatível com Deno
+// MCP HTTP server p/ agente n8n
 // ================================================================
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+// Determina status_crm pelo local (espelha lógica de criar-agendamento)
+function determineStatusCrmByLocation(local: string): string {
+  const l = (local || "").toLowerCase();
+  if (l.includes("clinicor")) return "CLINICOR";
+  if (l.includes("hgp") || l.includes("hospital geral")) return "HGP";
+  if (l.includes("belém") || l.includes("belem") || l.includes("iob") || l.includes("vitria")) return "BELÉM";
+  return "NOVO LEAD";
+}
+
+// Encontra lead existente SEM data marcada (últimos 8 dígitos do telefone)
+async function encontrarLeadSemData(telefone: string) {
+  const last8 = (telefone || "").replace(/\D/g, "").slice(-8);
+  if (last8.length < 8) return null;
+  const { data } = await supabaseAdmin
+    .from("agendamentos")
+    .select("id, telefone_whatsapp, data_agendamento, hora_agendamento, created_at, is_sandbox")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  const candidatos = (data ?? [])
+    .filter((a: any) => (a.telefone_whatsapp ?? "").replace(/\D/g, "").endsWith(last8))
+    .filter((a: any) => !a.is_sandbox)
+    .filter((a: any) => !a.data_agendamento || !a.hora_agendamento);
+  return candidatos[0] ?? null;
+}
 
 // ----------------------------------------------------------------
 // Helper: chama Edge Function do mesmo projeto
@@ -131,17 +160,129 @@ async function executeTool(
   }
 
   if (name === "criar_agendamento") {
-    return await callEdgeFunction("criar-agendamento", {
-      nome_completo:     args.nome_completo,
-      telefone_whatsapp: args.telefone_whatsapp,
-      tipo_atendimento:  args.tipo_atendimento ?? "Consulta",
-      local_atendimento: args.local_atendimento,
-      convenio:          args.convenio,
-      data_agendamento:  args.data_agendamento,
-      hora_agendamento:  args.hora_agendamento,
-      origem:            "mcp",
+    const telefone = String(args.telefone_whatsapp ?? "").trim();
+    const data_agendamento = String(args.data_agendamento ?? "");
+    const hora_agendamento = String(args.hora_agendamento ?? "");
+    const local_atendimento = String(args.local_atendimento ?? "");
+    const nome_completo = String(args.nome_completo ?? "").trim();
+    const convenio = String(args.convenio ?? "Particular");
+    const tipo_atendimento = String(args.tipo_atendimento ?? "Consulta");
+
+    if (!telefone || !data_agendamento || !hora_agendamento || !local_atendimento || !nome_completo) {
+      return { sucesso: false, motivo: "dados_incompletos" };
+    }
+
+    // 1) Valida disponibilidade
+    const validacao: any = await callEdgeFunction("validar-agendamento", {
+      data_agendamento,
+      hora_agendamento,
+      local_atendimento,
     });
+    if (!validacao?.disponivel) {
+      return { sucesso: false, motivo: "horario_indisponivel", detalhe: validacao?.motivo ?? null };
+    }
+
+    const status_crm = determineStatusCrmByLocation(local_atendimento);
+    const status_funil = "agendado";
+
+    // 2) Upsert: se já existe lead sem data, atualiza; senão cria
+    const leadExistente = await encontrarLeadSemData(telefone);
+
+    const patch: Record<string, unknown> = {
+      nome_completo,
+      telefone_whatsapp: telefone,
+      tipo_atendimento,
+      local_atendimento,
+      convenio,
+      data_agendamento,
+      hora_agendamento,
+      status_crm,
+      status_funil,
+      origem: "mcp",
+      updated_at: new Date().toISOString(),
+    };
+
+    let agendamentoId: string | null = null;
+
+    if (leadExistente) {
+      const { data: upd, error: updErr } = await supabaseAdmin
+        .from("agendamentos")
+        .update(patch)
+        .eq("id", leadExistente.id)
+        .select("id")
+        .single();
+      if (updErr) {
+        if ((updErr as any).code === "23505") {
+          return { sucesso: false, motivo: "horario_indisponivel" };
+        }
+        console.error("[mcp criar_agendamento] update err:", updErr);
+        return { sucesso: false, motivo: "erro_interno" };
+      }
+      agendamentoId = upd?.id ?? leadExistente.id;
+    } else {
+      const { data: ins, error: insErr } = await supabaseAdmin
+        .from("agendamentos")
+        .insert([patch])
+        .select("id")
+        .single();
+      if (insErr) {
+        if ((insErr as any).code === "23505") {
+          return { sucesso: false, motivo: "horario_indisponivel" };
+        }
+        console.error("[mcp criar_agendamento] insert err:", insErr);
+        return { sucesso: false, motivo: "erro_interno" };
+      }
+      agendamentoId = ins?.id ?? null;
+    }
+
+    // 3) Notificações best-effort (não bloqueia resposta ao agente)
+    const notifs = [
+      supabaseAdmin.functions.invoke("confirmar-agendamento-whatsapp", {
+        body: {
+          agendamento_data: {
+            nome_completo,
+            telefone_whatsapp: telefone,
+            tipo_atendimento,
+            local_atendimento,
+            data_agendamento,
+            hora_agendamento,
+            convenio,
+          },
+        },
+      }),
+      supabaseAdmin.functions.invoke("notificar-n8n", {
+        body: {
+          evento: "agendamento_criado",
+          dados_agendamento: {
+            id: agendamentoId,
+            nome_completo,
+            telefone_whatsapp: telefone,
+            tipo_atendimento,
+            local_atendimento,
+            convenio,
+            data_agendamento,
+            hora_agendamento,
+            status_crm,
+            origem: "mcp",
+          },
+        },
+      }),
+    ];
+    Promise.allSettled(notifs).catch(() => {});
+
+    return {
+      sucesso: true,
+      status: "confirmado",
+      agendamento_id: agendamentoId,
+      paciente: nome_completo,
+      data: data_agendamento,
+      hora: hora_agendamento,
+      local: local_atendimento,
+      convenio,
+      tipo_atendimento,
+    };
   }
+
 
   if (name === "listar_datas_disponiveis") {
     return await callEdgeFunction("listar-datas-disponiveis", {
