@@ -54,10 +54,13 @@ const KanbanCard = ({
   onToggleSandbox,
   isDragging,
   boasVindas,
+  ultimaMsgInAt,
+  onAfterReengajar,
 }: KanbanCardProps) => {
   const isLead = isLeadIncompleto(agendamento);
   const atendido = isAtendido(agendamento);
   const [historicoOpen, setHistoricoOpen] = useState(false);
+  const [reengajando, setReengajando] = useState(false);
   const { isComfortable } = useDensity();
 
   // Calcula tempo desde criação e tempo na fase atual
@@ -66,14 +69,77 @@ const KanbanCard = ({
   const diasDesdeCriacao = differenceInDays(new Date(), createdDate);
   const diasNaFase = differenceInDays(new Date(), updatedDate);
 
-  // Cor de urgência baseada em dias parado na fase (não aplicada para ATENDIDO)
-  const urgenciaColor = atendido
-    ? "border-l-muted-foreground/40"
-    : diasNaFase > 7
-    ? "border-l-red-500"
-    : diasNaFase > 2
-    ? "border-l-yellow-500"
-    : "border-l-emerald-500";
+  // SLA: tempo desde a última mensagem do PACIENTE (IN)
+  const horasDesdeUltimaIn = ultimaMsgInAt
+    ? differenceInHours(new Date(), new Date(ultimaMsgInAt))
+    : null;
+  const slaLevel: "normal" | "warm" | "cold" | null =
+    horasDesdeUltimaIn == null
+      ? null
+      : horasDesdeUltimaIn < 2
+      ? "normal"
+      : horasDesdeUltimaIn < 24
+      ? "warm"
+      : "cold";
+
+  // Cor da borda esquerda: SLA tem prioridade sobre dias na fase
+  const slaBorder =
+    slaLevel === "cold"
+      ? "border-l-red-500"
+      : slaLevel === "warm"
+      ? "border-l-yellow-500"
+      : null;
+  const urgenciaColor =
+    slaBorder ??
+    (atendido
+      ? "border-l-muted-foreground/40"
+      : diasNaFase > 7
+      ? "border-l-red-500"
+      : diasNaFase > 2
+      ? "border-l-yellow-500"
+      : "border-l-emerald-500");
+
+  // Bot vs Humano
+  const pausaAteMs = (agendamento as any).bot_pausado_ate
+    ? new Date((agendamento as any).bot_pausado_ate).getTime()
+    : 0;
+  const pausaVigente = pausaAteMs > Date.now();
+  const humanoAssumiu = (agendamento as any).bot_ativo === false || pausaVigente;
+
+  // Lead "não qualificado" (ghost): sem nome real
+  const naoQualificado =
+    !agendamento.nome_completo ||
+    agendamento.nome_completo.trim() === "" ||
+    agendamento.nome_completo.trim().toLowerCase() === "lead whatsapp";
+
+  // Reengajar
+  const ultimoFollowup = (agendamento as any).ultimo_followup_em as string | undefined;
+  const followupRecente =
+    !!ultimoFollowup &&
+    Date.now() - new Date(ultimoFollowup).getTime() < 24 * 60 * 60 * 1000;
+  const podeReengajar = slaLevel === "cold" && !humanoAssumiu && !followupRecente;
+  const motivoBloqueio = humanoAssumiu
+    ? "humano assumiu"
+    : followupRecente
+    ? "reengajado recentemente"
+    : null;
+
+  const telDigits = (agendamento.telefone_whatsapp || "").replace(/\D/g, "");
+  const waUrl = telDigits ? `https://wa.me/${telDigits}` : null;
+
+  const handleReengajar = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!podeReengajar || reengajando) return;
+    setReengajando(true);
+    const { success, error } = await reengajarLead(agendamento.id);
+    setReengajando(false);
+    if (success) {
+      toast.success("Mensagem de reengajamento enviada");
+      onAfterReengajar?.();
+    } else {
+      toast.error(error || "Não foi possível reengajar");
+    }
+  };
 
   return (
     <TooltipProvider delayDuration={200}>
