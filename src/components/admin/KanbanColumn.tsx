@@ -129,6 +129,8 @@ const KanbanColumn = ({
                 onTriggerAutomation={onTriggerAutomation}
                 onToggleSandbox={onToggleSandbox}
                 boasVindas={boasVindasMap?.[agendamento.id]}
+                ultimaMsgInAt={ultimasMsgsIn?.[agendamento.id]}
+                onAfterReengajar={onRefresh}
               />
             </div>
           ))
