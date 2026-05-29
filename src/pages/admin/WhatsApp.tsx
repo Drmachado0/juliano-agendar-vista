@@ -132,8 +132,8 @@ const AdminWhatsApp = () => {
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <EvolutionStatusBadge />
-              {botGlobalAtivo ? (
+            <div className="flex items-center gap-2 flex-wrap">
+
                 <Badge className="gap-1 bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40">
                   <Bot className="h-3 w-3" />
                   Automação ativa
