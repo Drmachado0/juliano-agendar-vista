@@ -210,7 +210,20 @@ const KanbanCard = ({
             </div>
             <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground/80">
               <Phone className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate">{agendamento.telefone_whatsapp}</span>
+              {waUrl ? (
+                <a
+                  href={waUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate hover:text-emerald-600 hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                  title="Abrir conversa no WhatsApp"
+                >
+                  {agendamento.telefone_whatsapp}
+                </a>
+              ) : (
+                <span className="truncate">{agendamento.telefone_whatsapp}</span>
+              )}
             </div>
           </div>
         </TooltipTrigger>
