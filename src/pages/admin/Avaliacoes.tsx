@@ -168,11 +168,12 @@ const Avaliacoes = () => {
   // Conexão Z-API é gerenciada externamente; assumimos conectado.
   const isWhatsAppConnected = true;
   const evolutionLoading = false;
-  const reconectar = async (): Promise<{ success: boolean; error?: string }> => ({
+  const reconectar = async (): Promise<{ success: boolean; error?: string; details?: string }> => ({
     success: false,
     error: "A conexão do WhatsApp agora é gerenciada no painel Z-API.",
   });
   const refreshEvolution = () => {};
+
 
   
   const [template, setTemplate] = useState(TEMPLATE_PADRAO);
