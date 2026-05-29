@@ -299,49 +299,41 @@ const AdminCRM = () => {
     e.preventDefault();
     setDragOverColumn(null);
 
-    if (!draggingAgendamento || draggingAgendamento.status_crm === newStatus) {
+    const ag = draggingAgendamento;
+    const oldStatus = ((ag as any)?.status_funil as string) || "novo";
+    if (!ag || oldStatus === newStatus) {
       setDraggingAgendamento(null);
       return;
     }
 
-    const oldStatus = draggingAgendamento.status_crm;
+    // Para cancelado/faltou pede motivo
+    let motivo: string | null = null;
+    if (newStatus === "cancelado" || newStatus === "faltou") {
+      const label = newStatus === "cancelado" ? "cancelamento" : "falta";
+      const input = window.prompt(`Motivo do ${label} (opcional):`, "");
+      motivo = input?.trim() || null;
+    }
 
     // Optimistic update
     setAgendamentosPorStatus((prev) => {
       const updated = { ...prev };
-      updated[oldStatus] = updated[oldStatus].filter((a) => a.id !== draggingAgendamento.id);
-      updated[newStatus] = [{ ...draggingAgendamento, status_crm: newStatus }, ...updated[newStatus]];
+      updated[oldStatus] = (updated[oldStatus] || []).filter((a) => a.id !== ag.id);
+      updated[newStatus] = [{ ...ag, status_funil: newStatus, motivo_status: motivo ?? (ag as any).motivo_status } as Agendamento, ...(updated[newStatus] || [])];
       return updated;
     });
 
-    // Update in database (com auditoria)
-    const { error } = await atualizarStatusCrm(draggingAgendamento.id, newStatus, oldStatus);
+    const { error } = await atualizarStatusFunil(ag.id, newStatus, oldStatus, motivo);
 
     if (error) {
-      // Revert on error
       setAgendamentosPorStatus((prev) => {
         const updated = { ...prev };
-        updated[newStatus] = updated[newStatus].filter((a) => a.id !== draggingAgendamento.id);
-        updated[oldStatus] = [draggingAgendamento, ...updated[oldStatus]];
+        updated[newStatus] = (updated[newStatus] || []).filter((a) => a.id !== ag.id);
+        updated[oldStatus] = [ag, ...(updated[oldStatus] || [])];
         return updated;
       });
-
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar o status.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "Não foi possível atualizar o status.", variant: "destructive" });
     } else {
-      toast({
-        title: "Status atualizado!",
-        description: `Movido para ${newStatus}`,
-      });
-
-      // Notify n8n about status change
-      await notificarN8n('status_crm_atualizado', {
-        ...draggingAgendamento,
-        status_crm: newStatus,
-      });
+      toast({ title: "Status atualizado!", description: `Movido para ${newStatus.replace(/_/g, " ")}` });
     }
 
     setDraggingAgendamento(null);
