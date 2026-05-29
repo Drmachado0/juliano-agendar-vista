@@ -391,7 +391,6 @@ const AdminCRM = () => {
     // Optimistic update
     setAgendamentosPorStatus((prev) => {
       const updated = { ...prev };
-      const { normalizeStatusFunil } = await import("@/hooks/useKanbanColumnsConfig");
       const col = normalizeStatusFunil((agendamento as any).status_funil);
       if (updated[col]) {
         updated[col] = updated[col].map((a) =>
