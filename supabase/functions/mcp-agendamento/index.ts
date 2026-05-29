@@ -1,10 +1,39 @@
 // ================================================================
 // supabase/functions/mcp-agendamento/index.ts
-// Versão corrigida — sem @supabase/mcp-utils, compatível com Deno
+// MCP HTTP server p/ agente n8n
 // ================================================================
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+// Determina status_crm pelo local (espelha lógica de criar-agendamento)
+function determineStatusCrmByLocation(local: string): string {
+  const l = (local || "").toLowerCase();
+  if (l.includes("clinicor")) return "CLINICOR";
+  if (l.includes("hgp") || l.includes("hospital geral")) return "HGP";
+  if (l.includes("belém") || l.includes("belem") || l.includes("iob") || l.includes("vitria")) return "BELÉM";
+  return "NOVO LEAD";
+}
+
+// Encontra lead existente SEM data marcada (últimos 8 dígitos do telefone)
+async function encontrarLeadSemData(telefone: string) {
+  const last8 = (telefone || "").replace(/\D/g, "").slice(-8);
+  if (last8.length < 8) return null;
+  const { data } = await supabaseAdmin
+    .from("agendamentos")
+    .select("id, telefone_whatsapp, data_agendamento, hora_agendamento, created_at, is_sandbox")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  const candidatos = (data ?? [])
+    .filter((a: any) => (a.telefone_whatsapp ?? "").replace(/\D/g, "").endsWith(last8))
+    .filter((a: any) => !a.is_sandbox)
+    .filter((a: any) => !a.data_agendamento || !a.hora_agendamento);
+  return candidatos[0] ?? null;
+}
 
 // ----------------------------------------------------------------
 // Helper: chama Edge Function do mesmo projeto
