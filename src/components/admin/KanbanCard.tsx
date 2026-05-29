@@ -30,6 +30,8 @@ interface KanbanCardProps {
   onToggleSandbox?: (agendamento: Agendamento) => void;
   isDragging?: boolean;
   boasVindas?: BoasVindasInfo;
+  ultimaMsgInAt?: string;
+  onAfterReengajar?: () => void;
 }
 
 // Verifica se é um lead incompleto (sem data/hora de agendamento)
