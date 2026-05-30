@@ -149,6 +149,34 @@ export const useGoogleTag = () => {
     });
   };
 
+  // Sucesso real do agendamento — disparado UMA vez por agendamento confirmado.
+  // Guarda contra duplicidade fica no caller (useRef no handler de submit).
+  // Dispara dois eventos: o do funil GA4 ({contexto}_appointment_success) e
+  // o google_ads_conversion (tag de conversão Google Ads já espera esse nome).
+  const trackAppointmentSuccess = (
+    pageType: AppointmentContext,
+    data?: { id?: string | null; appointmentType?: string; location?: string; value?: number },
+  ) => {
+    const value = data?.value ?? 300;
+    pushToDataLayer({
+      event: pageType === 'modal' ? 'modal_appointment_success' : 'lp_appointment_success',
+      step: 'appointment_success',
+      page_type: pageType,
+      appointment_id: data?.id ?? null,
+      appointment_type: data?.appointmentType,
+      location: data?.location,
+      appointment_value: value,
+      value,
+      currency: 'BRL',
+    });
+    pushToDataLayer({
+      event: 'google_ads_conversion',
+      conversion_label: 'agendamento_confirmado',
+      value,
+      currency: 'BRL',
+    });
+  };
+
   return {
     trackEvent,
     trackWhatsAppClick,
@@ -163,5 +191,7 @@ export const useGoogleTag = () => {
     trackFormStart,
     trackStepCompleted,
     trackAppointmentError,
+    trackAppointmentSuccess,
+
   };
 };
