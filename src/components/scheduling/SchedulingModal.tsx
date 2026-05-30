@@ -158,6 +158,18 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
       trackLeadGA('agendamento');
       trackFormSubmitConversion();
 
+      // Evento de sucesso real do agendamento (GA4 + Google Ads conversion).
+      // Guard impede dupla contagem em re-submits / re-renders.
+      if (!successFiredRef.current) {
+        successFiredRef.current = true;
+        trackAppointmentSuccess('modal', {
+          id: metaEventId ?? null,
+          appointmentType: formData.appointmentTypeName,
+          location: formData.locationName,
+        });
+      }
+
+
       // Meta Pixel tracking — passa agendamento.id como event_id para dedup com CAPI
       trackSchedule(formData.appointmentTypeName, formData.locationName, metaEventId);
       trackCompleteRegistration(formData.appointmentTypeName, formData.locationName, metaEventId);
