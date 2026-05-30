@@ -196,16 +196,6 @@ Deno.serve(async (req) => {
       .catch((e) => console.error('[criar-lead] notificar-n8n falhou:', e));
 
 
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim()
-      ?? req.headers.get('x-real-ip')
-      ?? '';
-    const userAgent = req.headers.get('user-agent') ?? '';
-    fireMetaCapiLead(
-      { id: lead.id, email: data.email?.trim() || null, telefone: phoneClean, nome: data.nome_completo },
-      data,
-      clientIp,
-      userAgent,
-    ).catch((e) => console.error('[criar-lead] Meta CAPI fire-and-forget error:', e));
 
     return new Response(
       JSON.stringify({ success: true, lead_id: lead.id }),
