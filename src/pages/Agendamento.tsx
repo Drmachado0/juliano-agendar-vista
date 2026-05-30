@@ -338,6 +338,17 @@ const Agendamento = () => {
       trackCompleteRegistration(formData.appointmentTypeName, formData.locationName, leadId);
       trackFormSubmitConversion();
 
+      // Evento de sucesso real do agendamento (GA4 + Google Ads conversion).
+      // Guard impede dupla contagem em re-submits / re-renders.
+      if (!successFiredRef.current) {
+        successFiredRef.current = true;
+        trackAppointmentSuccess('landing_agendamento', {
+          id: leadId ?? null,
+          appointmentType: formData.appointmentTypeName,
+          location: formData.locationName,
+        });
+      }
+
       pushDL({
         event: "lp_appointment_scheduled",
         page_type: "landing_agendamento",
@@ -346,6 +357,7 @@ const Agendamento = () => {
         value: 300,
         currency: "BRL",
       });
+
 
       // Renderiza SuccessStep inline (sem hard navigation) — preserva fbq async
       // pra terminar de enviar Lead/Schedule/CompleteRegistration ao Meta
