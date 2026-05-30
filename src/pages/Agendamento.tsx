@@ -126,8 +126,11 @@ const Agendamento = () => {
     trackFormStart,
     trackStepCompleted,
     trackAppointmentError,
+    trackAppointmentSuccess,
   } = useGoogleTag();
   const formStartFiredRef = useRef(false);
+  const successFiredRef = useRef(false);
+
 
   const totalSteps = 4;
 
