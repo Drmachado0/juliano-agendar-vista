@@ -67,9 +67,12 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
     trackFormStart,
     trackStepCompleted,
     trackAppointmentError,
+    trackAppointmentSuccess,
   } = useGoogleTag();
   const { trackViewContent, trackLead: trackLeadMeta, trackSchedule, trackCompleteRegistration } = useMetaPixel();
   const formStartFiredRef = useRef(false);
+  const successFiredRef = useRef(false);
+
 
   const totalSteps = 4;
 
