@@ -196,7 +196,7 @@ export default function StatusAgendamentoPage() {
                 </p>
               </div>
               <Button asChild variant="outline">
-                <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer">
+                <a href={waLinkBare} target="_blank" rel="noopener noreferrer">
                   <MessageCircle className="h-4 w-4 mr-2" />
                   Falar com a clínica
                 </a>
@@ -301,7 +301,7 @@ function StatusContent({ dados }: { dados: StatusAgendamento }) {
             Precisa reagendar, cancelar ou tem alguma dúvida?
           </p>
           <Button asChild size="lg" className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white">
-            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer">
+            <a href={waLinkBare} target="_blank" rel="noopener noreferrer">
               <MessageCircle className="h-5 w-5 mr-2" />
               Falar com a clínica no WhatsApp
             </a>
