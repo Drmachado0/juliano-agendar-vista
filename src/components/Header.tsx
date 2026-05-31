@@ -14,6 +14,7 @@ const Header = () => {
   const { user, isAdmin } = useAuth();
   const { trackWhatsAppClick, trackCTAClick } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
+  const { waLinkBare, display } = (require("@/hooks/useSiteWhatsApp") as typeof import("@/hooks/useSiteWhatsApp")).useSiteWhatsApp();
 
   const navItems = [
     { label: "Sobre", id: "sobre" },
