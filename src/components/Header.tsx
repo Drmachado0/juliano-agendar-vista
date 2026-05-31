@@ -1,6 +1,7 @@
 import { Menu, X, Settings, LogIn, CalendarCheck, Phone } from "lucide-react";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
+import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
@@ -14,7 +15,7 @@ const Header = () => {
   const { user, isAdmin } = useAuth();
   const { trackWhatsAppClick, trackCTAClick } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
-  const { waLinkBare, display } = (require("@/hooks/useSiteWhatsApp") as typeof import("@/hooks/useSiteWhatsApp")).useSiteWhatsApp();
+  const { waLinkBare, display } = useSiteWhatsApp();
 
   const navItems = [
     { label: "Sobre", id: "sobre" },
@@ -128,11 +129,11 @@ const Header = () => {
           {/* Mobile Actions */}
           <div className="flex md:hidden items-center gap-1.5">
             <a
-              href="https://wa.me/5591980690617"
+              href={waLinkBare}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => {
-                trackWhatsAppClick('https://wa.me/5591980690617', '(91) 98069-0617', 'whatsapp_header', 'header_top');
+                trackWhatsAppClick(waLinkBare, display, 'whatsapp_header', 'header_top');
                 trackMetaContact('WhatsApp');
               }}
               className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"

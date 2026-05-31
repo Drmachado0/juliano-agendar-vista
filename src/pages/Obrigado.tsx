@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
+import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 
 const DEDUP_STORAGE_KEY = "obrigado_tracking_fired_v1";
 
 const Obrigado = () => {
   const { trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
+  const { waLink } = useSiteWhatsApp();
 
   useEffect(() => {
     const fireObrigadoTracking = () => {
@@ -160,12 +162,13 @@ const Obrigado = () => {
         </div>
 
         <a
-          href="https://wa.me/5591980690617?text=Ol%C3%A1!%20Acabei%20de%20agendar%20minha%20consulta%20com%20o%20Dr.%20Juliano%20Machado."
+          href={waLink("Olá! Acabei de agendar minha consulta com o Dr. Juliano Machado.")}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => {
+            const url = waLink("Olá! Acabei de agendar minha consulta com o Dr. Juliano Machado.");
             trackWhatsAppClick(
-              'https://wa.me/5591980690617?text=Ol%C3%A1!%20Acabei%20de%20agendar%20minha%20consulta%20com%20o%20Dr.%20Juliano%20Machado.',
+              url,
               'Falar pelo WhatsApp',
               'whatsapp_obrigado',
               'obrigado_page'
