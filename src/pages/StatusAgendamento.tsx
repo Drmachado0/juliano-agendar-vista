@@ -216,6 +216,7 @@ export default function StatusAgendamentoPage() {
 }
 
 function StatusContent({ dados }: { dados: StatusAgendamento }) {
+  const { waLinkBare } = useSiteWhatsApp();
   const statusInfo = classificarStatus(dados);
   const { Icon } = statusInfo;
 
