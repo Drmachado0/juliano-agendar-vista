@@ -41,7 +41,7 @@ export const useGoogleTag = () => {
     });
   };
 
-  const trackPhoneClick = (linkUrl: string = 'tel:+5591980690617') => {
+  const trackPhoneClick = (linkUrl: string = 'tel:+5591936180476') => {
     pushToDataLayer({
       event: 'phone_click',
       link_url: linkUrl,
