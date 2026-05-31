@@ -2,7 +2,7 @@
 // O número é dinâmico (lido de site_config), mas mantemos uma constante
 // de fallback para uso enquanto o fetch inicial não retornou e para SSR/SEO.
 
-export const DEFAULT_WHATSAPP_RAW = "5591980690617";
+export const DEFAULT_WHATSAPP_RAW = "5591936180476";
 
 const DEFAULT_TEXT =
   "Olá! Gostaria de agendar uma consulta oftalmológica com o Dr. Juliano Machado.";

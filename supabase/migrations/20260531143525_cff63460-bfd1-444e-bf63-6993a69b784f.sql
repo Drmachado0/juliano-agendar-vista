@@ -1,0 +1,1 @@
+UPDATE public.site_config SET whatsapp_number = '5591936180476', updated_at = now() WHERE id = true;
