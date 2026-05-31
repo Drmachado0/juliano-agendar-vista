@@ -19,7 +19,7 @@ const Index = () => {
     "medicalSpecialty": "Ophthalmology",
     "url": "https://drjulianomachado.com",
     "image": "https://drjulianomachado.com/og-image.jpg",
-    "telephone": "+5591991150174",
+    "telephone": "+5591980690617",
     "priceRange": "$$",
     "address": [
       {
