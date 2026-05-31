@@ -62,6 +62,7 @@ import TemplatesWhatsAppTab from "@/components/admin/TemplatesWhatsAppTab";
 import EnvioConfigCard from "@/components/admin/EnvioConfigCard";
 import VariacoesLembreteAnualCard from "@/components/admin/VariacoesLembreteAnualCard";
 import ZapiStatusCard from "@/components/admin/ZapiStatusCard";
+import WhatsAppNumberCard from "@/components/admin/WhatsAppNumberCard";
 
 import { sincronizarAvaliacoesManualmente } from "@/services/avaliacoesGoogle";
 
@@ -578,7 +579,8 @@ export default function Configuracoes() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="zapi" className="mt-6">
+          <TabsContent value="zapi" className="mt-6 space-y-6">
+            <WhatsAppNumberCard />
             <ZapiStatusCard />
           </TabsContent>
 
