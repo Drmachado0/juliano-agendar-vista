@@ -1541,6 +1541,27 @@ export type Database = {
         }
         Relationships: []
       }
+      site_config: {
+        Row: {
+          id: boolean
+          updated_at: string
+          updated_by: string | null
+          whatsapp_number: string
+        }
+        Insert: {
+          id?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          whatsapp_number?: string
+        }
+        Update: {
+          id?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          whatsapp_number?: string
+        }
+        Relationships: []
+      }
       status_acesso_log: {
         Row: {
           agendamento_id: string
