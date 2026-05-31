@@ -25,6 +25,7 @@ import { criarLead, converterLeadEmAgendamento } from "@/services/leads";
 import { notificarN8n } from "@/services/integracoes";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
+import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import drJulianoHero from "@/assets/dr-juliano-hero.jpg";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
@@ -92,8 +93,8 @@ const initialFormData: FormData = {
   acceptNotifications: true,
 };
 
-const WHATSAPP_URL =
-  "https://wa.me/5591980690617?text=Ol%C3%A1%21+Gostaria+de+agendar+uma+consulta+oftalmol%C3%B3gica+com+o+Dr.+Juliano+Machado.";
+const WHATSAPP_DEFAULT_MSG =
+  "Olá! Gostaria de agendar uma consulta oftalmológica com o Dr. Juliano Machado.";
 
 const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "fbclid"];
 
@@ -128,6 +129,8 @@ const Agendamento = () => {
     trackAppointmentError,
     trackAppointmentSuccess,
   } = useGoogleTag();
+  const { waLink } = useSiteWhatsApp();
+  const WHATSAPP_URL = waLink(WHATSAPP_DEFAULT_MSG);
   const formStartFiredRef = useRef(false);
   const successFiredRef = useRef(false);
 

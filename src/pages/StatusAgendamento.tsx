@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 
 interface StatusAgendamento {
   id: string;
@@ -119,10 +120,9 @@ function formatarHora(h: string): string {
   return h.slice(0, 5);
 }
 
-const WHATSAPP_NUMBER = "5591980690617";
-
 export default function StatusAgendamentoPage() {
   const { id } = useParams<{ id: string }>();
+  const { waLinkBare } = useSiteWhatsApp();
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [dados, setDados] = useState<StatusAgendamento | null>(null);
@@ -196,7 +196,7 @@ export default function StatusAgendamentoPage() {
                 </p>
               </div>
               <Button asChild variant="outline">
-                <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer">
+                <a href={waLinkBare} target="_blank" rel="noopener noreferrer">
                   <MessageCircle className="h-4 w-4 mr-2" />
                   Falar com a clínica
                 </a>
@@ -216,6 +216,7 @@ export default function StatusAgendamentoPage() {
 }
 
 function StatusContent({ dados }: { dados: StatusAgendamento }) {
+  const { waLinkBare } = useSiteWhatsApp();
   const statusInfo = classificarStatus(dados);
   const { Icon } = statusInfo;
 
@@ -301,7 +302,7 @@ function StatusContent({ dados }: { dados: StatusAgendamento }) {
             Precisa reagendar, cancelar ou tem alguma dúvida?
           </p>
           <Button asChild size="lg" className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white">
-            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer">
+            <a href={waLinkBare} target="_blank" rel="noopener noreferrer">
               <MessageCircle className="h-5 w-5 mr-2" />
               Falar com a clínica no WhatsApp
             </a>

@@ -3,12 +3,14 @@ import { Link } from "react-router-dom";
 import logoImage from "@/assets/dr-juliano-logo.webp";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
+import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import { openPreferences } from "@/lib/consent";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const { trackWhatsAppClick } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
+  const { waLinkBare, display } = useSiteWhatsApp();
 
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -87,17 +89,17 @@ const Footer = () => {
             <h4 className="text-foreground font-semibold text-sm mb-4 font-sans border-b border-primary/20 pb-2 inline-block">Contato</h4>
             <div className="space-y-3">
               <a
-                href="https://wa.me/5591980690617"
+                href={waLinkBare}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
-                  trackWhatsAppClick('https://wa.me/5591980690617', '(91) 98069-0617', 'whatsapp_footer_contact', 'footer_contact');
+                  trackWhatsAppClick(waLinkBare, display, 'whatsapp_footer_contact', 'footer_contact');
                   trackMetaContact('WhatsApp');
                 }}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <MessageCircle className="w-4 h-4 text-primary" />
-                (91) 98069-0617
+                {display}
               </a>
               <a
                 href="https://www.instagram.com/drjulianomachado.oftalmo/"
@@ -170,11 +172,11 @@ const Footer = () => {
               <Instagram className="w-4 h-4" />
             </a>
             <a
-              href="https://wa.me/5591980690617"
+              href={waLinkBare}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => {
-                trackWhatsAppClick('https://wa.me/5591980690617', 'WhatsApp Footer Social', 'whatsapp_footer_social', 'footer_social');
+                trackWhatsAppClick(waLinkBare, 'WhatsApp Footer Social', 'whatsapp_footer_social', 'footer_social');
                 trackMetaContact('WhatsApp');
               }}
               className="text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-300"

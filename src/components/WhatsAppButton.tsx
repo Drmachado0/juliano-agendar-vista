@@ -3,10 +3,12 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 
 const WhatsAppButton = () => {
   const { trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
   const { trackContact: trackMetaContact, generateEventId } = useMetaPixel();
+  const { waLink } = useSiteWhatsApp();
 
   // Dispara CAPI server-side para WhatsApp Contact (sem agendamento.id — usa UUID + cookies)
   const fireMetaCapiContact = async (eventId: string) => {
@@ -47,7 +49,7 @@ const WhatsAppButton = () => {
   const [show, setShow] = useState(false);
   const [pulseReady, setPulseReady] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
-  const whatsappUrl = "https://wa.me/5591980690617?text=Ol%C3%A1%21%20Gostaria%20de%20agendar%20uma%20consulta%20oftalmol%C3%B3gica%20com%20o%20Dr.%20Juliano%20Machado.";
+  const whatsappUrl = waLink("Olá! Gostaria de agendar uma consulta oftalmológica com o Dr. Juliano Machado.");
 
   useEffect(() => {
     const showTimer = setTimeout(() => setShow(true), 3000);

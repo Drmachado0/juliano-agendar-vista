@@ -5,10 +5,12 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, ArrowLeft } from "lucide-react";
 import { openPreferences } from "@/lib/consent";
+import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 
 const ULTIMA_ATUALIZACAO = "02 de maio de 2026";
 
 export default function PoliticaPrivacidade() {
+  const { waLinkBare, display } = useSiteWhatsApp();
   return (
     <>
       <Helmet>
@@ -67,12 +69,12 @@ export default function PoliticaPrivacidade() {
                 <br />
                 Contato:{" "}
                   <a
-                    href="https://wa.me/5591980690617"
+                    href={waLinkBare}
                     className="text-primary hover:underline"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    WhatsApp +55 (91) 98069-0617
+                    {`WhatsApp +55 ${display}`}
                   </a>
                 .
               </p>
@@ -82,12 +84,12 @@ export default function PoliticaPrivacidade() {
               <p>
                 Solicitações relativas a dados pessoais podem ser enviadas pelo WhatsApp{" "}
                   <a
-                    href="https://wa.me/5591980690617"
+                    href={waLinkBare}
                     className="text-primary hover:underline"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    +55 (91) 98069-0617
+                    {`+55 ${display}`}
                   </a>
                 , identificando o assunto como “LGPD”.
               </p>
@@ -172,12 +174,12 @@ export default function PoliticaPrivacidade() {
               <p className="mt-2">
                 Para exercer qualquer direito, entre em contato pelo{" "}
                 <a
-                  href="https://wa.me/5591980690617"
+                  href={waLinkBare}
                   className="text-primary hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  WhatsApp +55 (91) 98069-0617
+                  {`WhatsApp +55 ${display}`}
                 </a>
                 .
               </p>

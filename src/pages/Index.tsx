@@ -9,7 +9,10 @@ import InsuranceSection from "@/components/InsuranceSection";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import Footer from "@/components/Footer";
 
+import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
+
 const Index = () => {
+  const { raw: waRaw } = useSiteWhatsApp();
   // Structured data for SEO
   const structuredData = {
     "@context": "https://schema.org",
@@ -19,7 +22,7 @@ const Index = () => {
     "medicalSpecialty": "Ophthalmology",
     "url": "https://drjulianomachado.com",
     "image": "https://drjulianomachado.com/og-image.jpg",
-    "telephone": "+5591980690617",
+    "telephone": `+${waRaw}`,
     "priceRange": "$$",
     "address": [
       {

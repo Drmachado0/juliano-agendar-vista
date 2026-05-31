@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CalendarCheck, Phone, Clock, ArrowRight } from "lucide-react";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
+import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 
 import logoBradesco from "@/assets/convenios/bradesco-saude.png";
 import logoSulamerica from "@/assets/convenios/sulamerica.png";
@@ -15,6 +16,7 @@ import logoParticular from "@/assets/convenios/particular.png";
 const InsuranceSection = () => {
   const { trackCTAClick, trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
+  const { waLink } = useSiteWhatsApp();
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
 
@@ -115,12 +117,13 @@ const InsuranceSection = () => {
                   </Button>
                 </Link>
                 <a
-                  href="https://wa.me/5591980690617?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consulta%20com%20o%20Dr.%20Juliano%20Machado."
+                  href={waLink("Olá! Gostaria de agendar uma consulta com o Dr. Juliano Machado.")}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => {
+                    const url = waLink("Olá! Gostaria de agendar uma consulta com o Dr. Juliano Machado.");
                     trackWhatsAppClick(
-                      'https://wa.me/5591980690617?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consulta%20com%20o%20Dr.%20Juliano%20Machado.',
+                      url,
                       'Falar no WhatsApp',
                       'whatsapp_convenios_cta',
                       'convenios_section'
