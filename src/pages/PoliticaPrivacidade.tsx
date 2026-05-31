@@ -5,10 +5,12 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, ArrowLeft } from "lucide-react";
 import { openPreferences } from "@/lib/consent";
+import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 
 const ULTIMA_ATUALIZACAO = "02 de maio de 2026";
 
 export default function PoliticaPrivacidade() {
+  const { waLinkBare, display } = useSiteWhatsApp();
   return (
     <>
       <Helmet>
