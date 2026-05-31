@@ -129,6 +129,8 @@ const Agendamento = () => {
     trackAppointmentError,
     trackAppointmentSuccess,
   } = useGoogleTag();
+  const { waLink } = useSiteWhatsApp();
+  const WHATSAPP_URL = waLink(WHATSAPP_DEFAULT_MSG);
   const formStartFiredRef = useRef(false);
   const successFiredRef = useRef(false);
 

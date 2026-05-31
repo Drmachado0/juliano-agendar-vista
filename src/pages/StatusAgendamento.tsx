@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 
 interface StatusAgendamento {
   id: string;
@@ -119,10 +120,9 @@ function formatarHora(h: string): string {
   return h.slice(0, 5);
 }
 
-const WHATSAPP_NUMBER = "5591980690617";
-
 export default function StatusAgendamentoPage() {
   const { id } = useParams<{ id: string }>();
+  const { waLinkBare } = useSiteWhatsApp();
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [dados, setDados] = useState<StatusAgendamento | null>(null);
