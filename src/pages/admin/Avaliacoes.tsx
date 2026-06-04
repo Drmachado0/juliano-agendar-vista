@@ -1664,43 +1664,15 @@ const Avaliacoes = () => {
                     </Button>
 
 
-                    {/* Botão de verificação WhatsApp */}
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={verificarNumerosWhatsApp}
-                            disabled={verificandoWhatsApp || enviandoLote || !isWhatsAppConnected}
-                            className="text-emerald-600 border-emerald-500/50 hover:bg-emerald-500/10"
-                          >
-                            {verificandoWhatsApp ? (
-                              <>
-                                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                Verificando...
-                              </>
-                            ) : !isWhatsAppConnected ? (
-                              <>
-                                <WifiOff className="h-3.5 w-3.5 mr-1.5" />
-                                WhatsApp Offline
-                              </>
-                            ) : (
-                              <>
-                                <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
-                                Verificar WhatsApp
-                              </>
-                            )}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {!isWhatsAppConnected 
-                            ? "Reconecte o WhatsApp para verificar números"
-                            : "Verifica quais números existem no WhatsApp antes de enviar"
-                          }
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    {/* Botão de verificação WhatsApp — DESATIVADO
+                        Dependia da Z-API (phone-exists). ManyChat não expõe
+                        equivalente público. Mantido oculto até definirmos
+                        nova estratégia de verificação. */}
+                    {false && (
+                      <Button variant="outline" size="sm" onClick={verificarNumerosWhatsApp}>
+                        Verificar WhatsApp
+                      </Button>
+                    )}
                     
                     {/* Botão para remover inválidos */}
                     {verificacaoConcluida && contarNumerosVerificados().invalidos > 0 && (

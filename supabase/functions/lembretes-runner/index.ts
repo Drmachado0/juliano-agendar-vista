@@ -7,10 +7,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import {
-  sendWhatsappTextMessage,
   normalizePhoneNumber,
   sanitizePayload,
 } from "../_shared/evolutionApiClient.ts";
+import { enviarFlowManyChat } from "../_shared/manychat.ts";
 import { podeEnviarOutbound, LIMITES_PADRAO, logarBloqueioRateLimit } from "../_shared/rateLimitOutbound.ts";
 
 const corsHeaders = {
@@ -320,9 +320,18 @@ async function processarPacientes(
       await logarBloqueioRateLimit(supabase, 'lembretes-runner', pac.telefone, null, rl);
     } else {
       try {
-        result = await sendWhatsappTextMessage(pac.telefone, mensagem);
-        success = !!result.success;
-        if (!success) errMsg = result.errorMessage || "envio_falhou";
+        const flowNs = Deno.env.get("MANYCHAT_FLOW_NS_LEMBRETE_ANUAL") || "";
+        if (!flowNs) {
+          errMsg = "config_faltando: MANYCHAT_FLOW_NS_LEMBRETE_ANUAL não definido";
+        } else {
+          result = await enviarFlowManyChat(
+            pac.telefone,
+            flowNs,
+            pac.primeiro_nome || pac.nome || undefined,
+          );
+          success = !!result.success;
+          if (!success) errMsg = result.errorMessage || "envio_falhou";
+        }
       } catch (e: any) {
         errMsg = e?.message || "exception";
       }
