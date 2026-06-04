@@ -84,9 +84,9 @@ serve(async (req) => {
   }
 
   // 2.5) Captura de lead no 1º contato: se não existe agendamento/lead p/ esse telefone, cria um ghost lead
+  const nomeContato = (body.nome_contato ?? "").trim();
   let leadCriadoAgora = false;
   if (!agendamentoId && last8.length >= 8) {
-    const nomeContato = (body.nome_contato ?? "").trim();
     const insertLead = {
       nome_completo: nomeContato.length > 0 ? nomeContato : "Lead WhatsApp",
       telefone_whatsapp: telefoneNormalizado,
@@ -120,6 +120,33 @@ serve(async (req) => {
       leadCriadoAgora = true;
     }
   }
+
+  // 2.6) Backfill de nome: se o lead já existe como "Lead WhatsApp" (placeholder)
+  // e desta vez o n8n mandou um nome real, atualiza o cadastro.
+  if (
+    agendamentoId &&
+    !leadCriadoAgora &&
+    nomeContato.length > 1 &&
+    !/^lead\s*whatsapp$/i.test(nomeContato)
+  ) {
+    const { data: atual } = await supabase
+      .from("agendamentos")
+      .select("nome_completo")
+      .eq("id", agendamentoId)
+      .maybeSingle();
+    const nomeAtual = (atual?.nome_completo ?? "").trim();
+    const ehPlaceholder =
+      !nomeAtual ||
+      /^lead\s*whatsapp$/i.test(nomeAtual) ||
+      /^paciente$/i.test(nomeAtual);
+    if (ehPlaceholder) {
+      await supabase
+        .from("agendamentos")
+        .update({ nome_completo: nomeContato })
+        .eq("id", agendamentoId);
+    }
+  }
+
 
   // 3) Idempotência: se mensagem_externa_id já existe, retorna duplicada
   if (body.mensagem_externa_id) {
