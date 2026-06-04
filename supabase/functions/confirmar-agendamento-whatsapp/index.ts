@@ -3,15 +3,15 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { gerarMensagemDoTemplate, formatarData, formatarHora } from "../_shared/templateRenderer.ts";
-import { sendWhatsappTextMessage } from "../_shared/evolutionApiClient.ts";
-
+import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
+import { isBotPaused, isKnownInvalidWhatsapp } from "../_shared/whatsappGuards.ts";
+import { podeEnviarOutbound, LIMITES_PADRAO } from "../_shared/rateLimitOutbound.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Schema de validação - aceita agendamento_id OU agendamento_data diretamente
 const requestSchemaById = z.object({
   agendamento_id: z.string().uuid(),
 });
@@ -24,6 +24,7 @@ const agendamentoDataSchema = z.object({
   data_agendamento: z.string().min(1),
   hora_agendamento: z.string().min(1),
   convenio: z.string().optional(),
+  data_nascimento: z.string().optional().nullable(),
 });
 
 const requestSchemaByData = z.object({
@@ -32,177 +33,200 @@ const requestSchemaByData = z.object({
 
 function formatarTelefone(telefone: string): string {
   const apenasNumeros = telefone.replace(/\D/g, '');
-  if (apenasNumeros.startsWith('55')) {
-    return apenasNumeros;
-  }
+  if (apenasNumeros.startsWith('55')) return apenasNumeros;
   return '55' + apenasNumeros;
 }
 
+function primeiroNome(nome: string): string {
+  return (nome || '').trim().split(/\s+/)[0] || '';
+}
+
 serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
     const body = await req.json();
     console.log('[ConfirmarWhatsApp] Recebido pedido:', JSON.stringify(body));
 
-    // Criar cliente Supabase
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
 
-    let agendamentoData: {
-      nome_completo: string;
-      telefone_whatsapp: string;
-      tipo_atendimento?: string;
-      local_atendimento: string;
-      data_agendamento: string;
-      hora_agendamento: string;
-      aceita_contato_whatsapp_email?: boolean;
-    };
+    let agendamentoData: any;
     let agendamentoId: string | null = null;
 
-    // Tentar primeiro com agendamento_data (para chamadas do formulário público)
     const byDataResult = requestSchemaByData.safeParse(body);
-    
     if (byDataResult.success) {
-      // Dados passados diretamente - não precisa buscar do banco
       agendamentoData = {
         ...byDataResult.data.agendamento_data,
-        aceita_contato_whatsapp_email: true, // Assume true when data is passed directly
+        aceita_contato_whatsapp_email: true,
       };
-      console.log('[ConfirmarWhatsApp] Usando dados diretos para:', agendamentoData.nome_completo);
     } else {
-      // Tentar com agendamento_id (para chamadas do admin ou outras)
       const byIdResult = requestSchemaById.safeParse(body);
-      
       if (!byIdResult.success) {
-        console.error('[ConfirmarWhatsApp] Dados inválidos:', byDataResult.error, byIdResult.error);
         return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'Dados inválidos: forneça agendamento_id ou agendamento_data' 
-          }),
+          JSON.stringify({ success: false, error: 'Dados inválidos: forneça agendamento_id ou agendamento_data' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
       agendamentoId = byIdResult.data.agendamento_id;
-      console.log('[ConfirmarWhatsApp] Buscando agendamento por ID:', agendamentoId);
-
-      // Buscar dados do agendamento
       const { data: agendamento, error: fetchError } = await supabase
-        .from('agendamentos')
-        .select('*')
-        .eq('id', agendamentoId)
-        .single();
-
+        .from('agendamentos').select('*').eq('id', agendamentoId).single();
       if (fetchError || !agendamento) {
-        console.error('[ConfirmarWhatsApp] Erro ao buscar agendamento:', fetchError);
         return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'Agendamento não encontrado' 
-          }),
+          JSON.stringify({ success: false, error: 'Agendamento não encontrado' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
       agendamentoData = agendamento;
-      console.log('[ConfirmarWhatsApp] Agendamento encontrado:', agendamento.nome_completo);
     }
 
-    // Verificar se aceita contato WhatsApp (skip check if data was passed directly)
     if (agendamentoId && agendamentoData.aceita_contato_whatsapp_email === false) {
-      console.log('[ConfirmarWhatsApp] Paciente não aceita contato WhatsApp');
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Paciente não aceita contato por WhatsApp',
-          skipped: true 
-        }),
+        JSON.stringify({ success: true, message: 'Paciente não aceita contato por WhatsApp', skipped: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Formatar telefone e gerar mensagem do template
+    // ===== Guards (mantidos) =====
+    const liberado = await envioAutomaticoLiberado(supabase);
+    if (!liberado.liberado) {
+      console.log('[ConfirmarWhatsApp] Envios bloqueados:', liberado.motivo);
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, motivo: liberado.motivo }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (agendamentoId && isBotPaused(agendamentoData)) {
+      console.log('[ConfirmarWhatsApp] Bot pausado para esse agendamento');
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, motivo: 'bot_pausado' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const telefoneFormatado = formatarTelefone(agendamentoData.telefone_whatsapp);
 
-    // Buscar template do banco e renderizar
+    if (await isKnownInvalidWhatsapp(supabase, telefoneFormatado)) {
+      console.log('[ConfirmarWhatsApp] Número marcado como sem WhatsApp');
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, motivo: 'sem_whatsapp' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const rate = await podeEnviarOutbound(supabase, telefoneFormatado, [
+      LIMITES_PADRAO.confirmacao,
+      LIMITES_PADRAO.global_burst,
+    ]);
+    if (!rate.ok) {
+      console.log('[ConfirmarWhatsApp] Rate limit:', rate.motivo);
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, motivo: rate.motivo }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ===== Render do template (mantido) =====
+    const dataFmt = formatarData(agendamentoData.data_agendamento);
+    const horaFmt = formatarHora(agendamentoData.hora_agendamento);
+    const linkStatus = agendamentoId ? `https://drjulianomachado.com/status/${agendamentoId}` : undefined;
+
     const mensagem = await gerarMensagemDoTemplate('confirmacao_agendamento', {
       nome: agendamentoData.nome_completo,
-      data: formatarData(agendamentoData.data_agendamento),
-      hora: formatarHora(agendamentoData.hora_agendamento),
+      data: dataFmt,
+      hora: horaFmt,
       local: agendamentoData.local_atendimento,
       tipo_atendimento: agendamentoData.tipo_atendimento,
-      link_status: agendamentoId ? `https://drjulianomachado.com/status/${agendamentoId}` : undefined,
+      link_status: linkStatus,
     });
 
-    console.log('[ConfirmarWhatsApp] Enviando via Z-API para:', telefoneFormatado);
-
-    // Enviar via Z-API (helper compartilhado)
-    const sendResult = await sendWhatsappTextMessage(telefoneFormatado, mensagem);
-
-    if (!sendResult.success) {
-      throw new Error(`Z-API error: ${sendResult.errorMessage}`);
-    }
-    const evolutionResult: any = sendResult.rawResponse ?? {};
-
-
-    // Salvar mensagem no banco (sem agendamento_id se não temos)
-    const { error: msgError } = await supabase
-      .from('mensagens_whatsapp')
-      .insert({
-        agendamento_id: agendamentoId, // Pode ser null
-        telefone: agendamentoData.telefone_whatsapp,
-        direcao: 'OUT',
-        conteudo: mensagem,
-        status_envio: 'enviado',
-        tipo_mensagem: 'confirmacao_automatica',
-        mensagem_externa_id: sendResult.messageId ?? evolutionResult?.key?.id ?? null,
-
-      });
-
-    if (msgError) {
-      console.error('[ConfirmarWhatsApp] Erro ao salvar mensagem:', msgError);
-    } else {
-      console.log('[ConfirmarWhatsApp] Mensagem salva com sucesso');
-    }
-
-    // Atualizar agendamento com confirmacao_enviada = true (apenas se temos o ID)
-    if (agendamentoId) {
-      const { error: updateError } = await supabase
-        .from('agendamentos')
-        .update({ confirmacao_enviada: true })
-        .eq('id', agendamentoId);
-
-      if (updateError) {
-        console.error('[ConfirmarWhatsApp] Erro ao atualizar agendamento:', updateError);
+    // ===== Envio via n8n (ManyChat) =====
+    const webhookUrl = Deno.env.get('N8N_WEBHOOK_CONFIRMACAO');
+    if (!webhookUrl) {
+      console.error('[ConfirmarWhatsApp] N8N_WEBHOOK_CONFIRMACAO não configurado');
+      if (agendamentoId) {
+        await supabase.from('agendamentos').update({
+          confirmation_status: 'falha_envio',
+          confirmation_sent_at: new Date().toISOString(),
+        }).eq('id', agendamentoId);
       }
+      return new Response(
+        JSON.stringify({ success: false, error: 'Webhook n8n não configurado' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    console.log('[ConfirmarWhatsApp] ✅ Confirmação enviada com sucesso!');
+    const nascimentoFmt = agendamentoData.data_nascimento
+      ? formatarData(agendamentoData.data_nascimento)
+      : '';
 
+    const payload = {
+      event_id: `${agendamentoId ?? 'sem_id'}:confirmacao_imediata`,
+      agendamento_id: agendamentoId,
+      telefone: telefoneFormatado,
+      nome: agendamentoData.nome_completo,
+      primeiro_nome: primeiroNome(agendamentoData.nome_completo),
+      data: dataFmt,
+      hora: horaFmt,
+      local: agendamentoData.local_atendimento,
+      tipo: agendamentoData.tipo_atendimento ?? '',
+      convenio: agendamentoData.convenio ?? '',
+      nascimento: nascimentoFmt,
+      link_status: linkStatus ?? '',
+      mensagem,
+    };
+
+    console.log('[ConfirmarWhatsApp] POST → n8n', payload.event_id);
+
+    let n8nOk = false;
+    let n8nStatus = 0;
+    let n8nBody = '';
+    try {
+      const resp = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      n8nStatus = resp.status;
+      n8nBody = await resp.text().catch(() => '');
+      n8nOk = resp.ok;
+    } catch (e) {
+      console.error('[ConfirmarWhatsApp] Erro POST n8n:', e);
+    }
+
+    if (!n8nOk) {
+      console.error('[ConfirmarWhatsApp] n8n falhou:', n8nStatus, n8nBody);
+      if (agendamentoId) {
+        await supabase.from('agendamentos').update({
+          confirmation_status: 'falha_envio',
+          confirmation_sent_at: new Date().toISOString(),
+        }).eq('id', agendamentoId);
+      }
+      return new Response(
+        JSON.stringify({ success: false, error: `n8n retornou ${n8nStatus}` }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Sucesso no POST: NÃO marca como enviado — n8n confirma via n8n-registrar-envio.
+    console.log('[ConfirmarWhatsApp] ✅ Disparado para n8n (aguardando callback)');
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Confirmação enviada com sucesso',
+      JSON.stringify({
+        success: true,
+        message: 'Disparado para n8n; aguardando callback de envio',
         telefone: telefoneFormatado,
-        mensagem_id: evolutionResult?.key?.id 
+        event_id: payload.event_id,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('[ConfirmarWhatsApp] Erro:', error);
-    
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Erro desconhecido' 
-      }),
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

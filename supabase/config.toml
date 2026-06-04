@@ -108,5 +108,13 @@ verify_jwt = false
 [functions.reengajar-lead]
 verify_jwt = true
 
+[functions.n8n-registrar-envio]
+verify_jwt = false
+
+[functions.n8n-resposta-confirmacao]
+verify_jwt = false
+
+
+
 
 
