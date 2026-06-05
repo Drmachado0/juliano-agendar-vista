@@ -11,7 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 
 export interface ProcedureSection {
   title: string;
-  paragraphs: string[];
+  paragraphs: React.ReactNode[];
   bullets?: string[];
 }
 
