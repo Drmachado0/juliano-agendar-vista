@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { FormData } from "./SchedulingModal";
-import { CheckCircle, Calendar, Sparkles } from "lucide-react";
+import { CheckCircle, Calendar, Sparkles, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Confetti from "./Confetti";
