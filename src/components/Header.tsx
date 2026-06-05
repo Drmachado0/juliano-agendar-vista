@@ -1,4 +1,4 @@
-import { Menu, X, Settings, LogIn, CalendarCheck, Phone } from "lucide-react";
+import { Menu, X, LogIn, CalendarCheck, Phone } from "lucide-react";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
@@ -12,7 +12,7 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("");
   const [scrolled, setScrolled] = useState(false);
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const { trackWhatsAppClick, trackCTAClick } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
   const { waLinkBare, display } = useSiteWhatsApp();
@@ -100,14 +100,7 @@ const Header = () => {
 
           {/* CTA Desktop */}
           <div className="hidden md:flex items-center gap-2">
-            {user ? (
-              <Link to="/admin/dashboard">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Settings className="h-5 w-5" />
-                  {isAdmin ? "Admin" : "Painel"}
-                </Button>
-              </Link>
-            ) : (
+            {!user && (
               <Link to="/auth">
                 <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
                   <LogIn className="h-5 w-5" />
@@ -186,14 +179,7 @@ const Header = () => {
               <div className={`transition-all duration-300 ${isMenuOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}
                 style={{ transitionDelay: isMenuOpen ? `${navItems.length * 50}ms` : '0ms' }}
               >
-                {user ? (
-                  <Link to="/admin/dashboard" onClick={() => setIsMenuOpen(false)}>
-                    <Button variant="outline" size="sm" className="w-full gap-2">
-                      <Settings className="h-4 w-4" />
-                      {isAdmin ? "Admin" : "Painel"}
-                    </Button>
-                  </Link>
-                ) : (
+                {!user && (
                   <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
                     <Button variant="ghost" size="sm" className="w-full gap-2 justify-start px-4">
                       <LogIn className="h-4 w-4" />
