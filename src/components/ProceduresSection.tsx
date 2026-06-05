@@ -89,40 +89,53 @@ const ProceduresSection = () => {
 
         {/* Procedures Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredProcedures.map((procedure, index) => (
-            <div
-              key={procedure.title}
-              className={`group card-glass rounded-2xl overflow-hidden hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1.5 transition-all duration-500 ease-out-expo ${
-                isVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-95'
-              }`}
-              style={{ transitionDelay: isVisible ? `${index * 80}ms` : '0ms' }}
-            >
-              {/* Icon + Badge */}
-              <div className="relative pt-8 pb-4 flex justify-center">
-                <div className="relative">
-                  {/* Pulse glow ring on hover */}
-                  <div className="absolute inset-0 rounded-2xl bg-primary/20 opacity-0 group-hover:opacity-100 group-hover:animate-pulse-glow transition-opacity duration-500" />
-                  <div className="relative w-24 h-24 rounded-2xl border border-primary/10 group-hover:border-primary/25 flex items-center justify-center group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-primary/10 transition-all duration-500"
-                    style={{ background: 'radial-gradient(circle, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))' }}>
-                    <procedure.icon className="w-14 h-14 text-primary" />
+          {filteredProcedures.map((procedure, index) => {
+            const hasLink = "href" in procedure && procedure.href;
+            const cardInner = (
+              <>
+                {/* Icon + Badge */}
+                <div className="relative pt-8 pb-4 flex justify-center">
+                  <div className="relative">
+                    <div className="absolute inset-0 rounded-2xl bg-primary/20 opacity-0 group-hover:opacity-100 group-hover:animate-pulse-glow transition-opacity duration-500" />
+                    <div className="relative w-24 h-24 rounded-2xl border border-primary/10 group-hover:border-primary/25 flex items-center justify-center group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-primary/10 transition-all duration-500"
+                      style={{ background: 'radial-gradient(circle, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))' }}>
+                      <procedure.icon className="w-14 h-14 text-primary" />
+                    </div>
                   </div>
+                  <span className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-secondary/80 backdrop-blur-sm text-[11px] font-bold uppercase tracking-wider text-primary">
+                    {procedure.category === "exames" ? "Exame" : procedure.category === "cirurgias" ? "Cirurgia" : "Laser"}
+                  </span>
                 </div>
-                <span className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-secondary/80 backdrop-blur-sm text-[11px] font-bold uppercase tracking-wider text-primary">
-                  {procedure.category === "exames" ? "Exame" : procedure.category === "cirurgias" ? "Cirurgia" : "Laser"}
-                </span>
+                <div className="px-5 pb-6 text-center">
+                  <h3 className="text-base text-foreground font-semibold font-sans mb-2 group-hover:text-primary transition-colors duration-300">
+                    {procedure.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {procedure.description}
+                  </p>
+                  {hasLink && (
+                    <span className="inline-flex items-center gap-1.5 mt-4 text-xs font-semibold text-primary group-hover:gap-2 transition-all">
+                      Saiba mais
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
+                  )}
+                </div>
+              </>
+            );
+            const cardClass = `group card-glass rounded-2xl overflow-hidden hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1.5 transition-all duration-500 ease-out-expo block ${
+              isVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-95'
+            }`;
+            const style = { transitionDelay: isVisible ? `${index * 80}ms` : '0ms' };
+            return hasLink ? (
+              <Link key={procedure.title} to={(procedure as any).href} className={cardClass} style={style}>
+                {cardInner}
+              </Link>
+            ) : (
+              <div key={procedure.title} className={cardClass} style={style}>
+                {cardInner}
               </div>
-
-              {/* Content */}
-              <div className="px-5 pb-6 text-center">
-                <h3 className="text-base text-foreground font-semibold font-sans mb-2 group-hover:text-primary transition-colors duration-300">
-                  {procedure.title}
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {procedure.description}
-                </p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
