@@ -37,6 +37,7 @@ const data: ProcedurePageData = {
       paragraphs: [
         "Na maioria dos casos o paciente retorna para casa no mesmo dia, com orientações de uso de colírios e cuidados básicos como evitar esforço físico, coçar o olho ou expor a água e poeira nos primeiros dias.",
         "Os retornos com o oftalmologista são fundamentais para acompanhar a cicatrização, ajustar a prescrição visual quando necessário e identificar precocemente qualquer alteração. O tempo de recuperação varia entre as pessoas e será detalhado em consulta.",
+        "Anos depois, alguns pacientes podem desenvolver opacificação da cápsula posterior — também chamada de catarata secundária —, que causa embaçamento similar ao da catarata. Nesses casos, a indicação pode ser a capsulotomia YAG Laser, um procedimento rápido e indolor realizado no consultório.",
       ],
       bullets: [
         "Uso de colírios conforme prescrição médica.",
