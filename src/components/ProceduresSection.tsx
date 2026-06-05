@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-import { ArrowRight } from "lucide-react";
 import { RetinografiaIcon, MapeamentoRetinaIcon, TonometriaIcon, GonioscopiaIcon, BiometriaIcon, CatarataIcon, PterigioIcon, YagLaserIcon, IridotomiaIcon } from "./ProcedureIcons";
 
 const ProceduresSection = () => {
