@@ -1,3 +1,4 @@
+import React from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { ChevronRight, CalendarCheck, CheckCircle2, MapPin, Clock, ShieldCheck } from "lucide-react";
@@ -10,7 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 
 export interface ProcedureSection {
   title: string;
-  paragraphs: string[];
+  paragraphs: React.ReactNode[];
   bullets?: string[];
 }
 

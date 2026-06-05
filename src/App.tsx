@@ -36,6 +36,7 @@ const AdminRelatorios = lazy(() => import("./pages/admin/Relatorios"));
 const ProcCatarata = lazy(() => import("./pages/procedimentos/CirurgiaDeCatarata"));
 const ProcPterigio = lazy(() => import("./pages/procedimentos/CirurgiaDePterigio"));
 const ProcConsulta = lazy(() => import("./pages/procedimentos/ConsultaOftalmologica"));
+const ProcYagLaser = lazy(() => import("./pages/procedimentos/CapsulotomiaYagLaser"));
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,7 @@ const App = () => (
               <Route path="/procedimentos/cirurgia-de-catarata" element={<ProcCatarata />} />
               <Route path="/procedimentos/cirurgia-de-pterigio" element={<ProcPterigio />} />
               <Route path="/procedimentos/consulta-oftalmologica" element={<ProcConsulta />} />
+              <Route path="/procedimentos/capsulotomia-yag-laser" element={<ProcYagLaser />} />
               <Route path="/obrigado" element={<Obrigado />} />
               <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
               <Route path="/auth" element={<Auth />} />
