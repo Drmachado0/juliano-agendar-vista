@@ -89,14 +89,39 @@ const SuccessStep = ({ onClose, formData }: SuccessStepProps) => {
           </div>
         </div>
 
-        {/* Action Button with staggered animation */}
-        <div 
-          className="pt-4 animate-fade-in"
-          style={{ animationDelay: '0.6s' }}
+        {/* WhatsApp confirmation prompt */}
+        <div
+          className="space-y-3 animate-fade-in"
+          style={{ animationDelay: '0.5s' }}
         >
-          <Button 
-            variant="outline" 
-            onClick={onClose} 
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-sm mx-auto">
+            Toque abaixo e envie a mensagem para receber a confirmação e lembretes da sua consulta no WhatsApp.
+          </p>
+          <a
+            href="https://wa.me/5591936180476?text=Ol%C3%A1!%20Acabei%20de%20agendar%20minha%20consulta%20no%20site%20e%20quero%20receber%20as%20confirma%C3%A7%C3%B5es%20por%20aqui."
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block"
+          >
+            <Button
+              variant="whatsapp"
+              size="lg"
+              className="w-full max-w-sm mx-auto gap-2 transition-transform duration-200 hover:scale-105"
+            >
+              <MessageCircle className="w-5 h-5" />
+              Confirmar pelo WhatsApp
+            </Button>
+          </a>
+        </div>
+
+        {/* Action Button with staggered animation */}
+        <div
+          className="pt-2 animate-fade-in"
+          style={{ animationDelay: '0.7s' }}
+        >
+          <Button
+            variant="outline"
+            onClick={onClose}
             className="min-w-32 transition-transform duration-200 hover:scale-105"
           >
             Fechar
