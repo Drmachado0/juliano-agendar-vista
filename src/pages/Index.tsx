@@ -10,6 +10,7 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 import Footer from "@/components/Footer";
 
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
+import { GOOGLE_REVIEWS } from "@/lib/constants";
 
 const Index = () => {
   const { raw: waRaw } = useSiteWhatsApp();
@@ -42,9 +43,9 @@ const Index = () => {
     ],
     "aggregateRating": {
       "@type": "AggregateRating",
-      "ratingValue": "5.0",
+      "ratingValue": String(GOOGLE_REVIEWS.rating),
       "bestRating": "5",
-      "ratingCount": "100"
+      "ratingCount": String(GOOGLE_REVIEWS.count)
     },
     "sameAs": [
       "https://www.instagram.com/drjulianomachado.oftalmo/"

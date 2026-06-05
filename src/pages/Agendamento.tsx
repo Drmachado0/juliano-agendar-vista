@@ -27,51 +27,37 @@ import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import drJulianoHero from "@/assets/dr-juliano-hero.jpg";
+import { GOOGLE_REVIEWS } from "@/lib/constants";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
 type Depoimento = {
   nome: string;
-  cidade: string;
   data: string;
   texto: string;
 };
 
+// Avaliações reais do Google Business Profile do Dr. Juliano Machado.
+// Mantidas em código para o carrossel da landing /agendamento — espelham
+// as avaliações exibidas na home. Conformidade com CFM 2.336/2023:
+// apenas avaliações verificadas reais, sem depoimentos fictícios.
 const DEPOIMENTOS: Depoimento[] = [
   {
-    nome: "Maria S.",
-    cidade: "Paragominas, PA",
-    data: "Mar 2025",
-    texto: "Atendimento excelente, médico atencioso e equipe muito profissional. Recomendo demais!",
+    nome: "Jéssica Oliveira da Costa",
+    data: "Avaliação verificada · Google",
+    texto:
+      "Atendimento muito bom, profissional excelente, muito prestativo, atencioso, humano, super indico, fala muita clara.",
   },
   {
-    nome: "João P.",
-    cidade: "Belém, PA",
-    data: "Fev 2025",
-    texto: "Dr. Juliano explicou tudo com calma. Saí da consulta com todas as dúvidas resolvidas.",
+    nome: "Gislene Alves da Silva",
+    data: "Avaliação verificada · Google",
+    texto:
+      "Atendimento excelente, médico atencioso e equipe muito profissional. Recomendo demais!",
   },
   {
-    nome: "Ana L.",
-    cidade: "Paragominas, PA",
-    data: "Jan 2025",
-    texto: "Marquei pelo WhatsApp e fui atendida no horário. Estrutura impecável e muito cuidado.",
-  },
-  {
-    nome: "Carlos M.",
-    cidade: "Tomé-Açu, PA",
-    data: "Dez 2024",
-    texto: "Cirurgia de catarata tranquila e segura. Voltei a enxergar como antes. Gratidão!",
-  },
-  {
-    nome: "Fernanda R.",
-    cidade: "Belém, PA",
-    data: "Nov 2024",
-    texto: "Profissional de altíssimo nível. Atencioso, paciente e extremamente competente.",
-  },
-  {
-    nome: "Roberto A.",
-    cidade: "Paragominas, PA",
-    data: "Out 2024",
-    texto: "Recomendo de olhos fechados. Atendimento humano e diagnóstico preciso.",
+    nome: "Fernanda Cruz",
+    data: "Avaliação verificada · Google",
+    texto:
+      "Um ótimo atendimento, e dr Juliano um grande profissional. Levei meu filho para fazer o teste do olhinho e o dr. foi muito atencioso, cauteloso e muito cuidadoso no atendimento do meu pequeno.",
   },
 ];
 
@@ -517,7 +503,7 @@ const Agendamento = () => {
                         <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
                       ))}
                       <span className="ml-1 text-xs font-semibold text-foreground">
-                        5.0 · pacientes reais
+                        5.0 · Avaliações do Google
                       </span>
                     </div>
                     <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -541,7 +527,6 @@ const Agendamento = () => {
                         </p>
                         <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
                           <strong className="text-foreground">{d.nome}</strong>
-                          <span className="text-muted-foreground">· {d.cidade}</span>
                           <span className="text-muted-foreground">· {d.data}</span>
                         </div>
                       </div>
@@ -626,7 +611,7 @@ const Agendamento = () => {
                     <Star key={i} className="h-5 w-5 fill-accent text-accent" />
                   ))}
                   <span className="ml-2 text-sm font-semibold text-foreground">5.0/5</span>
-                  <span className="text-xs text-muted-foreground">(100+ avaliações)</span>
+                  <span className="text-xs text-muted-foreground">({GOOGLE_REVIEWS.count} avaliações)</span>
                 </div>
 
                 <img
@@ -634,6 +619,7 @@ const Agendamento = () => {
                   alt="Dr. Juliano Machado, oftalmologista"
                   className="mb-4 h-64 w-full rounded-lg object-cover object-top"
                   loading="lazy"
+                  decoding="async"
                 />
 
                 <h3 className="mb-3 font-serif text-lg font-semibold text-foreground">
@@ -668,7 +654,7 @@ const Agendamento = () => {
                   <li className="flex items-start gap-2">
                     <Clock className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                     <span className="text-muted-foreground">
-                      <strong className="text-foreground">Resposta em até 1h</strong> em horário comercial
+                      <strong className="text-foreground">Resposta em até 2h úteis</strong>
                     </span>
                   </li>
                 </ul>
@@ -681,9 +667,9 @@ const Agendamento = () => {
                   ))}
                 </div>
                 <p className="text-sm italic leading-relaxed text-foreground">
-                  "Atendimento excelente, médico atencioso e equipe muito profissional. Recomendo!"
+                  "Atendimento muito bom, profissional excelente, muito prestativo, atencioso, humano, super indico."
                 </p>
-                <p className="mt-2 text-xs text-muted-foreground">— Maria S., paciente</p>
+                <p className="mt-2 text-xs text-muted-foreground">— Jéssica Oliveira da Costa · Avaliação Google</p>
               </div>
             </aside>
           </div>

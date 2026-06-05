@@ -75,6 +75,8 @@ const InsuranceSection = () => {
                 <img
                   src={insurance.logo}
                   alt={insurance.name}
+                  loading="lazy"
+                  decoding="async"
                   className="h-7 w-auto object-contain"
                 />
                 <span className="font-medium text-foreground text-sm">{insurance.name}</span>

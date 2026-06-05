@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Star, Quote, Loader2, MessageSquare, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { buscarAvaliacoesGoogle, type AvaliacaoGoogle } from "@/services/avaliacoesGoogle";
-import { GOOGLE_REVIEW_URL } from "@/lib/constants";
+import { GOOGLE_REVIEW_URL, GOOGLE_REVIEWS } from "@/lib/constants";
 
 interface Testimonial {
   id: string;
@@ -161,7 +161,7 @@ const TestimonialsSection = () => {
               <span className="font-bold text-foreground text-lg">{averageRating}</span>
             </div>
             <span className="text-muted-foreground text-sm flex items-center gap-1.5">
-              <GoogleIcon /> {allTestimonials.length > 0 ? `baseado em ${allTestimonials.length} avaliações` : 'no Google'}
+              <GoogleIcon /> baseado em {GOOGLE_REVIEWS.count} avaliações
             </span>
           </div>
         </div>
@@ -212,6 +212,8 @@ const TestimonialsSection = () => {
                   <img
                     src={testimonial.image}
                     alt={testimonial.name}
+                    loading="lazy"
+                    decoding="async"
                     className="w-11 h-11 rounded-full object-cover ring-2 ring-primary/20 ring-offset-2 ring-offset-card"
                   />
                 ) : (
