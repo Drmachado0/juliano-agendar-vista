@@ -57,6 +57,8 @@ const AboutSection = () => {
                   src={drJulianoPhoto}
                   alt="Dr. Juliano Machado em seu consultório"
                   className="w-full h-auto object-cover"
+                  loading="lazy"
+                  decoding="async"
                 />
                 {/* Subtle overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent" />

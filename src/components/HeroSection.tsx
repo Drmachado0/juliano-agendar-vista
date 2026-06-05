@@ -170,10 +170,10 @@ const HeroSection = () => {
         </div>
       </div>
 
-      {/* Scroll indicator */}
+      {/* Scroll indicator — só em telas grandes (xl+) para não sobrepor os stat cards em md/lg */}
       <button
         onClick={() => document.getElementById("sobre")?.scrollIntoView({ behavior: "smooth" })}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 hidden lg:flex flex-col items-center gap-2 text-muted-foreground/40 hover:text-primary/60 transition-colors cursor-pointer animate-[float_3s_ease-in-out_infinite]"
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 hidden xl:flex flex-col items-center gap-2 text-muted-foreground/40 hover:text-primary/60 transition-colors cursor-pointer animate-[float_3s_ease-in-out_infinite] z-0 pointer-events-auto"
         style={{ animationTimingFunction: 'ease-in-out' }}
         aria-label="Rolar para baixo"
       >
