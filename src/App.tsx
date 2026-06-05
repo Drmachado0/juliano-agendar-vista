@@ -33,6 +33,9 @@ const AdminAuditoriaTracking = lazy(() => import("./pages/admin/AuditoriaTrackin
 const AdminLogs = lazy(() => import("./pages/admin/Logs"));
 const AdminLGPD = lazy(() => import("./pages/admin/LGPD"));
 const AdminRelatorios = lazy(() => import("./pages/admin/Relatorios"));
+const ProcCatarata = lazy(() => import("./pages/procedimentos/CirurgiaDeCatarata"));
+const ProcPterigio = lazy(() => import("./pages/procedimentos/CirurgiaDePterigio"));
+const ProcConsulta = lazy(() => import("./pages/procedimentos/ConsultaOftalmologica"));
 
 const queryClient = new QueryClient();
 
@@ -63,6 +66,9 @@ const App = () => (
               <Route path="/agendar" element={<RedirectToAgendamento />} />
               <Route path="/agendar-consulta" element={<RedirectToAgendamento />} />
               <Route path="/agendamento" element={<Agendamento />} />
+              <Route path="/procedimentos/cirurgia-de-catarata" element={<ProcCatarata />} />
+              <Route path="/procedimentos/cirurgia-de-pterigio" element={<ProcPterigio />} />
+              <Route path="/procedimentos/consulta-oftalmologica" element={<ProcConsulta />} />
               <Route path="/obrigado" element={<Obrigado />} />
               <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
               <Route path="/auth" element={<Auth />} />
