@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import ProcedurePageLayout, { type ProcedurePageData } from "@/components/procedimentos/ProcedurePageLayout";
 
 const data: ProcedurePageData = {
