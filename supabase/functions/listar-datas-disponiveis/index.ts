@@ -42,10 +42,10 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Método não permitido" }),
-      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: "Método não permitido" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -53,16 +53,13 @@ Deno.serve(async (req) => {
     const { mes, ano, local_atendimento } = body;
 
     if (!mes || !ano || mes < 1 || mes > 12) {
-      return new Response(
-        JSON.stringify({ error: 'Campos "mes" (1-12) e "ano" são obrigatórios' }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: 'Campos "mes" (1-12) e "ano" são obrigatórios' }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const localAtendimento = local_atendimento || "";
 
@@ -73,11 +70,7 @@ Deno.serve(async (req) => {
     let clinicaIds: string[] = [];
 
     if (slugs.length > 0) {
-      const { data: clinicas } = await supabase
-        .from("clinicas")
-        .select("id")
-        .in("slug", slugs)
-        .eq("ativo", true);
+      const { data: clinicas } = await supabase.from("clinicas").select("id").in("slug", slugs).eq("ativo", true);
       clinicaIds = clinicas?.map((c: { id: string }) => c.id) || [];
     }
 
@@ -87,7 +80,8 @@ Deno.serve(async (req) => {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
 
-    const dataInicio = primeiroDia < hoje ? hoje.toISOString().split("T")[0] : `${ano}-${String(mes).padStart(2, "0")}-01`;
+    const dataInicio =
+      primeiroDia < hoje ? hoje.toISOString().split("T")[0] : `${ano}-${String(mes).padStart(2, "0")}-01`;
     const dataFim = `${ano}-${String(mes).padStart(2, "0")}-${String(ultimoDia.getDate()).padStart(2, "0")}`;
 
     // 3. Batch-fetch all data for the month
@@ -110,15 +104,8 @@ Deno.serve(async (req) => {
         .gte("data", dataInicio)
         .lte("data", dataFim)
         .in("tipo_bloqueio", ["intervalo", "ausencia_profissional"]),
-      supabase
-        .from("disponibilidade_especifica")
-        .select("*")
-        .gte("data", dataInicio)
-        .lte("data", dataFim),
-      supabase
-        .from("disponibilidade_semanal")
-        .select("*")
-        .eq("ativo", true),
+      supabase.from("disponibilidade_especifica").select("*").gte("data", dataInicio).lte("data", dataFim),
+      supabase.from("disponibilidade_semanal").select("*").eq("ativo", true),
       supabase
         .from("agendamentos")
         .select("data_agendamento, hora_agendamento")
@@ -129,9 +116,7 @@ Deno.serve(async (req) => {
 
     // Filter by clinic
     const filterClinica = (item: any) =>
-      clinicaIds.length === 0 ||
-      item.clinica_id === null ||
-      clinicaIds.includes(item.clinica_id);
+      clinicaIds.length === 0 || item.clinica_id === null || clinicaIds.includes(item.clinica_id);
 
     const bloqueiosDiaMap = new Map<string, boolean>();
     for (const b of (bloqueiosDia || []).filter(filterClinica)) {
@@ -153,6 +138,14 @@ Deno.serve(async (req) => {
     }
 
     const dispSemanalFiltrada = (dispSemanal || []).filter(filterClinica);
+
+    // [FIX] Indexa modelos (disponibilidade_semanal) por id para lookup quando
+    // disponibilidade_especifica foi cadastrada via aplicação de modelo
+    // (hora_inicio/hora_fim ficam null, só modelo_id é preenchido).
+    const modelosMap = new Map<string, any>();
+    for (const m of dispSemanal || []) {
+      modelosMap.set(m.id, m);
+    }
 
     const agendamentosMap = new Map<string, Set<string>>();
     for (const a of agendamentos || []) {
@@ -184,15 +177,30 @@ Deno.serve(async (req) => {
         if (indisponivel && !especifica.some((d: any) => d.disponivel)) continue;
 
         for (const d of especifica) {
-          if (!d.disponivel || !d.hora_inicio || !d.hora_fim) continue;
-          slots.push(...gerarSlots(d.hora_inicio, d.hora_fim, d.intervalo_minutos || 30));
+          if (!d.disponivel) continue;
+
+          // [FIX] Se hora_inicio/hora_fim vieram null mas há modelo_id,
+          // resolve via disponibilidade_semanal (template aplicado).
+          let horaIni = d.hora_inicio;
+          let horaFim = d.hora_fim;
+          let intervalo = d.intervalo_minutos;
+          if ((!horaIni || !horaFim) && d.modelo_id) {
+            const modelo = modelosMap.get(d.modelo_id);
+            if (modelo) {
+              horaIni = horaIni || modelo.hora_inicio;
+              horaFim = horaFim || modelo.hora_fim;
+              intervalo = intervalo || modelo.intervalo_minutos;
+            }
+          }
+          if (!horaIni || !horaFim) continue; // ainda sem horários: pula
+
+          slots.push(...gerarSlots(horaIni, horaFim, intervalo || 30));
         }
       } else {
         // Política: sem disponibilidade_especifica = dia fechado.
         // Modelos semanais são apenas templates, não abrem agenda sozinhos.
         continue;
       }
-
 
       // Deduplicate
       slots = [...new Set(slots)].sort();
@@ -201,7 +209,7 @@ Deno.serve(async (req) => {
       const bloqueiosInt = bloqueiosIntMap.get(dataStr) || [];
       if (bloqueiosInt.length > 0) {
         slots = slots.filter(
-          (s) => !bloqueiosInt.some((b: any) => horarioDentroBloqueio(s, b.hora_inicio, b.hora_fim))
+          (s) => !bloqueiosInt.some((b: any) => horarioDentroBloqueio(s, b.hora_inicio, b.hora_fim)),
         );
       }
 
@@ -236,13 +244,13 @@ Deno.serve(async (req) => {
         datas_disponiveis: datasDisponiveis,
         total_datas: datasDisponiveis.length,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
     console.error(`[listar-datas] Erro:`, err);
-    return new Response(
-      JSON.stringify({ error: "Erro interno ao listar datas disponíveis" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: "Erro interno ao listar datas disponíveis" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
