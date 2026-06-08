@@ -188,14 +188,11 @@ Deno.serve(async (req) => {
           slots.push(...gerarSlots(d.hora_inicio, d.hora_fim, d.intervalo_minutos || 30));
         }
       } else {
-        const diaSemana = dataObj.getDay();
-        const semanal = dispSemanalFiltrada.filter((d: any) => d.dia_semana === diaSemana);
-        if (semanal.length === 0) continue;
-
-        for (const d of semanal) {
-          slots.push(...gerarSlots(d.hora_inicio, d.hora_fim, d.intervalo_minutos));
-        }
+        // Política: sem disponibilidade_especifica = dia fechado.
+        // Modelos semanais são apenas templates, não abrem agenda sozinhos.
+        continue;
       }
+
 
       // Deduplicate
       slots = [...new Set(slots)].sort();

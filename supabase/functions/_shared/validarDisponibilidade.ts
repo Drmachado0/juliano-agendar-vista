@@ -150,19 +150,52 @@ export async function listarHorariosDisponiveis(
     if (!clinicaFilter) return [];
   }
 
-  // 1. Buscar disponibilidade_semanal (grade horária)
-  let query = supabase
-    .from("disponibilidade_semanal")
+  // 1. Buscar disponibilidade_especifica (data aberta manualmente pelo admin)
+  // Política: sem disponibilidade_especifica = dia fechado. Modelos semanais
+  // são apenas templates e NÃO abrem agenda automaticamente.
+  let especQuery = supabase
+    .from("disponibilidade_especifica")
     .select("*, clinicas(id, nome)")
-    .eq("dia_semana", diaSemana)
-    .eq("ativo", true);
+    .eq("data", data)
+    .eq("disponivel", true);
 
   if (clinicaFilter) {
-    query = query.eq("clinica_id", clinicaFilter.id);
+    especQuery = especQuery.eq("clinica_id", clinicaFilter.id);
   }
 
-  const { data: disponibilidades, error: errD } = await query;
-  if (errD || !disponibilidades?.length) return [];
+  const { data: especificas, error: errE } = await especQuery;
+  if (errE || !especificas?.length) return [];
+
+  // Para cada disp_especifica sem hora_inicio/hora_fim explícito, resolve via modelo_id
+  const modeloIds = (especificas as any[])
+    .filter((e) => !e.hora_inicio && e.modelo_id)
+    .map((e) => e.modelo_id);
+
+  let modelosMap = new Map<string, any>();
+  if (modeloIds.length) {
+    const { data: modelos } = await supabase
+      .from("disponibilidade_semanal")
+      .select("*")
+      .in("id", modeloIds);
+    for (const m of (modelos as any[]) || []) modelosMap.set(m.id, m);
+  }
+
+  const disponibilidades = (especificas as any[]).map((e) => {
+    if (e.hora_inicio && e.hora_fim) return e;
+    const m = e.modelo_id ? modelosMap.get(e.modelo_id) : null;
+    if (m) {
+      return {
+        ...e,
+        hora_inicio: m.hora_inicio,
+        hora_fim: m.hora_fim,
+        intervalo_minutos: e.intervalo_minutos || m.intervalo_minutos,
+      };
+    }
+    return null;
+  }).filter(Boolean);
+
+  if (!disponibilidades.length) return [];
+
 
   // 2. Buscar bloqueios para esta data
   const { data: bloqueios } = await supabase
