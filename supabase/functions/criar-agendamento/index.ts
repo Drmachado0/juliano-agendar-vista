@@ -231,6 +231,7 @@ Deno.serve(async (req) => {
       fbc: body.fbc || null,
       landing_page: body.landing_page || null,
       referrer: body.referrer || null,
+      event_id: body.event_id || null,
     };
 
     // Insert into database

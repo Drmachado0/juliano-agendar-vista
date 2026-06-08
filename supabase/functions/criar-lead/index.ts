@@ -30,6 +30,7 @@ interface LeadData {
   fbc?: string | null;
   landing_page?: string | null;
   referrer?: string | null;
+  event_id?: string | null;
 }
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -157,6 +158,7 @@ Deno.serve(async (req) => {
         fbc: data.fbc || null,
         landing_page: data.landing_page || null,
         referrer: data.referrer || null,
+        event_id: data.event_id || null,
       })
       .select('id')
       .single();
