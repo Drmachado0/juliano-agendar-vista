@@ -145,6 +145,10 @@ const Obrigado = () => {
         meta_event_id: eventId,
       });
 
+      // Reforço server-side via Meta CAPI — mesmo event_id do Pixel/GTM para dedup.
+      void sendMetaCapi("Lead", eventId);
+      void sendMetaCapi("CompleteRegistration", eventId);
+
       try {
         window.sessionStorage?.setItem(DEDUP_STORAGE_KEY, "1");
       } catch {
