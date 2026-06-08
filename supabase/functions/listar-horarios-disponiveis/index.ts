@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
 // Local helpers (not imported from shared to avoid missing export errors)
 function getClinicaSlugsFromLocal(local: string): string[] {
   const l = local.toLowerCase().trim();
@@ -10,7 +9,6 @@ function getClinicaSlugsFromLocal(local: string): string[] {
   if (l.includes("belém") || l.includes("belem")) return ["iob", "vitria"];
   return [];
 }
-
 function gerarSlots(horaInicio: string, horaFim: string, intervaloMin: number): string[] {
   const slots: string[] = [];
   const [hI, mI] = horaInicio.split(":").map(Number);
@@ -25,7 +23,6 @@ function gerarSlots(horaInicio: string, horaFim: string, intervaloMin: number): 
   }
   return slots;
 }
-
 function horarioDentroBloqueio(slot: string, inicio: string | null, fim: string | null): boolean {
   if (!inicio || !fim) return false;
   const s = slot.substring(0, 5);
@@ -33,49 +30,39 @@ function horarioDentroBloqueio(slot: string, inicio: string | null, fim: string 
   const f = fim.substring(0, 5);
   return s >= i && s < f;
 }
-
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
-
-  if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: 'Método não permitido' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Método não permitido" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
-
   try {
     const body = await req.json();
     const { data, local_atendimento } = body;
-
     // Validate date
     if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data)) {
-      return new Response(
-        JSON.stringify({ error: 'Campo "data" obrigatório no formato YYYY-MM-DD' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Campo "data" obrigatório no formato YYYY-MM-DD' }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const localAtendimento = local_atendimento || '';
-
-    console.log(`[listar-horarios] Data: ${data}, Local: ${localAtendimento || 'todos'}`);
-
+    const localAtendimento = local_atendimento || "";
+    console.log(`[listar-horarios] Data: ${data}, Local: ${localAtendimento || "todos"}`);
     // 1. Check if date is in the past
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-    const dataCheck = new Date(data + 'T00:00:00');
-
+    const dataCheck = new Date(data + "T00:00:00");
     if (dataCheck < hoje) {
       return new Response(
         JSON.stringify({
@@ -83,75 +70,59 @@ Deno.serve(async (req) => {
           local_atendimento: localAtendimento || null,
           horarios_disponiveis: [],
           total: 0,
-          motivo: 'Data no passado'
+          motivo: "Data no passado",
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
     // 2. Get clinic IDs
     const slugs = localAtendimento ? getClinicaSlugsFromLocal(localAtendimento) : [];
     let clinicaIds: string[] = [];
-
     if (slugs.length > 0) {
-      const { data: clinicas } = await supabase
-        .from('clinicas')
-        .select('id')
-        .in('slug', slugs)
-        .eq('ativo', true);
+      const { data: clinicas } = await supabase.from("clinicas").select("id").in("slug", slugs).eq("ativo", true);
       clinicaIds = clinicas?.map((c: { id: string }) => c.id) || [];
     }
-
     // 3. Check full-day blocks
     const { data: bloqueiosDiaInteiro } = await supabase
-      .from('bloqueios_agenda')
-      .select('*')
-      .eq('data', data)
-      .in('tipo_bloqueio', ['dia_inteiro', 'feriado']);
-
-    const bloqueiosDiaFiltrados = bloqueiosDiaInteiro?.filter((b: any) =>
-      clinicaIds.length === 0 || clinicaIds.includes(b.clinica_id)
-    ) || [];
-
+      .from("bloqueios_agenda")
+      .select("*")
+      .eq("data", data)
+      .in("tipo_bloqueio", ["dia_inteiro", "feriado"]);
+    const bloqueiosDiaFiltrados =
+      bloqueiosDiaInteiro?.filter((b: any) => clinicaIds.length === 0 || clinicaIds.includes(b.clinica_id)) || [];
     if (bloqueiosDiaFiltrados.length > 0) {
-      const motivo = bloqueiosDiaFiltrados[0].motivo || 'Esta data está bloqueada';
+      const motivo = bloqueiosDiaFiltrados[0].motivo || "Esta data está bloqueada";
       return new Response(
         JSON.stringify({
           data,
           local_atendimento: localAtendimento || null,
           horarios_disponiveis: [],
           total: 0,
-          motivo
+          motivo,
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
     // 4. Get interval blocks
     const { data: bloqueiosIntervalo } = await supabase
-      .from('bloqueios_agenda')
-      .select('*')
-      .eq('data', data)
-      .in('tipo_bloqueio', ['intervalo', 'ausencia_profissional']);
-
-    const bloqueiosIntervaloFiltrados = bloqueiosIntervalo?.filter((b: any) =>
-      clinicaIds.length === 0 || clinicaIds.includes(b.clinica_id)
-    ) || [];
-
+      .from("bloqueios_agenda")
+      .select("*")
+      .eq("data", data)
+      .in("tipo_bloqueio", ["intervalo", "ausencia_profissional"]);
+    const bloqueiosIntervaloFiltrados =
+      bloqueiosIntervalo?.filter((b: any) => clinicaIds.length === 0 || clinicaIds.includes(b.clinica_id)) || [];
     // 5. Generate slots from availability rules
     let allSlots: string[] = [];
     let motivo: string | undefined;
-
     // Check specific availability first
     const { data: disponibilidadeEspecifica } = await supabase
-      .from('disponibilidade_especifica')
-      .select('*')
-      .eq('data', data);
-
-    const dispEspecificaFiltrada = disponibilidadeEspecifica?.filter((d: any) =>
-      d.clinica_id === null || clinicaIds.length === 0 || clinicaIds.includes(d.clinica_id)
-    ) || [];
-
+      .from("disponibilidade_especifica")
+      .select("*")
+      .eq("data", data);
+    const dispEspecificaFiltrada =
+      disponibilidadeEspecifica?.filter(
+        (d: any) => d.clinica_id === null || clinicaIds.length === 0 || clinicaIds.includes(d.clinica_id),
+      ) || [];
     if (dispEspecificaFiltrada.length > 0) {
       // Check if date is marked unavailable
       const indisponivel = dispEspecificaFiltrada.find((d: any) => !d.disponivel);
@@ -162,15 +133,47 @@ Deno.serve(async (req) => {
             local_atendimento: localAtendimento || null,
             horarios_disponiveis: [],
             total: 0,
-            motivo: indisponivel.motivo || 'Data indisponível'
+            motivo: indisponivel.motivo || "Data indisponível",
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
+      // [FIX] Resolve modelo_id (FK -> disponibilidade_semanal) quando
+      // hora_inicio/hora_fim estão null (data aberta via aplicação de modelo).
+      const modeloIds = [
+        ...new Set(
+          dispEspecificaFiltrada
+            .filter((d: any) => d.disponivel && (!d.hora_inicio || !d.hora_fim) && d.modelo_id)
+            .map((d: any) => d.modelo_id),
+        ),
+      ];
+      const modelosMap = new Map<string, any>();
+      if (modeloIds.length > 0) {
+        const { data: modelos } = await supabase.from("disponibilidade_semanal").select("*").in("id", modeloIds);
+        for (const m of modelos || []) {
+          modelosMap.set(m.id, m);
+        }
+      }
+
       for (const disp of dispEspecificaFiltrada) {
-        if (!disp.disponivel || !disp.hora_inicio || !disp.hora_fim) continue;
-        const slots = gerarSlots(disp.hora_inicio, disp.hora_fim, disp.intervalo_minutos || 30);
+        if (!disp.disponivel) continue;
+
+        // [FIX] Resolve via modelo se hora_inicio/hora_fim vierem null
+        let horaIni = disp.hora_inicio;
+        let horaFim = disp.hora_fim;
+        let intervalo = disp.intervalo_minutos;
+        if ((!horaIni || !horaFim) && disp.modelo_id) {
+          const modelo = modelosMap.get(disp.modelo_id);
+          if (modelo) {
+            horaIni = horaIni || modelo.hora_inicio;
+            horaFim = horaFim || modelo.hora_fim;
+            intervalo = intervalo || modelo.intervalo_minutos;
+          }
+        }
+        if (!horaIni || !horaFim) continue; // ainda sem horários: pula
+
+        const slots = gerarSlots(horaIni, horaFim, intervalo || 30);
         allSlots.push(...slots);
       }
     } else {
@@ -183,18 +186,15 @@ Deno.serve(async (req) => {
           local_atendimento: localAtendimento || null,
           horarios_disponiveis: [],
           total: 0,
-          motivo: 'Data não aberta para agendamento'
+          motivo: "Data não aberta para agendamento",
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
-
     // Deduplicate and sort
     allSlots = [...new Set(allSlots)].sort();
-
     // 6. Remove interval-blocked slots
-    allSlots = allSlots.filter(slot => {
+    allSlots = allSlots.filter((slot) => {
       for (const bloqueio of bloqueiosIntervaloFiltrados) {
         if (horarioDentroBloqueio(slot, bloqueio.hora_inicio, bloqueio.hora_fim)) {
           return false;
@@ -202,49 +202,41 @@ Deno.serve(async (req) => {
       }
       return true;
     });
-
     // 7. Remove occupied slots
     const { data: agendamentosExistentes } = await supabase
-      .from('agendamentos')
-      .select('hora_agendamento')
-      .eq('data_agendamento', data)
-      .neq('status_funil', 'cancelado');
-
+      .from("agendamentos")
+      .select("hora_agendamento")
+      .eq("data_agendamento", data)
+      .neq("status_funil", "cancelado");
     const horariosOcupados = new Set(
-      agendamentosExistentes?.map((a: any) => a.hora_agendamento?.substring(0, 5)) || []
+      agendamentosExistentes?.map((a: any) => a.hora_agendamento?.substring(0, 5)) || [],
     );
-
-    allSlots = allSlots.filter(slot => !horariosOcupados.has(slot));
-
+    allSlots = allSlots.filter((slot) => !horariosOcupados.has(slot));
     // 8. Remove past slots (for today, with 30min margin)
     const agora = new Date();
-    const isToday = data === agora.toISOString().split('T')[0];
-
+    const isToday = data === agora.toISOString().split("T")[0];
     if (isToday) {
       const minutosAgora = agora.getHours() * 60 + agora.getMinutes() + 30;
-      allSlots = allSlots.filter(slot => {
-        const [h, m] = slot.split(':').map(Number);
+      allSlots = allSlots.filter((slot) => {
+        const [h, m] = slot.split(":").map(Number);
         return h * 60 + m > minutosAgora;
       });
     }
-
     console.log(`[listar-horarios] ${allSlots.length} horários disponíveis`);
-
     return new Response(
       JSON.stringify({
         data,
         local_atendimento: localAtendimento || null,
         horarios_disponiveis: allSlots,
-        total: allSlots.length
+        total: allSlots.length,
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-
   } catch (err) {
     console.error(`[listar-horarios] Erro:`, err);
-    return new Response(
-      JSON.stringify({ error: 'Erro interno ao listar horários' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: "Erro interno ao listar horários" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
