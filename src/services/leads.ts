@@ -32,6 +32,7 @@ export async function criarLead(data: LeadData): Promise<{ lead_id: string | nul
       fbc: tracking.fbc || null,
       landing_page: tracking.landing_page || null,
       referrer: tracking.referrer || null,
+      event_id: tracking.event_id || null,
     };
 
     const { data: responseData, error } = await supabase.functions.invoke('criar-lead', {

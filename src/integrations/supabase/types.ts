@@ -37,6 +37,7 @@ export type Database = {
           detalhe_exame_ou_cirurgia: string | null
           email: string | null
           estado_atendimento: string
+          event_id: string | null
           fbc: string | null
           fbclid: string | null
           fbp: string | null
@@ -94,6 +95,7 @@ export type Database = {
           detalhe_exame_ou_cirurgia?: string | null
           email?: string | null
           estado_atendimento?: string
+          event_id?: string | null
           fbc?: string | null
           fbclid?: string | null
           fbp?: string | null
@@ -151,6 +153,7 @@ export type Database = {
           detalhe_exame_ou_cirurgia?: string | null
           email?: string | null
           estado_atendimento?: string
+          event_id?: string | null
           fbc?: string | null
           fbclid?: string | null
           fbp?: string | null

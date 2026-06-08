@@ -185,6 +185,20 @@ function captureMetaSignals() {
     sessionStorage.setItem('referrer', document.referrer);
   }
 
+  // event_id estável por sessão para dedup Pixel/CAPI/CRM.
+  let eventId = sessionStorage.getItem('lead_event_id') || undefined;
+  if (!eventId) {
+    try {
+      eventId =
+        (window.crypto && typeof window.crypto.randomUUID === 'function')
+          ? window.crypto.randomUUID()
+          : `lead_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      sessionStorage.setItem('lead_event_id', eventId);
+    } catch {
+      /* ignore */
+    }
+  }
+
   return {
     // Persistido na tabela (Edge Function vai escrever nas colunas)
     utm_source: persisted('utm_source'),
@@ -200,6 +214,7 @@ function captureMetaSignals() {
     fbp: getCookie('_fbp'),
     landing_page: sessionStorage.getItem('landing_page') || window.location.href,
     referrer: sessionStorage.getItem('referrer') || document.referrer || undefined,
+    event_id: eventId,
     // Sinais usados só pelo CAPI (não persistidos)
     meta_event_source_url: window.location.href,
     meta_user_agent: navigator.userAgent,
