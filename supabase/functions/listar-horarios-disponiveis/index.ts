@@ -174,37 +174,21 @@ Deno.serve(async (req) => {
         allSlots.push(...slots);
       }
     } else {
-      // Use weekly availability
-      const diaSemana = new Date(data + 'T12:00:00').getDay();
-
-      const { data: disponibilidadeSemanal } = await supabase
-        .from('disponibilidade_semanal')
-        .select('*')
-        .eq('dia_semana', diaSemana)
-        .eq('ativo', true);
-
-      const dispSemanalFiltrada = disponibilidadeSemanal?.filter((d: any) =>
-        d.clinica_id === null || clinicaIds.length === 0 || clinicaIds.includes(d.clinica_id)
-      ) || [];
-
-      if (dispSemanalFiltrada.length === 0) {
-        return new Response(
-          JSON.stringify({
-            data,
-            local_atendimento: localAtendimento || null,
-            horarios_disponiveis: [],
-            total: 0,
-            motivo: 'Não há expediente neste dia da semana'
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      for (const disp of dispSemanalFiltrada) {
-        const slots = gerarSlots(disp.hora_inicio, disp.hora_fim, disp.intervalo_minutos);
-        allSlots.push(...slots);
-      }
+      // Política: sem disponibilidade_especifica = dia fechado.
+      // Modelos semanais são apenas templates para abrir o dia rapidamente,
+      // não abrem agenda automaticamente.
+      return new Response(
+        JSON.stringify({
+          data,
+          local_atendimento: localAtendimento || null,
+          horarios_disponiveis: [],
+          total: 0,
+          motivo: 'Data não aberta para agendamento'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
 
     // Deduplicate and sort
     allSlots = [...new Set(allSlots)].sort();
