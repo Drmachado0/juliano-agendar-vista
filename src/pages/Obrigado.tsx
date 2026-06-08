@@ -6,8 +6,66 @@ import { Link } from "react-router-dom";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
+import { supabase } from "@/integrations/supabase/client";
 
 const DEDUP_STORAGE_KEY = "obrigado_tracking_fired_v1";
+
+const getCookie = (name: string): string | undefined => {
+  if (typeof document === "undefined") return undefined;
+  const match = document.cookie.match(
+    new RegExp("(?:^|; )" + name.replace(/([.$?*|{}()[\]\\/+^])/g, "\\$1") + "=([^;]*)")
+  );
+  return match ? decodeURIComponent(match[1]) : undefined;
+};
+
+const getUtm = (key: string): string | undefined => {
+  if (typeof window === "undefined") return undefined;
+  const fromUrl = new URLSearchParams(window.location.search).get(key);
+  if (fromUrl) return fromUrl;
+  try {
+    return window.sessionStorage?.getItem(key) ?? undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const sendMetaCapi = async (eventName: "Lead" | "CompleteRegistration", eventId: string) => {
+  try {
+    const utm_source = getUtm("utm_source");
+    const utm_medium = getUtm("utm_medium");
+    const utm_campaign = getUtm("utm_campaign");
+    const utm_content = getUtm("utm_content");
+    const utm_term = getUtm("utm_term");
+
+    const payload = {
+      event_name: eventName,
+      event_id: eventId,
+      event_source_url: window.location.href,
+      user_data: {
+        country: "BR",
+        fbp: getCookie("_fbp"),
+        fbc: getCookie("_fbc"),
+        client_user_agent: navigator.userAgent,
+      },
+      custom_data: {
+        content_name: "Agendamento Confirmado",
+        content_category: "Consulta Oftalmológica",
+        value: 300,
+        currency: "BRL",
+        ...(utm_source && { utm_source }),
+        ...(utm_medium && { utm_medium }),
+        ...(utm_campaign && { utm_campaign }),
+        ...(utm_content && { utm_content }),
+        ...(utm_term && { utm_term }),
+      },
+    };
+
+    const { error } = await supabase.functions.invoke("meta-capi", { body: payload });
+    if (error) console.warn(`[meta-capi] ${eventName} falhou:`, error);
+  } catch (err) {
+    console.warn(`[meta-capi] ${eventName} erro:`, err);
+  }
+};
 
 const Obrigado = () => {
   const { trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
@@ -86,6 +144,10 @@ const Obrigado = () => {
         event_id: eventId,
         meta_event_id: eventId,
       });
+
+      // Reforço server-side via Meta CAPI — mesmo event_id do Pixel/GTM para dedup.
+      void sendMetaCapi("Lead", eventId);
+      void sendMetaCapi("CompleteRegistration", eventId);
 
       try {
         window.sessionStorage?.setItem(DEDUP_STORAGE_KEY, "1");
