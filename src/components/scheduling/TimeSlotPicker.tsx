@@ -67,24 +67,9 @@ const TimeSlotPicker = ({
       const horariosDisponiveis = await gerarHorariosDisponiveis(selectedDate, localAtendimento);
       setSlots(horariosDisponiveis);
 
-      // Seleciona deterministicamente até MAX_VISIVEIS horários para exibir como disponíveis
+      // Mostra os primeiros MAX_VISIVEIS horários disponíveis em sequência
       const liberados = new Set<string>();
-      if (horariosDisponiveis.length <= MAX_VISIVEIS) {
-        horariosDisponiveis.forEach((s) => liberados.add(s.horario));
-      } else {
-        // Seed determinístico baseado na data + local para manter estabilidade entre re-renders
-        const seedStr = `${selectedDate.toDateString()}|${localAtendimento || ""}`;
-        let seed = 0;
-        for (let i = 0; i < seedStr.length; i++) seed = (seed * 31 + seedStr.charCodeAt(i)) >>> 0;
-        const indices = horariosDisponiveis.map((_, i) => i);
-        // Embaralhamento determinístico (Fisher-Yates com PRNG simples)
-        for (let i = indices.length - 1; i > 0; i--) {
-          seed = (seed * 9301 + 49297) % 233280;
-          const j = Math.floor((seed / 233280) * (i + 1));
-          [indices[i], indices[j]] = [indices[j], indices[i]];
-        }
-        indices.slice(0, MAX_VISIVEIS).forEach((idx) => liberados.add(horariosDisponiveis[idx].horario));
-      }
+      horariosDisponiveis.slice(0, MAX_VISIVEIS).forEach((s) => liberados.add(s.horario));
       setHorariosLiberados(liberados);
     } catch (error) {
       console.error("Erro ao carregar horários:", error);
