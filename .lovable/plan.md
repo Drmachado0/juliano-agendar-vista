@@ -1,50 +1,32 @@
-## Travas anti-loop / anti-spam no envio de WhatsApp
+## Problema
 
-Objetivo: garantir que **nunca** um lead/paciente receba mais de N mensagens automáticas em curto intervalo, mesmo se houver bug, cron duplicado ou falha de dedup.
+O calendário de /agendamento mostra todas as datas bloqueadas mesmo quando há entradas em "Datas Especiais Configuradas" (09–11 e 23–25/07/2026, clínicas Clinicor e HGP, `disponivel=true`, com `modelo_id` apontando para um modelo semanal de 08–11h ou 14–17h).
 
-### 1. Trava por telefone (rate-limit global outbound)
-Nova função SQL `pode_enviar_outbound(telefone, tipo, janela_minutos, max_msgs)`:
-- Conta mensagens em `mensagens_whatsapp` com `direcao='OUT'` para o telefone (últimos 8 dígitos) nos últimos X min.
-- Retorna `false` se excedeu.
+Causa-raiz confirmada por teste das RPCs:
+- `public.get_available_days(7, 2026, '<clinicor>')` → `[]`
+- `public.get_available_slots('2026-07-09', '<clinicor>')` → `[]`
+- Mesmo a query direta `SELECT … FROM disponibilidade_especifica … LIMIT 1` retornando 1 linha.
 
-Aplicar em **todas** as edge functions outbound antes de chamar Evolution:
-- `enviar-boas-vindas-lead` — máx **1 / 24h** por telefone
-- `enviar-confirmacao-whatsapp` — máx **1 / 6h**
-- `lembrete-consulta-whatsapp` — máx **2 / 24h**
-- `lembretes-runner` — máx **1 / 7 dias** por telefone
-- `enviar-whatsapp` (manual) — máx **10 / hora** (anti-fat-finger)
+Dentro de `get_available_slots`, o teste `IF v_disp IS NULL THEN RETURN;` aplicado a uma variável `record` não é confiável e está abortando a execução. O mesmo padrão aparece em `IF v_modelo IS NOT NULL` e no laço de `get_available_days/get_next_available_slot`.
 
-### 2. Circuit breaker por tipo de mensagem
-Nova tabela `envio_circuit_breaker`:
-- `tipo_mensagem`, `janela_inicio`, `count_enviado`, `count_erro`, `aberto` (bool)
-- Se taxa de erro > 30% em 10 min → marca `aberto=true` e bloqueia envios desse tipo por 30 min.
-- Edge function consulta antes de enviar; se aberto, registra em `system_logs` e pula.
+## Solução
 
-### 3. Trava por agendamento
-Para evitar reentradas (causa do bug Bruna):
-- Garantir índices únicos parciais por `agendamento_id + tipo_mensagem` para `boas_vindas`, `confirmacao`, `lembrete_24h`, `lembrete_2h`, `agradecimento`.
-- Padronizar pattern **"claim → send → update"** (já feito em boas-vindas) nas demais functions outbound.
+Migration corrigindo as três funções para usar o idioma canônico `IF NOT FOUND THEN RETURN; END IF;` logo após cada `SELECT … INTO`, em vez de `IS NULL` em record.
 
-### 4. Kill switch global imediato
-- Já existe `configuracoes_envio.status_global`. Adicionar verificação **em todas** as edge functions outbound logo no início (hoje várias ignoram).
-- Adicionar botão "🛑 PARAR TUDO AGORA" no admin → seta `status_global='bloqueado'` + `motivo_bloqueio='manual_panic'`.
+### Mudanças em `public.get_available_slots(date, uuid)`
 
-### 5. Monitor + alerta
-Cron `monitor-envios-anomalos` (a cada 5 min):
-- Detecta telefone com ≥3 mensagens OUT em <30 min → registra `system_logs` nível `error` + marca agendamento `PRECISA_DE_HUMANO`.
-- Detecta tipo de mensagem com taxa erro >50% → abre circuit breaker.
-- Painel `/admin/logs` já mostra `system_logs`; adicionar filtro "anomalias de envio".
+- Após o `SELECT * INTO v_disp …` trocar `IF v_disp IS NULL THEN RETURN; END IF;` por `IF NOT FOUND THEN RETURN; END IF;`.
+- Após o `SELECT * INTO v_modelo …` trocar `IF v_modelo IS NOT NULL THEN …` por `IF FOUND THEN …`.
 
-### 6. Backfill / limpeza
-- Auditar `mensagens_whatsapp` últimas 7 dias agrupando por telefone+tipo: listar quem recebeu duplicatas.
-- Inserir dedup records onde faltar para "congelar" o estado.
+### Mudanças em `public.get_available_days(int, int, uuid)` e `public.get_next_available_slot(uuid, date)`
 
-### Arquivos afetados
-- **Migration**: função `pode_enviar_outbound`, tabela `envio_circuit_breaker`, índices únicos parciais (confirmacao/lembretes/agradecimento).
-- **Edge functions** (guard no topo): `enviar-boas-vindas-lead`, `enviar-confirmacao-whatsapp`, `lembrete-consulta-whatsapp`, `lembretes-runner`, `enviar-whatsapp`, `enviar-whatsapp-queue`, `retentar-boas-vindas-pendentes`.
-- **Nova edge function**: `monitor-envios-anomalos` + cron schedule (5 min).
-- **Frontend**: botão pânico em `src/pages/admin/Configuracoes.tsx` (aba Envios) + badge de circuit breaker aberto.
+- Manter a lógica atual, mas garantir que continuam usando `get_available_slots` corrigido. Não há mudança estrutural além de redeclarar os GRANTs.
 
-### Perguntas antes de implementar
-1. Quer aplicar **tudo** ou começar só pelos itens 1+4 (rate-limit + botão pânico) que já cobrem 90% do risco?
-2. Limites sugeridos acima estão ok ou prefere mais conservador (ex.: boas-vindas 1/72h)?
+### Pós-migração
+
+- Validar via SQL:
+  - `SELECT count(*) FROM public.get_available_slots('2026-07-09','657e4784-e292-45c6-a033-40f3d115f984');` deve retornar 12 (08:00–10:45, intervalo 15).
+  - `SELECT * FROM public.get_available_days(7, 2026, '657e4784-e292-45c6-a033-40f3d115f984');` deve listar 09, 10, 11, 23, 24, 25/07/2026.
+- Recarregar /agendamento e confirmar que as datas aparecem clicáveis.
+
+Não é necessário redeploy de edge function (as funções `listar-datas-disponiveis` / `listar-horarios-disponiveis` não são usadas por esta tela; o front chama a RPC direta). Não há mudança no front-end.
