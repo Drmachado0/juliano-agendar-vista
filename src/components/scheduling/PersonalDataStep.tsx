@@ -220,7 +220,7 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
         <div className="space-y-2">
           <Label htmlFor="birthDate" className="text-foreground flex items-center gap-2">
             <Calendar className="w-4 h-4 text-primary" />
-            Data de nascimento
+            Data de nascimento (opcional)
           </Label>
           <Input
             id="birthDate"
