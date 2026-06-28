@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Award, Users, Star, Shield, CalendarCheck, ChevronDown } from "lucide-react";
+import { Award, Users, Star, Shield, CalendarCheck, ChevronDown, Clock, Zap, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import drJulianoHeroWebp from "@/assets/dr-juliano-hero.webp";
