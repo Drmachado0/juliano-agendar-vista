@@ -243,14 +243,14 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
         <div className="space-y-2">
           <Label htmlFor="email" className="text-foreground flex items-center gap-2">
             <Mail className="w-4 h-4 text-primary" />
-            E-mail
+            E-mail (opcional)
           </Label>
           <Input
             id="email"
             type="email"
             value={formData.email}
             onChange={(e) => updateFormData({ email: e.target.value })}
-            placeholder="seu@email.com (opcional)"
+            placeholder="seu@email.com"
             className={`bg-secondary border-border focus:border-primary ${
               errors.email ? "border-destructive" : ""
             }`}
