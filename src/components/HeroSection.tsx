@@ -13,7 +13,6 @@ const HeroSection = () => {
   const { waLink } = useSiteWhatsApp();
   const heroWaUrl = waLink("Olá! Vi o site do Dr. Juliano Machado e gostaria de agendar uma consulta oftalmológica.");
   const [count, setCount] = useState(0);
-  const [count, setCount] = useState(0);
 
   // Animated counter for patients
   useEffect(() => {
