@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Star, Quote, Loader2, MessageSquare, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { buscarAvaliacoesGoogle, type AvaliacaoGoogle } from "@/services/avaliacoesGoogle";
@@ -37,13 +37,11 @@ function convertToTestimonial(avaliacao: AvaliacaoGoogle): Testimonial {
   };
 }
 
+const MAX_CARDS = 6;
+
 const TestimonialsSection = () => {
   const [isVisible, setIsVisible] = useState(false);
-  const [displayedTestimonials, setDisplayedTestimonials] = useState<Testimonial[]>([]);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
-  const autoRotateRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: avaliacoesGoogle, isLoading } = useQuery({
     queryKey: ['avaliacoes-google'],
@@ -51,49 +49,18 @@ const TestimonialsSection = () => {
     staleTime: 1000 * 60 * 30,
   });
 
-  const allTestimonials = useMemo(() => {
-    if (avaliacoesGoogle && avaliacoesGoogle.length > 0) {
-      return avaliacoesGoogle.map(convertToTestimonial);
-    }
-    return [];
+  const displayedTestimonials = useMemo(() => {
+    if (!avaliacoesGoogle || avaliacoesGoogle.length === 0) return [] as Testimonial[];
+    return [...avaliacoesGoogle]
+      .sort((a, b) => {
+        if (b.rating !== a.rating) return b.rating - a.rating;
+        return (b.time_epoch || 0) - (a.time_epoch || 0);
+      })
+      .slice(0, MAX_CARDS)
+      .map(convertToTestimonial);
   }, [avaliacoesGoogle]);
 
-  const shuffleArray = useCallback((array: Testimonial[]): Testimonial[] => {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  }, []);
-
-  const loadNewTestimonials = useCallback(() => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      const shuffled = shuffleArray(allTestimonials);
-      setDisplayedTestimonials(shuffled.slice(0, 3));
-      setIsTransitioning(false);
-    }, 400);
-  }, [shuffleArray, allTestimonials]);
-
-  useEffect(() => {
-    if (allTestimonials.length > 0) {
-      const shuffled = shuffleArray(allTestimonials);
-      setDisplayedTestimonials(shuffled.slice(0, 3));
-    }
-  }, [shuffleArray, allTestimonials]);
-
-  useEffect(() => {
-    if (isHovered || allTestimonials.length <= 3) {
-      if (autoRotateRef.current) {
-        clearInterval(autoRotateRef.current);
-        autoRotateRef.current = null;
-      }
-      return;
-    }
-    autoRotateRef.current = setInterval(() => loadNewTestimonials(), AUTO_ROTATE_INTERVAL);
-    return () => { if (autoRotateRef.current) clearInterval(autoRotateRef.current); };
-  }, [isHovered, loadNewTestimonials, allTestimonials.length]);
+  const isTransitioning = false;
 
   const averageRating = useMemo(() => {
     if (displayedTestimonials.length === 0) return "5.0";
@@ -174,18 +141,15 @@ const TestimonialsSection = () => {
         )}
 
         {/* Empty */}
-        {!isLoading && allTestimonials.length === 0 && (
+        {!isLoading && displayedTestimonials.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             <p>As avaliações estão sendo carregadas.</p>
           </div>
         )}
 
         {/* Testimonials Grid */}
-        <div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+
           {displayedTestimonials.map((testimonial, index) => (
             <div
               key={testimonial.id}
