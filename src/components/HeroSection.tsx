@@ -1,14 +1,17 @@
 import { Button } from "@/components/ui/button";
-import { Award, Users, Star, Shield, CalendarCheck, ChevronDown, Clock, Zap, X } from "lucide-react";
+import { Award, Users, Star, Shield, CalendarCheck, ChevronDown, Clock, Zap, X, MessageCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import drJulianoHeroWebp from "@/assets/dr-juliano-hero.webp";
 import drJulianoHeroWebp2x from "@/assets/dr-juliano-hero@2x.webp";
 import drJulianoHeroJpg from "@/assets/dr-juliano-hero.jpg";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
+import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 
 const HeroSection = () => {
-  const { trackCTAClick } = useGoogleTag();
+  const { trackCTAClick, trackWhatsAppClick } = useGoogleTag();
+  const { waLink } = useSiteWhatsApp();
+  const heroWaUrl = waLink("Olá! Vi o site do Dr. Juliano Machado e gostaria de agendar uma consulta oftalmológica.");
   const [count, setCount] = useState(0);
 
   // Animated counter for patients
@@ -126,18 +129,31 @@ const HeroSection = () => {
                   <span className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
                 </Button>
               </Link>
-              <Button
-                variant="outline"
-                size="lg"
+              <a
+                href={heroWaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackWhatsAppClick(heroWaUrl, 'Falar no WhatsApp', 'whatsapp_hero', 'hero')}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-14 rounded-xl px-8 text-base font-semibold border-2 border-[#25D366]/60 text-[#25D366] hover:bg-[#25D366]/10 hover:border-[#25D366] transition-all duration-300"
+              >
+                <MessageCircle className="w-5 h-5" />
+                Falar no WhatsApp
+              </a>
+            </div>
+
+            {/* Tertiary link */}
+            <div className="text-center lg:text-left mb-6 opacity-0 animate-slide-up animation-delay-700">
+              <button
                 onClick={() => {
                   trackCTAClick('saiba_mais', 'hero', 'Conhecer procedimentos');
                   document.getElementById("procedimentos")?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="w-full sm:w-auto text-base py-6 sm:py-3 border-primary/35 text-primary/90 hover:border-primary/60 hover:text-primary"
+                className="text-sm text-muted-foreground hover:text-primary underline underline-offset-4 transition-colors"
               >
                 Ver procedimentos
-              </Button>
+              </button>
             </div>
+
 
             {/* Reassurance line */}
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-2 mb-7 text-sm text-foreground/85 font-medium opacity-0 animate-slide-up animation-delay-700">

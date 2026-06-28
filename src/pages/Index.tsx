@@ -7,6 +7,7 @@ import TestimonialsSection from "@/components/TestimonialsSection";
 import LocationsSection from "@/components/LocationsSection";
 import InsuranceSection from "@/components/InsuranceSection";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import MobileStickyCTA from "@/components/MobileStickyCTA";
 import Footer from "@/components/Footer";
 
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
@@ -89,6 +90,7 @@ const Index = () => {
 
         <Footer />
         <WhatsAppButton />
+        <MobileStickyCTA />
       </div>
     </>
   );
