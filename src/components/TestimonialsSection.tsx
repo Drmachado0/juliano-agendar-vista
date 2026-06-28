@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Star, Quote, Loader2, MessageSquare, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { buscarAvaliacoesGoogle, type AvaliacaoGoogle } from "@/services/avaliacoesGoogle";
