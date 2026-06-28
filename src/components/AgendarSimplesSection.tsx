@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, ListChecks, CheckCircle2, ArrowRight, MessageCircle } from "lucide-react";
+import { CalendarDays, ListChecks, CheckCircle2, ArrowRight, MessageCircle, Shield } from "lucide-react";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import { Button } from "@/components/ui/button";
@@ -156,6 +156,18 @@ const AgendarSimplesSection = () => {
             <MessageCircle className="w-4 h-4 text-[#25D366]" />
             Prefere falar antes? Chamar no WhatsApp
           </a>
+        </div>
+
+        {/* Privacy reassurance */}
+        <div
+          className={`flex items-center justify-center gap-2 mt-5 text-xs md:text-sm text-muted-foreground/80 text-center transition-all duration-700 delay-400 ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          }`}
+        >
+          <Shield className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />
+          <span>
+            Seus dados são usados apenas para contato e confirmação do agendamento. Não compartilhamos com terceiros.
+          </span>
         </div>
       </div>
     </section>
