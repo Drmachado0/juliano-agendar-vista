@@ -139,6 +139,24 @@ const HeroSection = () => {
               </Button>
             </div>
 
+            {/* Reassurance line */}
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-2 mb-7 text-sm text-foreground/85 font-medium opacity-0 animate-slide-up animation-delay-700">
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-primary" aria-hidden="true" />
+                Resposta em até 2h úteis
+              </span>
+              <span className="hidden sm:inline text-primary/40" aria-hidden="true">·</span>
+              <span className="inline-flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-primary" aria-hidden="true" />
+                Sem fila de espera
+              </span>
+              <span className="hidden sm:inline text-primary/40" aria-hidden="true">·</span>
+              <span className="inline-flex items-center gap-1.5">
+                <X className="w-4 h-4 text-primary" aria-hidden="true" />
+                Cancele quando quiser
+              </span>
+            </div>
+
             {/* Stats cards */}
             <div className="grid grid-cols-3 gap-4 opacity-0 animate-blur-in animation-delay-700">
               <StatCard
