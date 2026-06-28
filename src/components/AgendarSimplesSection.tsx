@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, ListChecks, CheckCircle2, ArrowRight, MessageCircle } from "lucide-react";
+import { CalendarDays, ListChecks, CheckCircle2, ArrowRight, MessageCircle, Shield } from "lucide-react";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import { Button } from "@/components/ui/button";
