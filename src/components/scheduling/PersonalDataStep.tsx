@@ -198,7 +198,7 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
         <div className="space-y-2">
           <Label htmlFor="phone" className="text-foreground flex items-center gap-2">
             <Phone className="w-4 h-4 text-primary" />
-            Telefone (WhatsApp) *
+            WhatsApp para confirmação *
           </Label>
           <Input
             id="phone"
