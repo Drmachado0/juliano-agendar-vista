@@ -45,7 +45,7 @@ const MobileStickyCTA = () => {
           href={waUrl}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => trackWhatsAppClick(waUrl, "WhatsApp", "whatsapp_sticky_mobile", "sticky_mobile")}
+          onClick={() => trackWhatsAppClick(waUrl, "Falar no WhatsApp", "whatsapp_sticky_mobile", "sticky_mobile")}
           aria-label="Falar no WhatsApp"
           className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-[#25D366] text-white shadow-lg shadow-[#25D366]/30 active:scale-[0.98] transition-transform"
         >
