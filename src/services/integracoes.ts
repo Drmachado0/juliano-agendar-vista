@@ -123,13 +123,19 @@ async function uploadImageToStorage(imageBase64: string): Promise<{ url: string 
       return { url: null, error: error.message };
     }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
+    // Get signed URL (bucket is private for LGPD compliance)
+    const { data: urlData, error: signedError } = await supabase.storage
       .from('whatsapp-images')
-      .getPublicUrl(data.path);
+      .createSignedUrl(data.path, 3600);
 
-    console.log("[integracoes] Imagem uploaded com sucesso:", urlData.publicUrl);
-    return { url: urlData.publicUrl, error: null };
+    if (signedError || !urlData?.signedUrl) {
+      console.error("[integracoes] Erro ao gerar signed URL:", signedError);
+      return { url: null, error: signedError?.message || "Falha ao gerar signed URL" };
+    }
+
+    console.log("[integracoes] Imagem uploaded com sucesso (signed URL gerada)");
+    return { url: urlData.signedUrl, error: null };
+
   } catch (err: any) {
     console.error("[integracoes] Erro ao processar imagem para upload:", err);
     return { url: null, error: err.message || "Erro ao processar imagem" };
