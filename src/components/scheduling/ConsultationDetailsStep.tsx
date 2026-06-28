@@ -90,9 +90,9 @@ const ConsultationDetailsStep = ({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-foreground">Detalhes da consulta</h3>
+        <h3 className="text-lg font-semibold text-foreground">Qual atendimento você precisa?</h3>
         <p className="text-sm text-muted-foreground">
-          Informe os detalhes do atendimento desejado.
+          Escolha o tipo, local e convênio.
         </p>
       </div>
 
