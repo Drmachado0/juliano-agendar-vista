@@ -168,6 +168,7 @@ const AdminDashboard = () => {
           .select(
             "id, created_at, data_agendamento, hora_agendamento, nome_completo, local_atendimento, tipo_atendimento, convenio, status_crm, status_funil, confirmation_status"
           )
+          .eq("is_sandbox", false)
           .neq("status_funil", "bloqueio"),
         supabase
           .from("mensagens_whatsapp")
@@ -186,12 +187,14 @@ const AdminDashboard = () => {
           .select(
             "id, created_at, data_agendamento, hora_agendamento, nome_completo, local_atendimento, tipo_atendimento, convenio, status_crm, status_funil, confirmation_status"
           )
+          .eq("is_sandbox", false)
           .gte("data_agendamento", hojeStr)
           .neq("status_funil", "bloqueio")
           .order("data_agendamento", { ascending: true })
           .order("hora_agendamento", { ascending: true })
           .limit(6),
       ]);
+
 
       if (agRes.error) throw agRes.error;
       const agendamentos = (agRes.data || []) as Agendamento[];
