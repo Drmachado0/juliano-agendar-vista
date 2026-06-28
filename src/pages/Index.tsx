@@ -90,6 +90,7 @@ const Index = () => {
 
         <Footer />
         <WhatsAppButton />
+        <MobileStickyCTA />
       </div>
     </>
   );
