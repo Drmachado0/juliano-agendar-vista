@@ -141,18 +141,15 @@ const TestimonialsSection = () => {
         )}
 
         {/* Empty */}
-        {!isLoading && allTestimonials.length === 0 && (
+        {!isLoading && displayedTestimonials.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             <p>As avaliações estão sendo carregadas.</p>
           </div>
         )}
 
         {/* Testimonials Grid */}
-        <div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+
           {displayedTestimonials.map((testimonial, index) => (
             <div
               key={testimonial.id}
