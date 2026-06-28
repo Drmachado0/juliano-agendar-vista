@@ -5,6 +5,7 @@ import AboutSection from "@/components/AboutSection";
 import ProceduresSection from "@/components/ProceduresSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import AgendarSimplesSection from "@/components/AgendarSimplesSection";
+import AgendarFAQSection from "@/components/AgendarFAQSection";
 import LocationsSection from "@/components/LocationsSection";
 import InsuranceSection from "@/components/InsuranceSection";
 import WhatsAppButton from "@/components/WhatsAppButton";
