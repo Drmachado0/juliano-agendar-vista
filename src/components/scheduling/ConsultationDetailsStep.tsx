@@ -143,7 +143,7 @@ const ConsultationDetailsStep = ({
         <div className="space-y-3">
           <Label className="text-foreground flex items-center gap-2">
             <MapPin className="w-4 h-4 text-primary" />
-            Local do atendimento *
+            Onde prefere ser atendido? *
           </Label>
           <RadioGroup
             value={formData.location}
@@ -180,7 +180,7 @@ const ConsultationDetailsStep = ({
         <div className="space-y-3">
           <Label className="text-foreground flex items-center gap-2">
             <Shield className="w-4 h-4 text-primary" />
-            Convênio *
+            Convênio ou particular *
           </Label>
           <RadioGroup
             value={formData.insurance}
@@ -231,7 +231,7 @@ const ConsultationDetailsStep = ({
               <Input
                 value={formData.otherInsurance}
                 onChange={(e) => updateFormData({ otherInsurance: e.target.value })}
-                placeholder="Nome do convênio"
+                placeholder="Digite o nome do convênio"
                 className={`bg-secondary border-border focus:border-primary ${
                   errors.otherInsurance ? "border-destructive" : ""
                 }`}
