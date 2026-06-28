@@ -31,7 +31,7 @@ const AgendarSimplesSection = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
   const { trackCTAClick, trackWhatsAppClick } = useGoogleTag();
   const { waLink } = useSiteWhatsApp();
-  const waUrl = waLink("Olá! Vi no site que agendar é simples e gostaria de tirar uma dúvida antes de marcar.");
+  const waUrl = waLink("Olá! Vi no site que agendar é simples e gostaria de tirar uma dúvida antes de marcar. (origem: agendar_simples)");
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -124,7 +124,7 @@ const AgendarSimplesSection = () => {
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
           }`}
         >
-          <Link to="/agendamento" className="w-full sm:w-auto">
+          <Link to="/agendamento?utm_source=site&utm_medium=cta&utm_campaign=agendar_simples" className="w-full sm:w-auto">
             <Button
               variant="hero"
               size="lg"
