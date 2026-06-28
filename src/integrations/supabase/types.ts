@@ -2294,6 +2294,7 @@ export type Database = {
         Returns: boolean
       }
       preview_dados_paciente: { Args: { p_telefone: string }; Returns: Json }
+      purge_old_system_logs: { Args: never; Returns: number }
       reativar_bot_agendamento: {
         Args: { p_agendamento_id: string }
         Returns: undefined
