@@ -20,7 +20,7 @@ const steps = [
   },
   {
     number: "03",
-    icon: ClockCheck,
+    icon: CheckCircle2,
     title: "A equipe confirma",
     description: "Você recebe a confirmação pelo WhatsApp com data, local e orientações.",
   },
