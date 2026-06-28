@@ -167,9 +167,9 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-foreground">Dados pessoais</h3>
+        <h3 className="text-lg font-semibold text-foreground">Quem vai ser atendido?</h3>
         <p className="text-sm text-muted-foreground">
-          Preencha seus dados para agendarmos sua consulta.
+          Preencha seus dados. Vamos confirmar tudo pelo WhatsApp.
         </p>
       </div>
 
