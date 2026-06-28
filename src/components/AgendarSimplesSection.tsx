@@ -129,7 +129,7 @@ const AgendarSimplesSection = () => {
               variant="hero"
               size="lg"
               onClick={() =>
-                trackCTAClick("agendar_online", "agendar_simples", "Agendar consulta online")
+                trackCTAClick("agendar_consulta", "agendar_simples", "Agendar consulta online")
               }
               className="w-full sm:w-auto text-base py-6 sm:py-3 group relative overflow-hidden"
             >
