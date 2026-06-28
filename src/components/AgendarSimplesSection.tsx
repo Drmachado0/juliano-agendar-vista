@@ -95,8 +95,8 @@ const AgendarSimplesSection = () => {
                 />
 
                 {/* Icon top-right */}
-                <div className="absolute top-5 right-5 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary/70 group-hover:text-primary group-hover:bg-primary/15 transition-all duration-300">
-                  <Icon className="w-5 h-5" />
+                <div className="absolute top-5 right-5 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary/70 group-hover:text-primary group-hover:bg-primary/15 transition-all duration-300" aria-hidden="true">
+                  <Icon className="w-5 h-5" aria-hidden="true" />
                 </div>
 
                 {/* Large number */}
@@ -131,7 +131,7 @@ const AgendarSimplesSection = () => {
               onClick={() =>
                 trackCTAClick("agendar_consulta", "agendar_simples", "Agendar consulta online")
               }
-              className="w-full sm:w-auto text-base py-6 sm:py-3 group relative overflow-hidden"
+              className="w-full sm:w-auto text-base py-6 sm:py-3 min-h-[48px] group relative overflow-hidden"
             >
               Agendar consulta online
               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -150,7 +150,8 @@ const AgendarSimplesSection = () => {
                 "agendar_simples"
               )
             }
-            className="inline-flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors underline underline-offset-4"
+            className="inline-flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors underline underline-offset-4 py-3 px-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background min-h-[48px]"
+            aria-label="Chamar no WhatsApp para tirar dúvidas antes de agendar"
           >
             <MessageCircle className="w-4 h-4 text-[#25D366]" />
             Prefere falar antes? Chamar no WhatsApp
