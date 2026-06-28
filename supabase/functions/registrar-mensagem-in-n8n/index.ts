@@ -83,9 +83,24 @@ serve(async (req) => {
     agendamentoId = match?.id ?? null;
   }
 
-  // 2.5) Captura de lead no 1º contato: se não existe agendamento/lead p/ esse telefone, cria um ghost lead
-  const nomeContato = (body.nome_contato ?? "").trim();
+  // Deriva nome do contato a partir de nome_contato ou de campos comuns no payload
+  // (Evolution/WhatsApp expõe pushName/notifyName/sender.pushName)
+  const payloadAny = (body.payload ?? {}) as Record<string, any>;
+  const nomeBruto =
+    (body.nome_contato ?? "").trim() ||
+    (payloadAny.pushName ?? "").toString().trim() ||
+    (payloadAny.notifyName ?? "").toString().trim() ||
+    (payloadAny.sender?.pushName ?? "").toString().trim() ||
+    (payloadAny.contact?.name ?? "").toString().trim() ||
+    "";
+  const ehNomePlaceholderEntrada =
+    !nomeBruto ||
+    /^lead\s*whatsapp$/i.test(nomeBruto) ||
+    /^paciente$/i.test(nomeBruto) ||
+    /^\+?\d[\d\s\-()]+$/.test(nomeBruto); // só números/telefone
+  const nomeContato = ehNomePlaceholderEntrada ? "" : nomeBruto;
   let leadCriadoAgora = false;
+
   if (!agendamentoId && last8.length >= 8) {
     const insertLead = {
       nome_completo: nomeContato.length > 0 ? nomeContato : "Lead WhatsApp",
