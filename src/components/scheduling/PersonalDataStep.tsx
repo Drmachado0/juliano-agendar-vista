@@ -103,25 +103,25 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
     // Nome completo: obrigatório, mínimo 2 palavras, apenas letras
     const nome = formData.fullName.trim();
     if (!nome) {
-      newErrors.fullName = "Nome completo é obrigatório";
+      newErrors.fullName = "Por favor, informe seu nome completo";
     } else if (nome.length < 3) {
-      newErrors.fullName = "Nome muito curto (mínimo 3 caracteres)";
+      newErrors.fullName = "O nome precisa ter pelo menos 3 caracteres";
     } else if (!/\s/.test(nome) || nome.split(/\s+/).filter(Boolean).length < 2) {
-      newErrors.fullName = "Informe nome e sobrenome";
+      newErrors.fullName = "Informe nome e sobrenome para continuarmos";
     } else if (!/^[A-Za-zÀ-ÿ\s'-]+$/.test(nome)) {
-      newErrors.fullName = "Nome deve conter apenas letras";
+      newErrors.fullName = "O nome deve conter apenas letras e espaços";
     }
 
     // Telefone: obrigatório, DDD válido (11-99) + 10 ou 11 dígitos
     const digits = formData.phone.replace(/\D/g, "");
     if (!formData.phone.trim()) {
-      newErrors.phone = "Telefone (WhatsApp) é obrigatório";
+      newErrors.phone = "Informe seu WhatsApp para receber a confirmação";
     } else if (digits.length < 10 || digits.length > 11) {
-      newErrors.phone = "Telefone deve ter DDD + número (ex: (91) 99999-9999)";
+      newErrors.phone = "Digite um número completo com DDD, ex: (91) 99999-9999";
     } else {
       const ddd = parseInt(digits.slice(0, 2), 10);
       if (ddd < 11 || ddd > 99) {
-        newErrors.phone = "DDD inválido";
+        newErrors.phone = "DDD inválido. Verifique o código de área";
       } else if (digits.length === 11 && digits[2] !== "9") {
         newErrors.phone = "Celular deve começar com 9 após o DDD";
       }
@@ -130,7 +130,7 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
     // E-mail: opcional, mas se preenchido precisa ser válido
     const emailVal = formData.email.trim();
     if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-      newErrors.email = "E-mail inválido";
+      newErrors.email = "Por favor, digite um e-mail válido (ex: nome@email.com)";
     }
 
     // Data de nascimento é opcional, mas se preenchida precisa estar completa e válida
@@ -147,9 +147,9 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
         idadeMaxima.setFullYear(idadeMaxima.getFullYear() - 120);
 
         if (dataNasc > hoje) {
-          newErrors.birthDate = "Data de nascimento não pode ser no futuro";
+          newErrors.birthDate = "A data de nascimento não pode ser futura";
         } else if (dataNasc < idadeMaxima) {
-          newErrors.birthDate = "Data de nascimento inválida (idade acima de 120 anos)";
+          newErrors.birthDate = "Data de nascimento inválida";
         }
       }
     }

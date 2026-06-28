@@ -51,19 +51,19 @@ const ConsultationDetailsStep = ({
     const newErrors: Record<string, string> = {};
 
     if (!formData.appointmentType) {
-      newErrors.appointmentType = "Selecione o tipo de atendimento";
+      newErrors.appointmentType = "Escolha o tipo de atendimento";
     }
 
     if (!formData.location) {
-      newErrors.location = "Selecione o local de atendimento";
+      newErrors.location = "Escolha o local de atendimento";
     }
 
     if (!formData.insurance) {
-      newErrors.insurance = "Selecione o convênio";
+      newErrors.insurance = "Informe se será particular ou convênio";
     }
 
     if (formData.insurance === "outro" && !formData.otherInsurance.trim()) {
-      newErrors.otherInsurance = "Informe o nome do convênio";
+      newErrors.otherInsurance = "Digite o nome do seu convênio";
     }
 
     setErrors(newErrors);
