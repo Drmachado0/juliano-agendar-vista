@@ -184,7 +184,7 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
             id="fullName"
             value={formData.fullName}
             onChange={(e) => updateFormData({ fullName: e.target.value })}
-            placeholder="Digite seu nome completo"
+            placeholder="Ex: Maria Oliveira"
             className={`bg-secondary border-border focus:border-primary ${
               errors.fullName ? "border-destructive" : ""
             }`}
