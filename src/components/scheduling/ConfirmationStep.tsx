@@ -64,9 +64,9 @@ const ConfirmationStep = ({ formData, onSubmit, onPrev, isSubmitting = false }: 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-foreground">Confirme seus dados</h3>
+        <h3 className="text-lg font-semibold text-foreground">Revise e confirme seu agendamento</h3>
         <p className="text-sm text-muted-foreground">
-          Revise as informações antes de confirmar o agendamento.
+          Confira se tudo está correto. Depois é só aguardar nosso contato.
         </p>
       </div>
 

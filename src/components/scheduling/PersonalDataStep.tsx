@@ -167,9 +167,9 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-foreground">Dados pessoais</h3>
+        <h3 className="text-lg font-semibold text-foreground">Quem vai ser atendido?</h3>
         <p className="text-sm text-muted-foreground">
-          Preencha seus dados para agendarmos sua consulta.
+          Preencha seus dados. Vamos confirmar tudo pelo WhatsApp.
         </p>
       </div>
 
@@ -184,7 +184,7 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
             id="fullName"
             value={formData.fullName}
             onChange={(e) => updateFormData({ fullName: e.target.value })}
-            placeholder="Digite seu nome completo"
+            placeholder="Ex: Maria Oliveira"
             className={`bg-secondary border-border focus:border-primary ${
               errors.fullName ? "border-destructive" : ""
             }`}
@@ -198,7 +198,7 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
         <div className="space-y-2">
           <Label htmlFor="phone" className="text-foreground flex items-center gap-2">
             <Phone className="w-4 h-4 text-primary" />
-            Telefone (WhatsApp) *
+            WhatsApp para confirmação *
           </Label>
           <Input
             id="phone"
@@ -220,7 +220,7 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
         <div className="space-y-2">
           <Label htmlFor="birthDate" className="text-foreground flex items-center gap-2">
             <Calendar className="w-4 h-4 text-primary" />
-            Data de nascimento
+            Data de nascimento (opcional)
           </Label>
           <Input
             id="birthDate"
@@ -243,14 +243,14 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
         <div className="space-y-2">
           <Label htmlFor="email" className="text-foreground flex items-center gap-2">
             <Mail className="w-4 h-4 text-primary" />
-            E-mail
+            E-mail (opcional)
           </Label>
           <Input
             id="email"
             type="email"
             value={formData.email}
             onChange={(e) => updateFormData({ email: e.target.value })}
-            placeholder="seu@email.com (opcional)"
+            placeholder="seu@email.com"
             className={`bg-secondary border-border focus:border-primary ${
               errors.email ? "border-destructive" : ""
             }`}
