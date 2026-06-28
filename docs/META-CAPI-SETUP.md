@@ -1,21 +1,23 @@
 # Meta CAPI — Setup do Dr. Juliano
 
 **Pixel:** `1003792428067622` · **BM:** `493850516412413 (DrJulianomachado)`
+**Última atualização:** revisado 2026-06-28 (sincronizado com o código)
 
 Integração server-side já está plugada no código. Faltam só 3 passos de config para entrar em produção.
 
 ---
 
-## Mudanças aplicadas no código
+## Mudanças aplicadas no código (estado atual)
 
-| Arquivo | Mudança |
+| Arquivo | Papel atual |
 |---|---|
-| `supabase/functions/meta-capi/index.ts` | **NOVO** — Edge Function que recebe payload, hashea PII (SHA-256), captura IP/UA, envia ao Meta Graph API |
-| `supabase/functions/criar-agendamento/index.ts` | Após cada agendamento criado, dispara CAPI Schedule com `event_id = agendamento.id` (fire-and-forget) |
-| `src/services/agendamentos.ts` | Captura cookies `_fbc`, `_fbp`, UTMs e User Agent do browser e envia ao backend junto do form |
-| `src/hooks/useMetaPixel.ts` | Aceita `eventId` opcional em todos os track methods + expõe `generateEventId()` |
-| `src/components/scheduling/SchedulingModal.tsx` | Passa `agendamento.id` como `event_id` para Schedule, CompleteRegistration e Lead |
-| `src/components/WhatsAppButton.tsx` | Gera UUID e chama CAPI direto + GTM com mesmo `event_id` |
+| `supabase/functions/meta-capi/index.ts` | Edge Function que recebe payload, hashea PII (SHA-256), captura IP/UA e envia ao Meta Graph API |
+| `supabase/functions/converter-lead-agendamento/index.ts` | **Origem real dos eventos CAPI** — após converter o lead em agendamento, dispara `fireMetaCapiSchedule` **e** `fireMetaCapiCompleteRegistration` (helpers locais sobre `fireMetaCapi`), fire-and-forget, com `event_id = agendamento.id` (= `lead_id` atualizado), propagando IP/UA do request original e `fbc/fbp/utm_*/landing_page` lidos da linha atualizada |
+| `supabase/functions/criar-lead/index.ts` | Cria a linha de lead inicial (captura `_fbc`, `_fbp`, UTMs, `landing_page`, IP, UA). **Não chama CAPI** diretamente — quem dispara é o `converter-lead-agendamento` no fechamento do funil |
+| `src/services/agendamentos.ts` / `src/services/leads.ts` | Captura cookies `_fbc`, `_fbp`, UTMs e User Agent no browser e envia ao backend |
+| `src/hooks/useMetaPixel.ts` | Aceita `eventId` opcional em todos os track methods + expõe `generateEventId()`. Empurra `meta_event_id` no dataLayer |
+| `src/pages/Agendamento.tsx` | **Lado browser do funil**. Após `criarLead` (fim do step 2) chama `trackLead(..., lead_id)`; no submit final chama `trackSchedule(..., leadId)` e `trackCompleteRegistration(..., leadId)`. Como o `lead_id` é o mesmo `id` que o `converter-lead-agendamento` retorna como `agendamento.id`, **`meta_event_id` browser == `event_id` server** → dedup garantida |
+| `src/components/WhatsAppButton.tsx` | Dispara `Contact` via dataLayer (GTM) com `event_id` (UUID) |
 
 ---
 
