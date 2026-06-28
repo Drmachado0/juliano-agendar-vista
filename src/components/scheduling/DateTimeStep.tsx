@@ -101,9 +101,9 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-foreground">Escolha data e horário</h3>
+        <h3 className="text-lg font-semibold text-foreground">Escolha a melhor data e horário</h3>
         <p className="text-sm text-muted-foreground">
-          Selecione a data e horário de sua preferência para o atendimento.
+          Veja os horários disponíveis para o local escolhido.
         </p>
       </div>
 
@@ -168,7 +168,7 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
             htmlFor="acceptFirstAvailable"
             className="text-sm text-muted-foreground cursor-pointer leading-relaxed"
           >
-            Aceito o primeiro horário disponível se não houver vaga no horário escolhido
+            Se não houver vaga, aceito o primeiro horário disponível
           </Label>
         </div>
 
@@ -185,7 +185,7 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
             htmlFor="acceptNotifications"
             className="text-sm text-muted-foreground cursor-pointer leading-relaxed"
           >
-            Aceito receber confirmação e lembretes por WhatsApp/E-mail
+            Quero receber confirmação e lembretes por WhatsApp e e-mail
           </Label>
         </div>
       </div>
