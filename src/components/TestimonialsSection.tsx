@@ -82,13 +82,17 @@ const TestimonialsSection = () => {
     return () => observer.disconnect();
   }, []);
 
-  const renderStars = (rating: number) =>
-    Array.from({ length: 5 }).map((_, index) => (
-      <Star
-        key={index}
-        className={`w-4 h-4 ${index < rating ? "fill-primary text-primary" : "text-muted-foreground/20"}`}
-      />
-    ));
+  const renderStars = (rating: number) => (
+    <span className="inline-flex" role="img" aria-label={`${rating} de 5 estrelas`}>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <Star
+          key={index}
+          aria-hidden="true"
+          className={`w-4 h-4 ${index < rating ? "fill-primary text-primary" : "text-muted-foreground/20"}`}
+        />
+      ))}
+    </span>
+  );
 
   const GoogleIcon = () => (
     <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -175,9 +179,11 @@ const TestimonialsSection = () => {
                 {testimonial.image ? (
                   <img
                     src={testimonial.image}
-                    alt={testimonial.name}
+                    alt={`Foto de ${testimonial.name}`}
                     loading="lazy"
                     decoding="async"
+                    width={44}
+                    height={44}
                     className="w-11 h-11 rounded-full object-cover ring-2 ring-primary/20 ring-offset-2 ring-offset-card"
                   />
                 ) : (

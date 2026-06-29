@@ -1,7 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { ComponentType, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { RetinografiaIcon, MapeamentoRetinaIcon, TonometriaIcon, GonioscopiaIcon, BiometriaIcon, CatarataIcon, PterigioIcon, YagLaserIcon, IridotomiaIcon } from "./ProcedureIcons";
+
+type ProcedureItem = {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+  category: "exames" | "cirurgias" | "laser";
+  href?: string;
+};
 
 const ProceduresSection = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -19,7 +27,7 @@ const ProceduresSection = () => {
     return () => observer.disconnect();
   }, []);
 
-  const procedures = [
+  const procedures: ProcedureItem[] = [
     { icon: RetinografiaIcon, title: "Retinografia", description: "Fotografia detalhada do fundo do olho. Essencial para acompanhar diabetes, glaucoma e doenças da retina.", category: "exames" },
     { icon: MapeamentoRetinaIcon, title: "Mapeamento de Retina", description: "Avaliação completa da retina para detectar problemas antes que afetem sua visão.", category: "exames" },
     { icon: TonometriaIcon, title: "Tonometria", description: "Mede a pressão do olho — o principal exame para prevenir e controlar o glaucoma.", category: "exames" },
@@ -73,7 +81,7 @@ const ProceduresSection = () => {
             <button
               key={cat.key}
               onClick={() => setActiveCategory(cat.key)}
-              className={`relative px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
+              className={`relative px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                 activeCategory === cat.key
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -90,7 +98,7 @@ const ProceduresSection = () => {
         {/* Procedures Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredProcedures.map((procedure, index) => {
-            const hasLink = "href" in procedure && procedure.href;
+            const hasLink = Boolean(procedure.href);
             const cardInner = (
               <>
                 {/* Icon + Badge */}
@@ -122,12 +130,12 @@ const ProceduresSection = () => {
                 </div>
               </>
             );
-            const cardClass = `group card-glass rounded-2xl overflow-hidden hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1.5 transition-all duration-500 ease-out-expo block ${
+            const cardClass = `group card-glass rounded-2xl overflow-hidden hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1.5 transition-all duration-500 ease-out-expo block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
               isVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-95'
             }`;
             const style = { transitionDelay: isVisible ? `${index * 80}ms` : '0ms' };
             return hasLink ? (
-              <Link key={procedure.title} to={(procedure as any).href} className={cardClass} style={style}>
+              <Link key={procedure.title} to={procedure.href!} className={cardClass} style={style}>
                 {cardInner}
               </Link>
             ) : (

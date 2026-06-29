@@ -105,9 +105,10 @@ const LocationsSection = () => {
                 : "border-border/50";
               return (
                 <button
-                  key={index}
+                  key={location.name}
                   onClick={() => setActiveLocation(index)}
-                  className={`card-shimmer w-full text-left card-glass rounded-2xl p-5 transition-all duration-400 ${borderColor} ${
+                  aria-pressed={isActive}
+                  className={`card-shimmer w-full text-left card-glass rounded-2xl p-5 transition-all duration-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${borderColor} ${
                     isActive
                       ? `bg-primary/5 shadow-lg shadow-primary/10 scale-[1.01] ${isBelem ? 'border-r-2 border-r-accent' : 'border-r-2 border-r-primary'}`
                       : "hover:border-primary/25 hover:bg-primary/3"
@@ -152,7 +153,6 @@ const LocationsSection = () => {
             {/* Mapa */}
             <div className="relative flex-1 min-h-[300px] bg-secondary/40">
               <iframe
-                key={activeLocation}
                 title={`Mapa - ${activeLocationData.name}`}
                 src={mapEmbedSrc}
                 className="absolute inset-0 w-full h-full"
@@ -160,6 +160,7 @@ const LocationsSection = () => {
                 style={{ border: 0, filter: "invert(0.92) hue-rotate(180deg) saturate(0.85) brightness(0.95)" }}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
+                sandbox="allow-scripts allow-same-origin allow-popups"
                 allowFullScreen
               />
               {/* badge cidade */}

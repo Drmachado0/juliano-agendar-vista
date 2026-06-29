@@ -64,7 +64,7 @@ const InsuranceSection = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-14">
             {insurances.map((insurance, index) => (
               <div
-                key={index}
+                key={insurance.name}
                 className={`card-shimmer flex items-center gap-3 px-5 py-3.5 rounded-xl border transition-all duration-500 hover:scale-105 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10 ${
                   insurance.highlight
                     ? "bg-primary/8 border-primary/25 shadow-sm shadow-primary/10 md:col-span-1 md:row-span-1"
@@ -74,9 +74,10 @@ const InsuranceSection = () => {
               >
                 <img
                   src={insurance.logo}
-                  alt={insurance.name}
+                  alt={`Convênio ${insurance.name}`}
                   loading="lazy"
                   decoding="async"
+                  height={28}
                   className="h-7 w-auto object-contain"
                 />
                 <span className="font-medium text-foreground text-sm">{insurance.name}</span>

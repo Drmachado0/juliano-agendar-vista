@@ -69,7 +69,7 @@ const Header = () => {
             <div className={`rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/25 flex items-center justify-center overflow-hidden group-hover:border-primary/40 transition-all duration-300 ${
               scrolled ? 'w-10 h-10' : 'w-11 h-11 sm:w-12 sm:h-12'
             }`}>
-              <img src={logoImage} alt="Logo" className={`object-contain transition-all duration-300 ${
+              <img src={logoImage} alt={`${DOCTOR.name} – ${DOCTOR.specialty}`} className={`object-contain transition-all duration-300 ${
                 scrolled ? 'w-8 h-8' : 'w-9 h-9 sm:w-10 sm:h-10'
               }`} />
             </div>
@@ -85,7 +85,7 @@ const Header = () => {
               <button
                 key={item.id}
                 onClick={() => scrollToSection(item.id)}
-                className={`relative px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-300 ${
+                className={`relative px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                   activeSection === item.id
                     ? "text-primary font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"

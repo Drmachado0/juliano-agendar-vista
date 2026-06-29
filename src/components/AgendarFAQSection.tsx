@@ -81,7 +81,7 @@ const AgendarFAQSection = () => {
           <Accordion type="single" collapsible className="px-5 md:px-7">
             {faqs.map((faq, index) => (
               <AccordionItem
-                key={index}
+                key={faq.question}
                 value={`item-${index}`}
                 className="border-b border-border/40 last:border-b-0"
               >

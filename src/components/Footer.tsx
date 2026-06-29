@@ -26,7 +26,7 @@ const Footer = () => {
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2.5 mb-4 group">
               <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/25 flex items-center justify-center overflow-hidden transition-shadow duration-300 group-hover:shadow-lg group-hover:shadow-primary/15">
-                <img src={logoImage} alt="Logo" className="w-12 h-12 object-contain" />
+                <img src={logoImage} alt="Dr. Juliano Machado – Oftalmologista" className="w-12 h-12 object-contain" />
               </div>
               <div className="flex flex-col">
                 <span className="font-bold text-foreground text-base">Dr. Juliano Machado</span>

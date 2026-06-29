@@ -118,9 +118,9 @@ const HeroSection = () => {
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 opacity-0 animate-fade-in animation-delay-600">
               <ProofChip
                 main={
-                  <span className="inline-flex items-center gap-1">
+                  <span className="inline-flex items-center gap-1" aria-label={`${GOOGLE_REVIEWS.rating.toFixed(1)} de 5 estrelas no Google`}>
                     <span className="font-bold">{GOOGLE_REVIEWS.rating.toFixed(1)}</span>
-                    <span className="inline-flex text-accent">
+                    <span className="inline-flex text-accent" aria-hidden="true">
                       {[0, 1, 2, 3, 4].map((i) => (
                         <Star key={i} className="w-3 h-3 fill-current" />
                       ))}

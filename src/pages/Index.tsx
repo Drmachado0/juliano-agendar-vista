@@ -58,7 +58,7 @@ const Index = () => {
   return (
     <>
       <Helmet>
-        <title>Oftalmologista em Paragominas e Belém | Dr. Juliano Machado</title>
+        <title>Dr. Juliano Machado – Oftalmologista em Paragominas e Belém</title>
         <meta
           name="description"
           content="Oftalmologista em Paragominas e Belém. Dr. Juliano Machado, 13+ anos, nota 5.0. Catarata, pterígio, glaucoma. Agende sua consulta online."

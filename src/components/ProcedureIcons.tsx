@@ -1,13 +1,17 @@
+import { useId } from "react";
+
 interface IconProps {
   className?: string;
 }
 
 const svgClass = (className?: string) => `proc-icon ${className ?? ""}`;
 
-export const RetinografiaIcon = ({ className }: IconProps) => (
+export const RetinografiaIcon = ({ className }: IconProps) => {
+  const pupilId = useId();
+  return (
   <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={svgClass(className)}>
     <defs>
-      <radialGradient id="retino-pupil" cx="50%" cy="50%" r="50%">
+      <radialGradient id={pupilId} cx="50%" cy="50%" r="50%">
         <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.9" />
         <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.5" />
       </radialGradient>
@@ -17,15 +21,18 @@ export const RetinografiaIcon = ({ className }: IconProps) => (
     <circle cx="24" cy="26" r="9" stroke="hsl(var(--primary))" strokeWidth="2" />
     <circle className="pa-focus" cx="24" cy="26" r="6.5" stroke="hsl(var(--accent))" strokeWidth="1" opacity="0.7" />
     <circle className="pa-focus2" cx="24" cy="26" r="4" stroke="hsl(var(--accent))" strokeWidth="1" opacity="0.5" />
-    <circle className="pa-breathe" cx="24" cy="26" r="2" fill="url(#retino-pupil)" />
+    <circle className="pa-breathe" cx="24" cy="26" r="2" fill={`url(#${pupilId})`} />
     <circle className="pa-twinkle" cx="36" cy="18" r="1.5" fill="hsl(var(--primary))" opacity="0.6" />
   </svg>
-);
+  );
+};
 
-export const MapeamentoRetinaIcon = ({ className }: IconProps) => (
+export const MapeamentoRetinaIcon = ({ className }: IconProps) => {
+  const pupilId = useId();
+  return (
   <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={svgClass(className)}>
     <defs>
-      <radialGradient id="mapret-pupil" cx="50%" cy="50%" r="50%">
+      <radialGradient id={pupilId} cx="50%" cy="50%" r="50%">
         <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
         <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
       </radialGradient>
@@ -40,9 +47,10 @@ export const MapeamentoRetinaIcon = ({ className }: IconProps) => (
     <line x1="28" y1="18" x2="28" y2="30" stroke="hsl(var(--accent))" strokeWidth="0.8" opacity="0.5" />
     {/* animated scan sweep */}
     <line className="pa-scan" x1="17" y1="24" x2="31" y2="24" stroke="hsl(var(--accent))" strokeWidth="1.6" strokeLinecap="round" />
-    <circle className="pa-breathe" cx="24" cy="24" r="2.5" fill="url(#mapret-pupil)" />
+    <circle className="pa-breathe" cx="24" cy="24" r="2.5" fill={`url(#${pupilId})`} />
   </svg>
-);
+  );
+};
 
 export const TonometriaIcon = ({ className }: IconProps) => (
   <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={svgClass(className)}>
@@ -113,10 +121,12 @@ export const PterigioIcon = ({ className }: IconProps) => (
   </svg>
 );
 
-export const YagLaserIcon = ({ className }: IconProps) => (
+export const YagLaserIcon = ({ className }: IconProps) => {
+  const glowId = useId();
+  return (
   <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={svgClass(className)}>
     <defs>
-      <radialGradient id="yag-glow" cx="50%" cy="50%" r="50%">
+      <radialGradient id={glowId} cx="50%" cy="50%" r="50%">
         <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity="0.35" />
         <stop offset="100%" stopColor="hsl(var(--accent))" stopOpacity="0" />
       </radialGradient>
@@ -127,15 +137,18 @@ export const YagLaserIcon = ({ className }: IconProps) => (
     <line className="pa-beam" x1="12" y1="6" x2="24" y2="26" stroke="hsl(var(--accent))" strokeWidth="1.5" strokeLinecap="round" opacity="0.9" />
     <line className="pa-beam2" x1="24" y1="4" x2="24" y2="26" stroke="hsl(var(--accent))" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" />
     <line className="pa-beam3" x1="36" y1="6" x2="24" y2="26" stroke="hsl(var(--accent))" strokeWidth="1.5" strokeLinecap="round" opacity="0.9" />
-    <circle className="pa-glow" cx="24" cy="26" r="4.5" fill="url(#yag-glow)" />
+    <circle className="pa-glow" cx="24" cy="26" r="4.5" fill={`url(#${glowId})`} />
     <circle className="pa-twinkle" cx="24" cy="26" r="1.5" fill="hsl(var(--accent))" fillOpacity="0.5" />
   </svg>
-);
+  );
+};
 
-export const IridotomiaIcon = ({ className }: IconProps) => (
+export const IridotomiaIcon = ({ className }: IconProps) => {
+  const glowId = useId();
+  return (
   <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={svgClass(className)}>
     <defs>
-      <radialGradient id="irido-glow" cx="50%" cy="50%" r="50%">
+      <radialGradient id={glowId} cx="50%" cy="50%" r="50%">
         <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity="0.7" />
         <stop offset="100%" stopColor="hsl(var(--accent))" stopOpacity="0.2" />
       </radialGradient>
@@ -157,9 +170,10 @@ export const IridotomiaIcon = ({ className }: IconProps) => (
     </g>
     <circle cx="24" cy="24" r="5.5" stroke="hsl(var(--primary))" strokeWidth="1.2" />
     <circle className="pa-breathe" cx="24" cy="24" r="3" fill="hsl(var(--primary))" opacity="0.4" />
-    <circle className="pa-glow" cx="35" cy="18" r="2.5" fill="url(#irido-glow)" />
+    <circle className="pa-glow" cx="35" cy="18" r="2.5" fill={`url(#${glowId})`} />
     <circle className="pa-twinkle" cx="35" cy="18" r="1.2" fill="hsl(var(--accent))" fillOpacity="0.9" />
     <line className="pa-beam" x1="42" y1="8" x2="35" y2="18" stroke="hsl(var(--accent))" strokeWidth="1.5" strokeLinecap="round" opacity="0.8" />
     <line className="pa-beam2" x1="44" y1="14" x2="35" y2="18" stroke="hsl(var(--accent))" strokeWidth="1" strokeLinecap="round" opacity="0.6" />
   </svg>
-);
+  );
+};
