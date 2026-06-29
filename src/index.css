@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Archivo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -58,6 +58,96 @@
     --sidebar-accent-foreground: 40 15% 95%;
     --sidebar-border: 222 28% 15%;
     --sidebar-ring: 42 85% 54%;
+  }
+
+  /* ============================================================
+     TEMA "OBSIDIANA" — dark premium, escopo só na landing pública.
+     Aplicado via <div class="theme-obsidian"> em Index.tsx.
+     NÃO afeta o /admin (que continua no tema navy próprio).
+     Obsidiana profunda + teal luminoso + cobre champanhe.
+     ============================================================ */
+  .theme-obsidian {
+    --background: 210 28% 5%;          /* obsidiana #0A0E12 */
+    --foreground: 205 19% 96%;         /* branco-gelo #F2F5F7 */
+
+    --card: 210 24% 8%;                /* #11161C */
+    --card-foreground: 205 19% 96%;
+
+    --popover: 210 26% 7%;
+    --popover-foreground: 205 19% 96%;
+
+    /* Teal luminoso — CTA e foco */
+    --primary: 174 66% 50%;            /* #2BD4C4 */
+    --primary-foreground: 210 40% 6%;
+
+    --secondary: 210 18% 13%;
+    --secondary-foreground: 205 19% 96%;
+
+    --muted: 210 16% 13%;
+    --muted-foreground: 204 11% 64%;   /* #9AA7B0 */
+
+    /* Cobre champanhe — detalhes premium / RQE */
+    --accent: 38 58% 58%;              /* #D4A857 */
+    --accent-foreground: 210 40% 6%;
+
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 205 19% 96%;
+
+    --border: 205 14% 16%;
+    --input: 205 14% 16%;
+    --ring: 174 66% 50%;
+
+    --radius: 0.9rem;
+
+    --gradient-primary: linear-gradient(135deg, hsl(174 66% 52%), hsl(186 72% 40%));
+    --gradient-hero: linear-gradient(160deg, hsl(210 30% 6%) 0%, hsl(210 26% 7%) 45%, hsl(200 30% 9%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(210 22% 10%), hsl(210 26% 7%));
+    --gradient-gold: linear-gradient(135deg, hsl(38 60% 64%), hsl(42 66% 74%));   /* usado por .gradient-text -> cobre */
+    --gradient-accent: linear-gradient(135deg, hsl(174 66% 54%), hsl(190 70% 42%)); /* teal -> .gradient-text-accent */
+    --shadow-glow: 0 0 60px hsl(174 66% 50% / 0.22);
+    --shadow-card: 0 16px 50px hsl(210 40% 2% / 0.6);
+    --shadow-gold: 0 8px 26px hsl(38 58% 58% / 0.20);
+    --shadow-accent: 0 8px 30px hsl(174 66% 50% / 0.22);
+
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+  }
+
+  /* Tipografia condensada de impacto nos títulos da landing */
+  .theme-obsidian h1,
+  .theme-obsidian h2,
+  .theme-obsidian h3 {
+    font-family: "Archivo", system-ui, sans-serif;
+    letter-spacing: -0.025em;
+  }
+
+  /* Scrollbar escura dentro da landing obsidiana */
+  .theme-obsidian ::-webkit-scrollbar-track {
+    background: hsl(210 26% 7%);
+  }
+  .theme-obsidian ::-webkit-scrollbar-thumb {
+    background: hsl(174 30% 28%);
+  }
+
+  /* Vidro premium (glass) */
+  .glass-panel {
+    background: hsl(0 0% 100% / 0.05);
+    border: 1px solid hsl(0 0% 100% / 0.10);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  /* Glow teal para CTA primário */
+  .glow-teal {
+    box-shadow:
+      0 0 0 1px hsl(174 66% 50% / 0.35),
+      0 10px 40px -10px hsl(174 66% 50% / 0.65);
+  }
+  .glow-teal:hover {
+    box-shadow:
+      0 0 0 1px hsl(174 66% 50% / 0.5),
+      0 14px 50px -8px hsl(174 66% 50% / 0.8);
   }
 
   * {
@@ -465,6 +555,42 @@
   50% {
     transform: scale(1.15);
     opacity: 0;
+  }
+}
+
+/* Obsidiana — luz lenta atravessando o olho (educativa, não sensacionalista) */
+@keyframes eyeLightDrift {
+  0% {
+    transform: translateX(-12%) scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateX(8%) scale(1.08);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateX(-12%) scale(1);
+    opacity: 0.35;
+  }
+}
+.animate-eye-light {
+  animation: eyeLightDrift 9s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes irisRotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-iris {
+  animation: irisRotate 40s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-eye-light,
+  .animate-iris {
+    animation: none !important;
   }
 }
 

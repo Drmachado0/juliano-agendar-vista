@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { Award, Users, Star, Shield, CalendarCheck, ChevronDown, Clock, Zap, X, MessageCircle } from "lucide-react";
+import { Star, CalendarCheck, MessageCircle, ShieldCheck, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import drJulianoHeroWebp from "@/assets/dr-juliano-hero.webp";
-import drJulianoHeroWebp2x from "@/assets/dr-juliano-hero@2x.webp";
 import drJulianoHeroJpg from "@/assets/dr-juliano-hero.jpg";
+import drJulianoHeroVideo from "@/assets/dr-juliano-hero.mp4";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
+import { DOCTOR, GOOGLE_REVIEWS } from "@/lib/constants";
 
 const HeroSection = () => {
   const { trackCTAClick, trackWhatsAppClick } = useGoogleTag();
@@ -16,7 +16,7 @@ const HeroSection = () => {
 
   // Animated counter for patients
   useEffect(() => {
-    const target = 6000;
+    const target = DOCTOR.patientsServed;
     const duration = 2000;
     const start = Date.now();
     const timer = setInterval(() => {
@@ -30,216 +30,159 @@ const HeroSection = () => {
   }, []);
 
   return (
-    <section className="relative min-h-[75dvh] flex items-center pt-24 sm:pt-24 pb-10 hero-gradient noise-overlay overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* Radial glow behind photo area */}
-        <div className="absolute top-1/3 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]" />
-        {/* Accent teal glow — bottom right */}
-        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px]" />
-        {/* Diagonal grid */}
-        <div className="absolute inset-0 opacity-[0.015]" style={{
-          backgroundImage: `linear-gradient(hsl(var(--primary) / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary) / 0.3) 1px, transparent 1px)`,
-          backgroundSize: '80px 80px',
-          transform: 'rotate(45deg) scale(1.5)',
-          transformOrigin: 'center center',
-        }} />
-        {/* Decorative line */}
-        <div className="absolute top-0 left-1/3 w-px h-24 bg-gradient-to-b from-transparent via-primary/20 to-transparent hidden lg:block" />
+    <section className="relative overflow-hidden hero-gradient min-h-[92vh] flex items-center pt-28 pb-16 sm:pt-32">
+      {/* Atmosphere */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+        {/* deep teal glow — afastado da foto */}
+        <div className="absolute top-[30%] left-[28%] w-[520px] h-[520px] rounded-full bg-primary/8 blur-[120px]" />
+        <div className="absolute -bottom-40 -left-40 w-[440px] h-[440px] rounded-full bg-primary/5 blur-[110px]" />
+        {/* fine grid */}
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)",
+            backgroundSize: "64px 64px",
+            maskImage: "radial-gradient(ellipse at 35% 40%, black, transparent 70%)",
+            WebkitMaskImage: "radial-gradient(ellipse at 35% 40%, black, transparent 70%)",
+          }}
+        />
+        {/* drifting eye-light beam */}
+        <div className="absolute top-1/3 left-1/4 w-[360px] h-[100px] bg-gradient-to-r from-transparent via-primary/20 to-transparent blur-2xl animate-eye-light" />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="grid lg:grid-cols-[2fr_3fr] gap-8 lg:gap-14 items-center">
-          {/* Photo Column — left on desktop */}
-          <div className="flex justify-center lg:justify-end order-1 lg:order-1 lg:mt-8 opacity-0 animate-scale-in animation-delay-100 ease-out-expo">
-            <div className="relative noise-overlay">
-              {/* Glow ring */}
-              <div className="absolute -inset-3 rounded-[2rem] bg-gradient-to-br from-primary/15 via-primary/5 to-transparent blur-2xl" />
-
-              {/* Decorative iris circles */}
-              <div className="absolute -bottom-8 -left-8 w-[200px] h-[200px] rounded-full border border-primary/15 hidden lg:block" />
-              <div className="absolute -bottom-4 -left-4 w-[140px] h-[140px] rounded-full border border-primary/8 hidden lg:block" />
-
-              {/* Photo container */}
-              <div className="relative w-56 h-72 sm:w-64 sm:h-80 md:w-72 md:h-[22rem] lg:w-[22rem] lg:h-[28rem] rounded-[2rem] rounded-bl-[4rem] overflow-hidden border-2 border-primary/25 shadow-2xl shadow-primary/10">
-                <picture>
-                  <source
-                    type="image/webp"
-                    srcSet={`${drJulianoHeroWebp} 900w, ${drJulianoHeroWebp2x} 1400w`}
-                    sizes="(min-width: 1024px) 22rem, (min-width: 768px) 18rem, 16rem"
-                  />
-                  <img
-                    src={drJulianoHeroJpg}
-                    alt="Dr. Juliano Machado - Médico Oftalmologista"
-                    width={900}
-                    height={1206}
-                    loading="eager"
-                    fetchPriority="high"
-                    decoding="async"
-                    className="w-full h-full object-cover object-top"
-                  />
-                </picture>
-                {/* Subtle overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-background/10 to-transparent" />
-              </div>
-
-              {/* Name tag below photo on mobile */}
-              <div className="text-center mt-4 lg:hidden">
-                <p className="text-foreground font-bold text-lg font-sans">Dr. Juliano Machado</p>
-                <p className="text-primary text-sm font-medium">Oftalmologista</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Content Column */}
-          <div className="text-center lg:text-left order-2 lg:order-2">
-            {/* Trust badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/8 border border-primary/15 mb-6 opacity-0 animate-blur-in animation-delay-300">
-              <Shield className="w-3.5 h-3.5 text-primary" />
-              <span className="text-xs text-muted-foreground font-medium uppercase tracking-[0.08em]">
-                Sociedade Brasileira de Oftalmologia
+        <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-10 items-center">
+          {/* Content */}
+          <div className="text-center lg:text-left order-2 lg:order-1">
+            {/* Credential eyebrow (CFM) */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-panel mb-7 opacity-0 animate-fade-in animation-delay-200">
+              <ShieldCheck className="w-3.5 h-3.5 text-accent" />
+              <span className="text-xs font-medium text-foreground/90 tracking-wide">
+                {DOCTOR.specialty} · {DOCTOR.rqe} · {DOCTOR.crm}
               </span>
             </div>
 
             {/* Heading */}
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[4rem] font-extrabold leading-[1.08] mb-4 opacity-0 animate-slide-up animation-delay-400 tracking-[-0.02em]">
-               <span className="text-foreground">Enxergar bem</span>
+            <h1 className="text-5xl sm:text-6xl lg:text-[5rem] font-extrabold leading-[0.95] uppercase mb-6 opacity-0 animate-slide-up animation-delay-300">
+              <span className="text-foreground">Enxergar bem</span>
               <br />
-              <span className="gradient-text opacity-0 animate-reveal-up animation-delay-600">muda tudo</span>
+              <span className="gradient-text-accent">muda tudo.</span>
             </h1>
 
             {/* Subtitle */}
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-7 max-w-md mx-auto lg:mx-0 opacity-0 animate-slide-up animation-delay-500">
-              <span className="text-foreground font-semibold">Dr. Juliano Machado</span> já devolveu a clareza de visão para mais de 6.000 pacientes em{" "}
+            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-9 max-w-xl mx-auto lg:mx-0 opacity-0 animate-slide-up animation-delay-400">
+              Há mais de <span className="text-foreground font-semibold">{DOCTOR.yearsExperience} anos</span>, o{" "}
+              <span className="text-foreground font-semibold">{DOCTOR.name}</span> une tecnologia diagnóstica e cuidado
+              próximo para avaliar e tratar a sua visão — em{" "}
               <span className="text-primary font-medium">Paragominas</span> e{" "}
-              <span className="text-primary font-medium">Belém</span>. Do primeiro exame à cirurgia, ele cuida de você.
+              <span className="text-primary font-medium">Belém</span>. Do exame à cirurgia.
             </p>
 
-            {/* CTA */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8 opacity-0 animate-slide-up animation-delay-600">
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-9 opacity-0 animate-slide-up animation-delay-500">
               <Link to="/agendamento" className="w-full sm:w-auto">
                 <Button
-                  variant="hero"
+                  variant="obsidian"
                   size="lg"
-                  onClick={() => trackCTAClick('agendar_consulta', 'hero', 'Agendar minha consulta')}
-                  className="w-full sm:w-auto text-base py-6 sm:py-3 group relative overflow-hidden"
+                  onClick={() => trackCTAClick("agendar_consulta", "hero", "Agendar avaliação")}
+                  className="w-full sm:w-auto text-base group"
                 >
-                  <CalendarCheck className="w-5 h-5 mr-1" />
-                  Agendar consulta
-                  <span className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
+                  <CalendarCheck className="w-5 h-5" />
+                  Agendar avaliação
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </Button>
               </Link>
               <a
                 href={heroWaUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => trackWhatsAppClick(heroWaUrl, 'Falar no WhatsApp', 'whatsapp_hero', 'hero')}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-14 rounded-xl px-8 text-base font-semibold border-2 border-[#25D366]/60 text-[#25D366] hover:bg-[#25D366]/10 hover:border-[#25D366] transition-all duration-300"
+                onClick={() => trackWhatsAppClick(heroWaUrl, "Falar no WhatsApp", "whatsapp_hero", "hero")}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-14 rounded-full px-8 text-base font-semibold glass-panel text-foreground hover:bg-white/10 transition-all duration-300"
               >
-                <MessageCircle className="w-5 h-5" />
+                <MessageCircle className="w-5 h-5 text-[#25D366]" />
                 Falar no WhatsApp
               </a>
             </div>
 
-            {/* Tertiary link */}
-            <div className="text-center lg:text-left mb-6 opacity-0 animate-slide-up animation-delay-700">
-              <button
-                onClick={() => {
-                  trackCTAClick('saiba_mais', 'hero', 'Conhecer procedimentos');
-                  document.getElementById("procedimentos")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="text-sm text-muted-foreground hover:text-primary underline underline-offset-4 transition-colors"
-              >
-                Ver procedimentos
-              </button>
-            </div>
-
-
-            {/* Reassurance line */}
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-2 mb-7 text-sm text-foreground/85 font-medium opacity-0 animate-slide-up animation-delay-700">
-              <span className="inline-flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-primary" aria-hidden="true" />
-                Resposta em até 2h úteis
-              </span>
-              <span className="hidden sm:inline text-primary/40" aria-hidden="true">·</span>
-              <span className="inline-flex items-center gap-1.5">
-                <Zap className="w-4 h-4 text-primary" aria-hidden="true" />
-                Sem fila de espera
-              </span>
-              <span className="hidden sm:inline text-primary/40" aria-hidden="true">·</span>
-              <span className="inline-flex items-center gap-1.5">
-                <X className="w-4 h-4 text-primary" aria-hidden="true" />
-                Cancele quando quiser
-              </span>
-            </div>
-
-            {/* Stats cards */}
-            <div className="grid grid-cols-3 gap-4 opacity-0 animate-blur-in animation-delay-700">
-              <StatCard
-                icon={<Users className="w-4 h-4 text-primary" />}
-                value={`+${count.toLocaleString('pt-BR')}`}
-                label="pacientes atendidos"
-              />
-              <StatCard
-                icon={<Star className="w-4 h-4 text-primary fill-primary" />}
-                value="5.0"
-                label="nota máxima no Google"
-                highlight
-                extra={
-                  <svg className="w-3.5 h-3.5 ml-1" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                  </svg>
+            {/* Social proof — glass strip */}
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 opacity-0 animate-fade-in animation-delay-600">
+              <ProofChip
+                main={
+                  <span className="inline-flex items-center gap-1">
+                    <span className="font-bold">{GOOGLE_REVIEWS.rating.toFixed(1)}</span>
+                    <span className="inline-flex text-accent">
+                      {[0, 1, 2, 3, 4].map((i) => (
+                        <Star key={i} className="w-3 h-3 fill-current" />
+                      ))}
+                    </span>
+                  </span>
                 }
+                sub={`${GOOGLE_REVIEWS.count} avaliações · Google`}
               />
-              <StatCard
-                icon={<Award className="w-4 h-4 text-primary" />}
-                value="+13 anos"
-                label="de oftalmologia"
-              />
+              <ProofChip main={<span className="font-bold">+{count.toLocaleString("pt-BR")}</span>} sub="pacientes atendidos" />
+              <ProofChip main={<span className="font-bold">+{DOCTOR.yearsExperience} anos</span>} sub="de oftalmologia" />
+            </div>
+          </div>
+
+          {/* Photo */}
+          <div className="flex justify-center lg:justify-end order-1 lg:order-2 opacity-0 animate-scale-in animation-delay-200 ease-out-expo">
+            <div className="relative">
+              {/* iris ring decoration */}
+              <div className="absolute -inset-8 rounded-full border border-primary/10 animate-iris hidden lg:block" />
+              {/* teal halo (atrás da foto) */}
+              <div className="absolute -inset-3 rounded-[2.2rem] bg-gradient-to-br from-primary/20 to-transparent blur-2xl" />
+
+              {/* photo / living portrait */}
+              <div className="relative w-64 h-80 sm:w-72 sm:h-[24rem] lg:w-[23rem] lg:h-[30rem] rounded-[2rem] overflow-hidden ring-1 ring-white/10 shadow-2xl bg-card">
+                <video
+                  src={drJulianoHeroVideo}
+                  poster={drJulianoHeroJpg}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="auto"
+                  aria-label={`${DOCTOR.name} - Médico ${DOCTOR.specialty}`}
+                  className="w-full h-full object-cover object-top"
+                />
+                {/* leve fade só na base */}
+                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-background/80 to-transparent" />
+                {/* teal rim light */}
+                <div className="absolute inset-0 rounded-[2rem] ring-1 ring-inset ring-primary/15" />
+              </div>
+
+              {/* Floating glass credential card */}
+              <div className="absolute -bottom-5 -left-4 sm:-left-10 glass-panel rounded-2xl px-4 py-3 flex items-center gap-3 opacity-0 animate-slide-up animation-delay-700">
+                <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-5 h-5 text-primary" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold text-foreground leading-tight">{DOCTOR.name}</p>
+                  <p className="text-xs text-muted-foreground leading-tight">{DOCTOR.crm} · {DOCTOR.rqe}</p>
+                </div>
+              </div>
+
+              {/* Floating Google rating chip */}
+              <div className="absolute top-4 -right-3 sm:-right-6 glass-panel rounded-xl px-3 py-2 flex items-center gap-1.5 opacity-0 animate-slide-up animation-delay-700">
+                <Star className="w-4 h-4 text-accent fill-accent" />
+                <span className="text-sm font-bold text-foreground">{GOOGLE_REVIEWS.rating.toFixed(1)}</span>
+                <span className="text-xs text-muted-foreground">Google</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Scroll indicator — só em telas grandes (xl+) para não sobrepor os stat cards em md/lg */}
-      <button
-        onClick={() => document.getElementById("sobre")?.scrollIntoView({ behavior: "smooth" })}
-        className="absolute bottom-4 left-1/2 -translate-x-1/2 hidden xl:flex flex-col items-center gap-2 text-muted-foreground/40 hover:text-primary/60 transition-colors cursor-pointer animate-[float_3s_ease-in-out_infinite] z-0 pointer-events-auto"
-        style={{ animationTimingFunction: 'ease-in-out' }}
-        aria-label="Rolar para baixo"
-      >
-        <span className="text-xs uppercase tracking-[0.2em] font-medium font-sans">Conheça o Dr. Juliano</span>
-        <ChevronDown className="w-5 h-5" />
-      </button>
     </section>
   );
 };
 
 /* ---------- Sub-component ---------- */
 
-interface StatCardProps {
-  icon: React.ReactNode;
-  value: string;
-  label: string;
-  extra?: React.ReactNode;
-  highlight?: boolean;
-}
-
-const StatCard = ({ icon, value, label, extra, highlight }: StatCardProps) => (
-  <div className={`card-shimmer flex flex-col items-center lg:items-start gap-1 px-3 py-3 rounded-xl backdrop-blur-sm ${
-    highlight
-      ? 'bg-primary/5 border border-primary/30'
-      : 'bg-card/50 border border-border/40'
-  }`}>
-    <div className="flex items-center gap-1.5">
-      {icon}
-      <span className="text-lg lg:text-xl font-bold text-foreground tabular-nums">{value}</span>
-      {extra}
-    </div>
-    <span className="text-xs text-muted-foreground leading-tight">{label}</span>
+const ProofChip = ({ main, sub }: { main: React.ReactNode; sub: string }) => (
+  <div className="glass-panel rounded-xl px-4 py-2.5 text-left">
+    <div className="text-base text-foreground leading-none mb-1">{main}</div>
+    <div className="text-xs text-muted-foreground leading-none">{sub}</div>
   </div>
 );
 

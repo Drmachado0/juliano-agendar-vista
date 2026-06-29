@@ -78,7 +78,7 @@ const Index = () => {
         </script>
       </Helmet>
 
-      <div className="min-h-screen bg-background">
+      <div className="theme-obsidian min-h-screen bg-background">
         <Header />
         
         <main>

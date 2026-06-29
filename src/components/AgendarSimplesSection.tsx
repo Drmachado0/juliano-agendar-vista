@@ -126,12 +126,12 @@ const AgendarSimplesSection = () => {
         >
           <Link to="/agendamento?utm_source=site&utm_medium=cta&utm_campaign=agendar_simples" className="w-full sm:w-auto">
             <Button
-              variant="hero"
+              variant="obsidian"
               size="lg"
               onClick={() =>
                 trackCTAClick("agendar_consulta", "agendar_simples", "Agendar consulta online")
               }
-              className="w-full sm:w-auto text-base py-6 sm:py-3 min-h-[48px] group relative overflow-hidden"
+              className="w-full sm:w-auto text-base py-6 sm:py-3 min-h-[48px] group"
             >
               Agendar consulta online
               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />

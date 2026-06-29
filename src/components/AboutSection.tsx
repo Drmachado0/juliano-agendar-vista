@@ -1,16 +1,20 @@
 import { Heart, Cpu, CheckCircle, Stethoscope, GraduationCap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import drJulianoPhoto from "@/assets/dr-juliano-consultorio.jpg";
+import drJulianoVideo from "@/assets/dr-juliano-consultorio.mp4";
 
 const AboutSection = () => {
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
+          // carrega/toca o retrato vivo só quando a seção entra na tela
+          videoRef.current?.play().catch(() => {});
           observer.disconnect();
         }
       },
@@ -51,14 +55,18 @@ const AboutSection = () => {
               {/* Vertical decorative bar */}
               <div className="absolute left-0 top-[10%] bottom-[10%] w-1 bg-gradient-to-b from-transparent via-primary/40 to-transparent z-10 rounded-full" />
 
-              {/* Main photo */}
+              {/* Main photo / living portrait */}
               <div className="relative rounded-3xl rounded-tr-[5rem] overflow-hidden border border-border/50 shadow-2xl">
-                <img
-                  src={drJulianoPhoto}
-                  alt="Dr. Juliano Machado em seu consultório"
+                <video
+                  ref={videoRef}
+                  src={drJulianoVideo}
+                  poster={drJulianoPhoto}
+                  muted
+                  loop
+                  playsInline
+                  preload="none"
+                  aria-label="Dr. Juliano Machado em seu consultório"
                   className="w-full h-auto object-cover"
-                  loading="lazy"
-                  decoding="async"
                 />
                 {/* Subtle overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent" />

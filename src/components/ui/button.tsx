@@ -18,6 +18,11 @@ const buttonVariants = cva(
         hero: "bg-gradient-to-r from-gold-400 via-primary to-gold-600 text-gold-900 font-bold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-[1.03] active:scale-100 border border-gold-300/20",
         whatsapp: "bg-[#25D366] text-white hover:bg-[#20BD5A] shadow-lg shadow-[#25D366]/30 hover:shadow-xl hover:shadow-[#25D366]/40",
         premium: "bg-transparent border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300",
+        warm: "rounded-full bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 hover:-translate-y-0.5 active:translate-y-0",
+        warmAmber: "rounded-full bg-accent text-accent-foreground font-bold shadow-lg shadow-accent/30 hover:shadow-xl hover:shadow-accent/40 hover:-translate-y-0.5 active:translate-y-0",
+        warmOutline: "rounded-full bg-transparent border-2 border-primary/30 text-primary font-semibold hover:bg-primary/8 hover:border-primary/60",
+        obsidian: "rounded-full bg-primary text-primary-foreground font-bold glow-teal hover:-translate-y-0.5 active:translate-y-0 transition-all",
+        obsidianGlass: "rounded-full glass-panel text-foreground font-semibold hover:bg-white/10 hover:-translate-y-0.5",
       },
       size: {
         default: "h-11 px-5 py-2",

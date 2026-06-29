@@ -147,22 +147,44 @@ const LocationsSection = () => {
             })}
           </div>
 
-          {/* Map — behind cards with overlay */}
-          <div className={`relative rounded-3xl overflow-hidden min-h-[500px] transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}>
-            {/* Map iframe */}
-            <iframe
-              src={activeLocationData.mapUrl}
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              allowFullScreen
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              className="absolute inset-0 w-full h-full"
-              title={`Mapa - ${activeLocationData.name}`}
-            />
-            {/* Gradient overlay for transition to cards */}
-            <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-background/80 pointer-events-none hidden lg:block" />
+          {/* Map — painel escuro estilizado (premium, sem iframe/WebGL) */}
+          <div className={`relative rounded-3xl overflow-hidden min-h-[500px] border border-border/60 transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}>
+            {/* Faux dark map backdrop */}
+            <div className="absolute inset-0 bg-gradient-to-br from-secondary/50 via-card to-background" aria-hidden="true">
+              {/* street grid */}
+              <div
+                className="absolute inset-0 opacity-[0.06]"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
+                  backgroundSize: "44px 44px",
+                }}
+              />
+              {/* diagonal avenues */}
+              <div className="absolute -inset-1/4 rotate-[18deg]">
+                <div className="absolute top-1/3 left-0 right-0 h-px bg-primary/10" />
+                <div className="absolute top-2/3 left-0 right-0 h-px bg-primary/10" />
+                <div className="absolute left-1/4 top-0 bottom-0 w-px bg-primary/10" />
+                <div className="absolute left-2/3 top-0 bottom-0 w-px bg-accent/10" />
+              </div>
+              {/* teal glow under pin */}
+              <div className="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-primary/15 blur-[90px]" />
+            </div>
+
+            {/* Pin com anéis pulsantes */}
+            <div className="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2 flex items-center justify-center" aria-hidden="true">
+              <span className="absolute w-28 h-28 rounded-full border border-primary/20" />
+              <span className="absolute w-44 h-44 rounded-full border border-primary/10" />
+              <span className="absolute w-28 h-28 rounded-full bg-primary/10 animate-ping" style={{ animationDuration: "3s" }} />
+              <div className="relative w-14 h-14 rounded-2xl glass-panel flex items-center justify-center glow-teal">
+                <activeLocationData.icon className="w-6 h-6 text-primary" />
+              </div>
+            </div>
+
+            {/* badge cidade */}
+            <div className="absolute top-5 left-5 px-3 py-1.5 rounded-full glass-panel text-xs font-semibold text-foreground">
+              {activeLocationData.city} · PA
+            </div>
 
             {/* Details overlay at bottom */}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card/95 via-card/80 to-transparent p-6 pt-12">
@@ -189,10 +211,11 @@ const LocationsSection = () => {
                 href={activeLocationData.mapsLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary/15 text-primary hover:bg-primary/25 transition-colors text-sm font-semibold"
               >
-                <ExternalLink className="w-4 h-4" />
-                Ver no mapa
+                <Navigation className="w-4 h-4" />
+                Como chegar
+                <ExternalLink className="w-3.5 h-3.5 opacity-70" />
               </a>
             </div>
           </div>

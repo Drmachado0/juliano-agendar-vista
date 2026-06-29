@@ -107,10 +107,10 @@ const InsuranceSection = () => {
               <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
                 <Link to="/agendamento">
                   <Button
-                    variant="hero"
+                    variant="obsidian"
                     size="lg"
                     onClick={() => trackCTAClick('agendar_consulta', 'convenios', 'Agendar minha consulta')}
-                    className="text-base group relative overflow-hidden"
+                    className="text-base group"
                   >
                     <CalendarCheck className="w-5 h-5 mr-1" />
                     Agendar consulta

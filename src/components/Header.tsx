@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { DOCTOR } from "@/lib/constants";
 import logoImage from "@/assets/dr-juliano-logo.webp";
 
 const Header = () => {
@@ -73,8 +74,8 @@ const Header = () => {
               }`} />
             </div>
             <div className="flex flex-col">
-              <span className="font-semibold text-foreground text-sm sm:text-base leading-tight">Dr. Juliano Machado</span>
-              <span className="text-xs text-primary/80 font-medium">Oftalmologista</span>
+              <span className="font-semibold text-foreground text-sm sm:text-base leading-tight">{DOCTOR.name}</span>
+              <span className="text-xs text-primary/80 font-medium">{DOCTOR.specialty} · {DOCTOR.rqe}</span>
             </div>
           </button>
 
@@ -112,9 +113,9 @@ const Header = () => {
               to="/agendamento"
               onClick={() => trackCTAClick('agendar_consulta', 'header_desktop', 'Agendar Online')}
             >
-              <Button variant="hero" size="sm" className="gap-1.5 card-shimmer">
+              <Button variant="obsidian" size="sm" className="gap-1.5">
                 <CalendarCheck className="h-5 w-5" />
-                Agendar Online
+                Agendar avaliação
               </Button>
             </Link>
           </div>
@@ -138,7 +139,7 @@ const Header = () => {
               to="/agendamento"
               onClick={() => trackCTAClick('agendar_consulta', 'header_mobile', 'Agendar')}
             >
-              <Button variant="hero" size="sm" className="gap-1 text-xs px-2.5 py-1.5 h-auto">
+              <Button variant="obsidian" size="sm" className="gap-1 text-xs px-3 py-1.5 h-auto">
                 <CalendarCheck className="h-3.5 w-3.5" />
                 Agendar
               </Button>
