@@ -66,6 +66,10 @@ const LocationsSection = () => {
   ];
 
   const activeLocationData = locations[activeLocation];
+  // Google Maps embed (sem API key) do local ativo
+  const mapEmbedSrc = `https://www.google.com/maps?q=${encodeURIComponent(
+    `${activeLocationData.name}, ${activeLocationData.address}`
+  )}&z=16&hl=pt-BR&output=embed`;
 
   return (
     <section id="locais" className="py-20 md:py-28 bg-card relative noise-overlay" ref={sectionRef}>
@@ -147,47 +151,29 @@ const LocationsSection = () => {
             })}
           </div>
 
-          {/* Map — painel escuro estilizado (premium, sem iframe/WebGL) */}
-          <div className={`relative rounded-3xl overflow-hidden min-h-[500px] border border-border/60 transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}>
-            {/* Faux dark map backdrop */}
-            <div className="absolute inset-0 bg-gradient-to-br from-secondary/50 via-card to-background" aria-hidden="true">
-              {/* street grid */}
-              <div
-                className="absolute inset-0 opacity-[0.06]"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
-                  backgroundSize: "44px 44px",
-                }}
+          {/* Map — Google Maps real do local selecionado */}
+          <div className={`relative rounded-3xl overflow-hidden min-h-[500px] border border-border/60 flex flex-col transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}>
+            {/* Mapa */}
+            <div className="relative flex-1 min-h-[300px] bg-secondary/40">
+              <iframe
+                key={activeLocation}
+                title={`Mapa - ${activeLocationData.name}`}
+                src={mapEmbedSrc}
+                className="absolute inset-0 w-full h-full"
+                // mapa "dark" via filtro CSS (embed do Google não tem dark nativo sem JS API + key)
+                style={{ border: 0, filter: "invert(0.92) hue-rotate(180deg) saturate(0.85) brightness(0.95)" }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
               />
-              {/* diagonal avenues */}
-              <div className="absolute -inset-1/4 rotate-[18deg]">
-                <div className="absolute top-1/3 left-0 right-0 h-px bg-primary/10" />
-                <div className="absolute top-2/3 left-0 right-0 h-px bg-primary/10" />
-                <div className="absolute left-1/4 top-0 bottom-0 w-px bg-primary/10" />
-                <div className="absolute left-2/3 top-0 bottom-0 w-px bg-accent/10" />
-              </div>
-              {/* teal glow under pin */}
-              <div className="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-primary/15 blur-[90px]" />
-            </div>
-
-            {/* Pin com anéis pulsantes */}
-            <div className="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2 flex items-center justify-center" aria-hidden="true">
-              <span className="absolute w-28 h-28 rounded-full border border-primary/20" />
-              <span className="absolute w-44 h-44 rounded-full border border-primary/10" />
-              <span className="absolute w-28 h-28 rounded-full bg-primary/10 animate-ping" style={{ animationDuration: "3s" }} />
-              <div className="relative w-14 h-14 rounded-2xl glass-panel flex items-center justify-center glow-teal">
-                <activeLocationData.icon className="w-6 h-6 text-primary" />
+              {/* badge cidade */}
+              <div className="absolute top-5 left-5 px-3 py-1.5 rounded-full glass-panel text-xs font-semibold text-foreground z-[1] pointer-events-none">
+                {activeLocationData.city} · PA
               </div>
             </div>
 
-            {/* badge cidade */}
-            <div className="absolute top-5 left-5 px-3 py-1.5 rounded-full glass-panel text-xs font-semibold text-foreground">
-              {activeLocationData.city} · PA
-            </div>
-
-            {/* Details overlay at bottom */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card/95 via-card/80 to-transparent p-6 pt-12">
+            {/* Detalhes do local */}
+            <div className="bg-card border-t border-border/60 p-6">
               <h3 className="text-lg font-bold text-foreground mb-3 font-sans">{activeLocationData.name}</h3>
               <div className="space-y-2 mb-4">
                 <div className="flex items-start gap-3 text-muted-foreground">

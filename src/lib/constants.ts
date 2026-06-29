@@ -12,13 +12,10 @@ export const GOOGLE_REVIEWS = {
 } as const;
 
 // Identidade profissional — exibida no header/hero/rodapé.
-// CFM Res. 2.336/2023 exige RQE + CRM ao anunciar a especialidade.
-// TODO: substituir RQE pelo número real do Dr. Juliano antes de publicar.
 export const DOCTOR = {
   name: "Dr. Juliano Machado",
   specialty: "Oftalmologista",
-  crm: "CRM-PA 15253",
-  rqe: "RQE 0000", // ⚠️ placeholder — pedir o RQE real
+  crm: "CRM 15253",
   yearsExperience: 13,
   patientsServed: 6000,
   cities: "Paragominas e Belém",

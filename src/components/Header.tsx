@@ -75,7 +75,7 @@ const Header = () => {
             </div>
             <div className="flex flex-col">
               <span className="font-semibold text-foreground text-sm sm:text-base leading-tight">{DOCTOR.name}</span>
-              <span className="text-xs text-primary/80 font-medium">{DOCTOR.specialty} · {DOCTOR.rqe}</span>
+              <span className="text-xs text-primary/80 font-medium">{DOCTOR.specialty} · {DOCTOR.crm}</span>
             </div>
           </button>
 

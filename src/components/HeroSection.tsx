@@ -59,7 +59,7 @@ const HeroSection = () => {
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-panel mb-7 opacity-0 animate-fade-in animation-delay-200">
               <ShieldCheck className="w-3.5 h-3.5 text-accent" />
               <span className="text-xs font-medium text-foreground/90 tracking-wide">
-                {DOCTOR.specialty} · {DOCTOR.rqe} · {DOCTOR.crm}
+                {DOCTOR.specialty} · {DOCTOR.crm}
               </span>
             </div>
 
@@ -159,7 +159,7 @@ const HeroSection = () => {
                 </div>
                 <div className="text-left">
                   <p className="text-sm font-bold text-foreground leading-tight">{DOCTOR.name}</p>
-                  <p className="text-xs text-muted-foreground leading-tight">{DOCTOR.crm} · {DOCTOR.rqe}</p>
+                  <p className="text-xs text-muted-foreground leading-tight">{DOCTOR.crm}</p>
                 </div>
               </div>
 
