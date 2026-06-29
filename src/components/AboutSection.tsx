@@ -1,12 +1,20 @@
-import { Heart, Cpu, CheckCircle, Stethoscope, GraduationCap } from "lucide-react";
+import { Heart, Cpu, CheckCircle, Stethoscope, GraduationCap, Pause, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import drJulianoPhoto from "@/assets/dr-juliano-consultorio.jpg";
 import drJulianoVideo from "@/assets/dr-juliano-consultorio.mp4";
 
 const AboutSection = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const [videoPaused, setVideoPaused] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  const toggleVideo = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) v.play().catch(() => {});
+    else v.pause();
+  };
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -67,9 +75,20 @@ const AboutSection = () => {
                   preload="none"
                   aria-label="Dr. Juliano Machado em seu consultório"
                   className="w-full h-auto object-cover"
+                  onPlay={() => setVideoPaused(false)}
+                  onPause={() => setVideoPaused(true)}
                 />
                 {/* Subtle overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent" />
+                {/* Botão pausar/reproduzir (WCAG 2.2.2) */}
+                <button
+                  type="button"
+                  onClick={toggleVideo}
+                  aria-label={videoPaused ? "Reproduzir vídeo" : "Pausar vídeo"}
+                  className="absolute bottom-3 right-3 z-10 w-9 h-9 rounded-full glass-panel flex items-center justify-center text-foreground/90 hover:text-foreground hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors"
+                >
+                  {videoPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                </button>
               </div>
 
               {/* Floating credentials card */}

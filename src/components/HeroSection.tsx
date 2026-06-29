@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Star, CalendarCheck, MessageCircle, ShieldCheck, ArrowRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Star, CalendarCheck, MessageCircle, ShieldCheck, ArrowRight, Pause, Play } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import drJulianoHeroJpg from "@/assets/dr-juliano-hero.jpg";
+import drJulianoHeroWebp from "@/assets/dr-juliano-hero.webp";
 import drJulianoHeroVideo from "@/assets/dr-juliano-hero.mp4";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
@@ -13,6 +13,15 @@ const HeroSection = () => {
   const { waLink } = useSiteWhatsApp();
   const heroWaUrl = waLink("Olá! Vi o site do Dr. Juliano Machado e gostaria de agendar uma consulta oftalmológica.");
   const [count, setCount] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoPaused, setVideoPaused] = useState(false);
+
+  const toggleVideo = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) v.play().catch(() => {});
+    else v.pause();
+  };
 
   // Animated counter for patients
   useEffect(() => {
@@ -63,8 +72,8 @@ const HeroSection = () => {
               </span>
             </div>
 
-            {/* Heading */}
-            <h1 className="text-5xl sm:text-6xl lg:text-[5rem] font-extrabold leading-[0.95] uppercase mb-6 opacity-0 animate-slide-up animation-delay-300">
+            {/* Heading — sem opacity-0/delay (é o LCP; deve pintar imediatamente) */}
+            <h1 className="text-5xl sm:text-6xl lg:text-[5rem] font-extrabold leading-[0.95] uppercase mb-6">
               <span className="text-foreground">Enxergar bem</span>
               <br />
               <span className="gradient-text-accent">muda tudo.</span>
@@ -136,20 +145,32 @@ const HeroSection = () => {
               {/* photo / living portrait */}
               <div className="relative w-64 h-80 sm:w-72 sm:h-[24rem] lg:w-[23rem] lg:h-[30rem] rounded-[2rem] overflow-hidden ring-1 ring-white/10 shadow-2xl bg-card">
                 <video
+                  ref={videoRef}
                   src={drJulianoHeroVideo}
-                  poster={drJulianoHeroJpg}
+                  poster={drJulianoHeroWebp}
                   autoPlay
                   muted
                   loop
                   playsInline
-                  preload="auto"
+                  preload="metadata"
                   aria-label={`${DOCTOR.name} - Médico ${DOCTOR.specialty}`}
                   className="w-full h-full object-cover object-top"
+                  onPlay={() => setVideoPaused(false)}
+                  onPause={() => setVideoPaused(true)}
                 />
                 {/* leve fade só na base */}
                 <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-background/80 to-transparent" />
                 {/* teal rim light */}
                 <div className="absolute inset-0 rounded-[2rem] ring-1 ring-inset ring-primary/15" />
+                {/* Botão pausar/reproduzir (WCAG 2.2.2) */}
+                <button
+                  type="button"
+                  onClick={toggleVideo}
+                  aria-label={videoPaused ? "Reproduzir vídeo" : "Pausar vídeo"}
+                  className="absolute bottom-3 right-3 z-10 w-9 h-9 rounded-full glass-panel flex items-center justify-center text-foreground/90 hover:text-foreground hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors"
+                >
+                  {videoPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                </button>
               </div>
 
               {/* Floating glass credential card */}
