@@ -40,7 +40,6 @@ const TimeSlotPicker = ({
   localAtendimento,
 }: TimeSlotPickerProps) => {
   const [slots, setSlots] = useState<SlotDisponivel[]>([]);
-  const [horariosLiberados, setHorariosLiberados] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [filtroPeriodo, setFiltroPeriodo] = useState<Periodo>("todos");
   const isMobile = useIsMobile();
@@ -66,19 +65,25 @@ const TimeSlotPicker = ({
     try {
       const horariosDisponiveis = await gerarHorariosDisponiveis(selectedDate, localAtendimento);
       setSlots(horariosDisponiveis);
-
-      // Mostra os primeiros MAX_VISIVEIS horários disponíveis em sequência
-      const liberados = new Set<string>();
-      horariosDisponiveis.slice(0, MAX_VISIVEIS).forEach((s) => liberados.add(s.horario));
-      setHorariosLiberados(liberados);
     } catch (error) {
       console.error("Erro ao carregar horários:", error);
       setSlots([]);
-      setHorariosLiberados(new Set());
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Mostra os primeiros MAX_VISIVEIS horários em sequência, MAS sempre mantém
+  // o horário já selecionado liberado — senão o auto-refresh (30s) podia
+  // marcá-lo como "Ocupado" enquanto o resumo ainda o mostrava selecionado.
+  const horariosLiberados = useMemo(() => {
+    const liberados = new Set<string>();
+    slots.slice(0, MAX_VISIVEIS).forEach((s) => liberados.add(s.horario));
+    if (selectedTime && slots.some((s) => s.horario === selectedTime)) {
+      liberados.add(selectedTime);
+    }
+    return liberados;
+  }, [slots, selectedTime]);
 
   const slotsPorPeriodo = useMemo(() => {
     const agrupado: Record<Exclude<Periodo, "todos">, SlotDisponivel[]> = {

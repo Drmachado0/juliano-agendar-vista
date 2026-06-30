@@ -209,10 +209,10 @@ export function montarGradeAgenda(
       }
     }
 
-    // Verificar se há agendamento
+    // Verificar se há agendamento (hora_agendamento pode ser nula em leads sem horário)
     const agendamento = agendamentos.find(a => {
-      const horaAgendamento = a.hora_agendamento.slice(0, 5);
-      return horaAgendamento === slot.horaFormatada;
+      const horaAgendamento = (a.hora_agendamento || "").slice(0, 5);
+      return horaAgendamento !== "" && horaAgendamento === slot.horaFormatada;
     });
 
     if (agendamento) {
