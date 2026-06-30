@@ -17,6 +17,30 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+import { logSystem } from "../_shared/systemLogger.ts";
+
+// Códigos de erro da Graph API que indicam rate limit / throttling.
+// Refs: https://developers.facebook.com/docs/marketing-api/error-reference
+const RATE_LIMIT_CODES = new Set<number>([4, 17, 32, 613, 80004, 80014]);
+
+function classifyMetaError(metaJson: any, httpStatus: number): {
+  level: "warn" | "error" | "critical";
+  reason: string;
+} {
+  const code = metaJson?.error?.code;
+  const subcode = metaJson?.error?.error_subcode;
+  if (typeof code === "number" && RATE_LIMIT_CODES.has(code)) {
+    return { level: "warn", reason: `rate_limit (code=${code}${subcode ? `, subcode=${subcode}` : ""})` };
+  }
+  if (httpStatus === 401 || httpStatus === 403 || code === 190) {
+    return { level: "critical", reason: `auth/token (code=${code}, http=${httpStatus})` };
+  }
+  if (httpStatus >= 500) {
+    return { level: "warn", reason: `meta_5xx (http=${httpStatus})` };
+  }
+  return { level: "error", reason: `meta_4xx (code=${code}, http=${httpStatus})` };
+}
+
 const PIXEL_ID = Deno.env.get("META_PIXEL_ID");
 const ACCESS_TOKEN = Deno.env.get("META_CAPI_ACCESS_TOKEN");
 const TEST_EVENT_CODE = Deno.env.get("META_TEST_EVENT_CODE");
@@ -133,6 +157,13 @@ Deno.serve(async (req) => {
 
   if (!PIXEL_ID || !ACCESS_TOKEN) {
     console.error("[meta-capi] Missing PIXEL_ID or ACCESS_TOKEN env vars");
+    logSystem({
+      level: "critical",
+      category: "edge_function",
+      source: "meta-capi",
+      message: "Secrets ausentes: META_PIXEL_ID/META_CAPI_ACCESS_TOKEN",
+      details: { pixel_id_set: !!PIXEL_ID, token_set: !!ACCESS_TOKEN },
+    });
     return new Response(
       JSON.stringify({ error: "Server misconfigured" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -212,7 +243,22 @@ Deno.serve(async (req) => {
     const metaJson = await metaRes.json();
 
     if (!metaRes.ok) {
-      console.error("[meta-capi] Meta CAPI error:", metaJson);
+      const { level, reason } = classifyMetaError(metaJson, metaRes.status);
+      console.error(`[meta-capi] Meta CAPI error [${level}/${reason}]`, metaJson);
+      logSystem({
+        level,
+        category: "edge_function",
+        source: "meta-capi",
+        message: `Falha CAPI ${event_name}: ${reason}`,
+        details: {
+          event_name,
+          event_id,
+          http_status: metaRes.status,
+          meta_error: metaJson?.error ?? metaJson,
+          fbtrace_id: metaJson?.fbtrace_id,
+          event_source_url,
+        },
+      });
       return new Response(
         JSON.stringify({ error: "Meta CAPI rejected event", details: metaJson }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -233,6 +279,13 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error("[meta-capi] Network/fetch error:", err);
+    logSystem({
+      level: "error",
+      category: "edge_function",
+      source: "meta-capi",
+      message: `Falha de rede ao chamar Meta CAPI: ${(err as Error)?.message ?? err}`,
+      details: { event_name, event_id, event_source_url },
+    });
     return new Response(JSON.stringify({ error: "Failed to reach Meta CAPI" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
