@@ -157,6 +157,13 @@ Deno.serve(async (req) => {
 
   if (!PIXEL_ID || !ACCESS_TOKEN) {
     console.error("[meta-capi] Missing PIXEL_ID or ACCESS_TOKEN env vars");
+    logSystem({
+      level: "critical",
+      category: "edge_function",
+      source: "meta-capi",
+      message: "Secrets ausentes: META_PIXEL_ID/META_CAPI_ACCESS_TOKEN",
+      details: { pixel_id_set: !!PIXEL_ID, token_set: !!ACCESS_TOKEN },
+    });
     return new Response(
       JSON.stringify({ error: "Server misconfigured" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
