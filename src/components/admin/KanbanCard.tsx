@@ -465,7 +465,7 @@ const KanbanCard = ({
                 )}
                 {s === "pendente" && (
                   <div className="pt-1 mt-1 border-t border-border/50 opacity-80">
-                    Aguardando confirmação de entrega da Evolution API.
+                    Aguardando confirmação de entrega do WhatsApp.
                   </div>
                 )}
               </div>
