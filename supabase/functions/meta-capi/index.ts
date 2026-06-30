@@ -243,7 +243,22 @@ Deno.serve(async (req) => {
     const metaJson = await metaRes.json();
 
     if (!metaRes.ok) {
-      console.error("[meta-capi] Meta CAPI error:", metaJson);
+      const { level, reason } = classifyMetaError(metaJson, metaRes.status);
+      console.error(`[meta-capi] Meta CAPI error [${level}/${reason}]`, metaJson);
+      logSystem({
+        level,
+        category: "edge_function",
+        source: "meta-capi",
+        message: `Falha CAPI ${event_name}: ${reason}`,
+        details: {
+          event_name,
+          event_id,
+          http_status: metaRes.status,
+          meta_error: metaJson?.error ?? metaJson,
+          fbtrace_id: metaJson?.fbtrace_id,
+          event_source_url,
+        },
+      });
       return new Response(
         JSON.stringify({ error: "Meta CAPI rejected event", details: metaJson }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -264,6 +279,13 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error("[meta-capi] Network/fetch error:", err);
+    logSystem({
+      level: "error",
+      category: "edge_function",
+      source: "meta-capi",
+      message: `Falha de rede ao chamar Meta CAPI: ${(err as Error)?.message ?? err}`,
+      details: { event_name, event_id, event_source_url },
+    });
     return new Response(JSON.stringify({ error: "Failed to reach Meta CAPI" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
