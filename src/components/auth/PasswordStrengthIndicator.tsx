@@ -19,7 +19,7 @@ export function validatePasswordStrength(password: string): {
     { label: "Letra maiúscula (A-Z)", met: /[A-Z]/.test(password) },
     { label: "Letra minúscula (a-z)", met: /[a-z]/.test(password) },
     { label: "Número (0-9)", met: /[0-9]/.test(password) },
-    { label: "Caractere especial (!@#$%...)", met: /[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/`~';]/.test(password) },
+    { label: "Caractere especial (!@#$%...)", met: /[!@#$%^&*(),.?":{}|<>_\-+=[\]\\/`~';]/.test(password) },
   ];
 
   const isValid = requirements.every((req) => req.met);

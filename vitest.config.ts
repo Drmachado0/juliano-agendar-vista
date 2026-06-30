@@ -9,6 +9,13 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // Evita que src/integrations/supabase/client.ts lance no import durante os
+    // testes (ele exige VITE_SUPABASE_* e mostra fallback se ausentes). Valores
+    // placeholder — os testes não fazem chamadas reais ao Supabase.
+    env: {
+      VITE_SUPABASE_URL: "http://localhost:54321",
+      VITE_SUPABASE_PUBLISHABLE_KEY: "test-anon-key",
+    },
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
