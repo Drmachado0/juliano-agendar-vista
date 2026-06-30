@@ -28,6 +28,8 @@ interface WebhookConfig {
   secret: string;
 }
 
+const N8N_TIMEOUT_MS = Number(Deno.env.get("N8N_WHATSAPP_TIMEOUT_MS") || "15000");
+
 function getWebhookConfig(): WebhookConfig {
   const url = (Deno.env.get("N8N_WHATSAPP_WEBHOOK_URL") || "").trim();
   const secret = Deno.env.get("N8N_WEBHOOK_SECRET") || "";
@@ -50,6 +52,84 @@ interface N8nDispatchResult extends WhatsappSendResult {
   exists?: boolean;
 }
 
+type FailureKind =
+  | "config_missing"
+  | "timeout"
+  | "network"
+  | "http_4xx"
+  | "http_5xx"
+  | "logical_error";
+
+/**
+ * Classifica a falha e devolve o nível para system_logs.
+ * - critical → exige ação humana (config ausente, 5xx persistente)
+ * - error    → falha que afeta entrega (4xx, lógico)
+ * - warn     → transiente (timeout, rede)
+ */
+function classifyFailure(kind: FailureKind): "warn" | "error" | "critical" {
+  if (kind === "config_missing" || kind === "http_5xx") return "critical";
+  if (kind === "timeout" || kind === "network") return "warn";
+  return "error";
+}
+
+/**
+ * Grava falha em system_logs (fire-and-forget). Nunca lança.
+ * Usa service role; não bloqueia o fluxo principal.
+ */
+function logFailure(
+  action: string,
+  kind: FailureKind,
+  details: Record<string, unknown>,
+): void {
+  try {
+    const url = Deno.env.get("SUPABASE_URL");
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !key) return;
+
+    const level = classifyFailure(kind);
+    const body = {
+      level,
+      category: "edge_function",
+      source: "whatsapp-n8n",
+      message: `n8n webhook falhou (${action}): ${kind}`,
+      details: { action, failure_kind: kind, ...details },
+    };
+
+    // fire-and-forget — sem await
+    fetch(`${url}/rest/v1/system_logs`, {
+      method: "POST",
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify(body),
+    }).catch((e) => {
+      console.warn("[whatsapp] falha ao gravar system_logs:", e?.message);
+    });
+  } catch (e: any) {
+    console.warn("[whatsapp] logFailure exceção:", e?.message);
+  }
+}
+
+/** Mascara dados sensíveis em payloads antes de logar. */
+function safeDetailsForLog(payload: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(payload)) {
+    if (k === "phone" && typeof v === "string") {
+      out.phone_masked = "***" + v.slice(-4);
+    } else if (k === "message" && typeof v === "string") {
+      out.message_preview = v.slice(0, 80);
+    } else if (k === "image") {
+      out.has_image = true;
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
 /**
  * Dispara uma ação de WhatsApp para o webhook do n8n.
  * O n8n decide como falar com o ManyChat (flow/template/conteúdo).
@@ -65,8 +145,14 @@ async function dispararN8n(
     cfg = getWebhookConfig();
   } catch (e: any) {
     console.error("[whatsapp] Config inválida:", e?.message);
+    logFailure(action, "config_missing", { error: e?.message });
     return { ok: false, erro: e?.message ?? "Config de WhatsApp inválida" };
   }
+
+  const safeDetails = safeDetailsForLog(payload);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), N8N_TIMEOUT_MS);
+  const startedAt = Date.now();
 
   try {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -76,14 +162,24 @@ async function dispararN8n(
       method: "POST",
       headers,
       body: JSON.stringify({ action, ...payload }),
+      signal: controller.signal,
     });
+    clearTimeout(timer);
 
+    const elapsed_ms = Date.now() - startedAt;
     const text = await resp.text();
     let data: any;
     try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
     if (!resp.ok) {
+      const kind: FailureKind = resp.status >= 500 ? "http_5xx" : "http_4xx";
       console.error(`[whatsapp] ${action} HTTP ${resp.status}: ${text.slice(0, 300)}`);
+      logFailure(action, kind, {
+        http_status: resp.status,
+        elapsed_ms,
+        response_preview: text.slice(0, 300),
+        ...safeDetails,
+      });
       return {
         ok: false,
         status: resp.status,
@@ -98,20 +194,44 @@ async function dispararN8n(
     const exists = data?.exists === true || data?.exists === "true";
 
     if (!okLogico) {
+      const erro = data?.erro ?? data?.error ?? "Falha reportada pelo n8n";
+      logFailure(action, "logical_error", {
+        http_status: resp.status,
+        elapsed_ms,
+        n8n_error: erro,
+        response_preview: text.slice(0, 300),
+        ...safeDetails,
+      });
       return {
         ok: false,
         status: resp.status,
-        erro: data?.erro ?? data?.error ?? "Falha reportada pelo n8n",
+        erro,
         raw: data,
       };
     }
 
     return { ok: true, status: resp.status, messageId, exists, raw: data };
   } catch (e: any) {
-    console.error(`[whatsapp] Exceção em ${action}:`, e?.message);
-    return { ok: false, erro: e?.message ?? "Erro desconhecido" };
+    clearTimeout(timer);
+    const elapsed_ms = Date.now() - startedAt;
+    const aborted = e?.name === "AbortError";
+    const kind: FailureKind = aborted ? "timeout" : "network";
+    console.error(`[whatsapp] Exceção em ${action}${aborted ? " (timeout)" : ""}:`, e?.message);
+    logFailure(action, kind, {
+      elapsed_ms,
+      timeout_ms: N8N_TIMEOUT_MS,
+      error: e?.message ?? String(e),
+      ...safeDetails,
+    });
+    return {
+      ok: false,
+      erro: aborted
+        ? `Timeout (${N8N_TIMEOUT_MS}ms) no webhook do n8n`
+        : (e?.message ?? "Erro desconhecido"),
+    };
   }
 }
+
 
 /**
  * Envia uma mensagem de TEXTO via WhatsApp (n8n → ManyChat).
