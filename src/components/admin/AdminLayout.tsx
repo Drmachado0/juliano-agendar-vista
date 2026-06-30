@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, LayoutGrid, LogOut, Menu, X, BarChart3, MessageCircle, CalendarDays, CalendarOff, Users, Settings, Star, Bell, ShieldCheck, ScrollText, Bot, Shield, FileBarChart, Webhook } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import drLogo from "@/assets/dr-juliano-logo.webp";
+import drLogo from "@/assets/dr-juliano-logo.svg";
 
 interface AdminLayoutProps {
   children: ReactNode;

@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import drLogo from "@/assets/dr-juliano-logo.webp";
+import drLogo from "@/assets/dr-juliano-logo.svg";
 import { PasswordStrengthIndicator, validatePasswordStrength } from "@/components/auth/PasswordStrengthIndicator";
 import TwoFactorVerification from "@/components/auth/TwoFactorVerification";
 import { supabase } from "@/integrations/supabase/client";

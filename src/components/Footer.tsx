@@ -1,6 +1,6 @@
 import { Heart, MapPin, Instagram, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
-import logoImage from "@/assets/dr-juliano-logo.webp";
+import logoImage from "@/assets/dr-juliano-logo.svg";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";

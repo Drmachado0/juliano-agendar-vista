@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { DOCTOR } from "@/lib/constants";
-import logoImage from "@/assets/dr-juliano-logo.webp";
+import logoImage from "@/assets/dr-juliano-logo.svg";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
