@@ -20,6 +20,8 @@ interface GoogleReview {
 interface PlaceDetailsResponse {
   result?: {
     reviews?: GoogleReview[];
+    user_ratings_total?: number;
+    rating?: number;
   };
   status: string;
   error_message?: string;
@@ -85,7 +87,7 @@ serve(async (req) => {
     console.log('Fetching reviews from Google Places API...');
 
     // Fetch reviews from Google Places API
-    const googleUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=reviews&key=${googleApiKey}&language=pt-BR`;
+    const googleUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=reviews,user_ratings_total,rating&key=${googleApiKey}&language=pt-BR`;
     
     const googleResponse = await fetch(googleUrl);
     const googleData: PlaceDetailsResponse = await googleResponse.json();
@@ -104,20 +106,38 @@ serve(async (req) => {
     const reviews = googleData.result?.reviews || [];
     console.log(`Found ${reviews.length} reviews from Google`);
 
-    if (reviews.length === 0) {
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'No reviews found',
-        synced: 0 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     // Connect to Supabase with service role
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Grava o total REAL de avaliações + nota média do Google em site_config.
+    // Alimenta o selo "+N avaliações" e o aggregateRating do site (sempre verídicos).
+    const totalReal = googleData.result?.user_ratings_total ?? null;
+    const notaMedia = googleData.result?.rating ?? null;
+    if (totalReal !== null) {
+      const { error: cfgErr } = await supabaseAdmin
+        .from('site_config')
+        .update({
+          google_reviews_total: totalReal,
+          google_rating: notaMedia,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', true);
+      if (cfgErr) console.error('Erro ao gravar total em site_config:', cfgErr);
+    }
+
+    if (reviews.length === 0) {
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'No reviews found',
+        google_reviews_total: totalReal,
+        google_rating: notaMedia,
+        synced: 0
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Process and upsert reviews
     let syncedCount = 0;
@@ -163,7 +183,9 @@ serve(async (req) => {
       message: `Synchronized ${syncedCount} reviews`,
       synced: syncedCount,
       errors: errorCount,
-      total_from_google: reviews.length
+      total_from_google: reviews.length,
+      google_reviews_total: googleData.result?.user_ratings_total ?? null,
+      google_rating: googleData.result?.rating ?? null
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

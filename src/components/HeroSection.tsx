@@ -6,11 +6,14 @@ import drJulianoHeroWebp from "@/assets/dr-juliano-hero.webp";
 import drJulianoHeroVideo from "@/assets/dr-juliano-hero.mp4";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
-import { DOCTOR, GOOGLE_REVIEWS } from "@/lib/constants";
+import { useGoogleReviews } from "@/hooks/useGoogleReviews";
+import { DOCTOR } from "@/lib/constants";
+import { formatReviewCount } from "@/lib/utils";
 
 const HeroSection = () => {
   const { trackCTAClick, trackWhatsAppClick } = useGoogleTag();
   const { waLink } = useSiteWhatsApp();
+  const reviews = useGoogleReviews();
   const heroWaUrl = waLink("Olá! Vi o site do Dr. Juliano Machado e gostaria de agendar uma consulta oftalmológica.");
   const [count, setCount] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -118,8 +121,8 @@ const HeroSection = () => {
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 opacity-0 animate-fade-in animation-delay-600">
               <ProofChip
                 main={
-                  <span className="inline-flex items-center gap-1" aria-label={`${GOOGLE_REVIEWS.rating.toFixed(1)} de 5 estrelas no Google`}>
-                    <span className="font-bold">{GOOGLE_REVIEWS.rating.toFixed(1)}</span>
+                  <span className="inline-flex items-center gap-1" aria-label={`${reviews.rating.toFixed(1)} de 5 estrelas no Google`}>
+                    <span className="font-bold">{reviews.rating.toFixed(1)}</span>
                     <span className="inline-flex text-accent" aria-hidden="true">
                       {[0, 1, 2, 3, 4].map((i) => (
                         <Star key={i} className="w-3 h-3 fill-current" />
@@ -127,7 +130,7 @@ const HeroSection = () => {
                     </span>
                   </span>
                 }
-                sub={`${GOOGLE_REVIEWS.count} avaliações · Google`}
+                sub={`${formatReviewCount(reviews.count)} avaliações · Google`}
               />
               <ProofChip main={<span className="font-bold">+{count.toLocaleString("pt-BR")}</span>} sub="pacientes atendidos" />
               <ProofChip main={<span className="font-bold">+{DOCTOR.yearsExperience} anos</span>} sub="de oftalmologia" />
@@ -187,7 +190,7 @@ const HeroSection = () => {
               {/* Floating Google rating chip */}
               <div className="absolute top-4 -right-3 sm:-right-6 glass-panel rounded-xl px-3 py-2 flex items-center gap-1.5 opacity-0 animate-slide-up animation-delay-700">
                 <Star className="w-4 h-4 text-accent fill-accent" />
-                <span className="text-sm font-bold text-foreground">{GOOGLE_REVIEWS.rating.toFixed(1)}</span>
+                <span className="text-sm font-bold text-foreground">{reviews.rating.toFixed(1)}</span>
                 <span className="text-xs text-muted-foreground">Google</span>
               </div>
             </div>

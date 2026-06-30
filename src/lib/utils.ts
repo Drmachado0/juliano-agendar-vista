@@ -8,6 +8,17 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Formata a contagem de avaliações para exibição no selo.
+ * Arredonda SEMPRE para baixo (nunca superestima) e prefixa "+" a partir de 20,
+ * ex.: 10 → "10", 108 → "+100", 127 → "+120". Mantém veracidade (CFM/CDC).
+ * Para o dado estruturado de SEO use o número EXATO, não esta string.
+ */
+export function formatReviewCount(n: number): string {
+  if (!Number.isFinite(n) || n < 20) return String(Math.max(0, Math.floor(n || 0)));
+  return `+${Math.floor(n / 10) * 10}`;
+}
+
+/**
  * Data local no formato "YYYY-MM-DD".
  * Use no lugar de `date.toISOString().slice(0,10)`, que devolve a data em UTC
  * e causa off-by-one no fuso BR (UTC-3) entre ~21h e a meia-noite.

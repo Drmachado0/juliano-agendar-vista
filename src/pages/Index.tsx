@@ -13,11 +13,12 @@ import MobileStickyCTA from "@/components/MobileStickyCTA";
 import Footer from "@/components/Footer";
 
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
-import { GOOGLE_REVIEWS } from "@/lib/constants";
+import { useGoogleReviews } from "@/hooks/useGoogleReviews";
 
 const Index = () => {
   const { raw: waRaw } = useSiteWhatsApp();
-  // Structured data for SEO
+  const reviews = useGoogleReviews();
+  // Structured data for SEO (ratingCount = total EXATO, exigido pelo Google)
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Physician",
@@ -46,9 +47,9 @@ const Index = () => {
     ],
     "aggregateRating": {
       "@type": "AggregateRating",
-      "ratingValue": String(GOOGLE_REVIEWS.rating),
+      "ratingValue": String(reviews.rating),
       "bestRating": "5",
-      "ratingCount": String(GOOGLE_REVIEWS.count)
+      "ratingCount": String(reviews.count)
     },
     "sameAs": [
       "https://www.instagram.com/drjulianomachado.oftalmo/"

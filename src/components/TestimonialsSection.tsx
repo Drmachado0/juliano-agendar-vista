@@ -2,7 +2,9 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { Star, Quote, Loader2, MessageSquare, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { buscarAvaliacoesGoogle, type AvaliacaoGoogle } from "@/services/avaliacoesGoogle";
-import { GOOGLE_REVIEW_URL, GOOGLE_REVIEWS } from "@/lib/constants";
+import { useGoogleReviews } from "@/hooks/useGoogleReviews";
+import { GOOGLE_REVIEW_URL } from "@/lib/constants";
+import { formatReviewCount } from "@/lib/utils";
 
 interface Testimonial {
   id: string;
@@ -42,6 +44,7 @@ const MAX_CARDS = 6;
 const TestimonialsSection = () => {
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const reviews = useGoogleReviews();
 
   const { data: avaliacoesGoogle, isLoading } = useQuery({
     queryKey: ['avaliacoes-google'],
@@ -132,7 +135,7 @@ const TestimonialsSection = () => {
               <span className="font-bold text-foreground text-lg">{averageRating}</span>
             </div>
             <span className="text-muted-foreground text-sm flex items-center gap-1.5">
-              <GoogleIcon /> baseado em {GOOGLE_REVIEWS.count} avaliações
+              <GoogleIcon /> baseado em {formatReviewCount(reviews.count)} avaliações
             </span>
           </div>
         </div>
