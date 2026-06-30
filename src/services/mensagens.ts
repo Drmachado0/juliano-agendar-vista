@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { mesmoTelefone } from "@/lib/whatsappNumber";
 
 export interface MensagemWhatsApp {
   id: string;
@@ -62,14 +63,21 @@ export const listarMensagensPorAgendamento = async (
         ? supabase
             .from("mensagens_whatsapp")
             .select("*")
-            .ilike("telefone", `%${last8}%`)
+            // sufixo ancorado ao FIM (sem % final) — evita casar 8 dígitos no meio do número
+            .ilike("telefone", `%${last8}`)
         : Promise.resolve({ data: [] as any[], error: null }),
     ]);
 
     if (byAgendamento.error) throw byAgendamento.error;
     if ((byPhone as any).error) throw (byPhone as any).error;
 
-    const all = [...(byAgendamento.data || []), ...((byPhone as any).data || [])];
+    // O prefiltro por sufixo ainda pode trazer contatos de outro DDD com os mesmos
+    // 8 dígitos finais; filtra pela chave canônica (DDD + 8) para não misturar conversas.
+    const byPhoneFiltradas = telefone
+      ? ((byPhone as any).data || []).filter((m: any) => mesmoTelefone(m.telefone, telefone))
+      : ((byPhone as any).data || []);
+
+    const all = [...(byAgendamento.data || []), ...byPhoneFiltradas];
     const unique = Array.from(new Map(all.map((m: any) => [m.id, m])).values());
     unique.sort(
       (a: any, b: any) =>

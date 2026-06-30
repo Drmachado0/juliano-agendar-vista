@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { addMonths } from "date-fns";
+import { dataLocalISO } from "@/lib/utils";
 
 export interface LembreteAnual {
   id: string;
@@ -83,15 +85,15 @@ export async function listarLembretesPendentes(filtro: string = 'todos'): Promis
       .order("data_proximo_lembrete", { ascending: true });
 
     if (filtro === 'vencidos') {
-      query = query.lte("data_proximo_lembrete", hoje.toISOString().split('T')[0]);
+      query = query.lte("data_proximo_lembrete", dataLocalISO(hoje));
     } else if (filtro === 'semana') {
       const proximaSemana = new Date(hoje);
       proximaSemana.setDate(proximaSemana.getDate() + 7);
-      query = query.lte("data_proximo_lembrete", proximaSemana.toISOString().split('T')[0]);
+      query = query.lte("data_proximo_lembrete", dataLocalISO(proximaSemana));
     } else if (filtro === 'mes') {
-      const proximoMes = new Date(hoje);
-      proximoMes.setMonth(proximoMes.getMonth() + 1);
-      query = query.lte("data_proximo_lembrete", proximoMes.toISOString().split('T')[0]);
+      // addMonths trata overflow (31/jan + 1 mês = 28/fev), evitando "pular" o mês
+      const proximoMes = addMonths(hoje, 1);
+      query = query.lte("data_proximo_lembrete", dataLocalISO(proximoMes));
     } else if (filtro.startsWith('mes_')) {
       // Filter by specific month: mes_2025-01, mes_2025-02, etc.
       const mesAno = filtro.replace('mes_', '');
@@ -233,8 +235,8 @@ export interface EstatisticaMensal {
 // Get general statistics
 export async function buscarEstatisticasGerais(): Promise<{ data: EstatisticasGerais | null; error: string | null }> {
   try {
-    const hoje = new Date().toISOString().split('T')[0];
-    
+    const hoje = dataLocalISO();
+
     const { data, error } = await supabase
       .from("lembretes_anuais")
       .select("lembrete_enviado, data_proximo_lembrete");

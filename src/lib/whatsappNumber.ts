@@ -13,6 +13,29 @@ export function normalizeWhatsApp(raw: string): string {
 }
 
 /**
+ * Chave canônica de identidade de um telefone BR: DDD (2 dígitos) + 8 dígitos finais.
+ * Remove o DDI 55 quando presente e ignora o 9º dígito volátil de celular,
+ * de modo que "(91) 98888-7777" e "(91) 8888-7777" geram a MESMA chave,
+ * mas DDDs diferentes (91 vs 11) geram chaves distintas.
+ * Retorna "" quando não há dígitos suficientes para identificar com segurança.
+ */
+export function chaveTelefone(raw: string): string {
+  let d = normalizeWhatsApp(raw);
+  if (d.startsWith("55") && d.length >= 12) d = d.slice(2); // remove DDI
+  if (d.length < 10) return "";
+  const ddd = d.slice(0, 2);
+  const last8 = d.slice(-8);
+  return ddd + last8;
+}
+
+/** True se dois números representam o mesmo contato (compara a chave canônica). */
+export function mesmoTelefone(a: string, b: string): boolean {
+  const ka = chaveTelefone(a);
+  const kb = chaveTelefone(b);
+  return ka !== "" && ka === kb;
+}
+
+/**
  * Formata para exibição "(91) 98069-0617" assumindo número BR com DDI 55.
  * Aceita também sem DDI. Retorna string original se não bater o padrão.
  */

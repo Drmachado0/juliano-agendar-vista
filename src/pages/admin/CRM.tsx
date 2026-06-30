@@ -309,7 +309,10 @@ const AdminCRM = () => {
     setDragOverColumn(null);
 
     const ag = draggingAgendamento;
-    const oldStatus = ((ag as any)?.status_funil as string) || "novo";
+    // Normaliza para casar com a chave dos baldes (que usam normalizeStatusFunil).
+    // Usar o valor cru aqui faz o card sumir/duplicar quando status_funil é legado
+    // ou está em caixa diferente (ex.: "AGENDADO", "confirmado", "lead").
+    const oldStatus = normalizeStatusFunil((ag as any)?.status_funil);
     if (!ag || oldStatus === newStatus) {
       setDraggingAgendamento(null);
       return;

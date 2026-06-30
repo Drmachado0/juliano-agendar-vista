@@ -167,7 +167,9 @@ export async function criarPlanoCampanha({ ano, mes1a12, pacientes, quantidades 
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
 
-  const remessasInsert = janelas.map((j) => {
+  // tamanhos é indexado por POSIÇÃO da janela (0..n-1), não por numero_janela
+  // (um mês pode ter só a janela #2, e tamanhos teria comprimento 1).
+  const remessasInsert = janelas.map((j, idx) => {
     const dataProg = new Date(j.data_envio_sugerida + "T00:00:00");
     let status: StatusRemessa = "agendada";
     if (dataProg <= hoje) status = "disponivel";
@@ -177,7 +179,7 @@ export async function criarPlanoCampanha({ ano, mes1a12, pacientes, quantidades 
       data_programada: j.data_envio_sugerida,
       janela_atendimento_id: j.id,
       status,
-      quantidade_planejada: tamanhos[j.numero_janela - 1] || 0,
+      quantidade_planejada: tamanhos[idx] || 0,
     };
   });
 
@@ -195,7 +197,8 @@ export async function criarPlanoCampanha({ ano, mes1a12, pacientes, quantidades 
   let cursor = 0;
   const pacientesInsert: Array<Partial<PacienteCampanhaRow>> = [];
   for (const r of remessasRows) {
-    const qtd = tamanhos[r.numero_remessa - 1] || 0;
+    // usa a quantidade já gravada na remessa (alinhada por posição da janela)
+    const qtd = r.quantidade_planejada || 0;
     const slice = ordenados.slice(cursor, cursor + qtd);
     cursor += qtd;
     for (const p of slice) {

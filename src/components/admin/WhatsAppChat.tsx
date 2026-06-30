@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Send, Sparkles, ArrowLeft, Phone, MapPin, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatAppointmentDate } from "@/lib/utils";
+import { mesmoTelefone } from "@/lib/whatsappNumber";
 import { supabase } from "@/integrations/supabase/client";
 import {
   MensagemWhatsApp,
@@ -91,9 +92,6 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
   useEffect(() => {
     if (!lead) return;
 
-    // Get last 8 digits for phone matching
-    const last8Digits = lead.telefone_whatsapp.replace(/\D/g, "").slice(-8);
-
     const channel = supabase
       .channel(`chat_${lead.agendamento_id}`)
       .on(
@@ -105,13 +103,14 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
         },
         (payload) => {
           const newMessage = payload.new as MensagemWhatsApp;
-          
+
           // Check if message belongs to this lead (by agendamento_id or phone)
-          const messagePhoneLast8 = newMessage.telefone.replace(/\D/g, "").slice(-8);
-          const isForThisLead = 
+          // Compara pela chave canônica (DDD + 8 dígitos) — não só os 8 finais,
+          // para não puxar conversa de outro contato com os mesmos dígitos finais.
+          const isForThisLead =
             newMessage.agendamento_id === lead.agendamento_id ||
-            messagePhoneLast8 === last8Digits;
-          
+            mesmoTelefone(newMessage.telefone, lead.telefone_whatsapp);
+
           if (!isForThisLead) return;
           
           setMessages((prev) => {

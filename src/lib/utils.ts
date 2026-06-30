@@ -8,6 +8,18 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Data local no formato "YYYY-MM-DD".
+ * Use no lugar de `date.toISOString().slice(0,10)`, que devolve a data em UTC
+ * e causa off-by-one no fuso BR (UTC-3) entre ~21h e a meia-noite.
+ */
+export function dataLocalISO(date: Date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
  * Formata data + hora de agendamento de forma segura.
  * Evita exibir "01/01/1970" quando o backend retorna timestamps zero/null/inválidos.
  *

@@ -170,7 +170,16 @@ export async function gerarHorariosDisponiveis(
     }
   }
 
+  // Se for hoje, remove horários que já passaram (a RPC não filtra por hora atual).
+  const ehHoje = isSameDay(data, hoje);
+  const minutosAgora = hoje.getHours() * 60 + hoje.getMinutes();
+  const minutosDoSlot = (h: string) => {
+    const [hh, mm] = h.split(":").map(Number);
+    return hh * 60 + mm;
+  };
+
   return Array.from(livres)
+    .filter((h) => !ehHoje || minutosDoSlot(h) > minutosAgora)
     .sort()
     .map((h) => ({ horario: h, disponivel: true }));
 }

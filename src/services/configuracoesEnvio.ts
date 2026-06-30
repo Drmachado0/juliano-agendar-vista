@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { dataLocalISO } from "@/lib/utils";
 
 export type StatusGlobalEnvio = "ativo" | "pausado" | "bloqueado";
 
@@ -102,15 +103,21 @@ export function horaDeString(hms: string): number {
   return parseInt(h, 10) || 0;
 }
 
+/** Converte "HH:MM[:SS]" em minutos desde a meia-noite (considera os minutos) */
+export function minutosDeString(hms: string): number {
+  const [h, m] = (hms || "").split(":");
+  return (parseInt(h, 10) || 0) * 60 + (parseInt(m, 10) || 0);
+}
+
 /** Verifica se a hora atual local está dentro da janela [janela_inicio, janela_fim) */
 export function dentroDaJanela(cfg: ConfiguracoesEnvio, agora: Date = new Date()): boolean {
-  const horaAtual = agora.getHours() + agora.getMinutes() / 60;
-  const ini = horaDeString(cfg.janela_inicio);
-  const fim = horaDeString(cfg.janela_fim);
-  return horaAtual >= ini && horaAtual < fim;
+  const minutosAtuais = agora.getHours() * 60 + agora.getMinutes();
+  const ini = minutosDeString(cfg.janela_inicio);
+  const fim = minutosDeString(cfg.janela_fim);
+  return minutosAtuais >= ini && minutosAtuais < fim;
 }
 
 export function ehBlackoutHoje(cfg: ConfiguracoesEnvio, hoje: Date = new Date()): boolean {
-  const iso = hoje.toISOString().slice(0, 10);
+  const iso = dataLocalISO(hoje);
   return (cfg.blackout_dates || []).includes(iso);
 }
