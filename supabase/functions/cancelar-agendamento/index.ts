@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-n8n-secret",
 };
 
 Deno.serve(async (req) => {
@@ -15,6 +15,16 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ error: "Método não permitido" }),
       { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  // Segredo compartilhado: só o n8n (ou o servidor MCP interno) pode cancelar.
+  const sharedSecret = Deno.env.get("N8N_SHARED_SECRET");
+  const provided = req.headers.get("x-n8n-secret");
+  if (!sharedSecret || !provided || provided !== sharedSecret) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
@@ -38,24 +48,45 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Build query to find the appointment(s)
-    let query = supabase
-      .from("agendamentos")
-      .select("id, nome_completo, telefone_whatsapp, data_agendamento, hora_agendamento, local_atendimento, status_funil")
-      .neq("status_funil", "cancelado")
-      .order("data_agendamento", { ascending: true });
+    const baseSelect = "id, nome_completo, telefone_whatsapp, data_agendamento, hora_agendamento, local_atendimento, status_funil";
+    let agendamentos:
+      | { id: string; nome_completo: string | null; telefone_whatsapp: string | null; data_agendamento: string | null; hora_agendamento: string | null; local_atendimento: string | null; status_funil: string | null }[]
+      | null = null;
+    let fetchError: { message: string } | null = null;
 
     if (agendamento_id) {
-      query = query.eq("id", agendamento_id);
+      const res = await supabase
+        .from("agendamentos")
+        .select(baseSelect)
+        .neq("status_funil", "cancelado")
+        .eq("id", agendamento_id)
+        .order("data_agendamento", { ascending: true });
+      agendamentos = res.data as typeof agendamentos;
+      fetchError = res.error;
     } else if (telefone) {
-      // Normalize: keep only digits
-      const digits = telefone.replace(/\D/g, "");
-      query = query.or(`telefone_whatsapp.ilike.%${digits}%`);
-      // Only cancel the next upcoming appointment
-      query = query.gte("data_agendamento", new Date().toISOString().split("T")[0]);
-      query = query.limit(1);
+      // Match exato pelos últimos 8 dígitos (evita cancelar o paciente errado por substring)
+      const last8 = telefone.replace(/\D/g, "").slice(-8);
+      if (last8.length < 8) {
+        return new Response(
+          JSON.stringify({ error: "Telefone inválido" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const hoje = new Date().toISOString().split("T")[0];
+      const res = await supabase
+        .from("agendamentos")
+        .select(baseSelect)
+        .neq("status_funil", "cancelado")
+        .gte("data_agendamento", hoje)
+        .order("data_agendamento", { ascending: true })
+        .limit(200);
+      fetchError = res.error;
+      const match = (res.data ?? []).find(
+        (a: { telefone_whatsapp: string | null }) =>
+          (a.telefone_whatsapp ?? "").replace(/\D/g, "").endsWith(last8)
+      );
+      agendamentos = match ? [match as NonNullable<typeof agendamentos>[number]] : [];
     }
-
-    const { data: agendamentos, error: fetchError } = await query;
 
     if (fetchError) {
       console.error("[cancelar-agendamento] Fetch error:", fetchError);

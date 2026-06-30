@@ -73,7 +73,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.buscar-pacientes-saudevianet]
-verify_jwt = false
+verify_jwt = true
 
 [functions.listar-horarios-disponiveis]
 verify_jwt = false

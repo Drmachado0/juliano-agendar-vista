@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const N8N_SHARED_SECRET = Deno.env.get("N8N_SHARED_SECRET") ?? "";
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
@@ -47,6 +48,8 @@ async function callEdgeFunction(
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+      // Repassa o segredo para functions internas que o exigem (ex.: cancelar-agendamento)
+      "x-n8n-secret": N8N_SHARED_SECRET,
     },
     body: JSON.stringify(body),
   });
@@ -313,13 +316,19 @@ Deno.serve(async (req: Request) => {
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-n8n-secret",
       },
     });
   }
 
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
+  }
+
+  // Segredo compartilhado: o servidor MCP usa service_role e precisa ser fechado.
+  const provided = req.headers.get("x-n8n-secret");
+  if (!N8N_SHARED_SECRET || !provided || provided !== N8N_SHARED_SECRET) {
+    return jsonRpcError(null, -32001, "Unauthorized");
   }
 
   let body: Record<string, unknown>;
