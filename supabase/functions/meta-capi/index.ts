@@ -17,6 +17,30 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+import { logSystem } from "../_shared/systemLogger.ts";
+
+// Códigos de erro da Graph API que indicam rate limit / throttling.
+// Refs: https://developers.facebook.com/docs/marketing-api/error-reference
+const RATE_LIMIT_CODES = new Set<number>([4, 17, 32, 613, 80004, 80014]);
+
+function classifyMetaError(metaJson: any, httpStatus: number): {
+  level: "warn" | "error" | "critical";
+  reason: string;
+} {
+  const code = metaJson?.error?.code;
+  const subcode = metaJson?.error?.error_subcode;
+  if (typeof code === "number" && RATE_LIMIT_CODES.has(code)) {
+    return { level: "warn", reason: `rate_limit (code=${code}${subcode ? `, subcode=${subcode}` : ""})` };
+  }
+  if (httpStatus === 401 || httpStatus === 403 || code === 190) {
+    return { level: "critical", reason: `auth/token (code=${code}, http=${httpStatus})` };
+  }
+  if (httpStatus >= 500) {
+    return { level: "warn", reason: `meta_5xx (http=${httpStatus})` };
+  }
+  return { level: "error", reason: `meta_4xx (code=${code}, http=${httpStatus})` };
+}
+
 const PIXEL_ID = Deno.env.get("META_PIXEL_ID");
 const ACCESS_TOKEN = Deno.env.get("META_CAPI_ACCESS_TOKEN");
 const TEST_EVENT_CODE = Deno.env.get("META_TEST_EVENT_CODE");
