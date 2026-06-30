@@ -4,6 +4,7 @@ import WhatsAppLeadsList from "@/components/admin/WhatsAppLeadsList";
 import WhatsAppChat from "@/components/admin/WhatsAppChat";
 import WhatsAppContatos from "@/components/admin/WhatsAppContatos";
 import { LeadComMensagens, MensagemWhatsApp, buscarAgendamentoPorTelefone } from "@/services/mensagens";
+import { mesmoTelefone } from "@/lib/whatsappNumber";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
 import { useBotGlobalStatus } from "@/hooks/useBotGlobalStatus";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,17 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Bot, PowerOff } from "lucide-react";
 import { toast } from "sonner";
+
+// Ordena os leads pela última mensagem (mais recente primeiro; sem data vai pro fim)
+function ordenarPorUltimaMensagem(a: LeadComMensagens, b: LeadComMensagens) {
+  if (!a.ultima_mensagem_data && !b.ultima_mensagem_data) return 0;
+  if (!a.ultima_mensagem_data) return 1;
+  if (!b.ultima_mensagem_data) return -1;
+  return (
+    new Date(b.ultima_mensagem_data).getTime() -
+    new Date(a.ultima_mensagem_data).getTime()
+  );
+}
 
 const AdminWhatsApp = () => {
   const [selectedLead, setSelectedLead] = useState<LeadComMensagens | null>(null);
@@ -32,49 +44,61 @@ const AdminWhatsApp = () => {
     }
   }, [leads, selectedLead]);
 
+  // Contato novo que chegou em tempo real mas ainda não está na lista (primeira
+  // mensagem de um número sem card): busca o lead e o adiciona no topo.
+  const adicionarLeadNovo = useCallback(async (message: MensagemWhatsApp) => {
+    const { data } = await buscarAgendamentoPorTelefone(message.telefone);
+    if (!data) return; // número sem agendamento/lead → nada a exibir ainda
+    setLeads((prev) => {
+      // guarda anti-duplicado (corrida / StrictMode)
+      if (prev.some((l) => l.agendamento_id === data.id)) return prev;
+      const novo: LeadComMensagens = {
+        agendamento_id: data.id,
+        nome_completo: data.nome_completo,
+        telefone_whatsapp: data.telefone_whatsapp,
+        status_crm: data.status_crm,
+        local_atendimento: data.local_atendimento || "",
+        is_sandbox: data.is_sandbox,
+        ultima_mensagem: message.conteudo,
+        ultima_mensagem_data: message.created_at,
+        mensagens_nao_lidas: message.direcao === "IN" ? 1 : 0,
+      };
+      return [novo, ...prev].sort(ordenarPorUltimaMensagem);
+    });
+  }, []);
+
   // Handle realtime messages - match by agendamento_id OR phone number
   const handleNewMessage = useCallback(
     (message: MensagemWhatsApp) => {
-      // Normalize phone for comparison (last 8 digits)
-      const normalizePhone = (phone: string) => phone.replace(/\D/g, "").slice(-8);
-      const messagePhoneLast8 = normalizePhone(message.telefone);
-      
-      // Update leads list with new message
       setLeads((prev) => {
-        const updated = prev.map((lead) => {
-          // Match by agendamento_id OR by phone number
-          const leadPhoneLast8 = normalizePhone(lead.telefone_whatsapp);
-          const isMatch = 
+        const idx = prev.findIndex(
+          (lead) =>
             lead.agendamento_id === message.agendamento_id ||
-            (message.agendamento_id === null && leadPhoneLast8 === messagePhoneLast8);
-          
-          if (isMatch) {
-            return {
-              ...lead,
-              ultima_mensagem: message.conteudo,
-              ultima_mensagem_data: message.created_at,
-              mensagens_nao_lidas:
-                message.direcao === "IN" && lead.agendamento_id !== selectedLead?.agendamento_id
-                  ? lead.mensagens_nao_lidas + 1
-                  : lead.mensagens_nao_lidas,
-            };
-          }
-          return lead;
-        });
+            (message.agendamento_id === null &&
+              mesmoTelefone(lead.telefone_whatsapp, message.telefone))
+        );
 
-        // Sort by last message
-        return updated.sort((a, b) => {
-          if (!a.ultima_mensagem_data && !b.ultima_mensagem_data) return 0;
-          if (!a.ultima_mensagem_data) return 1;
-          if (!b.ultima_mensagem_data) return -1;
-          return (
-            new Date(b.ultima_mensagem_data).getTime() -
-            new Date(a.ultima_mensagem_data).getTime()
-          );
-        });
+        // Contato novo (sem card): dispara a busca assíncrona e mantém a lista.
+        if (idx === -1) {
+          adicionarLeadNovo(message);
+          return prev;
+        }
+
+        const updated = [...prev];
+        const lead = updated[idx];
+        updated[idx] = {
+          ...lead,
+          ultima_mensagem: message.conteudo,
+          ultima_mensagem_data: message.created_at,
+          mensagens_nao_lidas:
+            message.direcao === "IN" && lead.agendamento_id !== selectedLead?.agendamento_id
+              ? lead.mensagens_nao_lidas + 1
+              : lead.mensagens_nao_lidas,
+        };
+        return updated.sort(ordenarPorUltimaMensagem);
       });
     },
-    [selectedLead?.agendamento_id]
+    [selectedLead?.agendamento_id, adicionarLeadNovo]
   );
 
   // Subscribe to realtime
