@@ -318,25 +318,21 @@ Deno.serve(async (req) => {
           }).then(() => {}, () => {});
           falhas++;
         } else {
-          // Erro real → marca para humano
-          console.error(`[boas-vindas] ✗ Erro ${normalizedPhone} (lead ${lead.id}):`, resultado.errorMessage);
-          await supabase
-            .from('agendamentos')
-            .update({
-              status_crm: 'PRECISA_DE_HUMANO',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', lead.id)
-            .eq('status_funil', 'lead')
-            .eq('status_crm', 'NOVO LEAD');
+          // Falha técnica de envio (provedor/webhook) — NÃO escala para humano.
+          // O claim já foi gravado em mensagens_whatsapp com status_envio='erro'
+          // e a função `retentar-boas-vindas-pendentes` cuidará do retry
+          // controlado. Só após MAX_TENTATIVAS sem confirmação o lead é
+          // promovido a PRECISA_DE_HUMANO (motivo: max_tentativas_sem_confirmacao).
+          console.error(`[boas-vindas] ✗ Erro técnico ${normalizedPhone} (lead ${lead.id}) — mantém NOVO LEAD para retry:`, resultado.errorMessage);
 
           await supabase.from('system_logs').insert({
-            level: 'error',
+            level: 'warn',
             category: 'whatsapp',
             source: 'enviar-boas-vindas-lead',
-            message: 'Falha no envio de boas-vindas',
+            message: 'Falha técnica no envio de boas-vindas — mantido em NOVO LEAD para retry',
             details: {
-              event: 'boas_vindas_falhou',
+              event: 'boas_vindas_falha_tecnica',
+              motivo_status: 'falha_tecnica_envio_whatsapp',
               agendamento_id: lead.id,
               telefone_mascarado: '***' + normalizedPhone.slice(-4),
               evolution_status: resultado.evolutionStatus ?? null,
@@ -346,6 +342,7 @@ Deno.serve(async (req) => {
           }).then(() => {}, () => {});
           falhas++;
         }
+
       } catch (err) {
         console.error(`[boas-vindas] Erro ao processar lead ${lead.id}:`, err);
         falhas++;
