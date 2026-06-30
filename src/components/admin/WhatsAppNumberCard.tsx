@@ -101,8 +101,8 @@ export default function WhatsAppNumberCard() {
             <Alert>
               <AlertDescription className="text-xs">
                 Importante: este campo controla apenas os <strong>links wa.me</strong> exibidos no
-                site. A instância Z-API que envia mensagens (lembretes, confirmações, avaliações)
-                continua usando o celular já pareado no painel da Z-API.
+                site. O envio de mensagens (lembretes, confirmações, avaliações) é feito pela
+                integração de WhatsApp (n8n → ManyChat), configurada separadamente.
               </AlertDescription>
             </Alert>
 

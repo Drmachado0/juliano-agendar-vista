@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { verificarNumeroZapi, normalizePhoneBR } from "../_shared/zapi.ts";
+import { verificarNumeroWhatsapp, normalizePhoneBR } from "../_shared/whatsappSender.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -88,20 +88,20 @@ serve(async (req) => {
       numerosParaVerificar.push(...numerosFormatados);
     }
 
-    // Z-API: 1 chamada GET por número (deduplicado)
+    // Verificação via n8n: 1 chamada por número (deduplicado)
     if (numerosParaVerificar.length > 0) {
       const uniques = [...new Set(numerosParaVerificar.map(n => n.formatted))];
-      console.log(`[verificar] Z-API: verificando ${uniques.length} números únicos`);
+      console.log(`[verificar] Verificando ${uniques.length} números únicos`);
 
       const existsMap = new Map<string, { exists: boolean; jid?: string }>();
       for (const phone of uniques) {
-        const r = await verificarNumeroZapi(phone);
+        const r = await verificarNumeroWhatsapp(phone);
         if (!r.ok) {
-          console.error(`[verificar] Falha Z-API para ${phone}: ${r.erro}`);
+          console.error(`[verificar] Falha na verificação para ${phone}: ${r.erro}`);
           return new Response(
             JSON.stringify({
               success: false,
-              error: `Erro ao consultar Z-API: ${r.erro}`,
+              error: `Erro ao verificar número: ${r.erro}`,
               resultadosParciais: results,
             }),
             { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

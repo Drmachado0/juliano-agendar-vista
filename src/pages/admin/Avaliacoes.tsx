@@ -31,7 +31,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { validarTelefoneBrasileiro, autocorrigirTelefone } from "@/lib/validarTelefoneBR";
 import imagemPadraoAvaliacao from "@/assets/avaliacao-default.png";
-// Conexão WhatsApp agora é gerenciada no painel Z-API (externamente).
+// Conexão WhatsApp é gerenciada externamente na integração (n8n → ManyChat).
 
 import { useEnvioLoteConfig, LIMITE_SESSAO, LIMITE_DIARIO } from "@/hooks/useEnvioLoteConfig";
 
@@ -164,13 +164,13 @@ Oftalmologia`;
 };
 
 const Avaliacoes = () => {
-  // Hook para status da conexão Evolution API
-  // Conexão Z-API é gerenciada externamente; assumimos conectado.
+  // Status da conexão de WhatsApp.
+  // A conexão é gerenciada externamente na integração (n8n → ManyChat); assumimos conectado.
   const isWhatsAppConnected = true;
   const evolutionLoading = false;
   const reconectar = async (): Promise<{ success: boolean; error?: string; details?: { qrcode?: string } }> => ({
     success: false,
-    error: "A conexão do WhatsApp agora é gerenciada no painel Z-API.",
+    error: "A conexão do WhatsApp é gerenciada na integração (n8n → ManyChat).",
   });
   const refreshEvolution = () => {};
 
@@ -1665,10 +1665,10 @@ const Avaliacoes = () => {
 
 
                     {/* Botão de verificação WhatsApp — DESATIVADO
-                        Dependia da Z-API (phone-exists). ManyChat não expõe
-                        equivalente público. Removido o JSX morto; a função
-                        verificarNumerosWhatsApp foi mantida para reativação
-                        quando definirmos nova estratégia de verificação. */}
+                        Dependia de verificação phone-exists do provedor anterior.
+                        O ManyChat não expõe equivalente público. Removido o JSX
+                        morto; a função verificarNumerosWhatsApp foi mantida para
+                        reativação quando definirmos nova estratégia de verificação. */}
 
                     {/* Botão para remover inválidos */}
                     {verificacaoConcluida && contarNumerosVerificados().invalidos > 0 && (

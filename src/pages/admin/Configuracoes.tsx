@@ -61,7 +61,6 @@ import TwoFactorSetup from "@/components/admin/TwoFactorSetup";
 import TemplatesWhatsAppTab from "@/components/admin/TemplatesWhatsAppTab";
 import EnvioConfigCard from "@/components/admin/EnvioConfigCard";
 import VariacoesLembreteAnualCard from "@/components/admin/VariacoesLembreteAnualCard";
-import ZapiStatusCard from "@/components/admin/ZapiStatusCard";
 import WhatsAppNumberCard from "@/components/admin/WhatsAppNumberCard";
 
 import { sincronizarAvaliacoesManualmente } from "@/services/avaliacoesGoogle";
@@ -565,9 +564,9 @@ export default function Configuracoes() {
               <Link2 className="h-4 w-4" />
               <span className="hidden sm:inline">Integrações</span>
             </TabsTrigger>
-            <TabsTrigger value="zapi" className="gap-2 text-xs sm:text-sm">
+            <TabsTrigger value="whatsapp" className="gap-2 text-xs sm:text-sm">
               <MessageSquare className="h-4 w-4" />
-              <span className="hidden sm:inline">Z-API</span>
+              <span className="hidden sm:inline">WhatsApp</span>
             </TabsTrigger>
             <TabsTrigger value="bot" className="gap-2 text-xs sm:text-sm">
               <Bot className="h-4 w-4" />
@@ -579,9 +578,8 @@ export default function Configuracoes() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="zapi" className="mt-6 space-y-6">
+          <TabsContent value="whatsapp" className="mt-6 space-y-6">
             <WhatsAppNumberCard />
-            <ZapiStatusCard />
           </TabsContent>
 
 

@@ -94,13 +94,13 @@ serve(async (req: Request): Promise<Response> => {
       campaign: campaign || "default",
       priority: priority || "normal"
     });
-    // 2. Send via Z-API (helper compartilhado)
-    console.log("[enviar-whatsapp-queue] Enviando via Z-API...");
+    // 2. Send via n8n → ManyChat (helper compartilhado)
+    console.log("[enviar-whatsapp-queue] Enviando via n8n...");
 
     const sendResult = await sendWhatsappTextMessage(phoneFormatted, mensagem);
     const elapsed = Date.now() - startTime;
 
-    console.log("[enviar-whatsapp-queue] Resposta Z-API:", {
+    console.log("[enviar-whatsapp-queue] Resposta do provedor:", {
       success: sendResult.success,
       elapsed: `${elapsed}ms`,
       messageId: sendResult.messageId,
@@ -131,7 +131,7 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Z-API returned error - log and return error (no retry)
+    // Provedor returned error - log and return error (no retry)
     const errMsg = sendResult.errorMessage ?? "Erro desconhecido";
     console.error("[enviar-whatsapp-queue] ✗ Falha no envio:", errMsg);
 
@@ -140,9 +140,9 @@ serve(async (req: Request): Promise<Response> => {
     if (lowerResponse.includes("exists") && lowerResponse.includes("false")) {
       userMessage = "Número não encontrado no WhatsApp";
     } else if (lowerResponse.includes("not connected") || lowerResponse.includes("disconnected")) {
-      userMessage = "WhatsApp desconectado. Verifique a instância Z-API.";
+      userMessage = "WhatsApp desconectado. Verifique a conexão no ManyChat.";
     } else if (lowerResponse.includes("401") || lowerResponse.includes("unauthorized")) {
-      userMessage = "Erro de autenticação com Z-API";
+      userMessage = "Erro de autenticação com o provedor de WhatsApp";
     }
 
     // Persist failure log (fire-and-forget)

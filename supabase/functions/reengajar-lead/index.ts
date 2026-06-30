@@ -76,7 +76,7 @@ serve(async (req) => {
 
   const texto = (mensagem && mensagem.trim().length > 0) ? mensagem.trim() : TEMPLATE_PADRAO;
 
-  // Envia via enviar-whatsapp (Z-API)
+  // Envia via enviar-whatsapp (WhatsApp via n8n)
   const { data: envio, error: invokeErr } = await supabase.functions.invoke("enviar-whatsapp", {
     body: {
       telefone: ag.telefone_whatsapp,

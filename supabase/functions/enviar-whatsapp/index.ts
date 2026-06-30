@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { registrarMensagemWhatsapp } from "../_shared/registrarMensagem.ts";
-import { enviarTextoZapi, enviarImagemZapi } from "../_shared/zapi.ts";
+import { enviarTextoWhatsapp, enviarImagemWhatsapp } from "../_shared/whatsappSender.ts";
 
 
 // CORS configuration
@@ -37,7 +37,7 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   const startTime = Date.now();
-  console.log("[enviar-whatsapp] === NOVA REQUISIÇÃO (Z-API) ===");
+  console.log("[enviar-whatsapp] === NOVA REQUISIÇÃO (WhatsApp via n8n) ===");
 
   try {
     const body = await req.json();
@@ -65,17 +65,17 @@ serve(async (req: Request): Promise<Response> => {
     );
 
     const isImage = !!imagem_url;
-    console.log("[enviar-whatsapp] Enviando via helper Z-API:", { isImage, phone: phoneFormatted });
+    console.log("[enviar-whatsapp] Enviando via n8n:", { isImage, phone: phoneFormatted });
 
     const result = isImage
-      ? await enviarImagemZapi(phoneFormatted, imagem_url!, caption ?? mensagem ?? "")
-      : await enviarTextoZapi(phoneFormatted, mensagem);
+      ? await enviarImagemWhatsapp(phoneFormatted, imagem_url!, caption ?? mensagem ?? "")
+      : await enviarTextoWhatsapp(phoneFormatted, mensagem);
 
     const elapsed = Date.now() - startTime;
     console.log("[enviar-whatsapp] Resposta:", { ok: result.ok, status: result.status, elapsed: `${elapsed}ms`, messageId: result.messageId });
 
     if (!result.ok) {
-      console.error("[enviar-whatsapp] ✗ Erro Z-API:", result.erro);
+      console.error("[enviar-whatsapp] ✗ Erro no envio:", result.erro);
       try {
         await registrarMensagemWhatsapp(supabase, {
           telefone,
@@ -84,13 +84,13 @@ serve(async (req: Request): Promise<Response> => {
           tipo_mensagem: (tipo_mensagem as any) ?? "manual",
           agendamento_id: agendamento_id ?? null,
           status_envio: "erro",
-          error_message: `[ZAPI] ${result.erro ?? "Erro desconhecido"}`,
+          error_message: `[WhatsApp] ${result.erro ?? "Erro desconhecido"}`,
         });
       } catch (e: any) {
         console.warn("[enviar-whatsapp] Falha ao registrar mensagem (erro) no CRM:", e?.message);
       }
       return new Response(
-        JSON.stringify({ ok: false, success: false, error: "ZAPI_ERROR", erro: result.erro, elapsed: `${elapsed}ms` }),
+        JSON.stringify({ ok: false, success: false, error: "SEND_ERROR", erro: result.erro, elapsed: `${elapsed}ms` }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }

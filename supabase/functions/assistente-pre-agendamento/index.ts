@@ -49,7 +49,7 @@ function normalizePhoneBR(raw: string): string {
 async function sendWhatsappText(phone: string, text: string) {
   const result = await sendWhatsappTextMessage(phone, text);
   if (!result.success) {
-    return { success: false, error: result.errorMessage ?? "Falha no envio Z-API" };
+    return { success: false, error: result.errorMessage ?? "Falha no envio de WhatsApp" };
   }
   return { success: true, externalId: result.messageId ?? null };
 }

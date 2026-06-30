@@ -63,8 +63,8 @@ export function mapEvolutionStatusToDelivery(
   return { deliveryStatus: 'pendente', confirmed: false };
 }
 
-// NOTA: A leitura de credenciais Evolution foi removida. O envio é 100% Z-API.
-// Helpers legados foram apagados; use ./zapi.ts diretamente quando possível.
+// NOTA: O envio de WhatsApp é 100% via n8n → ManyChat.
+// Helpers legados foram apagados; use ./whatsappSender.ts diretamente quando possível.
 
 
 
@@ -102,25 +102,25 @@ export function normalizePhoneNumber(rawPhone: string): string {
 
 /**
  * ============================================================================
- * MIGRAÇÃO: Evolution API → Z-API
+ * Envio de WhatsApp → n8n → ManyChat
  * ============================================================================
  * Mantemos a assinatura legada (sendWhatsappTextMessage, SendMessageResult)
  * para evitar refatorações em cascata. Internamente delegamos para o helper
- * único em ../_shared/zapi.ts.
+ * único em ../_shared/whatsappSender.ts.
  *
- * Receber mensagens NÃO é responsabilidade desta camada — o n8n recebe direto
- * da Z-API.
+ * Receber mensagens NÃO é responsabilidade desta camada — o n8n cuida do
+ * recebimento.
  * ============================================================================
  */
 
-import { enviarTextoZapi, enviarImagemZapi } from "./zapi.ts";
+import { enviarTextoWhatsapp, enviarImagemWhatsapp } from "./whatsappSender.ts";
 
-/** Envia mensagem de TEXTO via Z-API (delega ao helper único). */
+/** Envia mensagem de TEXTO via WhatsApp (delega ao helper único). */
 export async function sendWhatsappTextMessage(
   phone: string,
   body: string
 ): Promise<SendMessageResult> {
-  const r = await enviarTextoZapi(phone, body);
+  const r = await enviarTextoWhatsapp(phone, body);
   const sanitized = sanitizePayload(r.raw);
   if (!r.ok) {
     return {
@@ -144,13 +144,13 @@ export async function sendWhatsappTextMessage(
   };
 }
 
-/** Envia IMAGEM via Z-API (delega ao helper único). */
+/** Envia IMAGEM via WhatsApp (delega ao helper único). */
 export async function sendWhatsappImageMessage(
   phone: string,
   image: string,
   caption?: string
 ): Promise<SendMessageResult> {
-  const r = await enviarImagemZapi(phone, image, caption);
+  const r = await enviarImagemWhatsapp(phone, image, caption);
   const sanitized = sanitizePayload(r.raw);
   if (!r.ok) {
     return {
