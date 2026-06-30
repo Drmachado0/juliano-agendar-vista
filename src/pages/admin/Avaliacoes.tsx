@@ -495,7 +495,7 @@ const Avaliacoes = () => {
         }
         
         if (errorData?.resultados || data?.resultados) {
-          allResults.push(...(errorData?.resultados || data?.resultados));
+          allResults.push(...(errorData?.resultados ?? data?.resultados ?? []));
         }
       }
       
@@ -1666,14 +1666,10 @@ const Avaliacoes = () => {
 
                     {/* Botão de verificação WhatsApp — DESATIVADO
                         Dependia da Z-API (phone-exists). ManyChat não expõe
-                        equivalente público. Mantido oculto até definirmos
-                        nova estratégia de verificação. */}
-                    {false && (
-                      <Button variant="outline" size="sm" onClick={verificarNumerosWhatsApp}>
-                        Verificar WhatsApp
-                      </Button>
-                    )}
-                    
+                        equivalente público. Removido o JSX morto; a função
+                        verificarNumerosWhatsApp foi mantida para reativação
+                        quando definirmos nova estratégia de verificação. */}
+
                     {/* Botão para remover inválidos */}
                     {verificacaoConcluida && contarNumerosVerificados().invalidos > 0 && (
                       <Button

@@ -12,7 +12,7 @@ const agendamentoInsertSchema = z.object({
     .string()
     .min(10, "Telefone deve ter no mínimo 10 dígitos")
     .max(20, "Telefone deve ter no máximo 20 caracteres")
-    .regex(/^[\d\s\-\(\)\+]+$/, "Telefone contém caracteres inválidos"),
+    .regex(/^[\d\s\-()+]+$/, "Telefone contém caracteres inválidos"),
   data_nascimento: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Data de nascimento inválida")
