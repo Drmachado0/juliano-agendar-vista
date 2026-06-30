@@ -138,7 +138,7 @@ export default function PoliticaPrivacidade() {
               <p>Compartilhamos dados apenas com operadores estritamente necessários:</p>
               <ul className="list-disc pl-6 space-y-1 mt-2">
                 <li><strong className="text-foreground">Lovable Cloud</strong> (infraestrutura e banco de dados).</li>
-                <li><strong className="text-foreground">Evolution API / WhatsApp</strong> (comunicação com pacientes).</li>
+                <li><strong className="text-foreground">Provedor de WhatsApp</strong> (comunicação com pacientes).</li>
                 <li><strong className="text-foreground">Google</strong> (Analytics, Tag Manager, Calendar, Ads).</li>
                 <li><strong className="text-foreground">Meta</strong> (Pixel para mensuração de campanhas).</li>
                 <li>Sistemas internos da clínica para gestão de prontuário.</li>
