@@ -363,14 +363,13 @@ Deno.serve(async (req: Request) => {
     bearer ||
     "";
 
-  const okAuth =
-    !!N8N_SHARED_SECRET &&
-    !!provided &&
-    provided === N8N_SHARED_SECRET;
+  // Segredo canônico: banco (rotacionável) com fallback pra env var.
+  const expected = await getN8nSharedSecret();
+  const okAuth = !!expected && !!provided && timingSafeEqual(provided, expected);
 
   if (!okAuth) {
     console.warn("[mcp-agendamento] Unauthorized: secret ausente ou inválido", {
-      has_secret_env: !!N8N_SHARED_SECRET,
+      has_secret_source: !!expected,
       received_headers: {
         "x-n8n-secret": !!req.headers.get("x-n8n-secret"),
         "x-mcp-secret": !!req.headers.get("x-mcp-secret"),
