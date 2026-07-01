@@ -346,7 +346,6 @@ Deno.serve(async (req: Request) => {
       { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } },
     );
   }
-  }
 
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
