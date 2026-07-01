@@ -4,6 +4,7 @@
 // ================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { getN8nSharedSecret, timingSafeEqual } from "../_shared/n8nSecret.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -324,6 +325,7 @@ Deno.serve(async (req: Request) => {
 
   // GET → health check público (sem segredo). Útil para debug/monitoramento.
   if (req.method === "GET") {
+    const hasSecret = !!(await getN8nSharedSecret());
     return new Response(
       JSON.stringify({
         success: true,
@@ -337,7 +339,8 @@ Deno.serve(async (req: Request) => {
           "apikey: <N8N_SHARED_SECRET>",
           "Authorization: Bearer <N8N_SHARED_SECRET>",
         ],
-        configured: !!N8N_SHARED_SECRET,
+        configured: hasSecret,
+        secret_source: hasSecret ? "db_or_env" : "none",
         tools: TOOLS.map((t) => t.name),
       }),
       { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } },
@@ -362,14 +365,13 @@ Deno.serve(async (req: Request) => {
     bearer ||
     "";
 
-  const okAuth =
-    !!N8N_SHARED_SECRET &&
-    !!provided &&
-    provided === N8N_SHARED_SECRET;
+  // Segredo canônico: banco (rotacionável) com fallback pra env var.
+  const expected = await getN8nSharedSecret();
+  const okAuth = !!expected && !!provided && timingSafeEqual(provided, expected);
 
   if (!okAuth) {
     console.warn("[mcp-agendamento] Unauthorized: secret ausente ou inválido", {
-      has_secret_env: !!N8N_SHARED_SECRET,
+      has_secret_source: !!expected,
       received_headers: {
         "x-n8n-secret": !!req.headers.get("x-n8n-secret"),
         "x-mcp-secret": !!req.headers.get("x-mcp-secret"),

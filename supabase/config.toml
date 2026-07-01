@@ -123,3 +123,6 @@ verify_jwt = false
 
 [functions.zapi-status]
 verify_jwt = false
+
+[functions.rotacionar-n8n-secret]
+verify_jwt = false

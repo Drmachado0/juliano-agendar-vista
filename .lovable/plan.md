@@ -1,32 +1,90 @@
-## Problema
+# Painel para rotacionar N8N_SHARED_SECRET
 
-O calendário de /agendamento mostra todas as datas bloqueadas mesmo quando há entradas em "Datas Especiais Configuradas" (09–11 e 23–25/07/2026, clínicas Clinicor e HGP, `disponivel=true`, com `modelo_id` apontando para um modelo semanal de 08–11h ou 14–17h).
+## Contexto
 
-Causa-raiz confirmada por teste das RPCs:
-- `public.get_available_days(7, 2026, '<clinicor>')` → `[]`
-- `public.get_available_slots('2026-07-09', '<clinicor>')` → `[]`
-- Mesmo a query direta `SELECT … FROM disponibilidade_especifica … LIMIT 1` retornando 1 linha.
+Hoje o `N8N_SHARED_SECRET` só existe como env var de Edge Function. Não há API em runtime que permita ao app rotacionar env vars do backend — para dar um botão "Rotacionar" no admin, o segredo precisa passar a viver no banco (fonte da verdade), com a env var servindo apenas como fallback inicial.
 
-Dentro de `get_available_slots`, o teste `IF v_disp IS NULL THEN RETURN;` aplicado a uma variável `record` não é confiável e está abortando a execução. O mesmo padrão aparece em `IF v_modelo IS NOT NULL` e no laço de `get_available_days/get_next_available_slot`.
+## O que será construído
 
-## Solução
+### 1. Armazenamento no banco (fonte da verdade)
 
-Migration corrigindo as três funções para usar o idioma canônico `IF NOT FOUND THEN RETURN; END IF;` logo após cada `SELECT … INTO`, em vez de `IS NULL` em record.
+Nova tabela `integracao_secrets` (admin-only, RLS estrita):
 
-### Mudanças em `public.get_available_slots(date, uuid)`
+- `nome` (text, PK) — ex.: `N8N_SHARED_SECRET`
+- `valor` (text, criptografado com pgcrypto usando `ENCRYPTION_KEY`)
+- `rotacionado_em` (timestamptz)
+- `rotacionado_por` (uuid → auth.users)
+- `versao` (int, incrementa a cada rotação)
 
-- Após o `SELECT * INTO v_disp …` trocar `IF v_disp IS NULL THEN RETURN; END IF;` por `IF NOT FOUND THEN RETURN; END IF;`.
-- Após o `SELECT * INTO v_modelo …` trocar `IF v_modelo IS NOT NULL THEN …` por `IF FOUND THEN …`.
+Grants + RLS: apenas `service_role` acessa via edge function; nenhum SELECT direto do frontend.
 
-### Mudanças em `public.get_available_days(int, int, uuid)` e `public.get_next_available_slot(uuid, date)`
+Duas RPCs SECURITY DEFINER:
+- `rotacionar_secret_integracao(nome text)` — só admin. Gera valor com `gen_random_bytes(48) → base64url`, grava criptografado, retorna valor em claro **uma única vez**.
+- `ler_secret_integracao(nome text)` — chamada só por edge functions via service_role. Retorna valor descriptografado.
 
-- Manter a lógica atual, mas garantir que continuam usando `get_available_slots` corrigido. Não há mudança estrutural além de redeclarar os GRANTs.
+### 2. Edge function `rotacionar-n8n-secret`
 
-### Pós-migração
+`POST` protegido por `Authorization: Bearer <jwt>` + checagem `has_role(admin)`. Chama a RPC de rotação e devolve `{ valor, versao, rotacionado_em }`. Loga em `system_logs` (level=warn, sem o valor).
 
-- Validar via SQL:
-  - `SELECT count(*) FROM public.get_available_slots('2026-07-09','657e4784-e292-45c6-a033-40f3d115f984');` deve retornar 12 (08:00–10:45, intervalo 15).
-  - `SELECT * FROM public.get_available_days(7, 2026, '657e4784-e292-45c6-a033-40f3d115f984');` deve listar 09, 10, 11, 23, 24, 25/07/2026.
-- Recarregar /agendamento e confirmar que as datas aparecem clicáveis.
+### 3. Consumidores lêem do banco com cache
 
-Não é necessário redeploy de edge function (as funções `listar-datas-disponiveis` / `listar-horarios-disponiveis` não são usadas por esta tela; o front chama a RPC direta). Não há mudança no front-end.
+`supabase/functions/_shared/n8nSecret.ts`: helper `getN8nSharedSecret()` que:
+1. Lê da tabela via service role
+2. Faz cache em memória por 60s (evita hit por request)
+3. Fallback para `Deno.env.get("N8N_SHARED_SECRET")` se DB vazio (compat com estado atual)
+
+Atualizar para usar o helper:
+- `mcp-agendamento`
+- `registrar-mensagem-in-n8n`
+- (qualquer outra que valide `x-n8n-secret`)
+
+### 4. Painel admin
+
+Nova aba/card em `/admin/configuracoes` → "Integrações":
+
+```text
+┌─ N8N Shared Secret ─────────────────────────────┐
+│ Versão atual: v3                                │
+│ Rotacionado em: 01/07/2026 15:42 por juliano@…  │
+│                                                 │
+│ [ Rotacionar segredo ]                          │
+└─────────────────────────────────────────────────┘
+```
+
+Ao clicar em "Rotacionar":
+
+1. Modal de confirmação:
+   > **Atenção — invalidação imediata.**
+   > O valor atual deixará de funcionar assim que confirmado. Toda chamada do n8n com o segredo antigo passará a retornar `Unauthorized` até você colar o novo valor em todas as credenciais do n8n (mcp-agendamento, registrar-mensagem-in-n8n e qualquer outra).
+   > 
+   > [ Cancelar ]  [ Confirmar rotação ]
+
+2. Após confirmar: dispara `rotacionar-n8n-secret`.
+
+3. Tela do valor (mostrado **uma única vez**):
+   - Bloco monospace com o valor + botão "Copiar" (usa `navigator.clipboard`).
+   - Toast "Copiado".
+   - Aviso destacado: "Este valor não será exibido de novo. Guarde num gerenciador de senhas antes de fechar."
+   - Checklist onde colar:
+     - [ ] n8n → credencial `mcp-agendamento` (header `x-n8n-secret`)
+     - [ ] n8n → credencial `registrar-mensagem-in-n8n`
+   - Botão "Fechar" só habilita depois de clicar em "Copiar" ou "Já guardei".
+
+4. Após fechar: o valor some do DOM e do estado React; o card volta a mostrar só versão + timestamp.
+
+### 5. Auditoria
+
+- Cada rotação insere linha em `system_logs`: `category='security'`, `source='n8n-secret-rotation'`, `level='warn'`, com `rotacionado_por` e `versao` (nunca o valor).
+- Aparece no `/admin/logs` existente.
+
+## Detalhes técnicos
+
+- Criptografia at-rest: `pgcrypto` (`pgp_sym_encrypt/decrypt`) usando a mesma `ENCRYPTION_KEY` já em uso para notas médicas.
+- Cache TTL 60s no helper para não estourar leituras — aceito atraso de até 60s entre rotação e propagação (o painel avisa isso).
+- Fallback para env var é somente-leitura: se a env estiver definida e o DB vazio, na primeira rotação o valor da env é substituído. Depois disso o DB manda.
+- Não altero a env var `N8N_SHARED_SECRET` no Lovable Cloud — ela vira apenas seed inicial e pode ser removida depois que a rotação for feita ao menos uma vez.
+
+## Fora de escopo
+
+- Rotacionar outros segredos (Manychat, Evolution etc.) — mesma arquitetura pode ser estendida depois, mas este painel foca só no `N8N_SHARED_SECRET`.
+- Rotação automática programada.
