@@ -583,6 +583,7 @@ export default function Configuracoes() {
           <TabsContent value="whatsapp" className="mt-6 space-y-6">
             <WhatsAppNumberCard />
             <TesteEnvioWhatsAppCard />
+            <N8nSecretRotationCard />
           </TabsContent>
 
 
