@@ -325,6 +325,7 @@ Deno.serve(async (req: Request) => {
 
   // GET → health check público (sem segredo). Útil para debug/monitoramento.
   if (req.method === "GET") {
+    const hasSecret = !!(await getN8nSharedSecret());
     return new Response(
       JSON.stringify({
         success: true,
@@ -338,11 +339,13 @@ Deno.serve(async (req: Request) => {
           "apikey: <N8N_SHARED_SECRET>",
           "Authorization: Bearer <N8N_SHARED_SECRET>",
         ],
-        configured: !!N8N_SHARED_SECRET,
+        configured: hasSecret,
+        secret_source: hasSecret ? "db_or_env" : "none",
         tools: TOOLS.map((t) => t.name),
       }),
       { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } },
     );
+  }
   }
 
   if (req.method !== "POST") {
