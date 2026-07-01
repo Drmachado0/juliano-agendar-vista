@@ -315,20 +315,74 @@ Deno.serve(async (req: Request) => {
     return new Response(null, {
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-n8n-secret",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers":
+          "Content-Type, Authorization, apikey, x-api-key, x-n8n-secret, x-mcp-secret",
       },
     });
+  }
+
+  // GET → health check público (sem segredo). Útil para debug/monitoramento.
+  if (req.method === "GET") {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        service: "mcp-agendamento",
+        protocol: "jsonrpc-2.0",
+        transport: "http",
+        auth_headers_accepted: [
+          "x-n8n-secret: <N8N_SHARED_SECRET>",
+          "x-mcp-secret: <N8N_SHARED_SECRET>",
+          "x-api-key: <N8N_SHARED_SECRET>",
+          "apikey: <N8N_SHARED_SECRET>",
+          "Authorization: Bearer <N8N_SHARED_SECRET>",
+        ],
+        configured: !!N8N_SHARED_SECRET,
+        tools: TOOLS.map((t) => t.name),
+      }),
+      { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } },
+    );
   }
 
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  // Segredo compartilhado: o servidor MCP usa service_role e precisa ser fechado.
-  const provided = req.headers.get("x-n8n-secret");
-  if (!N8N_SHARED_SECRET || !provided || provided !== N8N_SHARED_SECRET) {
-    return jsonRpcError(null, -32001, "Unauthorized");
+  // Autenticação por segredo compartilhado. Aceita múltiplos headers para
+  // acomodar diferentes formas do n8n enviar (Header Auth, Generic Credentials, MCP tool).
+  const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization") ?? "";
+  const bearer = authHeader.toLowerCase().startsWith("bearer ")
+    ? authHeader.slice(7).trim()
+    : "";
+  const provided =
+    req.headers.get("x-n8n-secret") ||
+    req.headers.get("x-mcp-secret") ||
+    req.headers.get("x-api-key") ||
+    req.headers.get("apikey") ||
+    bearer ||
+    "";
+
+  const okAuth =
+    !!N8N_SHARED_SECRET &&
+    !!provided &&
+    provided === N8N_SHARED_SECRET;
+
+  if (!okAuth) {
+    console.warn("[mcp-agendamento] Unauthorized: secret ausente ou inválido", {
+      has_secret_env: !!N8N_SHARED_SECRET,
+      received_headers: {
+        "x-n8n-secret": !!req.headers.get("x-n8n-secret"),
+        "x-mcp-secret": !!req.headers.get("x-mcp-secret"),
+        "x-api-key": !!req.headers.get("x-api-key"),
+        apikey: !!req.headers.get("apikey"),
+        authorization_bearer: !!bearer,
+      },
+    });
+    return jsonRpcError(
+      null,
+      -32001,
+      "Unauthorized: envie N8N_SHARED_SECRET em um dos headers (x-n8n-secret, x-mcp-secret, x-api-key, apikey, Authorization: Bearer).",
+    );
   }
 
   let body: Record<string, unknown>;

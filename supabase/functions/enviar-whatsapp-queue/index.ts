@@ -65,6 +65,25 @@ serve(async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Health check (GET): não faz envio, apenas reporta estado da integração.
+  if (req.method === "GET") {
+    const webhookConfigured = !!(Deno.env.get("N8N_WHATSAPP_WEBHOOK_URL") || "").trim();
+    return new Response(
+      JSON.stringify({
+        success: true,
+        provider: "n8n_manychat",
+        configured: webhookConfigured,
+        webhook_configured: webhookConfigured,
+        send_requires_post: true,
+        status_label: webhookConfigured
+          ? "WhatsApp via n8n/ManyChat configurado"
+          : "N8N_WHATSAPP_WEBHOOK_URL ausente",
+        zapi_active: false,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
+    );
+  }
+
   const startTime = Date.now();
   console.log("[enviar-whatsapp-queue] === NOVA REQUISIÇÃO (Fire & Forget) ===");
 
