@@ -37,12 +37,12 @@ Deno.serve(async (req: Request) => {
     global: { headers: { Authorization: authHeader } },
   });
 
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-  const { data: claims, error: claimsErr } = await userClient.auth.getClaims(token);
-  if (claimsErr || !claims?.claims?.sub) {
+  const { data: userData, error: userErr } = await userClient.auth.getUser();
+  if (userErr || !userData?.user?.id) {
+    console.error("[rotacionar-n8n-secret] auth.getUser erro:", userErr?.message);
     return json({ error: "Unauthorized" }, 401);
   }
-  const userId = claims.claims.sub as string;
+  const userId = userData.user.id;
 
   // Checa role admin via service_role (bypassa RLS)
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
