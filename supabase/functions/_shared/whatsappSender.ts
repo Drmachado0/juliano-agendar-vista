@@ -58,16 +58,17 @@ type FailureKind =
   | "network"
   | "http_4xx"
   | "http_5xx"
+  | "unauthorized_secret"
   | "logical_error";
 
 /**
  * Classifica a falha e devolve o nível para system_logs.
- * - critical → exige ação humana (config ausente, 5xx persistente)
+ * - critical → exige ação humana (config ausente, 5xx persistente, secret inválido)
  * - error    → falha que afeta entrega (4xx, lógico)
  * - warn     → transiente (timeout, rede)
  */
 function classifyFailure(kind: FailureKind): "warn" | "error" | "critical" {
-  if (kind === "config_missing" || kind === "http_5xx") return "critical";
+  if (kind === "config_missing" || kind === "http_5xx" || kind === "unauthorized_secret") return "critical";
   if (kind === "timeout" || kind === "network") return "warn";
   return "error";
 }
