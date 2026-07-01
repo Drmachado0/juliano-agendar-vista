@@ -162,10 +162,24 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!n8nResponse.ok) {
       const errorText = await n8nResponse.text();
-      console.error("Erro n8n webhook:", errorText);
+      const isUnauthorized = n8nResponse.status === 401 || n8nResponse.status === 403;
+      if (isUnauthorized) {
+        console.error(
+          `[notificar-n8n][SECRET_INVALIDO] n8n rejeitou webhook com HTTP ${n8nResponse.status}. ` +
+          `Assinatura HMAC/secret não bate. Verifique se N8N_WEBHOOK_SECRET aqui é igual ao configurado ` +
+          `no node do webhook no n8n. Evento: ${evento}. Resposta: ${errorText.slice(0, 200)}`,
+        );
+      } else {
+        console.error(`Erro n8n webhook (HTTP ${n8nResponse.status}):`, errorText);
+      }
       // Don't fail the request - n8n errors shouldn't block the main flow
       return new Response(
-        JSON.stringify({ success: true, warning: "n8n webhook retornou erro, mas a operação continuou" }),
+        JSON.stringify({
+          success: true,
+          warning: isUnauthorized
+            ? `SECRET_INVALIDO: n8n retornou ${n8nResponse.status}`
+            : "n8n webhook retornou erro, mas a operação continuou",
+        }),
         {
           status: 200,
           headers: { "Content-Type": "application/json", ...corsHeaders },
