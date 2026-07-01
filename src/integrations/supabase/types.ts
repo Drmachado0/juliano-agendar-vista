@@ -928,6 +928,33 @@ export type Database = {
         }
         Relationships: []
       }
+      integracao_secrets: {
+        Row: {
+          nome: string
+          rotacionado_em: string
+          rotacionado_por: string | null
+          rotacionado_por_email: string | null
+          valor_encrypted: string
+          versao: number
+        }
+        Insert: {
+          nome: string
+          rotacionado_em?: string
+          rotacionado_por?: string | null
+          rotacionado_por_email?: string | null
+          valor_encrypted: string
+          versao?: number
+        }
+        Update: {
+          nome?: string
+          rotacionado_em?: string
+          rotacionado_por?: string | null
+          rotacionado_por_email?: string | null
+          valor_encrypted?: string
+          versao?: number
+        }
+        Relationships: []
+      }
       integracoes_evolution: {
         Row: {
           api_token_encrypted: string | null
@@ -2193,6 +2220,17 @@ export type Database = {
           hora_agendamento: string
         }[]
       }
+      info_secret_integracao: {
+        Args: { p_nome: string }
+        Returns: {
+          existe: boolean
+          nome: string
+          rotacionado_em: string
+          rotacionado_por_email: string
+          versao: number
+        }[]
+      }
+      ler_secret_integracao: { Args: { p_nome: string }; Returns: string }
       lgpd_check_rate_limit: {
         Args: { p_acao: string; p_limite?: number }
         Returns: undefined
@@ -2377,6 +2415,7 @@ export type Database = {
         Args: { p_lock_token: string; p_paciente_id: string }
         Returns: boolean
       }
+      rotacionar_secret_integracao: { Args: { p_nome: string }; Returns: Json }
       set_agendamento_sandbox: {
         Args: {
           p_agendamento_id: string
