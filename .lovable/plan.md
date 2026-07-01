@@ -1,32 +1,49 @@
-## Problema
 
-O calendário de /agendamento mostra todas as datas bloqueadas mesmo quando há entradas em "Datas Especiais Configuradas" (09–11 e 23–25/07/2026, clínicas Clinicor e HGP, `disponivel=true`, com `modelo_id` apontando para um modelo semanal de 08–11h ou 14–17h).
+## Diagnóstico
 
-Causa-raiz confirmada por teste das RPCs:
-- `public.get_available_days(7, 2026, '<clinicor>')` → `[]`
-- `public.get_available_slots('2026-07-09', '<clinicor>')` → `[]`
-- Mesmo a query direta `SELECT … FROM disponibilidade_especifica … LIMIT 1` retornando 1 linha.
+O endpoint `mcp-agendamento` está funcionando corretamente. Ele rejeita a conexão com `-32001 Unauthorized` porque exige o header:
 
-Dentro de `get_available_slots`, o teste `IF v_disp IS NULL THEN RETURN;` aplicado a uma variável `record` não é confiável e está abortando a execução. O mesmo padrão aparece em `IF v_modelo IS NOT NULL` e no laço de `get_available_days/get_next_available_slot`.
+```
+x-n8n-secret: <valor de N8N_SHARED_SECRET>
+```
 
-## Solução
+O nó **MCP Client** do seu workflow n8n está autenticando com outra coisa (provavelmente a Lovable Anon Key no `Authorization: Bearer`), por isso não passa. **Não há bug de código nem alteração a fazer no Lovable** — é configuração no n8n.
 
-Migration corrigindo as três funções para usar o idioma canônico `IF NOT FOUND THEN RETURN; END IF;` logo após cada `SELECT … INTO`, em vez de `IS NULL` em record.
+## Passo a passo no n8n (nó MCP Client)
 
-### Mudanças em `public.get_available_slots(date, uuid)`
+1. Abra o workflow em produção e clique no nó **MCP Client**.
+2. Em **Endpoint**, confirme:
+   ```
+   https://cnpifhaszbonwlqruwnn.supabase.co/functions/v1/mcp-agendamento
+   ```
+3. **Server Transport**: `HTTP Streamable` (como já está).
+4. **Authentication**: troque de "Header Auth" (que só permite `Authorization`) para **Generic Credential Type → Header Auth** com header **customizado**, OU use **"Custom Headers"** no bloco de Options.
+   - **Header Name**: `x-n8n-secret`
+   - **Header Value**: cole o valor do secret `N8N_SHARED_SECRET` (o mesmo que já está configurado no Lovable Cloud).
+5. Remova qualquer credencial antiga que esteja mandando `Authorization: Bearer <anon key>` para esse endpoint — ela não é necessária (`verify_jwt = false` para essa function) e não substitui o `x-n8n-secret`.
+6. Salve, clique em **Test / Reconnect**. O painel Output deve deixar de mostrar "Unauthorized" e listar as tools (`listar_horarios_disponiveis`, `criar_agendamento`, etc.).
 
-- Após o `SELECT * INTO v_disp …` trocar `IF v_disp IS NULL THEN RETURN; END IF;` por `IF NOT FOUND THEN RETURN; END IF;`.
-- Após o `SELECT * INTO v_modelo …` trocar `IF v_modelo IS NOT NULL THEN …` por `IF FOUND THEN …`.
+## Onde pegar o valor do N8N_SHARED_SECRET
 
-### Mudanças em `public.get_available_days(int, int, uuid)` e `public.get_next_available_slot(uuid, date)`
+Você já cadastrou esse secret no Lovable Cloud anteriormente (é o mesmo usado pelo `mcp-agendamento` e por várias functions internas). Se você não tem mais o valor em mãos, o caminho seguro é **rotacionar**: eu gero um novo valor aleatório com `update_secret`, você cola o mesmo valor no n8n, e prontos. Nada no código muda.
 
-- Manter a lógica atual, mas garantir que continuam usando `get_available_slots` corrigido. Não há mudança estrutural além de redeclarar os GRANTs.
+Se quiser seguir por aí, me responda **"pode rotacionar o N8N_SHARED_SECRET"** e eu abro o formulário seguro para você definir o novo valor e depois colamos no n8n.
 
-### Pós-migração
+## O que NÃO fazer
 
-- Validar via SQL:
-  - `SELECT count(*) FROM public.get_available_slots('2026-07-09','657e4784-e292-45c6-a033-40f3d115f984');` deve retornar 12 (08:00–10:45, intervalo 15).
-  - `SELECT * FROM public.get_available_days(7, 2026, '657e4784-e292-45c6-a033-40f3d115f984');` deve listar 09, 10, 11, 23, 24, 25/07/2026.
-- Recarregar /agendamento e confirmar que as datas aparecem clicáveis.
+- Não remova a checagem `x-n8n-secret` do `mcp-agendamento`. Esse endpoint usa `service_role` e cria/cancela agendamentos — deixá-lo aberto expõe a agenda inteira.
+- Não coloque o valor do secret em nenhum campo do frontend nem em `.env` do repositório.
 
-Não é necessário redeploy de edge function (as funções `listar-datas-disponiveis` / `listar-horarios-disponiveis` não são usadas por esta tela; o front chama a RPC direta). Não há mudança no front-end.
+## Referência (código atual, não vai ser alterado)
+
+`supabase/functions/mcp-agendamento/index.ts`:
+```ts
+const provided = req.headers.get("x-n8n-secret");
+if (!N8N_SHARED_SECRET || !provided || provided !== N8N_SHARED_SECRET) {
+  return jsonRpcError(null, -32001, "Unauthorized");
+}
+```
+
+## Entregável deste plano
+
+Como a correção é 100% no n8n, **este plano não altera arquivos**. Aprovar o plano só confirma o diagnóstico. Se você quiser que eu rotacione o `N8N_SHARED_SECRET` para você ter um valor novo para colar no n8n, me avise após aprovar.
