@@ -125,6 +125,20 @@ export default function N8nSecretRotationCard() {
       setShowValue(true);
       setCopiado(false);
       setAceitouGuardar(false);
+
+      // Auto-copia para o clipboard assim que o segredo é revelado, para
+      // evitar erros de digitação ao colar no n8n. Se o navegador negar
+      // (foco/permissão), mostramos um aviso e o usuário usa o botão manual.
+      try {
+        await navigator.clipboard.writeText(data.valor);
+        setCopiado(true);
+        toast.success("Novo segredo copiado automaticamente para a área de transferência");
+      } catch {
+        toast.warning("Não consegui copiar automaticamente", {
+          description: "Use o botão de copiar ao lado do valor.",
+        });
+      }
+
       await carregarInfo();
     } catch (e: any) {
       console.error("[N8nSecretRotationCard] rotação erro:", e);
