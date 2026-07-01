@@ -58,16 +58,17 @@ type FailureKind =
   | "network"
   | "http_4xx"
   | "http_5xx"
+  | "unauthorized_secret"
   | "logical_error";
 
 /**
  * Classifica a falha e devolve o nível para system_logs.
- * - critical → exige ação humana (config ausente, 5xx persistente)
+ * - critical → exige ação humana (config ausente, 5xx persistente, secret inválido)
  * - error    → falha que afeta entrega (4xx, lógico)
  * - warn     → transiente (timeout, rede)
  */
 function classifyFailure(kind: FailureKind): "warn" | "error" | "critical" {
-  if (kind === "config_missing" || kind === "http_5xx") return "critical";
+  if (kind === "config_missing" || kind === "http_5xx" || kind === "unauthorized_secret") return "critical";
   if (kind === "timeout" || kind === "network") return "warn";
   return "error";
 }
@@ -172,18 +173,41 @@ async function dispararN8n(
     try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
     if (!resp.ok) {
-      const kind: FailureKind = resp.status >= 500 ? "http_5xx" : "http_4xx";
-      console.error(`[whatsapp] ${action} HTTP ${resp.status}: ${text.slice(0, 300)}`);
+      const isUnauthorized = resp.status === 401 || resp.status === 403;
+      const kind: FailureKind = isUnauthorized
+        ? "unauthorized_secret"
+        : resp.status >= 500
+          ? "http_5xx"
+          : "http_4xx";
+
+      if (isUnauthorized) {
+        // Log marcado para detecção rápida pós-deploy / rotação de secret
+        console.error(
+          `[whatsapp][SECRET_INVALIDO] n8n rejeitou webhook ${action} com HTTP ${resp.status}. ` +
+          `Provável X-Webhook-Secret desatualizado no n8n. ` +
+          `Verifique se N8N_WEBHOOK_SECRET aqui bate com o header configurado na credencial do n8n. ` +
+          `Resposta: ${text.slice(0, 200)}`,
+        );
+      } else {
+        console.error(`[whatsapp] ${action} HTTP ${resp.status}: ${text.slice(0, 300)}`);
+      }
+
       logFailure(action, kind, {
         http_status: resp.status,
         elapsed_ms,
+        secret_present: !!cfg.secret,
         response_preview: text.slice(0, 300),
+        hint: isUnauthorized
+          ? "N8N respondeu Unauthorized: rotacione/atualize o X-Webhook-Secret no n8n para bater com N8N_WEBHOOK_SECRET."
+          : undefined,
         ...safeDetails,
       });
       return {
         ok: false,
         status: resp.status,
-        erro: `HTTP ${resp.status}: ${text.slice(0, 200)}`,
+        erro: isUnauthorized
+          ? `SECRET_INVALIDO: n8n retornou ${resp.status} (X-Webhook-Secret rejeitado)`
+          : `HTTP ${resp.status}: ${text.slice(0, 200)}`,
         raw: data,
       };
     }
