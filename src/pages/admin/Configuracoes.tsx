@@ -62,6 +62,7 @@ import TemplatesWhatsAppTab from "@/components/admin/TemplatesWhatsAppTab";
 import EnvioConfigCard from "@/components/admin/EnvioConfigCard";
 import VariacoesLembreteAnualCard from "@/components/admin/VariacoesLembreteAnualCard";
 import WhatsAppNumberCard from "@/components/admin/WhatsAppNumberCard";
+import TesteEnvioWhatsAppCard from "@/components/admin/TesteEnvioWhatsAppCard";
 
 import { sincronizarAvaliacoesManualmente } from "@/services/avaliacoesGoogle";
 
@@ -580,6 +581,7 @@ export default function Configuracoes() {
 
           <TabsContent value="whatsapp" className="mt-6 space-y-6">
             <WhatsAppNumberCard />
+            <TesteEnvioWhatsAppCard />
           </TabsContent>
 
 
