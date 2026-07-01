@@ -30,9 +30,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
-  const sharedSecret = Deno.env.get("N8N_SHARED_SECRET");
-  const provided = req.headers.get("x-n8n-secret");
-  if (!sharedSecret || !provided || provided !== sharedSecret) {
+  const expected = await getN8nSharedSecret();
+  const provided = req.headers.get("x-n8n-secret") ?? "";
+  if (!expected || !provided || !timingSafeEqual(provided, expected)) {
     return json({ error: "Unauthorized" }, 401);
   }
 
