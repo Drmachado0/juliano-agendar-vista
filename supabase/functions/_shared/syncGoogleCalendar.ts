@@ -53,8 +53,11 @@ export async function syncAgendamentoToCalendar(
       `[syncGoogleCalendar] Sincronizando agendamento ${agendamentoId} (action=${action}) com calendário do user ${userId}`,
     );
 
+    const { getN8nSharedSecret } = await import("./n8nSecret.ts");
+    const sharedSecret = await getN8nSharedSecret();
     const { error } = await supabase.functions.invoke("google-calendar-sync", {
       body: { action, agendamento_id: agendamentoId, user_id: userId },
+      headers: sharedSecret ? { "x-n8n-secret": sharedSecret } : undefined,
     });
 
     if (error) {
