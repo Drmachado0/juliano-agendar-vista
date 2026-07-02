@@ -151,19 +151,22 @@ const Auth = () => {
   };
 
   // Show 2FA verification screen
-  if (requires2FA && pendingUserId) {
+  if (requires2FA && pendingEmail && pendingPassword) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
         <TwoFactorVerification
-          userId={pendingUserId}
+          email={pendingEmail}
+          password={pendingPassword}
           onVerified={() => {
+            setPendingEmail("");
+            setPendingPassword("");
             toast({ title: "Login realizado", description: "Bem-vindo de volta!" });
             navigate("/admin/agendamentos");
           }}
           onCancel={() => {
             setRequires2FA(false);
-            setPendingUserId(null);
-            supabase.auth.signOut();
+            setPendingEmail("");
+            setPendingPassword("");
           }}
         />
       </div>
