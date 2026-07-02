@@ -15,6 +15,22 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // AUTH: admin JWT or shared secret
+  const providedSecret = req.headers.get("x-n8n-secret") || "";
+  let authorized = false;
+  if (providedSecret) {
+    const shared = await getN8nSharedSecret();
+    authorized = !!shared && timingSafeEqual(providedSecret, shared);
+  }
+  if (!authorized) {
+    const adm = await requireAdmin(req);
+    authorized = adm.ok;
+  }
+  if (!authorized) {
+    return new Response(JSON.stringify({ success: false, error: 'UNAUTHORIZED' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
   try {
     const { telefone, imageBase64: rawImageBase64, imageUrl, caption, agendamento_id, tipo_mensagem } = await req.json();
 
