@@ -171,7 +171,30 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    const { action, agendamento_id, user_id, calendar_id: bodyCalendarId } = await req.json();
+    // AUTH: allow either an admin JWT or the shared n8n secret (for edge-to-edge auto-sync)
+    const providedSecret = req.headers.get("x-n8n-secret") || "";
+    let callerUserId: string | null = null;
+    let isServerToServer = false;
+    if (providedSecret) {
+      const shared = await getN8nSharedSecret();
+      if (shared && timingSafeEqual(providedSecret, shared)) {
+        isServerToServer = true;
+      } else {
+        return new Response(JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    } else {
+      const auth = await requireAdmin(req);
+      if (!auth.ok || !auth.userId) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      callerUserId = auth.userId;
+    }
+
+    const { action, agendamento_id, user_id: bodyUserId, calendar_id: bodyCalendarId } = await req.json();
+    // Non-admin callers can only act on their own user_id; server-to-server may pass any.
+    const user_id = isServerToServer ? bodyUserId : (callerUserId as string);
     if (!user_id) throw new Error('User ID is required');
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
