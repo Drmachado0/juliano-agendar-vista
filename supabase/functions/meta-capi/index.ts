@@ -143,6 +143,44 @@ function getClientIp(req: Request): string {
   );
 }
 
+// Simple in-memory rate limiter (per IP)
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 60;
+const rateLimitStore = new Map<string, { count: number; windowStart: number }>();
+function checkRate(ip: string): boolean {
+  const now = Date.now();
+  const rec = rateLimitStore.get(ip);
+  if (!rec || now - rec.windowStart > RATE_LIMIT_WINDOW_MS) {
+    rateLimitStore.set(ip, { count: 1, windowStart: now });
+    return true;
+  }
+  if (rec.count >= RATE_LIMIT_MAX) return false;
+  rec.count++;
+  return true;
+}
+
+// Allowed browser origins for public tracking; server-to-server callers may
+// bypass via x-n8n-secret matching N8N_SHARED_SECRET.
+const ALLOWED_ORIGIN_SUFFIXES = [
+  "drjulianomachado.com",
+  "lovable.app",
+  "lovable.dev",
+  "localhost",
+];
+
+function isAllowedOrigin(req: Request): boolean {
+  const origin = req.headers.get("origin") || "";
+  const referer = req.headers.get("referer") || "";
+  const check = (u: string) => {
+    if (!u) return false;
+    try {
+      const host = new URL(u).hostname;
+      return ALLOWED_ORIGIN_SUFFIXES.some((s) => host === s || host.endsWith("." + s) || host === "localhost");
+    } catch { return false; }
+  };
+  return check(origin) || check(referer);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -152,6 +190,29 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Auth: allow calls from an allowed browser origin OR with valid shared secret
+  const providedSecret = req.headers.get("x-n8n-secret") || "";
+  let authorized = isAllowedOrigin(req);
+  if (!authorized && providedSecret) {
+    const shared = Deno.env.get("N8N_SHARED_SECRET") || "";
+    authorized = !!shared && providedSecret === shared;
+  }
+  if (!authorized) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Rate limit per client IP to bound abuse blast radius.
+  const clientIp = getClientIp(req) || "unknown";
+  if (!checkRate(clientIp)) {
+    return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+      status: 429,
+      headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" },
     });
   }
 
