@@ -52,38 +52,38 @@ const Auth = () => {
     }
 
     setIsLoading(true);
-    
-    // Use supabase directly to get user data for 2FA check
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password: loginPassword,
+
+    // Route through the login-secure edge function that enforces 2FA server-side
+    const { data, error } = await supabase.functions.invoke("login-secure", {
+      body: { email: loginEmail, password: loginPassword },
     });
-    
-    if (authError) {
+
+    if (error || !data || data.error) {
       setIsLoading(false);
       toast({
         title: "Erro ao fazer login",
-        description: authError.message === "Invalid login credentials" 
-          ? "Email ou senha incorretos" 
-          : authError.message,
+        description: data?.error || "Email ou senha incorretos",
         variant: "destructive",
       });
       return;
     }
 
-    // Check if user has 2FA enabled
-    if (authData?.user) {
-      const { data: twoFactorData } = await supabase
-        .from('two_factor_auth')
-        .select('totp_enabled')
-        .eq('user_id', authData.user.id)
-        .eq('totp_enabled', true)
-        .maybeSingle();
+    if (data.requires_2fa) {
+      setPendingEmail(loginEmail);
+      setPendingPassword(loginPassword);
+      setRequires2FA(true);
+      setIsLoading(false);
+      return;
+    }
 
-      if (twoFactorData?.totp_enabled) {
-        setPendingUserId(authData.user.id);
-        setRequires2FA(true);
+    if (data.session) {
+      const { error: setErr } = await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
+      if (setErr) {
         setIsLoading(false);
+        toast({ title: "Erro", description: setErr.message, variant: "destructive" });
         return;
       }
     }
