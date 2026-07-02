@@ -20,7 +20,8 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [requires2FA, setRequires2FA] = useState(false);
-  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<string>("");
+  const [pendingPassword, setPendingPassword] = useState<string>("");
   
   // Login form
   const [loginEmail, setLoginEmail] = useState("");
