@@ -2,10 +2,12 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { registrarMensagemWhatsapp } from "../_shared/registrarMensagem.ts";
 import { sendWhatsappImageMessage } from "../_shared/evolutionApiClient.ts";
+import { requireAdmin } from "../_shared/adminAuth.ts";
+import { getN8nSharedSecret, timingSafeEqual } from "../_shared/n8nSecret.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-n8n-secret',
 };
 
 serve(async (req) => {
