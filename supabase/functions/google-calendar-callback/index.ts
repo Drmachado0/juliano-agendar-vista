@@ -86,9 +86,17 @@ serve(async (req) => {
         }
       }
     } else {
+      // POST from frontend — REQUIRE authenticated user; ignore any body user_id
+      const auth = await requireUser(req);
+      if (!auth.ok || !auth.userId) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const body = await req.json();
       code = body.code;
-      user_id = body.user_id;
+      user_id = auth.userId; // trust JWT, not client input
       redirect_uri = body.redirect_uri;
     }
 
