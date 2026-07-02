@@ -7,12 +7,13 @@ import { Shield, Loader2, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface TwoFactorVerificationProps {
-  userId: string;
+  email: string;
+  password: string;
   onVerified: () => void;
   onCancel: () => void;
 }
 
-const TwoFactorVerification = ({ userId, onVerified, onCancel }: TwoFactorVerificationProps) => {
+const TwoFactorVerification = ({ email, password, onVerified, onCancel }: TwoFactorVerificationProps) => {
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState("");
@@ -27,19 +28,24 @@ const TwoFactorVerification = ({ userId, onVerified, onCancel }: TwoFactorVerifi
     setError("");
 
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke('totp-validate', {
-        body: { user_id: userId, token: code }
+      const { data, error: invokeError } = await supabase.functions.invoke("login-secure", {
+        body: { email, password, token: code },
       });
 
       if (invokeError) throw invokeError;
 
-      if (data.verified) {
+      if (data?.success && data.session) {
+        const { error: setErr } = await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+        if (setErr) throw setErr;
         onVerified();
       } else {
-        setError(data.error || "Código inválido");
+        setError(data?.error || "Código inválido");
       }
     } catch (err) {
-      console.error('2FA verification error:', err);
+      console.error("2FA verification error:", err);
       setError("Falha na verificação. Tente novamente.");
     } finally {
       setVerifying(false);
@@ -47,7 +53,7 @@ const TwoFactorVerification = ({ userId, onVerified, onCancel }: TwoFactorVerifi
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && code.length >= 6) {
+    if (e.key === "Enter" && code.length >= 6) {
       handleVerify();
     }
   };
@@ -75,7 +81,7 @@ const TwoFactorVerification = ({ userId, onVerified, onCancel }: TwoFactorVerifi
             placeholder="000000"
             value={code}
             onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, '').slice(0, 8);
+              const value = e.target.value.replace(/\D/g, "").slice(0, 8);
               setCode(value);
               setError("");
             }}
@@ -93,8 +99,8 @@ const TwoFactorVerification = ({ userId, onVerified, onCancel }: TwoFactorVerifi
           <p className="text-sm text-destructive text-center">{error}</p>
         )}
 
-        <Button 
-          className="w-full" 
+        <Button
+          className="w-full"
           onClick={handleVerify}
           disabled={code.length < 6 || verifying}
         >
@@ -102,8 +108,8 @@ const TwoFactorVerification = ({ userId, onVerified, onCancel }: TwoFactorVerifi
           Verificar
         </Button>
 
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           className="w-full"
           onClick={onCancel}
         >
