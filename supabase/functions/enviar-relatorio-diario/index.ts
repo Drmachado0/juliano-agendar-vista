@@ -78,8 +78,11 @@ Deno.serve(async (req) => {
     const mensagem = montarMensagem(rel);
 
     // Envia via edge function existente
+    const { getN8nSharedSecret } = await import("../_shared/n8nSecret.ts");
+    const secret = await getN8nSharedSecret();
     const { data: envio, error: envErr } = await supabase.functions.invoke("enviar-whatsapp", {
       body: { telefone, mensagem, tipo: "sistema" },
+      headers: secret ? { "x-n8n-secret": secret } : undefined,
     });
     if (envErr) throw envErr;
 

@@ -126,3 +126,6 @@ verify_jwt = false
 
 [functions.rotacionar-n8n-secret]
 verify_jwt = false
+
+[functions.login-secure]
+verify_jwt = false

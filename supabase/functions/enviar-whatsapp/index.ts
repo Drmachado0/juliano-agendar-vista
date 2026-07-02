@@ -3,12 +3,14 @@ import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { registrarMensagemWhatsapp } from "../_shared/registrarMensagem.ts";
 import { enviarTextoWhatsapp, enviarImagemWhatsapp } from "../_shared/whatsappSender.ts";
+import { requireAdmin } from "../_shared/adminAuth.ts";
+import { getN8nSharedSecret, timingSafeEqual } from "../_shared/n8nSecret.ts";
 
 
 // CORS configuration
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-n8n-secret",
 };
 
 // Schema validation — contrato de entrada mantido + suporte opcional a imagem
@@ -34,6 +36,22 @@ function normalizePhone(telefone: string): string {
 serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // AUTH: admin JWT or shared secret required
+  const providedSecret = req.headers.get("x-n8n-secret") || "";
+  let authorized = false;
+  if (providedSecret) {
+    const shared = await getN8nSharedSecret();
+    authorized = !!shared && timingSafeEqual(providedSecret, shared);
+  }
+  if (!authorized) {
+    const adm = await requireAdmin(req);
+    authorized = adm.ok;
+  }
+  if (!authorized) {
+    return new Response(JSON.stringify({ ok: false, success: false, error: "UNAUTHORIZED" }),
+      { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } });
   }
 
   const startTime = Date.now();

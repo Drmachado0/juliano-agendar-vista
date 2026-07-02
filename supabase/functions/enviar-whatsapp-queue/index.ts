@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendWhatsappTextMessage } from "../_shared/evolutionApiClient.ts";
+import { requireAdmin } from "../_shared/adminAuth.ts";
+import { getN8nSharedSecret, timingSafeEqual } from "../_shared/n8nSecret.ts";
 
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -40,7 +42,7 @@ async function logEnvio(opts: {
 // CORS configuration
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-n8n-secret",
 };
 
 // Schema validation - minimal
@@ -82,6 +84,22 @@ serve(async (req: Request): Promise<Response> => {
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
+  }
+
+  // AUTH (POST only): admin JWT or shared secret
+  const providedSecret = req.headers.get("x-n8n-secret") || "";
+  let authorized = false;
+  if (providedSecret) {
+    const shared = await getN8nSharedSecret();
+    authorized = !!shared && timingSafeEqual(providedSecret, shared);
+  }
+  if (!authorized) {
+    const adm = await requireAdmin(req);
+    authorized = adm.ok;
+  }
+  if (!authorized) {
+    return new Response(JSON.stringify({ success: false, error: "UNAUTHORIZED" }),
+      { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } });
   }
 
   const startTime = Date.now();

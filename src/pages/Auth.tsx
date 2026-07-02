@@ -20,7 +20,8 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [requires2FA, setRequires2FA] = useState(false);
-  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<string>("");
+  const [pendingPassword, setPendingPassword] = useState<string>("");
   
   // Login form
   const [loginEmail, setLoginEmail] = useState("");
@@ -51,38 +52,38 @@ const Auth = () => {
     }
 
     setIsLoading(true);
-    
-    // Use supabase directly to get user data for 2FA check
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password: loginPassword,
+
+    // Route through the login-secure edge function that enforces 2FA server-side
+    const { data, error } = await supabase.functions.invoke("login-secure", {
+      body: { email: loginEmail, password: loginPassword },
     });
-    
-    if (authError) {
+
+    if (error || !data || data.error) {
       setIsLoading(false);
       toast({
         title: "Erro ao fazer login",
-        description: authError.message === "Invalid login credentials" 
-          ? "Email ou senha incorretos" 
-          : authError.message,
+        description: data?.error || "Email ou senha incorretos",
         variant: "destructive",
       });
       return;
     }
 
-    // Check if user has 2FA enabled
-    if (authData?.user) {
-      const { data: twoFactorData } = await supabase
-        .from('two_factor_auth')
-        .select('totp_enabled')
-        .eq('user_id', authData.user.id)
-        .eq('totp_enabled', true)
-        .maybeSingle();
+    if (data.requires_2fa) {
+      setPendingEmail(loginEmail);
+      setPendingPassword(loginPassword);
+      setRequires2FA(true);
+      setIsLoading(false);
+      return;
+    }
 
-      if (twoFactorData?.totp_enabled) {
-        setPendingUserId(authData.user.id);
-        setRequires2FA(true);
+    if (data.session) {
+      const { error: setErr } = await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
+      if (setErr) {
         setIsLoading(false);
+        toast({ title: "Erro", description: setErr.message, variant: "destructive" });
         return;
       }
     }
@@ -150,19 +151,22 @@ const Auth = () => {
   };
 
   // Show 2FA verification screen
-  if (requires2FA && pendingUserId) {
+  if (requires2FA && pendingEmail && pendingPassword) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
         <TwoFactorVerification
-          userId={pendingUserId}
+          email={pendingEmail}
+          password={pendingPassword}
           onVerified={() => {
+            setPendingEmail("");
+            setPendingPassword("");
             toast({ title: "Login realizado", description: "Bem-vindo de volta!" });
             navigate("/admin/agendamentos");
           }}
           onCancel={() => {
             setRequires2FA(false);
-            setPendingUserId(null);
-            supabase.auth.signOut();
+            setPendingEmail("");
+            setPendingPassword("");
           }}
         />
       </div>
