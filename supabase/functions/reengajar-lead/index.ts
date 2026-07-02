@@ -77,6 +77,8 @@ serve(async (req) => {
   const texto = (mensagem && mensagem.trim().length > 0) ? mensagem.trim() : TEMPLATE_PADRAO;
 
   // Envia via enviar-whatsapp (WhatsApp via n8n)
+  const { getN8nSharedSecret } = await import("../_shared/n8nSecret.ts");
+  const secret = await getN8nSharedSecret();
   const { data: envio, error: invokeErr } = await supabase.functions.invoke("enviar-whatsapp", {
     body: {
       telefone: ag.telefone_whatsapp,
@@ -84,6 +86,7 @@ serve(async (req) => {
       agendamento_id: ag.id,
       tipo_mensagem: "reengajamento",
     },
+    headers: secret ? { "x-n8n-secret": secret } : undefined,
   });
 
   if (invokeErr) {
