@@ -3,6 +3,8 @@ import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { registrarMensagemWhatsapp } from "../_shared/registrarMensagem.ts";
 import { enviarTextoWhatsapp, enviarImagemWhatsapp } from "../_shared/whatsappSender.ts";
+import { requireAdmin } from "../_shared/adminAuth.ts";
+import { getN8nSharedSecret, timingSafeEqual } from "../_shared/n8nSecret.ts";
 
 
 // CORS configuration
