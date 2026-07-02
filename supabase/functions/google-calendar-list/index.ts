@@ -57,8 +57,16 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    const { user_id } = await req.json();
-    if (!user_id) throw new Error('user_id é obrigatório');
+    // Ignore any body user_id — resolve from JWT + admin role
+    const auth = await requireAdmin(req);
+    if (!auth.ok || !auth.userId) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    try { await req.json(); } catch { /* body optional */ }
+    const user_id = auth.userId;
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     const accessToken = await getValidAccessToken(supabase, user_id);
