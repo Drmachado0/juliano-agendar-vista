@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Authenticated can view bloqueios" ON public.bloqueios_agenda;
