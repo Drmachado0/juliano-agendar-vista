@@ -233,9 +233,54 @@ Deno.serve(async (req) => {
     );
   }
 
-  let payload: CapiPayload;
+  // ---- Zod validation of payload -----------------------------------------
+  const UserDataSchema = z.object({
+    em: z.string().trim().email().max(255).optional(),
+    ph: z.string().trim().min(8).max(20).optional(),
+    fn: z.string().trim().max(100).optional(),
+    ln: z.string().trim().max(100).optional(),
+    ct: z.string().trim().max(100).optional(),
+    st: z.string().trim().max(50).optional(),
+    zp: z.string().trim().max(20).optional(),
+    country: z.string().trim().max(3).optional(),
+    external_id: z.string().trim().max(100).optional(),
+    fbc: z.string().trim().max(255).optional(),
+    fbp: z.string().trim().max(255).optional(),
+    client_user_agent: z.string().max(512).optional(),
+  }).partial().default({});
+
+  const CustomDataSchema = z.object({
+    content_name: z.string().max(200).optional(),
+    content_category: z.string().max(100).optional(),
+    content_ids: z.array(z.string().max(100)).max(20).optional(),
+    contents: z.array(z.object({
+      id: z.string().max(100),
+      quantity: z.number().int().positive().optional(),
+    })).max(20).optional(),
+    num_items: z.number().int().nonnegative().optional(),
+    value: z.number().nonnegative().optional(),
+    currency: z.string().length(3).optional(),
+    lead_event_source: z.string().max(100).optional(),
+    utm_source: z.string().max(150).optional(),
+    utm_medium: z.string().max(150).optional(),
+    utm_campaign: z.string().max(150).optional(),
+    utm_content: z.string().max(150).optional(),
+    utm_term: z.string().max(150).optional(),
+  }).partial().default({});
+
+  const PayloadSchema = z.object({
+    event_name: z.string().min(1).max(50),
+    event_id: z.string().min(1).max(120),
+    event_source_url: z.string().url().max(2048),
+    action_source: z.enum(["website", "app", "chat", "email", "phone_call", "physical_store", "system_generated", "other"]).optional(),
+    event_time: z.number().int().positive().optional(),
+    user_data: UserDataSchema,
+    custom_data: CustomDataSchema,
+  });
+
+  let raw: unknown;
   try {
-    payload = await req.json();
+    raw = await req.json();
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
       status: 400,
@@ -243,50 +288,70 @@ Deno.serve(async (req) => {
     });
   }
 
+  const parsed = PayloadSchema.safeParse(raw);
+  if (!parsed.success) {
+    console.warn("[meta-capi] Payload inválido:", parsed.error.flatten());
+    return new Response(
+      JSON.stringify({ error: "Invalid payload", details: parsed.error.flatten() }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
   const {
     event_name,
     event_id,
     event_source_url,
-    user_data = {},
-    custom_data = {},
-  } = payload;
-
-  if (!event_name || !event_id || !event_source_url) {
-    return new Response(
-      JSON.stringify({
-        error: "Missing required fields: event_name, event_id, event_source_url",
-      }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
-  }
+    action_source,
+    event_time,
+    user_data,
+    custom_data,
+  } = parsed.data;
 
   if (!STANDARD_EVENTS.has(event_name)) {
     console.warn(`[meta-capi] Non-standard event: ${event_name}`);
   }
 
   const fallbackUserAgent = req.headers.get("user-agent") ?? "";
+  const hashedUserData = await hashUserData(
+    user_data,
+    clientIp === "unknown" ? "" : clientIp,
+    fallbackUserAgent,
+  );
 
-  const hashedUserData = await hashUserData(user_data, clientIp === "unknown" ? "" : clientIp, fallbackUserAgent);
+  // ---- Custom data mapping ------------------------------------------------
+  // Lead / CompleteRegistration devem ter currency + value para não perderem
+  // atribuição. Se o cliente não enviou, usamos defaults BRL/0 e marcamos a
+  // origem do lead para debugging no Events Manager.
+  const isLeadLike = event_name === "Lead" || event_name === "CompleteRegistration" || event_name === "Schedule";
+  const defaultedValue = custom_data.value ?? (isLeadLike ? 0 : undefined);
+  const defaultedCurrency = custom_data.currency ?? (isLeadLike ? "BRL" : undefined);
+
+  const mappedCustomData: Record<string, unknown> = {
+    ...(defaultedValue !== undefined && { value: defaultedValue }),
+    ...(defaultedCurrency && { currency: defaultedCurrency }),
+    ...(custom_data.content_name && { content_name: custom_data.content_name }),
+    ...(custom_data.content_category && { content_category: custom_data.content_category }),
+    ...(custom_data.content_ids && { content_ids: custom_data.content_ids }),
+    ...(custom_data.contents && { contents: custom_data.contents }),
+    ...(custom_data.num_items !== undefined && { num_items: custom_data.num_items }),
+    ...(custom_data.lead_event_source && { lead_event_source: custom_data.lead_event_source }),
+    ...(custom_data.utm_source && { utm_source: custom_data.utm_source }),
+    ...(custom_data.utm_medium && { utm_medium: custom_data.utm_medium }),
+    ...(custom_data.utm_campaign && { utm_campaign: custom_data.utm_campaign }),
+    ...(custom_data.utm_content && { utm_content: custom_data.utm_content }),
+    ...(custom_data.utm_term && { utm_term: custom_data.utm_term }),
+  };
 
   const event = {
     event_name,
-    event_time: Math.floor(Date.now() / 1000),
-    event_id,
+    event_time: event_time ?? Math.floor(Date.now() / 1000),
+    event_id, // mesmo id do Pixel browser → deduplicação
     event_source_url,
-    action_source: "website",
+    action_source: action_source ?? "website",
     user_data: hashedUserData,
-    custom_data: {
-      ...(custom_data.value !== undefined && { value: custom_data.value }),
-      ...(custom_data.currency && { currency: custom_data.currency }),
-      ...(custom_data.content_name && { content_name: custom_data.content_name }),
-      ...(custom_data.content_category && { content_category: custom_data.content_category }),
-      ...(custom_data.utm_source && { utm_source: custom_data.utm_source }),
-      ...(custom_data.utm_medium && { utm_medium: custom_data.utm_medium }),
-      ...(custom_data.utm_campaign && { utm_campaign: custom_data.utm_campaign }),
-      ...(custom_data.utm_content && { utm_content: custom_data.utm_content }),
-      ...(custom_data.utm_term && { utm_term: custom_data.utm_term }),
-    },
+    custom_data: mappedCustomData,
   };
+
 
   const body: Record<string, unknown> = {
     data: [event],
