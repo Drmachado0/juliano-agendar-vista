@@ -40,6 +40,7 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  ClipboardCopy,
 } from "lucide-react";
 
 type SecretInfo = {
@@ -79,6 +80,44 @@ export default function N8nSecretRotationCard() {
   const [showValue, setShowValue] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const [aceitouGuardar, setAceitouGuardar] = useState(false);
+  const [copiandoAtual, setCopiandoAtual] = useState(false);
+  const [copiadoAtual, setCopiadoAtual] = useState(false);
+
+  const copiarSegredoAtual = async () => {
+    setCopiandoAtual(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "revelar-n8n-secret",
+        { body: {} },
+      );
+      if (error) throw error;
+      if (!data?.success || !data?.valor) {
+        throw new Error(data?.message || data?.error || "Resposta inválida");
+      }
+      await navigator.clipboard.writeText(data.valor);
+      setCopiadoAtual(true);
+      toast.success("N8N_SHARED_SECRET copiado para a área de transferência", {
+        description:
+          data.fonte === "env"
+            ? "Valor vindo da variável de ambiente (ainda não rotacionado no banco)."
+            : "Cole no header x-n8n-secret do n8n.",
+      });
+      setTimeout(() => setCopiadoAtual(false), 4000);
+    } catch (e: any) {
+      console.error("[N8nSecretRotationCard] copiar atual erro:", e);
+      const msg = e?.message || "";
+      if (msg.includes("clipboard") || msg.includes("Clipboard")) {
+        toast.error("Não consegui acessar a área de transferência", {
+          description: "Verifique as permissões do navegador.",
+        });
+      } else {
+        toast.error("Não foi possível copiar o segredo", { description: msg });
+      }
+    } finally {
+      setCopiandoAtual(false);
+    }
+  };
+
 
   const carregarInfo = async () => {
     setLoading(true);
@@ -230,7 +269,23 @@ export default function N8nSecretRotationCard() {
             </AlertDescription>
           </Alert>
 
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={copiarSegredoAtual}
+              disabled={copiandoAtual}
+              className="gap-2"
+              title="Copia o valor atual do N8N_SHARED_SECRET para a área de transferência"
+            >
+              {copiandoAtual ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : copiadoAtual ? (
+                <Check className="h-4 w-4 text-green-600" />
+              ) : (
+                <ClipboardCopy className="h-4 w-4" />
+              )}
+              {copiadoAtual ? "Copiado" : "Copiar segredo atual"}
+            </Button>
             <Button
               variant="outline"
               onClick={() => setConfirmOpen(true)}
