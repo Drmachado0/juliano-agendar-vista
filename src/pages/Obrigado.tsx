@@ -123,27 +123,11 @@ const Obrigado = () => {
         meta_event_id: eventId,
       });
 
-      (window as any).dataLayer.push({
-        event: "meta_lead",
-        meta_event_name: "Lead",
-        value: 300,
-        currency: "BRL",
-        page_path: "/obrigado",
-        page_type: "agendamento_confirmado",
-        event_id: eventId,
-        meta_event_id: eventId,
-      });
+      // NOTA: eventos finais Lead/CompleteRegistration são disparados APENAS
+      // via Meta CAPI server-side (abaixo). O Meta Pixel browser-side rejeita
+      // esses eventos em contexto médico ("restricted event ... suppressed"),
+      // então não fazemos push de meta_lead / meta_complete_registration aqui.
 
-      (window as any).dataLayer.push({
-        event: "meta_complete_registration",
-        meta_event_name: "CompleteRegistration",
-        value: 300,
-        currency: "BRL",
-        page_path: "/obrigado",
-        page_type: "agendamento_confirmado",
-        event_id: eventId,
-        meta_event_id: eventId,
-      });
 
       // Reforço server-side via Meta CAPI — mesmo event_id do Pixel/GTM para dedup.
       void sendMetaCapi("Lead", eventId);
