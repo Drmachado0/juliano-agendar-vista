@@ -18,6 +18,8 @@ const corsHeaders = {
 };
 
 import { logSystem } from "../_shared/systemLogger.ts";
+import { z } from "https://esm.sh/zod@3.23.8";
+
 
 // Códigos de erro da Graph API que indicam rate limit / throttling.
 // Refs: https://developers.facebook.com/docs/marketing-api/error-reference
