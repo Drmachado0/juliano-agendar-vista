@@ -262,10 +262,9 @@ Deno.serve(async (req) => {
     console.warn(`[meta-capi] Non-standard event: ${event_name}`);
   }
 
-  const clientIp = getClientIp(req);
   const fallbackUserAgent = req.headers.get("user-agent") ?? "";
 
-  const hashedUserData = await hashUserData(user_data, clientIp, fallbackUserAgent);
+  const hashedUserData = await hashUserData(user_data, clientIp === "unknown" ? "" : clientIp, fallbackUserAgent);
 
   const event = {
     event_name,
