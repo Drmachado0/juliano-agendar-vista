@@ -1573,18 +1573,21 @@ export type Database = {
       }
       site_config: {
         Row: {
+          expected_meta_pixel_id: string
           id: boolean
           updated_at: string
           updated_by: string | null
           whatsapp_number: string
         }
         Insert: {
+          expected_meta_pixel_id?: string
           id?: boolean
           updated_at?: string
           updated_by?: string | null
           whatsapp_number?: string
         }
         Update: {
+          expected_meta_pixel_id?: string
           id?: boolean
           updated_at?: string
           updated_by?: string | null
