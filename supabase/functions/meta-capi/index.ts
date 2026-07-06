@@ -393,6 +393,19 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[meta-capi] OK ${event_name} event_id=${event_id} fbtrace=${metaJson.fbtrace_id}`);
+    logSystem({
+      level: "info",
+      category: "edge_function",
+      source: "meta-capi",
+      message: `CAPI OK ${event_name}`,
+      details: {
+        event_name,
+        event_id,
+        events_received: metaJson.events_received,
+        fbtrace_id: metaJson.fbtrace_id,
+        event_source_url,
+      },
+    });
 
     return new Response(
       JSON.stringify({
