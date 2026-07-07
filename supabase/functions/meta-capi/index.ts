@@ -195,6 +195,15 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Rate limit per client IP to bound abuse blast radius.
+  const clientIp = getClientIp(req) || "unknown";
+  if (!checkRate(clientIp)) {
+    return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+      status: 429,
+      headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" },
+    });
+  }
+
   // Auth: allow calls from an allowed browser origin OR with valid shared secret
   const providedSecret = req.headers.get("x-n8n-secret") || "";
   const originHeader = req.headers.get("origin") || "";
@@ -228,14 +237,6 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Rate limit per client IP to bound abuse blast radius.
-  const clientIp = getClientIp(req) || "unknown";
-  if (!checkRate(clientIp)) {
-    return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-      status: 429,
-      headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" },
-    });
-  }
 
   if (!PIXEL_ID || !ACCESS_TOKEN) {
     console.error("[meta-capi] Missing PIXEL_ID or ACCESS_TOKEN env vars");
