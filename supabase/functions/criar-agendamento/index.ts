@@ -273,7 +273,11 @@ Deno.serve(async (req) => {
     const fn = nameParts[0];
     const ln = nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined;
 
+    // Server-to-server: passa x-n8n-secret para autorizar no guard do meta-capi
+    // (o invoke interno não envia Origin/Referer permitido).
+    const n8nSecret = Deno.env.get('N8N_SHARED_SECRET') || '';
     const notifyMetaCapi = supabase.functions.invoke('meta-capi', {
+      headers: n8nSecret ? { 'x-n8n-secret': n8nSecret } : {},
       body: {
         event_name: 'Schedule',
         event_id: data.id,

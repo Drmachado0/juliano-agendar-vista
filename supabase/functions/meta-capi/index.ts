@@ -197,12 +197,31 @@ Deno.serve(async (req) => {
 
   // Auth: allow calls from an allowed browser origin OR with valid shared secret
   const providedSecret = req.headers.get("x-n8n-secret") || "";
-  let authorized = isAllowedOrigin(req);
-  if (!authorized && providedSecret) {
+  const originHeader = req.headers.get("origin") || "";
+  const refererHeader = req.headers.get("referer") || "";
+  const originAuthorized = isAllowedOrigin(req);
+  let secretAuthorized = false;
+  if (providedSecret) {
     const shared = Deno.env.get("N8N_SHARED_SECRET") || "";
-    authorized = !!shared && providedSecret === shared;
+    secretAuthorized = !!shared && providedSecret === shared;
   }
+  const authorized = originAuthorized || secretAuthorized;
   if (!authorized) {
+    // Log estruturado — nunca inclui o valor do secret nem headers sensíveis.
+    logSystem({
+      level: "warn",
+      category: "edge_function",
+      source: "meta-capi",
+      message: "CAPI request refused by guard",
+      details: {
+        reason: providedSecret ? "invalid_secret" : "missing_secret_and_origin",
+        origin_present: !!originHeader,
+        referer_present: !!refererHeader,
+        origin_authorized: originAuthorized,
+        secret_provided: !!providedSecret,
+        client_ip: clientIp,
+      },
+    });
     return new Response(JSON.stringify({ error: "Forbidden" }), {
       status: 403,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
