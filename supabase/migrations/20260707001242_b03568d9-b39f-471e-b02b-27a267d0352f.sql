@@ -1,0 +1,1 @@
+DELETE FROM agendamentos WHERE nome_completo = 'Teste Auditoria Hermes' AND telefone_whatsapp = '91999990001';
