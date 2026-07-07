@@ -51,6 +51,9 @@ async function fireMetaCapiLead(
       ? landing
       : `https://drjulianomachado.com${landing}`;
 
+    // Server-to-server: passa x-n8n-secret para autorizar no guard do meta-capi
+    // (chamadas server-to-server não têm Origin/Referer permitido).
+    const n8nSecret = Deno.env.get('N8N_SHARED_SECRET') || '';
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -58,6 +61,7 @@ async function fireMetaCapiLead(
         'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
         'x-forwarded-for': clientIp,
         'user-agent': userAgent,
+        ...(n8nSecret ? { 'x-n8n-secret': n8nSecret } : {}),
       },
       body: JSON.stringify({
         event_name: 'Lead',
