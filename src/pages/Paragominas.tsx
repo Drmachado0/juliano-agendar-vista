@@ -720,9 +720,9 @@ const Paragominas = () => {
               <header className="mb-16 md:mb-20 max-w-3xl">
                 <div className="flex items-center gap-4 mb-6">
                   <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                    VI — Agendamento
+                    Agendamento
                   </span>
-                  <div className="pgm-rule-dark flex-1 max-w-[240px]" />
+                  <div className="pgm-rule-dark flex-1 max-w-[200px]" />
                 </div>
                 <h2
                   id="passos-heading"
@@ -737,7 +737,7 @@ const Paragominas = () => {
                 </h2>
               </header>
 
-              {/* Passos — grid editorial */}
+              {/* Passos — ícones + timeline, sem numeração visual */}
               <ol className="grid md:grid-cols-3 gap-10 md:gap-0 relative">
                 {/* Linha conectora desktop */}
                 <div
@@ -745,41 +745,43 @@ const Paragominas = () => {
                   className="hidden md:block absolute top-6 left-[8%] right-[8%] h-px"
                   style={{ background: "var(--pgm-line-dark)" }}
                 />
-                {PASSOS.map((s, i) => (
-                  <li
-                    key={s.n}
-                    className="relative md:px-8 first:md:pl-0 last:md:pr-0"
-                    style={{
-                      borderLeft: "1px solid var(--pgm-line-dark)",
-                    }}
-                  >
-                    {/* ponto ciano */}
-                    <span
-                      className="absolute -left-[7px] top-4 w-3 h-3 rounded-full"
-                      style={{
-                        background: "var(--pgm-ciano)",
-                        boxShadow: "0 0 0 4px var(--pgm-petroleo)",
-                      }}
-                      aria-hidden="true"
-                    />
-                    <div className="pl-6 md:pl-8">
-                      <p className="pgm-mono text-sm tabular-nums mb-4" style={{ color: "var(--pgm-champagne)" }}>
-                        {s.n} / 03
-                      </p>
-                      <h3
-                        className="mb-3"
-                        style={{ ...SERIF, fontSize: "1.6rem", lineHeight: 1.1 }}
-                      >
-                        {s.t}
-                      </h3>
-                      <p className="text-sm md:text-base leading-relaxed" style={{ color: "rgba(243,240,232,0.72)" }}>
-                        {s.d}
-                      </p>
-                    </div>
-                    {/* apenas visual */}
-                    {i === PASSOS.length - 1 && null}
-                  </li>
-                ))}
+                {PASSOS.map((s) => {
+                  const Icon = s.icon;
+                  return (
+                    <li
+                      key={s.t}
+                      className="relative md:px-8 first:md:pl-0 last:md:pr-0"
+                      style={{ borderLeft: "1px solid var(--pgm-line-dark)" }}
+                    >
+                      {/* ponto ciano no eixo da timeline */}
+                      <span
+                        className="absolute -left-[7px] top-4 w-3 h-3 rounded-full"
+                        style={{
+                          background: "var(--pgm-ciano)",
+                          boxShadow: "0 0 0 4px var(--pgm-petroleo)",
+                        }}
+                        aria-hidden="true"
+                      />
+                      <div className="pl-6 md:pl-8">
+                        <Icon
+                          className="w-6 h-6 mb-5"
+                          style={{ color: "var(--pgm-champagne)" }}
+                          strokeWidth={1.4}
+                          aria-hidden="true"
+                        />
+                        <h3
+                          className="mb-3"
+                          style={{ ...SERIF, fontSize: "1.6rem", lineHeight: 1.1 }}
+                        >
+                          {s.t}
+                        </h3>
+                        <p className="text-sm md:text-base leading-relaxed" style={{ color: "rgba(243,240,232,0.72)" }}>
+                          {s.d}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
               </ol>
 
               <div className="mt-16 md:mt-20 flex items-center gap-6 flex-wrap">
