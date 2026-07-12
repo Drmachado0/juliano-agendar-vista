@@ -150,7 +150,7 @@ export function decorateWhatsappLinksWithCrmAttribution() {
   if (typeof window === 'undefined') return;
 
   const data = captureCrmAttribution();
-  if (!data || !hasPaidAttribution(data)) return;
+  if (!data) return;
 
   const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href]'))
     .filter((link) => isWhatsappHref(link.getAttribute('href') || ''));
@@ -159,18 +159,24 @@ export function decorateWhatsappLinksWithCrmAttribution() {
     try {
       const href = link.getAttribute('href') || '';
       const url = new URL(href, window.location.href);
-      const originalText =
-        url.searchParams.get('text') ||
-        'Olá! Gostaria de agendar uma consulta oftalmológica com o Dr. Juliano Machado.';
+      const currentText = url.searchParams.get('text') || '';
 
-      if (originalText.includes('[Origem Ads/CRM:')) {
-        link.dataset.crmAttrDecorated = data.crm_tracking_code;
-        return;
+      // A atribuição (crm_tracking_code, gclid, utm etc.) segue por dataLayer
+      // e pelo backend (utm_* nos agendamentos). Nunca deve aparecer no texto
+      // enviado ao WhatsApp. Se ainda existir um marcador legado no href,
+      // higienizamos aqui.
+      if (currentText.includes('[Origem Ads/CRM:')) {
+        const cleaned = currentText
+          .replace(/\n*\[Origem Ads\/CRM:[^\]]*\]\s*/g, '')
+          .trim();
+        if (cleaned) {
+          url.searchParams.set('text', cleaned);
+        } else {
+          url.searchParams.delete('text');
+        }
+        link.setAttribute('href', url.toString());
       }
 
-      const marker = `[Origem Ads/CRM: ${compactAttribution(data)}]`;
-      url.searchParams.set('text', `${originalText}\n\n${marker}`);
-      link.setAttribute('href', url.toString());
       link.dataset.crmAttrDecorated = data.crm_tracking_code;
     } catch (error) {
       console.warn('[whatsapp-crm-attribution] decorate failed:', error);
