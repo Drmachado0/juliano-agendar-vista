@@ -13,6 +13,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { requireN8nSecret, unauthorizedResponse, requestId } from "../_shared/authGuards.ts";
+import { telefoneCanonico as canonicalFallback, maskTelefone } from "../_shared/telefoneCanonico.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -118,20 +119,33 @@ serve(async (req) => {
   }
 
   // 2) Normalizar telefone
+  //    - telefoneNormalizado (E.164 sem símbolos, ex.: 5591991150174) → salvo em mensagens_whatsapp.telefone
+  //    - telefoneCanonico    (BR sem DDI, ex.: 91991150174)          → usado para buscar em agendamentos.telefone_canonico
   const { data: telNorm } = await supabase.rpc("normalizar_telefone", {
     p_telefone: body.telefone,
   });
   const telefoneNormalizado =
     (telNorm as string) ?? body.telefone.replace(/\D/g, "");
 
+  let telefoneCanon: string | null = null;
+  try {
+    const { data: telC } = await supabase.rpc("telefone_canonico", {
+      p_tel: body.telefone,
+    });
+    if (typeof telC === "string" && telC.length > 0) telefoneCanon = telC;
+  } catch {
+    // RPC ausente em ambientes antigos — usa fallback local
+  }
+  if (!telefoneCanon) telefoneCanon = canonicalFallback(body.telefone);
+
   // 3) Resolver agendamento: explícito > match único por telefone_canonico
   let agendamentoId: string | null = body.agendamento_id ?? null;
   let ambiguo = false;
-  if (!agendamentoId) {
+  if (!agendamentoId && telefoneCanon) {
     const { data: matches } = await supabase
       .from("agendamentos")
       .select("id, status_crm, created_at")
-      .eq("telefone_canonico", telefoneNormalizado)
+      .eq("telefone_canonico", telefoneCanon)
       .order("created_at", { ascending: false })
       .limit(2);
     if (matches && matches.length === 1) {
@@ -205,7 +219,7 @@ serve(async (req) => {
       category: "edge_function",
       source: "registrar-envio-out-n8n",
       message: `Falha inserir OUT: ${insErr.message}`,
-      details: { request_id: rid, telefone: telefoneNormalizado },
+      details: { request_id: rid, telefone_mask: maskTelefone(telefoneNormalizado), provider, has_provider_msg_id: !!providerMessageId },
       request_id: rid,
     });
     return json({ error: insErr.message }, 500, headers);
