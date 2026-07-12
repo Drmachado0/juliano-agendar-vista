@@ -161,8 +161,17 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
   const handleNext = () => {
     if (validate()) {
       onNext();
+    } else {
+      // Foca o primeiro campo inválido (ordem: nome, phone, birthDate, email)
+      requestAnimationFrame(() => {
+        const first =
+          document.querySelector<HTMLInputElement>(".pgm-form-error[data-field]");
+        const id = first?.getAttribute("data-field");
+        if (id) document.getElementById(id)?.focus();
+      });
     }
   };
+
 
   return (
     <div className="space-y-6">
