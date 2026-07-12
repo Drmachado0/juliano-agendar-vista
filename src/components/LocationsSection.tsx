@@ -5,8 +5,9 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 const LocationsSection = () => {
   const [activeLocation, setActiveLocation] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+  const [showBelem, setShowBelem] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
-  const { trackPhoneClick } = useGoogleTag();
+  const { trackPhoneClick, trackCTAClick } = useGoogleTag();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -61,7 +62,8 @@ const LocationsSection = () => {
     },
   ];
 
-  const activeLocationData = locations[activeLocation];
+  const rawActive = locations[activeLocation];
+  const activeLocationData = !showBelem && rawActive.city === "Belém" ? locations[0] : rawActive;
   // Google Maps embed (sem API key) do local ativo
   const mapEmbedSrc = `https://www.google.com/maps?q=${encodeURIComponent(
     `${activeLocationData.name}, ${activeLocationData.address}`
@@ -86,10 +88,11 @@ const LocationsSection = () => {
             Onde atendemos
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            4 locais em <span className="gradient-text">Paragominas e Belém</span>
+            Atendimento em <span className="gradient-text">Paragominas</span>
+            <span className="text-muted-foreground/70 text-2xl md:text-3xl font-semibold"> e Belém</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Escolha o local mais perto de você. Todos com estrutura completa para consultas e procedimentos.
+            Base em Paragominas, com atendimento também em Belém para procedimentos específicos.
           </p>
         </div>
 
@@ -97,6 +100,7 @@ const LocationsSection = () => {
           {/* Location Cards */}
           <div className="space-y-3 lg:pr-6 relative z-10">
             {locations.map((location, index) => {
+              if (!showBelem && location.city === "Belém") return null;
               const IconComponent = location.icon;
               const isActive = activeLocation === index;
               const isBelem = location.city === "Belém";
@@ -146,7 +150,21 @@ const LocationsSection = () => {
                 </button>
               );
             })}
+
+            {!showBelem && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBelem(true);
+                  trackCTAClick("ver_locais_belem", "locations", "Ver locais em Belém");
+                }}
+                className="w-full text-sm font-medium text-muted-foreground hover:text-primary transition-colors py-3 px-4 rounded-xl border border-dashed border-border/60 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[48px]"
+              >
+                + Ver 2 locais em Belém
+              </button>
+            )}
           </div>
+
 
           {/* Map — Google Maps real do local selecionado */}
           <div className={`relative rounded-3xl overflow-hidden min-h-[500px] border border-border/60 flex flex-col transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}>

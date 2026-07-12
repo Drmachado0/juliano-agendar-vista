@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Star, CalendarCheck, MessageCircle, ShieldCheck, ArrowRight, Pause, Play } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Star, CalendarCheck, MessageCircle, ShieldCheck, ArrowRight, MapPin, Pause, Play } from "lucide-react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import drJulianoHeroWebp from "@/assets/dr-juliano-hero.webp";
 import drJulianoHeroVideo from "@/assets/dr-juliano-hero.mp4";
@@ -14,8 +14,9 @@ const HeroSection = () => {
   const { trackCTAClick, trackWhatsAppClick } = useGoogleTag();
   const { waLink } = useSiteWhatsApp();
   const reviews = useGoogleReviews();
-  const heroWaUrl = waLink("Olá! Vi o site do Dr. Juliano Machado e gostaria de agendar uma consulta oftalmológica.");
-  const [count, setCount] = useState(0);
+  const heroWaUrl = waLink(
+    "Olá! Vi o site do Dr. Juliano Machado e gostaria de agendar uma consulta oftalmológica em Paragominas."
+  );
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoPaused, setVideoPaused] = useState(false);
 
@@ -26,31 +27,14 @@ const HeroSection = () => {
     else v.pause();
   };
 
-  // Animated counter for patients
-  useEffect(() => {
-    const target = DOCTOR.patientsServed;
-    const duration = 2000;
-    const start = Date.now();
-    const timer = setInterval(() => {
-      const elapsed = Date.now() - start;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.floor(eased * target));
-      if (progress >= 1) clearInterval(timer);
-    }, 16);
-    return () => clearInterval(timer);
-  }, []);
-
   return (
-    <section className="relative overflow-hidden hero-gradient min-h-[92vh] flex items-center pt-28 pb-16 sm:pt-32">
+    <section className="relative overflow-hidden hero-gradient min-h-[88vh] lg:min-h-[92vh] flex items-center pt-24 pb-12 sm:pt-32 sm:pb-16">
       {/* Atmosphere */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-        {/* deep teal glow — afastado da foto */}
-        <div className="absolute top-[30%] left-[28%] w-[520px] h-[520px] rounded-full bg-primary/8 blur-[120px]" />
-        <div className="absolute -bottom-40 -left-40 w-[440px] h-[440px] rounded-full bg-primary/5 blur-[110px]" />
-        {/* fine grid */}
+        <div className="absolute top-[30%] left-[28%] w-[420px] h-[420px] rounded-full bg-primary/8 blur-[110px]" />
+        <div className="absolute -bottom-40 -left-40 w-[360px] h-[360px] rounded-full bg-primary/5 blur-[100px]" />
         <div
-          className="absolute inset-0 opacity-[0.04]"
+          className="absolute inset-0 opacity-[0.04] hidden sm:block"
           style={{
             backgroundImage:
               "linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)",
@@ -59,49 +43,45 @@ const HeroSection = () => {
             WebkitMaskImage: "radial-gradient(ellipse at 35% 40%, black, transparent 70%)",
           }}
         />
-        {/* drifting eye-light beam */}
-        <div className="absolute top-1/3 left-1/4 w-[360px] h-[100px] bg-gradient-to-r from-transparent via-primary/20 to-transparent blur-2xl animate-eye-light" />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-10 items-center">
+        <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-8 lg:gap-10 items-center">
           {/* Content */}
           <div className="text-center lg:text-left order-2 lg:order-1">
-            {/* Credential eyebrow (CFM) */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-panel mb-7 opacity-0 animate-fade-in animation-delay-200">
-              <ShieldCheck className="w-3.5 h-3.5 text-accent" />
-              <span className="text-xs font-medium text-foreground/90 tracking-wide">
-                {DOCTOR.specialty} · {DOCTOR.crm}
+            {/* City + credential eyebrow */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-panel mb-5">
+              <MapPin className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs font-semibold text-foreground/90 tracking-wide uppercase">
+                Oftalmologista em Paragominas
               </span>
             </div>
 
-            {/* Heading — sem opacity-0/delay (é o LCP; deve pintar imediatamente) */}
-            <h1 className="text-5xl sm:text-6xl lg:text-[5rem] font-extrabold leading-[0.95] uppercase mb-6">
+            {/* Heading — LCP, sem animação de opacity */}
+            <h1 className="text-[2.25rem] leading-[1.05] sm:text-5xl lg:text-[4.25rem] font-extrabold uppercase mb-5">
               <span className="text-foreground">Enxergar bem</span>
               <br />
               <span className="gradient-text-accent">muda tudo.</span>
             </h1>
 
-            {/* Subtitle */}
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-9 max-w-xl mx-auto lg:mx-0 opacity-0 animate-slide-up animation-delay-400">
-              Há mais de <span className="text-foreground font-semibold">{DOCTOR.yearsExperience} anos</span>, o{" "}
-              <span className="text-foreground font-semibold">{DOCTOR.name}</span> une tecnologia diagnóstica e cuidado
-              próximo para avaliar e tratar a sua visão — em{" "}
-              <span className="text-primary font-medium">Paragominas</span> e{" "}
-              <span className="text-primary font-medium">Belém</span>. Do exame à cirurgia.
+            {/* Subtitle — direto, mobile-first */}
+            <p className="text-[15px] sm:text-lg text-muted-foreground leading-relaxed mb-7 max-w-xl mx-auto lg:mx-0">
+              Consultas, exames e cirurgias em <span className="text-foreground font-semibold">Paragominas</span> com o{" "}
+              <span className="text-foreground font-semibold">{DOCTOR.name}</span>. Agende online e receba a confirmação
+              pelo WhatsApp.
             </p>
 
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-9 opacity-0 animate-slide-up animation-delay-500">
+            {/* CTAs — CTA primária "Ver horários disponíveis" */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-6">
               <Link to="/agendamento" className="w-full sm:w-auto">
                 <Button
                   variant="obsidian"
                   size="lg"
-                  onClick={() => trackCTAClick("agendar_consulta", "hero", "Agendar avaliação")}
-                  className="w-full sm:w-auto text-base group"
+                  onClick={() => trackCTAClick("ver_horarios", "hero", "Ver horários disponíveis")}
+                  className="w-full sm:w-auto text-base group min-h-[52px]"
                 >
                   <CalendarCheck className="w-5 h-5" />
-                  Agendar avaliação
+                  Ver horários disponíveis
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </Button>
               </Link>
@@ -110,43 +90,38 @@ const HeroSection = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackWhatsAppClick(heroWaUrl, "Falar no WhatsApp", "whatsapp_hero", "hero")}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-14 rounded-full px-8 text-base font-semibold glass-panel text-foreground hover:bg-white/10 transition-all duration-300"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-[52px] rounded-full px-8 text-base font-semibold glass-panel text-foreground hover:bg-white/10 transition-all duration-300"
               >
                 <MessageCircle className="w-5 h-5 text-[#25D366]" />
                 Falar no WhatsApp
               </a>
             </div>
 
-            {/* Social proof — glass strip */}
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 opacity-0 animate-fade-in animation-delay-600">
-              <ProofChip
-                main={
-                  <span className="inline-flex items-center gap-1" aria-label={`${reviews.rating.toFixed(1)} de 5 estrelas no Google`}>
-                    <span className="font-bold">{reviews.rating.toFixed(1)}</span>
-                    <span className="inline-flex text-accent" aria-hidden="true">
-                      {[0, 1, 2, 3, 4].map((i) => (
-                        <Star key={i} className="w-3 h-3 fill-current" />
-                      ))}
-                    </span>
-                  </span>
-                }
-                sub={`${formatReviewCount(reviews.count)} avaliações · Google`}
-              />
-              <ProofChip main={<span className="font-bold">+{count.toLocaleString("pt-BR")}</span>} sub="pacientes atendidos" />
-              <ProofChip main={<span className="font-bold">+{DOCTOR.yearsExperience} anos</span>} sub="de oftalmologia" />
+            {/* Trust line — CRM + nota real, sem números inventados */}
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-2 text-xs sm:text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-accent" />
+                <span className="font-medium text-foreground/90">{DOCTOR.crm}</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5" aria-label={`${reviews.rating.toFixed(1)} de 5 no Google`}>
+                <Star className="w-3.5 h-3.5 text-accent fill-accent" />
+                <span className="font-semibold text-foreground/90">{reviews.rating.toFixed(1)}</span>
+                <span>({formatReviewCount(reviews.count)} avaliações)</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-primary" />
+                +{DOCTOR.yearsExperience} anos de experiência
+              </span>
             </div>
           </div>
 
-          {/* Photo */}
-          <div className="flex justify-center lg:justify-end order-1 lg:order-2 opacity-0 animate-scale-in animation-delay-200 ease-out-expo">
+          {/* Portrait — menor no mobile pra CTA aparecer above the fold */}
+          <div className="flex justify-center lg:justify-end order-1 lg:order-2">
             <div className="relative">
-              {/* iris ring decoration */}
-              <div className="absolute -inset-8 rounded-full border border-primary/10 animate-iris hidden lg:block" />
-              {/* teal halo (atrás da foto) */}
-              <div className="absolute -inset-3 rounded-[2.2rem] bg-gradient-to-br from-primary/20 to-transparent blur-2xl" />
+              <div className="absolute -inset-8 rounded-full border border-primary/10 hidden lg:block" />
+              <div className="absolute -inset-3 rounded-[2rem] bg-gradient-to-br from-primary/15 to-transparent blur-2xl" />
 
-              {/* photo / living portrait */}
-              <div className="relative w-64 h-80 sm:w-72 sm:h-[24rem] lg:w-[23rem] lg:h-[30rem] rounded-[2rem] overflow-hidden ring-1 ring-white/10 shadow-2xl bg-card">
+              <div className="relative w-44 h-56 sm:w-64 sm:h-80 lg:w-[23rem] lg:h-[30rem] rounded-[1.75rem] lg:rounded-[2rem] overflow-hidden ring-1 ring-white/10 shadow-2xl bg-card">
                 <video
                   ref={videoRef}
                   src={drJulianoHeroVideo}
@@ -156,39 +131,25 @@ const HeroSection = () => {
                   loop
                   playsInline
                   preload="metadata"
-                  aria-label={`${DOCTOR.name} - Médico ${DOCTOR.specialty}`}
+                  aria-label={`${DOCTOR.name} - ${DOCTOR.specialty}`}
                   className="w-full h-full object-cover object-top"
                   onPlay={() => setVideoPaused(false)}
                   onPause={() => setVideoPaused(true)}
                 />
-                {/* leve fade só na base */}
                 <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-background/80 to-transparent" />
-                {/* teal rim light */}
-                <div className="absolute inset-0 rounded-[2rem] ring-1 ring-inset ring-primary/15" />
-                {/* Botão pausar/reproduzir (WCAG 2.2.2) */}
+                <div className="absolute inset-0 rounded-[1.75rem] lg:rounded-[2rem] ring-1 ring-inset ring-primary/15" />
                 <button
                   type="button"
                   onClick={toggleVideo}
                   aria-label={videoPaused ? "Reproduzir vídeo" : "Pausar vídeo"}
-                  className="absolute bottom-3 right-3 z-10 w-9 h-9 rounded-full glass-panel flex items-center justify-center text-foreground/90 hover:text-foreground hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors"
+                  className="absolute bottom-2 right-2 z-10 w-9 h-9 rounded-full glass-panel flex items-center justify-center text-foreground/90 hover:text-foreground hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-colors"
                 >
                   {videoPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
                 </button>
               </div>
 
-              {/* Floating glass credential card */}
-              <div className="absolute -bottom-5 -left-4 sm:-left-10 glass-panel rounded-2xl px-4 py-3 flex items-center gap-3 opacity-0 animate-slide-up animation-delay-700">
-                <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
-                  <ShieldCheck className="w-5 h-5 text-primary" />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-bold text-foreground leading-tight">{DOCTOR.name}</p>
-                  <p className="text-xs text-muted-foreground leading-tight">{DOCTOR.crm}</p>
-                </div>
-              </div>
-
-              {/* Floating Google rating chip */}
-              <div className="absolute top-4 -right-3 sm:-right-6 glass-panel rounded-xl px-3 py-2 flex items-center gap-1.5 opacity-0 animate-slide-up animation-delay-700">
+              {/* Google rating chip — só desktop pra reduzir ruído no mobile */}
+              <div className="absolute top-4 -right-3 sm:-right-6 hidden sm:flex glass-panel rounded-xl px-3 py-2 items-center gap-1.5">
                 <Star className="w-4 h-4 text-accent fill-accent" />
                 <span className="text-sm font-bold text-foreground">{reviews.rating.toFixed(1)}</span>
                 <span className="text-xs text-muted-foreground">Google</span>
@@ -200,14 +161,5 @@ const HeroSection = () => {
     </section>
   );
 };
-
-/* ---------- Sub-component ---------- */
-
-const ProofChip = ({ main, sub }: { main: React.ReactNode; sub: string }) => (
-  <div className="glass-panel rounded-xl px-4 py-2.5 text-left">
-    <div className="text-base text-foreground leading-none mb-1">{main}</div>
-    <div className="text-xs text-muted-foreground leading-none">{sub}</div>
-  </div>
-);
 
 export default HeroSection;

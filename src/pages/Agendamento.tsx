@@ -131,6 +131,7 @@ const Agendamento = () => {
       page_path: "/agendamento",
       page_type: "landing_agendamento",
     });
+    pushDL({ event: "booking_view", page_type: "landing_agendamento" });
 
     try {
       const params = new URLSearchParams(window.location.search);
@@ -170,6 +171,7 @@ const Agendamento = () => {
     if (!formStartFiredRef.current) {
       formStartFiredRef.current = true;
       trackFormStart("landing_agendamento");
+      pushDL({ event: "booking_start", page_type: "landing_agendamento" });
     }
     setFormData((prev) => ({ ...prev, ...data }));
   };
@@ -183,6 +185,7 @@ const Agendamento = () => {
   const nextStep = async () => {
     if (currentStep < totalSteps) {
       trackStepCompleted(currentStep, "landing_agendamento");
+      pushDL({ event: "booking_step_completed", page_type: "landing_agendamento", step: currentStep });
       if (currentStep === 2 && !leadId) {
         const leadData = {
           nome_completo: formData.fullName,
@@ -335,6 +338,15 @@ const Agendamento = () => {
           id: leadId ?? null,
           appointmentType: formData.appointmentTypeName,
           location: formData.locationName,
+        });
+        pushDL({
+          event: "booking_submit",
+          page_type: "landing_agendamento",
+          appointment_id: leadId ?? null,
+          appointment_type: formData.appointmentTypeName,
+          location: formData.locationName,
+          value: 300,
+          currency: "BRL",
         });
       }
 

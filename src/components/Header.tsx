@@ -1,11 +1,10 @@
-import { Menu, X, LogIn, CalendarCheck, Phone } from "lucide-react";
+import { Menu, X, CalendarCheck, Phone } from "lucide-react";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { DOCTOR } from "@/lib/constants";
 import logoImage from "@/assets/dr-juliano-logo.svg";
 
@@ -13,7 +12,6 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("");
   const [scrolled, setScrolled] = useState(false);
-  const { user } = useAuth();
   const { trackWhatsAppClick, trackCTAClick } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
   const { waLinkBare, display } = useSiteWhatsApp();
@@ -101,19 +99,11 @@ const Header = () => {
 
           {/* CTA Desktop */}
           <div className="hidden md:flex items-center gap-2">
-            {!user && (
-              <Link to="/auth">
-                <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
-                  <LogIn className="h-5 w-5" />
-                  Entrar
-                </Button>
-              </Link>
-            )}
             <Link
               to="/agendamento"
               onClick={() => trackCTAClick('agendar_consulta', 'header_desktop', 'Agendar Online')}
             >
-              <Button variant="obsidian" size="sm" className="gap-1.5">
+              <Button variant="obsidian" size="sm" className="gap-1.5 min-h-[44px]">
                 <CalendarCheck className="h-5 w-5" />
                 Agendar avaliação
               </Button>
@@ -122,30 +112,17 @@ const Header = () => {
 
           {/* Mobile Actions */}
           <div className="flex md:hidden items-center gap-1.5">
-            <a
-              href={waLinkBare}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                trackWhatsAppClick(waLinkBare, display, 'whatsapp_header', 'header_top');
-                trackMetaContact('WhatsApp');
-              }}
-              className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
-              aria-label="WhatsApp"
-            >
-              <Phone className="w-4 h-4" />
-            </a>
             <Link
               to="/agendamento"
               onClick={() => trackCTAClick('agendar_consulta', 'header_mobile', 'Agendar')}
             >
-              <Button variant="obsidian" size="sm" className="gap-1 text-xs px-3 py-1.5 h-auto">
+              <Button variant="obsidian" size="sm" className="gap-1 text-xs px-3 min-h-[44px]">
                 <CalendarCheck className="h-3.5 w-3.5" />
                 Agendar
               </Button>
             </Link>
             <button
-              className="text-foreground p-2 rounded-lg hover:bg-secondary transition-colors"
+              className="text-foreground p-2 rounded-lg hover:bg-secondary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label={isMenuOpen ? "Fechar menu" : "Abrir menu"}
             >
@@ -177,18 +154,20 @@ const Header = () => {
 
               <div className="h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent my-2" />
 
-              <div className={`transition-all duration-300 ${isMenuOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}
-                style={{ transitionDelay: isMenuOpen ? `${navItems.length * 50}ms` : '0ms' }}
+              <a
+                href={waLinkBare}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  trackWhatsAppClick(waLinkBare, display, 'whatsapp_header', 'header_menu_mobile');
+                  trackMetaContact('WhatsApp');
+                  setIsMenuOpen(false);
+                }}
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-primary hover:bg-primary/10 transition-colors min-h-[44px]"
               >
-                {!user && (
-                  <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                    <Button variant="ghost" size="sm" className="w-full gap-2 justify-start px-4">
-                      <LogIn className="h-4 w-4" />
-                      Entrar
-                    </Button>
-                  </Link>
-                )}
-              </div>
+                <Phone className="w-4 h-4" />
+                Falar no WhatsApp
+              </a>
             </nav>
           </div>
         </div>

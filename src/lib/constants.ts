@@ -15,7 +15,7 @@ export const GOOGLE_REVIEWS = {
 export const DOCTOR = {
   name: "Dr. Juliano Machado",
   specialty: "Oftalmologista",
-  crm: "CRM 15253",
+  crm: "CRM-PA 15253",
   yearsExperience: 13,
   patientsServed: 6000,
   cities: "Paragominas e Belém",
