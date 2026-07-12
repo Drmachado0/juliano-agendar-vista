@@ -156,7 +156,7 @@ const FAQ = [
 /** Hook: mostra a barra sticky mobile só quando o hero saiu da viewport e o footer ainda não entrou. */
 const useMobileStickyVisibility = (
   heroRef: React.RefObject<HTMLElement>,
-  footerRef: React.RefObject<HTMLElement>,
+  footerRef: React.RefObject<HTMLDivElement>,
 ) => {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
