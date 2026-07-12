@@ -161,28 +161,8 @@ const LocationsSection = () => {
               );
             })}
 
-            <button
-              type="button"
-              aria-expanded={showBelem}
-              aria-controls="belem-locations-region"
-              onClick={() => {
-                if (showBelem) {
-                  // Ao ocultar Belém, se o ativo era Belém volta pra Clinicor.
-                  if (locations[activeLocation]?.city === "Belém") setActiveLocation(0);
-                  setShowBelem(false);
-                } else {
-                  setShowBelem(true);
-                  if (!belemTrackedRef.current) {
-                    belemTrackedRef.current = true;
-                    trackCTAClick("ver_locais_belem", "locations", "Ver locais em Belém");
-                  }
-                }
-              }}
-              className="w-full text-sm font-medium text-muted-foreground hover:text-primary transition-colors py-3 px-4 rounded-xl border border-dashed border-border/60 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[48px]"
-            >
-              {showBelem ? "− Ocultar locais em Belém" : "+ Ver 2 locais em Belém"}
-            </button>
           </div>
+
 
 
           {/* Map — Google Maps real do local selecionado (desktop apenas; mobile mostra cards) */}
