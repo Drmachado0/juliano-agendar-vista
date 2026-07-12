@@ -837,3 +837,65 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* =============================================================
+ * Agendamento Premium — /paragominas/agendamento
+ * Escopo isolado. Sobrescreve tokens shadcn dentro do container
+ * para converter o formulário (dark padrão) em marfim editorial.
+ * ============================================================= */
+.theme-paragominas-agendamento {
+  --background: 42 24% 93%;              /* marfim */
+  --foreground: 189 74% 12%;             /* petróleo */
+  --card: 0 0% 100%;                     /* branco puro (form) */
+  --card-foreground: 189 74% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 189 74% 12%;
+  --primary: 189 74% 12%;                /* petróleo para CTA */
+  --primary-foreground: 42 24% 93%;
+  --secondary: 42 20% 96%;
+  --secondary-foreground: 189 74% 12%;
+  --muted: 42 15% 90%;
+  --muted-foreground: 189 15% 32%;
+  --accent: 38 46% 62%;                  /* champagne */
+  --accent-foreground: 189 74% 12%;
+  --destructive: 0 74% 42%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 189 30% 82%;
+  --input: 189 30% 82%;
+  --ring: 175 65% 55%;                   /* ciano (foco) */
+  color: var(--pgm-petroleo);
+  background: var(--pgm-marfim);
+  font-family: 'Inter', 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+.theme-paragominas-agendamento h1,
+.theme-paragominas-agendamento h2,
+.theme-paragominas-agendamento h3 {
+  font-family: 'Fraunces', 'Playfair Display', Georgia, serif;
+  letter-spacing: -0.015em;
+}
+.theme-paragominas-agendamento .pgm-step-line {
+  height: 1px; background: var(--pgm-line); flex: 1;
+}
+.theme-paragominas-agendamento .pgm-step-line--done {
+  background: var(--pgm-champagne);
+}
+.theme-paragominas-agendamento .pgm-step-icon {
+  width: 40px; height: 40px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--pgm-line);
+  background: #fff; color: var(--pgm-petroleo);
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+.theme-paragominas-agendamento .pgm-step-icon--current {
+  background: var(--pgm-petroleo); color: var(--pgm-marfim);
+  border-color: var(--pgm-petroleo);
+}
+.theme-paragominas-agendamento .pgm-step-icon--done {
+  background: var(--pgm-champagne); color: var(--pgm-petroleo);
+  border-color: var(--pgm-champagne);
+}
+.theme-paragominas-agendamento .pgm-step-btn:focus-visible {
+  outline: 2px solid var(--pgm-ciano);
+  outline-offset: 3px;
+  border-radius: 999px;
+}
