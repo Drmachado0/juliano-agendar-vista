@@ -408,7 +408,7 @@ const Paragominas = () => {
                         <div>
                           <h3 className="text-lg font-semibold text-foreground">{l.name}</h3>
                           <p className="text-xs text-muted-foreground uppercase tracking-wide mt-0.5">
-                            Paragominas · PA
+                            {l.cityLabel}
                           </p>
                         </div>
                       </div>
