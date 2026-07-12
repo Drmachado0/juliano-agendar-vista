@@ -47,6 +47,15 @@ const BASE_URL = "https://drjulianomachado.com";
 
 const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
   const url = `${BASE_URL}/procedimentos/${data.slug}`;
+  const locations = data.locations ?? {
+    label: "Paragominas e Belém",
+    sidebarItems: [
+      "Clinicor e Hospital Geral — Paragominas",
+      "IOB e Vitria — Belém",
+    ],
+    ctaSuffix: "Paragominas e Belém",
+  };
+
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
