@@ -74,12 +74,21 @@ describe("Paragominas landing page", () => {
     expect(main.textContent || "").not.toMatch(/Capsulotomia/i);
   });
 
-  it("apresenta os 4 locais de atendimento (2 em Paragominas + 2 em Belém)", () => {
+  it("apresenta apenas os 2 locais em Paragominas (sem Belém na landing)", () => {
     renderPage();
     expect(screen.getAllByText(/Clinicor/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Hospital Geral de Paragominas/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Instituto de Olhos de Bel[eé]m/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Vitria/i).length).toBeGreaterThan(0);
+    const main = screen.getByRole("main");
+    expect(main.textContent || "").not.toMatch(/Bel[eé]m/i);
+  });
+
+  it("renderiza foto do Dr. Juliano no hero com alt descritivo", () => {
+    renderPage();
+    const img = screen.getByAltText(/Dr\. Juliano Machado/i) as HTMLImageElement;
+    expect(img).toBeTruthy();
+    expect(img.getAttribute("width")).toBeTruthy();
+    expect(img.getAttribute("height")).toBeTruthy();
+    expect(img.getAttribute("fetchpriority")).toBe("high");
   });
 
   it("CTAs específicos da landing carregam UTMs internas da campanha paragominas", () => {
