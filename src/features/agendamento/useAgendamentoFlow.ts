@@ -266,7 +266,7 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
           error.message.includes("ocupado");
 
         trackAppointmentError(
-          pageType,
+          pageType as any,
           isAvailabilityError ? "availability" : "other",
           error.message,
         );
