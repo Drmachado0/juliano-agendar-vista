@@ -9,20 +9,20 @@ const steps = [
   {
     number: "01",
     icon: CalendarDays,
-    title: "Escolha data e horário",
-    description: "Veja os horários livres no calendário e selecione o melhor pra você.",
+    title: "Escolha o local e a data",
+    description: "Selecione a clínica em Paragominas (ou Belém) e o dia que funciona pra você.",
   },
   {
     number: "02",
     icon: ListChecks,
     title: "Informe seus dados",
-    description: "Nome, contato, convênio ou particular e tipo de atendimento.",
+    description: "Nome, WhatsApp, convênio ou particular e tipo de atendimento.",
   },
   {
     number: "03",
     icon: CheckCircle2,
-    title: "A equipe confirma",
-    description: "Você recebe a confirmação pelo WhatsApp com data, local e orientações.",
+    title: "Receba a confirmação",
+    description: "A equipe confirma pelo WhatsApp com data, local e orientações.",
   },
 ];
 
