@@ -150,19 +150,12 @@ const TestimonialsSection = () => {
 
   const pool = useMemo<Testimonial[]>(() => {
     if (!avaliacoesGoogle || avaliacoesGoogle.length === 0) return [];
-    const deduped = dedupe(avaliacoesGoogle);
-    // Ordena por data mais recente e depois rating — não altera conteúdo.
-    const sorted = [...deduped].sort((a, b) => {
-      const tb = b.time_epoch || 0;
-      const ta = a.time_epoch || 0;
-      if (tb !== ta) return tb - ta;
-      return (b.rating || 0) - (a.rating || 0);
-    });
-    const converted = sorted
-      .map(convertToTestimonial)
-      .filter((x): x is Testimonial => x !== null);
-    return converted.slice(0, MAX_CARDS);
+    return buildTestimonialPool(avaliacoesGoogle).map((t) => ({
+      ...t,
+      avatar: initialsFrom(t.name),
+    }));
   }, [avaliacoesGoogle]);
+  void MAX_TESTIMONIALS; // referenciado para manter o import próximo ao contrato
 
   // Nota exibida: prioriza agregado real vindo do Google (site_config).
   const displayRating = reviews.hasRealAggregate
