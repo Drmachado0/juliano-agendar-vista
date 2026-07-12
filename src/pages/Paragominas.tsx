@@ -38,9 +38,21 @@ import { buildAgendamentoLink } from "@/lib/agendamentoLink";
 
 const CANONICAL = "https://drjulianomachado.com/paragominas";
 
-const LOCAIS = [
+type Local = {
+  name: string;
+  city: "Paragominas" | "Belém";
+  cityLabel: string;
+  address: string;
+  mapsLink: string;
+  icon: typeof Heart;
+  utmContent: string;
+};
+
+const LOCAIS: readonly Local[] = [
   {
     name: "Clinicor",
+    city: "Paragominas",
+    cityLabel: "Paragominas · PA",
     address: "Rua Eixo W1, R. Célio Miranda, N° 729 — Paragominas/PA",
     mapsLink:
       "https://maps.google.com/?q=Clinicor+Rua+Celio+Miranda+729+Paragominas+PA",
@@ -49,11 +61,34 @@ const LOCAIS = [
   },
   {
     name: "Hospital Geral de Paragominas",
+    city: "Paragominas",
+    cityLabel: "Paragominas · PA",
     address: "R. Santa Terezinha, 304 — Centro, Paragominas/PA",
     mapsLink:
       "https://maps.google.com/?q=Hospital+Geral+Paragominas+Santa+Terezinha+304",
     icon: Hospital,
     utmContent: "local_hgp",
+  },
+  {
+    name: "Instituto de Olhos de Belém",
+    city: "Belém",
+    cityLabel: "Belém · PA",
+    address: "Av. Generalíssimo Deodoro, 904 — Nazaré, Belém/PA",
+    mapsLink:
+      "https://maps.google.com/?q=Instituto+de+Olhos+de+Belem+Av+Generalissimo+Deodoro+904+Nazare+Belem+PA",
+    icon: Eye,
+    utmContent: "local_iob_belem",
+  },
+  {
+    name: "Vitria — Ed. Síntese 21",
+    city: "Belém",
+    cityLabel: "Belém · PA",
+    address:
+      "Av. Conselheiro Furtado, 2865 — Sobreloja, salas 08-10, São Braz, Belém/PA",
+    mapsLink:
+      "https://maps.google.com/?q=Vitria+Ed+Sintese+21+Av+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA",
+    icon: Hospital,
+    utmContent: "local_vitria_belem",
   },
 ] as const;
 
