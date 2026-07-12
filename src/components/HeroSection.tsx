@@ -19,17 +19,16 @@ const HeroSection = () => {
   );
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoPaused, setVideoPaused] = useState(false);
-  // Decide se renderiza vídeo (desktop, sem reduced-motion e sem save-data).
-  // No mobile mantemos só a imagem WebP estática pra não baixar o mp4.
+  // Renderiza o vídeo sempre que possível (inclusive mobile).
+  // Só desabilita se o usuário pediu reduced-motion ou está em save-data/2g.
   const [enableVideo, setEnableVideo] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const conn = (navigator as any).connection;
     const saveData = !!(conn && (conn.saveData || /2g/.test(conn.effectiveType || "")));
-    setEnableVideo(isDesktop && !reducedMotion && !saveData);
+    setEnableVideo(!reducedMotion && !saveData);
   }, []);
 
   const toggleVideo = () => {
