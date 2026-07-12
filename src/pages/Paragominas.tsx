@@ -432,7 +432,7 @@ const Paragominas = () => {
                           width={900}
                           height={1200}
                           alt="Dr. Juliano Machado, oftalmologista, durante atendimento clínico"
-                          fetchPriority="high"
+                          {...({ fetchpriority: "high" } as Record<string, string>)}
                           decoding="async"
                           className="block w-full h-auto object-cover"
                         />
