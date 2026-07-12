@@ -123,7 +123,7 @@ const ConsultationDetailsStep = ({
             }}
             className="grid grid-cols-1 gap-2"
           >
-            {tiposAtendimento.map((tipo) => (
+            {tiposVisiveis.map((tipo) => (
               <Label
                 key={tipo.id}
                 htmlFor={tipo.slug}
