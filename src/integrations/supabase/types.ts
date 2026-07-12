@@ -1385,6 +1385,8 @@ export type Database = {
           lida: boolean | null
           mensagem_externa_id: string | null
           payload: Json | null
+          provider: string | null
+          provider_message_id: string | null
           status_envio: string | null
           telefone: string
           telefone_canonico: string | null
@@ -1400,6 +1402,8 @@ export type Database = {
           lida?: boolean | null
           mensagem_externa_id?: string | null
           payload?: Json | null
+          provider?: string | null
+          provider_message_id?: string | null
           status_envio?: string | null
           telefone: string
           telefone_canonico?: string | null
@@ -1415,6 +1419,8 @@ export type Database = {
           lida?: boolean | null
           mensagem_externa_id?: string | null
           payload?: Json | null
+          provider?: string | null
+          provider_message_id?: string | null
           status_envio?: string | null
           telefone?: string
           telefone_canonico?: string | null
@@ -1890,7 +1896,9 @@ export type Database = {
           net_timeouts_24h: number | null
           net_ultimo_erro_at: string | null
           net_ultimo_erro_status: number | null
+          out_confirmados_24h: number | null
           pacientes_aguardando_resposta: number | null
+          pacientes_ultima_msg_in: number | null
         }
         Relationships: []
       }
@@ -2453,7 +2461,9 @@ export type Database = {
           net_timeouts_24h: number
           net_ultimo_erro_at: string
           net_ultimo_erro_status: number
+          out_confirmados_24h: number
           pacientes_aguardando_resposta: number
+          pacientes_ultima_msg_in: number
         }[]
       }
       set_agendamento_sandbox: {
