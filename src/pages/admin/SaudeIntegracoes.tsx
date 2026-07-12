@@ -151,6 +151,32 @@ export default function SaudeIntegracoes() {
         </div>
 
         <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Chamadas pg_net (últimas 24h)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-4">
+              {netCards.map((c) => (
+                <div key={c.label} className="rounded-md border p-3 flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-muted-foreground">{c.label}</div>
+                    <div className={`text-2xl font-semibold ${c.danger ? "text-destructive" : ""}`}>{c.value}</div>
+                  </div>
+                  <c.icon className={`h-5 w-5 ${c.danger ? "text-destructive" : "text-muted-foreground"}`} />
+                </div>
+              ))}
+            </div>
+            {saude?.net_ultimo_erro_at && (
+              <div className="text-xs text-muted-foreground">
+                Último erro pg_net:{" "}
+                <strong>{saude.net_ultimo_erro_status ?? "timeout"}</strong> em{" "}
+                {new Date(saude.net_ultimo_erro_at).toLocaleString("pt-BR")}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Recuperar mensagens órfãs</CardTitle>
           </CardHeader>
