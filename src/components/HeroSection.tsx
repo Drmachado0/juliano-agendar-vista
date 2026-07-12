@@ -66,14 +66,14 @@ const HeroSection = () => {
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-panel mb-5">
               <MapPin className="w-3.5 h-3.5 text-primary" />
               <span className="text-xs font-semibold text-foreground/90 tracking-wide uppercase">
-                Oftalmologista em Paragominas
+                Oftalmologista em Paragominas e Belém
               </span>
             </div>
 
             {/* Heading — LCP, sem animação de opacity/delay */}
             <h1 className="text-[2rem] leading-[1.1] sm:text-4xl lg:text-[3.5rem] font-extrabold mb-5 text-foreground">
               Cuide da sua visão com{" "}
-              <span className="gradient-text-accent">atendimento completo em Paragominas</span>
+              <span className="gradient-text-accent">atendimento em Paragominas e Belém</span>
             </h1>
 
             {/* Subtitle — apoio direto */}
@@ -81,7 +81,9 @@ const HeroSection = () => {
               Consultas e acompanhamento oftalmológico com o{" "}
               <span className="text-foreground font-semibold">{DOCTOR.name}</span> na{" "}
               <span className="text-foreground font-semibold">Clinicor</span> e no{" "}
-              <span className="text-foreground font-semibold">HGP</span>.
+              <span className="text-foreground font-semibold">HGP</span> (Paragominas), e no{" "}
+              <span className="text-foreground font-semibold">IOB</span> e{" "}
+              <span className="text-foreground font-semibold">Vitria</span> (Belém).
             </p>
 
             {/* CTAs — CTA primária "Ver horários disponíveis" */}
