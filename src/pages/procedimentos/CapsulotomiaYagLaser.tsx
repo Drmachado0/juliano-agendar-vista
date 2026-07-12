@@ -3,14 +3,19 @@ import ProcedurePageLayout, { type ProcedurePageData } from "@/components/proced
 const data: ProcedurePageData = {
   slug: "capsulotomia-yag-laser",
   procedureName: "Capsulotomia YAG Laser",
-  pageTitle: "Capsulotomia YAG Laser em Paragominas e Belém | Dr. Juliano Machado",
+  pageTitle: "Capsulotomia YAG Laser em Belém | Dr. Juliano Machado",
   metaDescription:
-    "Capsulotomia YAG Laser em Paragominas e Belém com o Dr. Juliano Machado. Procedimento rápido e indolor para tratar a opacificação da cápsula posterior após cirurgia de catarata. Agende sua consulta.",
-  h1: "Capsulotomia YAG Laser em Paragominas e Belém",
+    "Capsulotomia YAG Laser em Belém com o Dr. Juliano Machado. Procedimento rápido e indolor para tratar a opacificação da cápsula posterior após cirurgia de catarata. Realizado em Belém, mediante avaliação e agendamento.",
+  h1: "Capsulotomia YAG Laser em Belém",
   intro:
-    "A capsulotomia YAG é um procedimento a laser realizado no consultório para tratar a opacificação da cápsula posterior — também conhecida como catarata secundária — que pode ocorrer meses ou anos após a cirurgia de catarata. O Dr. Juliano Machado realiza esse tratamento em Paragominas e em Belém.",
+    "A capsulotomia YAG é um procedimento a laser realizado no consultório para tratar a opacificação da cápsula posterior — também conhecida como catarata secundária — que pode ocorrer meses ou anos após a cirurgia de catarata. Procedimento realizado em Belém, mediante avaliação e agendamento com o Dr. Juliano Machado.",
   medicalProcedureType: "https://schema.org/TherapeuticProcedure",
   bodyLocation: "Olho",
+  locations: {
+    label: "Belém",
+    sidebarItems: ["IOB e Vitria — Belém"],
+    ctaSuffix: "Belém",
+  },
   sections: [
     {
       title: "O que é a opacificação da cápsula posterior",

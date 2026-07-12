@@ -31,12 +31,31 @@ export interface ProcedurePageData {
   faqs: ProcedureFAQ[];
   medicalProcedureType?: string; // schema.org procedureType
   bodyLocation?: string;
+  /** Override opcional dos locais exibidos (chip, sidebar e CTA final).
+   *  Usado quando o procedimento é ofertado apenas em algumas cidades. */
+  locations?: {
+    /** Rótulo curto exibido no chip do hero. Ex.: "Belém" ou "Paragominas e Belém". */
+    label: string;
+    /** Itens da sidebar (cidade + clínicas). */
+    sidebarItems: string[];
+    /** Frase usada no CTA final ("Atendimento em <ctaSuffix>."). */
+    ctaSuffix: string;
+  };
 }
 
 const BASE_URL = "https://drjulianomachado.com";
 
 const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
   const url = `${BASE_URL}/procedimentos/${data.slug}`;
+  const locations = data.locations ?? {
+    label: "Paragominas e Belém",
+    sidebarItems: [
+      "Clinicor e Hospital Geral — Paragominas",
+      "IOB e Vitria — Belém",
+    ],
+    ctaSuffix: "Paragominas e Belém",
+  };
+
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -155,7 +174,7 @@ const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
 
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-6 text-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-primary" /> Paragominas e Belém
+                  <MapPin className="w-4 h-4 text-primary" /> {locations.label}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <Clock className="w-4 h-4 text-primary" /> Resposta em até 2h úteis
@@ -230,14 +249,12 @@ const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
                     </Button>
                   </Link>
                   <div className="mt-5 pt-5 border-t border-border/50 space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>Clinicor e Hospital Geral — Paragominas</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>IOB e Vitria — Belém</span>
-                    </div>
+                    {locations.sidebarItems.map((item) => (
+                      <div key={item} className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                        <span>{item}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </aside>
@@ -254,7 +271,7 @@ const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
                 Pronto para cuidar da sua visão?
               </h2>
               <p className="text-muted-foreground mb-8">
-                Agende sua consulta online em poucos minutos. Atendimento em Paragominas e Belém.
+                Agende sua consulta online em poucos minutos. Atendimento em {locations.ctaSuffix}.
               </p>
               <Link to="/agendamento">
                 <Button variant="hero" size="lg" className="gap-2">
