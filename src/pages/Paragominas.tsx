@@ -385,10 +385,10 @@ const Paragominas = () => {
             <div className="container mx-auto px-4 max-w-5xl">
               <div className="text-center mb-10">
                 <h2 id="locais-heading" className="text-2xl md:text-3xl font-bold text-foreground mb-3">
-                  Onde atendo em <span className="gradient-text">Paragominas</span>
+                  Onde atendo em <span className="gradient-text">Paragominas</span> e Belém
                 </h2>
                 <p className="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto">
-                  Escolha o local mais conveniente para a sua consulta.
+                  4 locais de atendimento. Escolha o mais conveniente para a sua consulta.
                 </p>
               </div>
 
