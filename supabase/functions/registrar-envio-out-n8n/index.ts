@@ -124,26 +124,42 @@ serve(async (req) => {
   // 2) Normalizar telefone
   //    - telefoneNormalizado (E.164 sem símbolos) → mensagens_whatsapp.telefone
   //    - telefoneCanonico    (BR sem DDI)          → agendamentos.telefone_canonico
-  const { data: telNorm } = await supabase.rpc("normalizar_telefone", {
+  const { data: telNorm, error: telErr } = await supabase.rpc("normalizar_telefone", {
     p_telefone: body.telefone,
   });
-  const telefoneNormalizado =
-    (telNorm as string) ?? body.telefone.replace(/\D/g, "");
-
-  let telefoneCanon: string | null = null;
-  try {
-    const { data: telC } = await supabase.rpc("telefone_canonico", {
-      p_tel: body.telefone,
+  if (telErr) {
+    await supabase.from("system_logs").insert({
+      level: "error",
+      category: "edge_function",
+      source: "registrar-envio-out-n8n",
+      message: "normalizar_telefone_falhou",
+      details: { request_id: rid, pg_code: (telErr as any).code ?? null },
+      request_id: rid,
     });
-    if (typeof telC === "string" && telC.length > 0) telefoneCanon = telC;
-  } catch {
-    // RPC ausente em ambientes antigos — usa fallback local
+    return json({ error: "normalizar_telefone_falhou", request_id: rid }, 500, headers);
+  }
+  const telefoneNormalizado =
+    (typeof telNorm === "string" && telNorm.length > 0
+      ? telNorm
+      : body.telefone.replace(/\D/g, ""));
+
+  // telefone_canonico: RPC opcional; erro NÃO fatal — usa fallback local
+  let telefoneCanon: string | null = null;
+  const { data: telC, error: telCErr } = await supabase.rpc("telefone_canonico", {
+    p_tel: body.telefone,
+  });
+  if (telCErr) {
+    console.warn("[registrar-envio-out-n8n] telefone_canonico RPC falhou; usando fallback");
+  } else if (typeof telC === "string" && telC.length > 0) {
+    telefoneCanon = telC;
   }
   if (!telefoneCanon) telefoneCanon = canonicalFallback(body.telefone);
 
   // 3) Resolver agendamento
   //    a) explícito: validar existência + telefone_canonico compatível (409 no mismatch)
-  //    b) sem explícito: match único por telefone_canonico
+  //    b) sem explícito: match ÚNICO por telefone_canonico entre ATIVOS não-sandbox
+  //       (mesma regra da RPC vincular_mensagem_por_telefone: exclui terminais
+  //       ATENDIDO/CANCELADO/COMPARECEU case-insensitive)
   let agendamentoId: string | null = body.agendamento_id ?? null;
   let ambiguo = false;
 
@@ -154,17 +170,21 @@ serve(async (req) => {
       .eq("id", agendamentoId)
       .maybeSingle();
     if (agErr) {
-      return json({ error: `agendamento lookup: ${agErr.message}` }, 500, headers);
+      return json({ error: "agendamento_lookup_failed", request_id: rid }, 500, headers);
     }
     if (!agend) {
-      return json({ error: "agendamento_not_found", agendamento_id: agendamentoId }, 404, headers);
+      return json(
+        { error: "agendamento_not_found", agendamento_id: agendamentoId, request_id: rid },
+        404,
+        headers,
+      );
     }
     if (telefoneCanon && agend.telefone_canonico && agend.telefone_canonico !== telefoneCanon) {
       await supabase.from("system_logs").insert({
         level: "warn",
         category: "edge_function",
         source: "registrar-envio-out-n8n",
-        message: "mismatch telefone x agendamento — recusado (409)",
+        message: "telefone_agendamento_mismatch",
         details: {
           request_id: rid,
           agendamento_id: agendamentoId,
@@ -174,24 +194,31 @@ serve(async (req) => {
         request_id: rid,
       });
       return json(
-        { error: "telefone_agendamento_mismatch", agendamento_id: agendamentoId },
+        { error: "telefone_agendamento_mismatch", agendamento_id: agendamentoId, request_id: rid },
         409,
         headers,
       );
     }
   } else if (telefoneCanon) {
+    // Ativos = não sandbox E status_crm NÃO terminal (case-insensitive)
+    const TERMINAIS = ["ATENDIDO", "CANCELADO", "COMPARECEU"];
     const { data: matches, error: mErr } = await supabase
       .from("agendamentos")
-      .select("id, status_crm, created_at")
+      .select("id, status_crm, is_sandbox, created_at")
       .eq("telefone_canonico", telefoneCanon)
       .order("created_at", { ascending: false })
-      .limit(2);
+      .limit(20);
     if (mErr) {
-      return json({ error: `agendamentos: ${mErr.message}` }, 500, headers);
+      return json({ error: "agendamentos_lookup_failed", request_id: rid }, 500, headers);
     }
-    if (matches && matches.length === 1) {
-      agendamentoId = matches[0].id;
-    } else if (matches && matches.length > 1) {
+    const ativos = (matches ?? []).filter(
+      (r) =>
+        r.is_sandbox !== true &&
+        !TERMINAIS.includes(String(r.status_crm ?? "").toUpperCase()),
+    );
+    if (ativos.length === 1) {
+      agendamentoId = ativos[0].id;
+    } else if (ativos.length > 1) {
       ambiguo = true;
     }
   }
