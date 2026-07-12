@@ -5,12 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Activity, RefreshCw, Link2, AlertTriangle } from "lucide-react";
+import { Activity, RefreshCw, Link2, AlertTriangle, CheckCircle2, XCircle, Clock } from "lucide-react";
 
 interface SaudeRow {
   mensagens_orfas: number;
   pacientes_aguardando_resposta: number;
   intents_24h: number;
+  net_2xx_24h: number;
+  net_4xx_24h: number;
+  net_5xx_24h: number;
+  net_timeouts_24h: number;
+  net_ultimo_erro_at: string | null;
+  net_ultimo_erro_status: number | null;
   gerado_em: string;
 }
 
