@@ -5,6 +5,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sendWhatsappTextMessage } from "../_shared/evolutionApiClient.ts";
+import { requireN8nSecret, unauthorizedResponse, requestId } from "../_shared/authGuards.ts";
+
 
 
 const corsHeaders = {
@@ -305,8 +307,17 @@ async function escalarParaHumano(
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   const t0 = Date.now();
+  const rid = requestId(req);
+
+  // Guard server-to-server: aceita header x-n8n-secret (ou aliases) validado no Vault.
+  const guard = await requireN8nSecret(req);
+  if (!guard.ok) {
+    console.warn("[assistente-pre-agendamento] unauthorized", { rid, reason: guard.reason });
+    return unauthorizedResponse(guard.reason ?? "unauthorized", corsHeaders);
+  }
 
   try {
+
     const body = (await req.json()) as ReqBody;
     if (!body?.telefone || !body?.conteudo) {
       return new Response(JSON.stringify({ error: "telefone e conteudo são obrigatórios" }), {

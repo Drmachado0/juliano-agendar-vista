@@ -129,3 +129,12 @@ verify_jwt = false
 
 [functions.login-secure]
 verify_jwt = false
+
+[functions.retentar-boas-vindas-pendentes]
+verify_jwt = false
+
+[functions.assistente-pre-agendamento]
+verify_jwt = false
+
+[functions.revelar-n8n-secret]
+verify_jwt = true

@@ -12,6 +12,8 @@ import {
 import { isBotPaused, isKnownInvalidWhatsapp } from '../_shared/whatsappGuards.ts';
 import { podeEnviarOutbound, LIMITES_PADRAO, logarBloqueioRateLimit } from '../_shared/rateLimitOutbound.ts';
 import { envioAutomaticoLiberado } from '../_shared/envioStatusGlobal.ts';
+import { requireCronSecret, unauthorizedResponse } from '../_shared/authGuards.ts';
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,20 +30,14 @@ serve(async (req) => {
   }
 
   try {
-    // Validar token de cron - OBRIGATÓRIO quando CRON_SECRET está configurado
-    const authHeader = req.headers.get('Authorization');
-    const cronSecret = Deno.env.get('CRON_SECRET');
-    
-    if (cronSecret) {
-      const expectedAuth = `Bearer ${cronSecret}`;
-      if (!authHeader || authHeader !== expectedAuth) {
-        console.warn('[Confirmação] Token de cron inválido ou ausente');
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+    // Validar token de cron via Vault (timing-safe). Aceita x-cron-secret ou Authorization: Bearer.
+    const cronGuard = await requireCronSecret(req);
+    if (!cronGuard.ok) {
+      console.warn('[Confirmação] Token de cron inválido/ausente:', cronGuard.reason);
+      return unauthorizedResponse(cronGuard.reason ?? 'unauthorized', corsHeaders);
     }
+
+
 
     console.log('[Confirmação] Iniciando job de confirmações automáticas...');
 

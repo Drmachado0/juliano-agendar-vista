@@ -4,6 +4,8 @@ import { buscarTemplate, renderizarTemplate } from "../_shared/templateRenderer.
 import { isKnownInvalidWhatsapp } from "../_shared/whatsappGuards.ts";
 import { podeEnviarOutbound, LIMITES_PADRAO, logarBloqueioRateLimit } from "../_shared/rateLimitOutbound.ts";
 import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
+import { requireCronSecret } from "../_shared/authGuards.ts";
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,10 +17,12 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Aceita CRON_SECRET (cron job) OU JWT de admin (chamada manual do CRM)
+  // Aceita CRON_SECRET (via Vault, timing-safe) OU JWT de admin
   const authHeader = req.headers.get('Authorization') || '';
-  const cronSecret = Deno.env.get('CRON_SECRET');
-  const isCron = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
+  const cronGuard = await requireCronSecret(req);
+  const isCron = cronGuard.ok;
+
+
 
   let isAdmin = false;
   if (!isCron && authHeader.startsWith('Bearer ')) {

@@ -62,6 +62,7 @@ export type Database = {
           servico_id: string | null
           status_crm: string
           status_funil: string | null
+          telefone_canonico: string | null
           telefone_whatsapp: string
           tipo_atendimento: string
           ultimo_followup_em: string | null
@@ -120,6 +121,7 @@ export type Database = {
           servico_id?: string | null
           status_crm?: string
           status_funil?: string | null
+          telefone_canonico?: string | null
           telefone_whatsapp: string
           tipo_atendimento: string
           ultimo_followup_em?: string | null
@@ -178,6 +180,7 @@ export type Database = {
           servico_id?: string | null
           status_crm?: string
           status_funil?: string | null
+          telefone_canonico?: string | null
           telefone_whatsapp?: string
           tipo_atendimento?: string
           ultimo_followup_em?: string | null
@@ -1384,6 +1387,7 @@ export type Database = {
           payload: Json | null
           status_envio: string | null
           telefone: string
+          telefone_canonico: string | null
           tipo_mensagem: string | null
         }
         Insert: {
@@ -1398,6 +1402,7 @@ export type Database = {
           payload?: Json | null
           status_envio?: string | null
           telefone: string
+          telefone_canonico?: string | null
           tipo_mensagem?: string | null
         }
         Update: {
@@ -1412,6 +1417,7 @@ export type Database = {
           payload?: Json | null
           status_envio?: string | null
           telefone?: string
+          telefone_canonico?: string | null
           tipo_mensagem?: string | null
         }
         Relationships: [
@@ -1873,6 +1879,15 @@ export type Database = {
         }
         Relationships: []
       }
+      v_saude_integracoes: {
+        Row: {
+          gerado_em: string | null
+          intents_24h: number | null
+          mensagens_orfas: number | null
+          pacientes_aguardando_resposta: number | null
+        }
+        Relationships: []
+      }
       vw_crm_kanban: {
         Row: {
           agendamento_id: string | null
@@ -2078,6 +2093,7 @@ export type Database = {
       }
     }
     Functions: {
+      _cron_headers: { Args: never; Returns: Json }
       apagar_dados_paciente: {
         Args: { p_confirmar?: boolean; p_telefone: string }
         Returns: Json
@@ -2431,6 +2447,11 @@ export type Database = {
         Args: { p_backup_codes: string; p_secret: string; p_user_id: string }
         Returns: undefined
       }
+      telefone_canonico: { Args: { p_tel: string }; Returns: string }
+      transicionar_estado_agendamento: {
+        Args: { p_id: string; p_motivo?: string; p_novo_status_crm: string }
+        Returns: Json
+      }
       trigger_google_calendar_pull: { Args: never; Returns: undefined }
       unificar_duplicados: {
         Args: { p_principal_id?: string; p_telefone_normalizado: string }
@@ -2443,6 +2464,11 @@ export type Database = {
           mensagem: string
         }[]
       }
+      vincular_mensagem_por_telefone: {
+        Args: { p_mensagem_id: string; p_nome_contato?: string }
+        Returns: Json
+      }
+      vincular_mensagens_orfas: { Args: { p_dry_run?: boolean }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user"

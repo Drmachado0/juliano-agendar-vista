@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { requireN8nSecret, unauthorizedResponse } from "../_shared/authGuards.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,11 +42,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
-  const sharedSecret = Deno.env.get("N8N_SHARED_SECRET");
-  const provided = req.headers.get("x-n8n-secret");
-  if (!sharedSecret || !provided || provided !== sharedSecret) {
-    return json({ error: "Unauthorized" }, 401);
-  }
+  const guard = await requireN8nSecret(req);
+  if (!guard.ok) return unauthorizedResponse(guard.reason ?? "unauthorized", corsHeaders);
+
 
   let raw: unknown;
   try {
