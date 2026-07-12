@@ -71,7 +71,7 @@ const AgendarSimplesSection = () => {
             Agendar é <span className="gradient-text">simples</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-base md:text-lg leading-relaxed">
-            Em menos de 1 minuto você escolhe o horário e a equipe confirma — tudo pelo site, sem ligação.
+            Em três passos rápidos você registra seu pedido e a equipe confirma pelo WhatsApp.
           </p>
         </div>
 
