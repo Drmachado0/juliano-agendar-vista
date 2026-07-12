@@ -271,7 +271,7 @@ const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
                 Pronto para cuidar da sua visão?
               </h2>
               <p className="text-muted-foreground mb-8">
-                Agende sua consulta online em poucos minutos. Atendimento em Paragominas e Belém.
+                Agende sua consulta online em poucos minutos. Atendimento em {locations.ctaSuffix}.
               </p>
               <Link to="/agendamento">
                 <Button variant="hero" size="lg" className="gap-2">
