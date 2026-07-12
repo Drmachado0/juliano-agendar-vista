@@ -25,13 +25,22 @@ export function useGoogleReviews(): GoogleReviewsData {
   const { data } = useQuery({
     queryKey: ["google-reviews-meta"],
     queryFn: async (): Promise<SiteConfigReviews | null> => {
+      // SELECT * evita 400 (código 42703) caso as colunas
+      // google_reviews_total/google_rating ainda não tenham sido criadas em
+      // site_config — schema opcional criado pela sync do Google.
       const { data, error } = await supabase
         .from("site_config" as any)
-        .select("google_reviews_total, google_rating")
+        .select("*")
         .eq("id", true)
         .maybeSingle();
-      if (error) return null; // colunas ausentes/sem sync → usa fallback
-      return (data as unknown as SiteConfigReviews) ?? null;
+      if (error || !data) return null;
+      const row = data as Record<string, unknown>;
+      return {
+        google_reviews_total:
+          typeof row.google_reviews_total === "number" ? row.google_reviews_total : null,
+        google_rating:
+          typeof row.google_rating === "number" ? row.google_rating : null,
+      };
     },
     staleTime: 1000 * 60 * 60, // 1h
   });
