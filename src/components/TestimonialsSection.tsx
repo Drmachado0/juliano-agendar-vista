@@ -11,7 +11,7 @@ import {
   Play,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { buscarAvaliacoesGoogle, type AvaliacaoGoogle } from "@/services/avaliacoesGoogle";
+import { buscarAvaliacoesGoogle } from "@/services/avaliacoesGoogle";
 import { useGoogleReviews } from "@/hooks/useGoogleReviews";
 import { GOOGLE_REVIEW_URL } from "@/lib/constants";
 import { formatReviewCount } from "@/lib/utils";
