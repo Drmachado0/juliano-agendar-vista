@@ -56,7 +56,7 @@ export default function SaudeIntegracoes() {
       toast.error("Falha na vinculação", { description: error.message });
       return;
     }
-    setLastRun(data as DryRunResult);
+    setLastRun(data as unknown as DryRunResult);
     toast.success(dryRun ? "Simulação concluída" : "Vinculação aplicada");
     if (!dryRun) carregar();
   }
