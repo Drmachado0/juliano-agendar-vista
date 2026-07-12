@@ -5,11 +5,10 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 const LocationsSection = () => {
   const [activeLocation, setActiveLocation] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
-  const [showBelem, setShowBelem] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
-  const belemTrackedRef = useRef(false);
   const sectionRef = useRef<HTMLDivElement>(null);
-  const { trackPhoneClick, trackCTAClick } = useGoogleTag();
+  const { trackPhoneClick } = useGoogleTag();
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
