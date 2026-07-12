@@ -35,10 +35,12 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Auth: CRON_SECRET ou JWT admin
+  // Auth: CRON_SECRET (via Vault + timing-safe) ou JWT admin
   const authHeader = req.headers.get("Authorization") || "";
-  const cronSecret = Deno.env.get("CRON_SECRET");
-  const isCron = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
+  const cronGuard = await requireCronSecret(req);
+  const isCron = cronGuard.ok;
+
+
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
