@@ -316,8 +316,9 @@ const ParagominasAgendamento = () => {
                 <div className="md:hidden">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-[11px] uppercase tracking-[0.22em] font-semibold" style={{ color: "var(--pgm-petroleo)" }}>
-                      Etapa {currentStep} de {totalSteps} · {STEPS[currentStep - 1].label}
+                      {STEPS[currentStep - 1].label}
                     </p>
+                    <p className="sr-only">Etapa {currentStep} de {totalSteps}</p>
                   </div>
                   <div className="flex items-center gap-1.5" role="list">
                     {progress.map((s) => (
