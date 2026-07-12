@@ -361,7 +361,7 @@ const ParagominasAgendamento = () => {
 
             {/* Formulário / Sucesso */}
             <div
-              className="rounded-2xl p-6 md:p-8 shadow-sm"
+              className="pgm-form-card rounded-2xl p-6 md:p-8 md:shadow-sm"
               style={{ background: "#fff", border: "1px solid var(--pgm-line)" }}
             >
               {isSubmitted ? (
