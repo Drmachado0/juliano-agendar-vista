@@ -557,17 +557,14 @@ const Paragominas = () => {
                   {/* Filetes champagne */}
                   <span className="absolute -top-2 -left-2 w-14 h-px" style={{ background: "var(--pgm-champagne)" }} />
                   <span className="absolute -top-2 -left-2 w-px h-14" style={{ background: "var(--pgm-champagne)" }} />
-                  <p className="mt-5 pgm-mono text-[10px] tracking-[0.3em] uppercase" style={{ color: "rgba(243,240,232,0.6)" }}>
-                    Fig. 02 · Consultório · Paragominas
-                  </p>
                 </div>
 
                 <div className="order-1 lg:order-2">
                   <div className="flex items-center gap-4 mb-6">
                     <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                      IV — Método
+                      Método
                     </span>
-                    <div className="pgm-rule-dark flex-1 max-w-[200px]" />
+                    <div className="pgm-rule-dark flex-1 max-w-[160px]" />
                   </div>
                   <h2
                     id="humana-heading"
@@ -585,18 +582,31 @@ const Paragominas = () => {
                     conforme a sua necessidade clínica — sem pressa, sem excesso, sem termos vagos.
                   </p>
 
-                  {/* Três verbos como banner tipográfico */}
-                  <ul className="grid grid-cols-3 gap-4 max-w-lg mb-10">
-                    {["Escutar", "Examinar", "Explicar"].map((v, i) => (
-                      <li key={v} className="flex flex-col gap-2 border-t pt-3" style={{ borderColor: "var(--pgm-line-dark)" }}>
-                        <span className="pgm-mono text-[10px] tracking-[0.3em] uppercase" style={{ color: "var(--pgm-champagne)" }}>
-                          0{i + 1}
-                        </span>
-                        <span className="pgm-serif text-lg md:text-xl" style={{ ...SERIF }}>
-                          {v}
-                        </span>
-                      </li>
-                    ))}
+                  {/* Três verbos com ícones — sem numeração */}
+                  <ul className="flex items-center gap-5 md:gap-8 max-w-lg mb-10 flex-wrap">
+                    {METODO.map((m, i) => {
+                      const Icon = m.icon;
+                      return (
+                        <li key={m.label} className="flex items-center gap-3">
+                          <Icon
+                            className="w-5 h-5"
+                            style={{ color: "var(--pgm-champagne)" }}
+                            aria-hidden="true"
+                            strokeWidth={1.4}
+                          />
+                          <span className="pgm-serif text-lg md:text-xl" style={{ ...SERIF }}>
+                            {m.label}
+                          </span>
+                          {i < METODO.length - 1 && (
+                            <span
+                              className="hidden md:inline-block w-6 h-px ml-3"
+                              style={{ background: "var(--pgm-line-dark)" }}
+                              aria-hidden="true"
+                            />
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
 
                   <p className="text-sm" style={{ color: "rgba(243,240,232,0.65)" }}>
