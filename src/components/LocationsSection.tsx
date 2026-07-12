@@ -62,7 +62,8 @@ const LocationsSection = () => {
     },
   ];
 
-  const activeLocationData = locations[activeLocation];
+  const rawActive = locations[activeLocation];
+  const activeLocationData = !showBelem && rawActive.city === "Belém" ? locations[0] : rawActive;
   // Google Maps embed (sem API key) do local ativo
   const mapEmbedSrc = `https://www.google.com/maps?q=${encodeURIComponent(
     `${activeLocationData.name}, ${activeLocationData.address}`
