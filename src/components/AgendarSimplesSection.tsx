@@ -131,11 +131,11 @@ const AgendarSimplesSection = () => {
               variant="obsidian"
               size="lg"
               onClick={() =>
-                trackCTAClick("agendar_consulta", "agendar_simples", "Agendar consulta online")
+                trackCTAClick("comecar_agendamento", "agendar_simples", "Começar agendamento")
               }
               className="w-full sm:w-auto text-base py-6 sm:py-3 min-h-[48px] group"
             >
-              Agendar consulta online
+              Começar agendamento
               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>
