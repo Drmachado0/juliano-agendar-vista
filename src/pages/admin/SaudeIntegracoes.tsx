@@ -17,6 +17,8 @@ interface SaudeRow {
   net_timeouts_24h: number;
   net_ultimo_erro_at: string | null;
   net_ultimo_erro_status: number | null;
+  out_confirmados_24h: number;
+  pacientes_ultima_msg_in: number;
   gerado_em: string;
 }
 
@@ -83,11 +85,25 @@ export default function SaudeIntegracoes() {
       icon: Activity,
     },
     {
-      label: "Intents (24h)",
+      label: "Intents (24h) — opcional",
       value: saude?.intents_24h ?? "—",
-      hint: "conversation_intents gravadas",
-      danger: (saude?.intents_24h ?? 0) === 0,
+      hint: "conversation_intents; agente oficial vive no n8n",
+      danger: false,
       icon: Link2,
+    },
+    {
+      label: "OUT confirmados (24h)",
+      value: saude?.out_confirmados_24h ?? "—",
+      hint: "mensagens OUT registradas via n8n/ManyChat",
+      danger: (saude?.out_confirmados_24h ?? 0) === 0,
+      icon: CheckCircle2,
+    },
+    {
+      label: "Pacientes s/ resposta (última msg IN)",
+      value: saude?.pacientes_ultima_msg_in ?? "—",
+      hint: "Kanban ainda considera direção IN",
+      danger: (saude?.pacientes_ultima_msg_in ?? 0) > 5,
+      icon: AlertTriangle,
     },
   ];
 
