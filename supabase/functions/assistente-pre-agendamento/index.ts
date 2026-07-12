@@ -325,7 +325,6 @@ serve(async (req) => {
   }
 
   try {
-
     const body = (await req.json()) as ReqBody;
     if (!body?.telefone || !body?.conteudo) {
       return new Response(JSON.stringify({ error: "telefone e conteudo são obrigatórios" }), {
@@ -339,13 +338,43 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // 0) IDEMPOTÊNCIA por mensagem_id (item 10)
+    // Se essa mensagem já produziu uma intent, retorna o registro sem reprocessar.
+    if (body.mensagem_id) {
+      const { data: jaProcessada } = await supabase
+        .from("conversation_intents")
+        .select("id, intencao, confianca, resumo, sentimento, proxima_acao, agendamento_id")
+        .eq("mensagem_id", body.mensagem_id)
+        .maybeSingle();
+      if (jaProcessada) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            duplicada: true,
+            intent_id: jaProcessada.id,
+            intencao: {
+              intencao: jaProcessada.intencao,
+              confianca: jaProcessada.confianca,
+              resumo: jaProcessada.resumo,
+              sentimento: jaProcessada.sentimento,
+              proxima_acao: jaProcessada.proxima_acao,
+            },
+            agendamentoId: jaProcessada.agendamento_id ?? null,
+            agiu: false,
+            request_id: rid,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
+        );
+      }
+    }
+
     // Verifica se bot está ligado para este lead
     let botAtivo = true;
     let agendamento: any = null;
     if (body.agendamento_id) {
       const { data } = await supabase
         .from("agendamentos")
-        .select("id, nome_completo, telefone_whatsapp, bot_ativo, status_funil, status_crm, local_atendimento, clinica_id, data_agendamento, hora_agendamento")
+        .select("id, nome_completo, telefone_whatsapp, bot_ativo, status_funil, status_crm, local_atendimento, clinica_id, data_agendamento, hora_agendamento, origem")
         .eq("id", body.agendamento_id)
         .maybeSingle();
       agendamento = data;
@@ -368,7 +397,7 @@ serve(async (req) => {
       }));
     }
 
-    // 1) Classificar
+    // 1) Classificar — se falhar (item 8), escala para humano e retorna agiu=false.
     let intencao;
     try {
       intencao = await classificarIntencao(body.conteudo, historico);
@@ -379,17 +408,28 @@ serve(async (req) => {
         p_acao: "erro",
         p_agendamento_id: body.agendamento_id ?? null,
         p_mensagem_id: body.mensagem_id ?? null,
-        p_detalhes: { stage: "classificar", error: msg },
+        p_detalhes: { stage: "classificar", error: msg, request_id: rid },
         p_latencia_ms: Date.now() - t0,
       });
-      return new Response(JSON.stringify({ ok: false, stage: "classificar", error: msg }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      await escalarParaHumano(supabase, {
+        telefone: body.telefone,
+        agendamentoId: body.agendamento_id ?? null,
+        agendamento,
+        motivo: "classificador_falhou",
+        intencao: "erro",
+        detalhes: { error: msg, request_id: rid },
       });
+      return new Response(
+        JSON.stringify({
+          ok: false, stage: "classificar", error: msg,
+          escalado: "classificador_falhou", agiu: false, request_id: rid,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
+      );
     }
 
-    // Persistir intenção
-    await supabase.from("conversation_intents").insert({
+    // Persistir intenção (UNIQUE parcial em mensagem_id evita duplicata)
+    const { error: intentErr } = await supabase.from("conversation_intents").insert({
       agendamento_id: body.agendamento_id ?? null,
       mensagem_id: body.mensagem_id ?? null,
       telefone: body.telefone,
@@ -401,6 +441,9 @@ serve(async (req) => {
       modelo: "openai/gpt-5-mini",
       raw_output: intencao as any,
     });
+    if (intentErr && !/duplicate key/i.test(intentErr.message)) {
+      console.warn("[assistente-pre-agendamento] intent insert falhou", intentErr.message);
+    }
 
     await supabase.rpc("registrar_bot_log", {
       p_telefone: body.telefone,
@@ -423,8 +466,8 @@ serve(async (req) => {
         detalhes: { confianca: intencao.confianca, resumo: intencao.resumo },
       });
       return new Response(
-        JSON.stringify({ ok: true, intencao, agiu: false, escalado: "intencao_sensivel" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ ok: true, intencao, agiu: false, escalado: "intencao_sensivel", request_id: rid }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
       );
     }
 
@@ -438,8 +481,8 @@ serve(async (req) => {
         detalhes: { confianca: intencao.confianca, resumo: intencao.resumo },
       });
       return new Response(
-        JSON.stringify({ ok: true, intencao, agiu: false, escalado: "bot_nao_entendeu" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ ok: true, intencao, agiu: false, escalado: "bot_nao_entendeu", request_id: rid }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
       );
     }
 
@@ -452,8 +495,8 @@ serve(async (req) => {
         p_detalhes: { motivo: !botAtivo ? "bot_desligado" : "intencao_fora_escopo" },
       });
       return new Response(
-        JSON.stringify({ ok: true, intencao, agiu: false }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ ok: true, intencao, agiu: false, request_id: rid }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
       );
     }
 
@@ -464,21 +507,26 @@ serve(async (req) => {
     if (slots.length === 0) {
       const fallback =
         "Olá! Recebi sua solicitação de agendamento 😊\nNo momento não consegui localizar horários livres por aqui — nossa equipe vai te responder em instantes para encontrar a melhor data.";
-      await sendWhatsappText(body.telefone, fallback);
+      const envioFb = await sendWhatsappText(body.telefone, fallback);
       const idEscalado = await escalarParaHumano(supabase, {
         telefone: body.telefone,
         agendamentoId: body.agendamento_id ?? null,
         agendamento,
-        motivo: "sem_slots",
+        motivo: envioFb.success ? "sem_slots" : "sem_slots_e_envio_falhou",
         intencao: intencao.intencao,
+        detalhes: { envio: envioFb },
       });
       return new Response(
-        JSON.stringify({ ok: true, intencao, agiu: true, fallback: true, escalado: "sem_slots", agendamentoId: idEscalado }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({
+          ok: true, intencao, agiu: envioFb.success, fallback: true,
+          escalado: envioFb.success ? "sem_slots" : "sem_slots_e_envio_falhou",
+          agendamentoId: idEscalado, request_id: rid,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
       );
     }
 
-    // 4) Montar e enviar mensagem com horários + criar agendamento "AGUARDANDO" no primeiro slot
+    // 4) Montar e ENVIAR mensagem PRIMEIRO. Só avança status se envio OK. (item 9)
     const linhas = slots.map((s, i) => `${i + 1}) ${fmtDataBR(s.data)} às ${s.hora}`);
     const nome = agendamento?.nome_completo?.split(" ")[0] || "";
     const saudacao = nome ? `Olá, ${nome}!` : "Olá!";
@@ -490,24 +538,38 @@ serve(async (req) => {
 
     const envio = await sendWhatsappText(body.telefone, texto);
 
-    // Criar/atualizar agendamento como AGUARDANDO no 1º slot sugerido
-    let agendamentoId = body.agendamento_id ?? null;
-    const primeiro = slots[0];
+    if (!envio.success) {
+      // NÃO avança status/agendamento. Escala para humano.
+      const idEscalado = await escalarParaHumano(supabase, {
+        telefone: body.telefone,
+        agendamentoId: body.agendamento_id ?? null,
+        agendamento,
+        motivo: "envio_falhou",
+        intencao: intencao.intencao,
+        detalhes: { envio, slots },
+      });
+      await supabase.rpc("registrar_bot_log", {
+        p_telefone: body.telefone,
+        p_acao: "erro",
+        p_agendamento_id: idEscalado,
+        p_intencao: intencao.intencao,
+        p_detalhes: { stage: "envio", envio, request_id: rid },
+        p_latencia_ms: Date.now() - t0,
+      });
+      return new Response(
+        JSON.stringify({
+          ok: false, intencao, agiu: false, escalado: "envio_falhou",
+          agendamentoId: idEscalado, error: envio.error, request_id: rid,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
+      );
+    }
 
-    if (agendamentoId) {
-      await supabase
-        .from("agendamentos")
-        .update({
-          status_funil: "aguardando",
-          status_crm: "AGUARDANDO",
-          data_agendamento: primeiro.data,
-          hora_agendamento: primeiro.hora,
-          clinica_id: primeiro.clinicaId ?? agendamento?.clinica_id ?? null,
-          bot_ultima_acao_at: new Date().toISOString(),
-          origem: agendamento?.origem || "bot_whatsapp",
-        })
-        .eq("id", agendamentoId);
-    } else {
+    // 5) Envio OK — usa RPC para transicionar status (item 7) e preserva data/hora separados.
+    const primeiro = slots[0];
+    let agendamentoId = body.agendamento_id ?? null;
+
+    if (!agendamentoId) {
       const { data: novo } = await supabase
         .from("agendamentos")
         .insert({
@@ -517,50 +579,64 @@ serve(async (req) => {
           local_atendimento: "A definir",
           convenio: "Particular",
           origem: "bot_whatsapp",
-          status_crm: "AGUARDANDO",
-          status_funil: "aguardando",
-          data_agendamento: primeiro.data,
-          hora_agendamento: primeiro.hora,
-          clinica_id: primeiro.clinicaId ?? null,
-          bot_ultima_acao_at: new Date().toISOString(),
+          status_crm: "NOVO LEAD",
+          status_funil: "novo",
+          estado_atendimento: "novo",
         })
         .select("id")
         .single();
       agendamentoId = novo?.id ?? null;
     }
 
-    // Salva mensagem OUT
-    if (envio.success) {
-      await supabase.from("mensagens_whatsapp").insert({
-        agendamento_id: agendamentoId,
-        telefone: body.telefone,
-        direcao: "OUT",
-        conteudo: texto,
-        status_envio: "enviado",
-        mensagem_externa_id: envio.externalId,
-        tipo_mensagem: "bot_pre_agendamento",
+    if (agendamentoId) {
+      // Transição via RPC — a máquina de estados cuida de funil/estado/bot.
+      await supabase.rpc("transicionar_estado_agendamento", {
+        p_id: agendamentoId,
+        p_novo_status_crm: "AGUARDANDO",
+        p_motivo: `bot sugeriu ${slots.length} horários`,
       });
+      // Data/hora/clinica escritos separadamente (não fazem parte da máquina de estados).
+      await supabase
+        .from("agendamentos")
+        .update({
+          data_agendamento: primeiro.data,
+          hora_agendamento: primeiro.hora,
+          clinica_id: primeiro.clinicaId ?? agendamento?.clinica_id ?? null,
+          bot_ultima_acao_at: new Date().toISOString(),
+        })
+        .eq("id", agendamentoId);
     }
+
+    // Salva mensagem OUT
+    await supabase.from("mensagens_whatsapp").insert({
+      agendamento_id: agendamentoId,
+      telefone: body.telefone,
+      direcao: "OUT",
+      conteudo: texto,
+      status_envio: "enviado",
+      mensagem_externa_id: envio.externalId,
+      tipo_mensagem: "bot_pre_agendamento",
+    });
 
     await supabase.rpc("registrar_bot_log", {
       p_telefone: body.telefone,
-      p_acao: envio.success ? "criou_agendamento" : "erro",
+      p_acao: "criou_agendamento",
       p_agendamento_id: agendamentoId,
       p_intencao: intencao.intencao,
-      p_detalhes: { slots, envio },
+      p_detalhes: { slots, envio, request_id: rid },
       p_latencia_ms: Date.now() - t0,
     });
 
     return new Response(
-      JSON.stringify({ ok: true, intencao, agiu: true, slots, agendamentoId }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ ok: true, intencao, agiu: true, slots, agendamentoId, request_id: rid }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
     );
   } catch (e) {
     const msg = e instanceof Error ? e.message : "erro";
-    console.error("[assistente-pre-agendamento] erro:", msg);
-    return new Response(JSON.stringify({ ok: false, error: msg }), {
+    console.error("[assistente-pre-agendamento] erro:", msg, { rid });
+    return new Response(JSON.stringify({ ok: false, error: msg, request_id: rid }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid },
     });
   }
 });

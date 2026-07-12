@@ -1,0 +1,1 @@
+ALTER VIEW public.v_saude_integracoes SET (security_invoker = true);

@@ -5,12 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Activity, RefreshCw, Link2, AlertTriangle } from "lucide-react";
+import { Activity, RefreshCw, Link2, AlertTriangle, CheckCircle2, XCircle, Clock } from "lucide-react";
 
 interface SaudeRow {
   mensagens_orfas: number;
   pacientes_aguardando_resposta: number;
   intents_24h: number;
+  net_2xx_24h: number;
+  net_4xx_24h: number;
+  net_5xx_24h: number;
+  net_timeouts_24h: number;
+  net_ultimo_erro_at: string | null;
+  net_ultimo_erro_status: number | null;
   gerado_em: string;
 }
 
@@ -70,18 +76,45 @@ export default function SaudeIntegracoes() {
       icon: AlertTriangle,
     },
     {
-      label: "Pacientes aguardando resposta",
+      label: "Aguardando resposta (48h)",
       value: saude?.pacientes_aguardando_resposta ?? "—",
-      hint: "Última mensagem IN sem OUT posterior (48h)",
+      hint: "Última IN sem OUT posterior",
       danger: (saude?.pacientes_aguardando_resposta ?? 0) > 5,
       icon: Activity,
     },
     {
-      label: "Intents processadas (24h)",
+      label: "Intents (24h)",
       value: saude?.intents_24h ?? "—",
       hint: "conversation_intents gravadas",
       danger: (saude?.intents_24h ?? 0) === 0,
       icon: Link2,
+    },
+  ];
+
+  const netCards = [
+    {
+      label: "pg_net 2xx (24h)",
+      value: saude?.net_2xx_24h ?? "—",
+      icon: CheckCircle2,
+      danger: false,
+    },
+    {
+      label: "pg_net 4xx (24h)",
+      value: saude?.net_4xx_24h ?? "—",
+      icon: XCircle,
+      danger: (saude?.net_4xx_24h ?? 0) > 0,
+    },
+    {
+      label: "pg_net 5xx (24h)",
+      value: saude?.net_5xx_24h ?? "—",
+      icon: AlertTriangle,
+      danger: (saude?.net_5xx_24h ?? 0) > 0,
+    },
+    {
+      label: "Timeouts (24h)",
+      value: saude?.net_timeouts_24h ?? "—",
+      icon: Clock,
+      danger: (saude?.net_timeouts_24h ?? 0) > 0,
     },
   ];
 
@@ -116,6 +149,32 @@ export default function SaudeIntegracoes() {
             </Card>
           ))}
         </div>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Chamadas pg_net (últimas 24h)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-4">
+              {netCards.map((c) => (
+                <div key={c.label} className="rounded-md border p-3 flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-muted-foreground">{c.label}</div>
+                    <div className={`text-2xl font-semibold ${c.danger ? "text-destructive" : ""}`}>{c.value}</div>
+                  </div>
+                  <c.icon className={`h-5 w-5 ${c.danger ? "text-destructive" : "text-muted-foreground"}`} />
+                </div>
+              ))}
+            </div>
+            {saude?.net_ultimo_erro_at && (
+              <div className="text-xs text-muted-foreground">
+                Último erro pg_net:{" "}
+                <strong>{saude.net_ultimo_erro_status ?? "timeout"}</strong> em{" "}
+                {new Date(saude.net_ultimo_erro_at).toLocaleString("pt-BR")}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

@@ -1884,6 +1884,12 @@ export type Database = {
           gerado_em: string | null
           intents_24h: number | null
           mensagens_orfas: number | null
+          net_2xx_24h: number | null
+          net_4xx_24h: number | null
+          net_5xx_24h: number | null
+          net_timeouts_24h: number | null
+          net_ultimo_erro_at: string | null
+          net_ultimo_erro_status: number | null
           pacientes_aguardando_resposta: number | null
         }
         Relationships: []
@@ -2435,6 +2441,21 @@ export type Database = {
         Returns: boolean
       }
       rotacionar_secret_integracao: { Args: { p_nome: string }; Returns: Json }
+      saude_integracoes: {
+        Args: never
+        Returns: {
+          gerado_em: string
+          intents_24h: number
+          mensagens_orfas: number
+          net_2xx_24h: number
+          net_4xx_24h: number
+          net_5xx_24h: number
+          net_timeouts_24h: number
+          net_ultimo_erro_at: string
+          net_ultimo_erro_status: number
+          pacientes_aguardando_resposta: number
+        }[]
+      }
       set_agendamento_sandbox: {
         Args: {
           p_agendamento_id: string
