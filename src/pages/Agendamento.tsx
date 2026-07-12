@@ -126,14 +126,20 @@ const Agendamento = () => {
 
   const totalSteps = 4;
 
-  // view_scheduling_page + ViewContent + UTMs (também persistidos por getTrackingParams)
+  // view_scheduling_page + ViewContent + UTMs. Guard evita disparo duplo em
+  // StrictMode/re-render — booking_view = 1 por montagem/visita à rota.
   useEffect(() => {
+    if (viewFiredRef.current) return;
+    viewFiredRef.current = true;
+
     trackViewContent("Landing Agendamento", "Consulta Oftalmológica");
+    // Evento legado — mantido pra compatibilidade com tags GTM já publicadas.
     pushDL({
       event: "view_scheduling_page",
       page_path: "/agendamento",
       page_type: "landing_agendamento",
     });
+    // Evento novo padronizado do funil.
     pushDL({ event: "booking_view", page_type: "landing_agendamento" });
 
     try {
