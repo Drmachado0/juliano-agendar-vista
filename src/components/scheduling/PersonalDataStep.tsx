@@ -161,16 +161,20 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
   const handleNext = () => {
     if (validate()) {
       onNext();
-    } else {
-      // Foca o primeiro campo inválido (ordem: nome, phone, birthDate, email)
-      requestAnimationFrame(() => {
-        const first =
-          document.querySelector<HTMLInputElement>(".pgm-form-error[data-field]");
-        const id = first?.getAttribute("data-field");
-        if (id) document.getElementById(id)?.focus();
-      });
+      return;
     }
+    // Foca o primeiro campo inválido na ordem visual
+    requestAnimationFrame(() => {
+      const order = ["fullName", "phone", "birthDate", "email"];
+      // Reexecuta validação síncrona para descobrir erros novamente sem depender do setState
+      const invalid = order.find((id) => {
+        const el = document.getElementById(id) as HTMLInputElement | null;
+        return el?.getAttribute("aria-invalid") === "true";
+      });
+      if (invalid) document.getElementById(invalid)?.focus();
+    });
   };
+
 
 
   return (
