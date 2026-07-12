@@ -1888,6 +1888,7 @@ export type Database = {
       v_saude_integracoes: {
         Row: {
           gerado_em: string | null
+          in_orfas_24h: number | null
           intents_24h: number | null
           mensagens_orfas: number | null
           net_2xx_24h: number | null
@@ -2453,6 +2454,7 @@ export type Database = {
         Args: never
         Returns: {
           gerado_em: string
+          in_orfas_24h: number
           intents_24h: number
           mensagens_orfas: number
           net_2xx_24h: number
