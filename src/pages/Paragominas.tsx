@@ -196,24 +196,24 @@ const Paragominas = () => {
   return (
     <>
       <Helmet>
-        <title>Oftalmologista em Paragominas | Dr. Juliano Machado</title>
+        <title>Oftalmologista em Paragominas e Belém | Dr. Juliano Machado</title>
         <meta
           name="description"
-          content="Consulta oftalmológica em Paragominas com Dr. Juliano Machado (CRM-PA 15253). Atendimento na Clinicor e no Hospital Geral de Paragominas."
+          content="Consulta oftalmológica em Paragominas e Belém com Dr. Juliano Machado (CRM-PA 15253). Atendimento na Clinicor, HGP, Instituto de Olhos de Belém e Vitria."
         />
         <link rel="canonical" href={CANONICAL} />
-        <meta property="og:title" content="Oftalmologista em Paragominas | Dr. Juliano Machado" />
+        <meta property="og:title" content="Oftalmologista em Paragominas e Belém | Dr. Juliano Machado" />
         <meta
           property="og:description"
-          content="Consulta oftalmológica em Paragominas: Clinicor e Hospital Geral de Paragominas. Agende online."
+          content="Consultas em Paragominas (Clinicor, HGP) e Belém (Instituto de Olhos de Belém, Vitria). Agende online."
         />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={CANONICAL} />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Oftalmologista em Paragominas | Dr. Juliano Machado" />
+        <meta name="twitter:title" content="Oftalmologista em Paragominas e Belém | Dr. Juliano Machado" />
         <meta
           name="twitter:description"
-          content="Atendimento oftalmológico em Paragominas com o Dr. Juliano Machado (CRM-PA 15253)."
+          content="Atendimento oftalmológico em Paragominas e Belém com Dr. Juliano Machado (CRM-PA 15253)."
         />
         <meta name="robots" content="index, follow" />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
