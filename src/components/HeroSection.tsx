@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Star, CalendarCheck, MessageCircle, ShieldCheck, ArrowRight, MapPin, Pause, Play } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import drJulianoHeroWebp from "@/assets/dr-juliano-hero.webp";
 import drJulianoHeroVideo from "@/assets/dr-juliano-hero.mp4";
@@ -19,6 +19,18 @@ const HeroSection = () => {
   );
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoPaused, setVideoPaused] = useState(false);
+  // Decide se renderiza vídeo (desktop, sem reduced-motion e sem save-data).
+  // No mobile mantemos só a imagem WebP estática pra não baixar o mp4.
+  const [enableVideo, setEnableVideo] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const conn = (navigator as any).connection;
+    const saveData = !!(conn && (conn.saveData || /2g/.test(conn.effectiveType || "")));
+    setEnableVideo(isDesktop && !reducedMotion && !saveData);
+  }, []);
 
   const toggleVideo = () => {
     const v = videoRef.current;
@@ -26,6 +38,7 @@ const HeroSection = () => {
     if (v.paused) v.play().catch(() => {});
     else v.pause();
   };
+
 
   return (
     <section className="relative overflow-hidden hero-gradient min-h-[88vh] lg:min-h-[92vh] flex items-center pt-24 pb-12 sm:pt-32 sm:pb-16">
