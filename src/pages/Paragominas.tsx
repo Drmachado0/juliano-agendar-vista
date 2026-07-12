@@ -308,12 +308,9 @@ const Paragominas = () => {
               {/* Cabeçalho de campanha */}
               <div className="mb-10 md:mb-14 flex items-center gap-5">
                 <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                  I — Oftalmologista em Paragominas
+                  Oftalmologista em Paragominas
                 </span>
                 <div className="pgm-rule flex-1 max-w-[280px]" />
-                <span className="hidden md:inline pgm-mono text-[10px] tracking-[0.3em] uppercase" style={{ color: "var(--pgm-ink-soft)" }}>
-                  Consultório · 2026
-                </span>
               </div>
 
               <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-10 lg:gap-16 items-end">
