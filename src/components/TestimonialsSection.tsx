@@ -134,7 +134,33 @@ const TestimonialCard = ({ t }: { t: Testimonial }) => {
   );
 };
 
-const TestimonialsSection = () => {
+export interface TestimonialsSectionProps {
+  /** "compact" = sem header grande e sem CTA para o Google (uso em landings). */
+  variant?: "default" | "compact";
+  /** id da section para deep-link/anchor. */
+  sectionId?: string;
+  /** Limite máximo de cards visíveis por página (cap adicional sobre o responsive). */
+  maxVisible?: number;
+  /** Exibir bloco de header (badge + h2 + rating). Default true. */
+  showHeader?: boolean;
+  /** Exibir CTA "Ler todas no Google". Default true. */
+  showCTA?: boolean;
+  /** Rótulo alternativo para aria-label. */
+  ariaLabel?: string;
+}
+
+const TestimonialsSection = ({
+  variant = "default",
+  sectionId = "depoimentos",
+  maxVisible,
+  showHeader,
+  showCTA,
+  ariaLabel = "Depoimentos de pacientes",
+}: TestimonialsSectionProps = {}) => {
+  const isCompact = variant === "compact";
+  const effectiveShowHeader = showHeader ?? !isCompact;
+  const effectiveShowCTA = showCTA ?? !isCompact;
+  const effectiveMaxVisible = maxVisible ?? (isCompact ? 3 : undefined);
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const reviews = useGoogleReviews();
@@ -170,7 +196,10 @@ const TestimonialsSection = () => {
   const displayCount = reviews.hasRealAggregate ? reviews.count : pool.length;
 
   // Layout responsivo + auto-rotate controls.
-  const itemsPerPage = useItemsPerPage();
+  const itemsPerPageRaw = useItemsPerPage();
+  const itemsPerPage = effectiveMaxVisible
+    ? Math.min(itemsPerPageRaw, effectiveMaxVisible)
+    : itemsPerPageRaw;
   const reducedMotion = useReducedMotion();
   const documentHidden = useDocumentHidden();
   const [hovering, setHovering] = useState(false);
@@ -230,51 +259,70 @@ const TestimonialsSection = () => {
 
   return (
     <section
-      id="depoimentos"
-      className="py-20 md:py-28 bg-gradient-to-b from-secondary/20 via-background to-secondary/20 relative noise-overlay"
+      id={sectionId}
+      className={`${isCompact ? "py-14 md:py-16" : "py-20 md:py-28"} bg-gradient-to-b from-secondary/20 via-background to-secondary/20 relative noise-overlay`}
       ref={sectionRef}
-      aria-label="Depoimentos de pacientes"
+      aria-label={ariaLabel}
     >
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
 
-      <div className="absolute top-20 left-10 opacity-[0.02] pointer-events-none hidden lg:block" aria-hidden="true">
-        <svg width="200" height="200" viewBox="0 0 24 24" fill="currentColor" className="text-foreground">
-          <path d="M4.583 17.321C3.553 16.227 3 15 3 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179zm10 0C13.553 16.227 13 15 13 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179z" />
-        </svg>
-      </div>
+      {!isCompact && (
+        <div className="absolute top-20 left-10 opacity-[0.02] pointer-events-none hidden lg:block" aria-hidden="true">
+          <svg width="200" height="200" viewBox="0 0 24 24" fill="currentColor" className="text-foreground">
+            <path d="M4.583 17.321C3.553 16.227 3 15 3 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179zm10 0C13.553 16.227 13 15 13 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179z" />
+          </svg>
+        </div>
+      )}
 
       <div className="container mx-auto px-4">
-        {/* Header */}
-        <div
-          className={`text-center mb-14 transition-all duration-700 ${
-            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-          }`}
-        >
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 border border-primary/15 text-primary font-semibold text-sm mb-6">
-            <MessageSquare className="w-3.5 h-3.5" />
-            O que dizem os pacientes
-          </span>
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            {title.includes("Google") ? (
-              <>
-                {title.replace(" no Google", "")} <span className="gradient-text">no Google</span>
-              </>
-            ) : (
-              title
-            )}
-          </h2>
-          <div className="flex items-center justify-center gap-3 mt-4">
-            <div className="inline-flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-xl">
-              <div className="flex items-center gap-0.5">
-                <Stars rating={Math.round(displayRating)} />
-              </div>
-              <span className="font-bold text-foreground text-lg">{ratingLabel}</span>
-            </div>
-            <span className="text-muted-foreground text-sm flex items-center gap-1.5">
-              <GoogleIcon /> baseado em {formatReviewCount(displayCount)} avaliações
+        {effectiveShowHeader && (
+          <div
+            className={`text-center mb-14 transition-all duration-700 ${
+              isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            }`}
+          >
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 border border-primary/15 text-primary font-semibold text-sm mb-6">
+              <MessageSquare className="w-3.5 h-3.5" />
+              O que dizem os pacientes
             </span>
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              {title.includes("Google") ? (
+                <>
+                  {title.replace(" no Google", "")} <span className="gradient-text">no Google</span>
+                </>
+              ) : (
+                title
+              )}
+            </h2>
+            <div className="flex items-center justify-center gap-3 mt-4">
+              <div className="inline-flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-xl">
+                <div className="flex items-center gap-0.5">
+                  <Stars rating={Math.round(displayRating)} />
+                </div>
+                <span className="font-bold text-foreground text-lg">{ratingLabel}</span>
+              </div>
+              <span className="text-muted-foreground text-sm flex items-center gap-1.5">
+                <GoogleIcon /> baseado em {formatReviewCount(displayCount)} avaliações
+              </span>
+            </div>
           </div>
-        </div>
+        )}
+
+        {isCompact && (
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
+              Avaliações reais no Google
+            </h2>
+            <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+              <Stars rating={Math.round(displayRating)} />
+              <span className="font-semibold text-foreground">{ratingLabel}</span>
+              <span>·</span>
+              <GoogleIcon />
+              <span>{formatReviewCount(displayCount)} avaliações</span>
+            </div>
+          </div>
+        )}
+
 
         {/* Loading */}
         {isLoading && (
@@ -371,23 +419,24 @@ const TestimonialsSection = () => {
           </div>
         )}
 
-        {/* CTA */}
-        <div
-          className={`text-center mt-10 transition-all duration-700 delay-300 ${
-            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-          }`}
-        >
-          <a
-            href={GOOGLE_REVIEW_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-card border border-primary/30 hover:border-primary/50 transition-all text-foreground font-medium text-sm hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/10"
+        {effectiveShowCTA && (
+          <div
+            className={`text-center mt-10 transition-all duration-700 delay-300 ${
+              isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            }`}
           >
-            <GoogleIcon />
-            Ler todas as avaliações no Google
-            <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 text-primary" />
-          </a>
-        </div>
+            <a
+              href={GOOGLE_REVIEW_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-card border border-primary/30 hover:border-primary/50 transition-all text-foreground font-medium text-sm hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/10"
+            >
+              <GoogleIcon />
+              Ler todas as avaliações no Google
+              <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 text-primary" />
+            </a>
+          </div>
+        )}
       </div>
     </section>
   );
