@@ -625,16 +625,16 @@ const Paragominas = () => {
           <section
             id="locais"
             aria-labelledby="locais-heading"
-            className="py-24 md:py-32"
+            className="pt-24 md:pt-32 pb-16 md:pb-20"
             style={{ background: "var(--pgm-marfim)" }}
           >
             <div className="container mx-auto px-4 max-w-6xl">
-              <header className="mb-14 md:mb-20 max-w-3xl">
+              <header className="mb-10 md:mb-14 max-w-3xl">
                 <div className="flex items-center gap-4 mb-6">
                   <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                    V — Onde atendo
+                    Onde atendo
                   </span>
-                  <div className="pgm-rule flex-1" />
+                  <div className="pgm-rule flex-1 max-w-[200px]" />
                 </div>
                 <h2
                   id="locais-heading"
@@ -649,64 +649,58 @@ const Paragominas = () => {
                 </h2>
               </header>
 
-              <div className="grid md:grid-cols-2 gap-10 md:gap-16">
+              <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-stretch">
                 {LOCAIS.map((l) => {
                   const bookLink = buildAgendamentoLink({ utm_content: l.utmContent });
                   return (
-                    <article key={l.name} className="relative">
-                      {/* Numeral gigante */}
-                      <span
-                        aria-hidden="true"
-                        className="pgm-serif absolute -top-8 -left-1 pointer-events-none select-none"
-                        style={{
-                          ...SERIF,
-                          fontSize: "clamp(6rem, 12vw, 9rem)",
-                          lineHeight: 0.85,
-                          color: "var(--pgm-champagne)",
-                          opacity: 0.35,
-                          fontStyle: "italic",
-                        }}
-                      >
-                        {l.number}
-                      </span>
-
-                      <div className="pt-16 md:pt-20 border-t" style={{ borderColor: "var(--pgm-line)" }}>
-                        <p className="pgm-eyebrow mb-3" style={{ color: "var(--pgm-champagne)" }}>
+                    <article
+                      key={l.name}
+                      className="relative flex flex-col pt-8 border-t"
+                      style={{ borderColor: "var(--pgm-line)" }}
+                    >
+                      <div className="flex items-center gap-3 mb-4">
+                        <MapPin
+                          className="w-4 h-4"
+                          style={{ color: "var(--pgm-champagne)" }}
+                          strokeWidth={1.6}
+                          aria-hidden="true"
+                        />
+                        <p className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
                           Paragominas · PA
                         </p>
-                        <h3
-                          className="mb-4 leading-[1.02]"
-                          style={{ ...SERIF, color: "var(--pgm-petroleo)", fontSize: "clamp(1.6rem, 3vw, 2.4rem)" }}
-                        >
-                          {l.name}
-                        </h3>
-                        <p className="text-base leading-relaxed mb-8 flex items-start gap-3 max-w-md" style={{ color: "var(--pgm-ink-soft)" }}>
-                          <MapPin className="w-4 h-4 shrink-0 mt-1" style={{ color: "var(--pgm-petroleo)" }} aria-hidden="true" />
-                          <span>{l.address}</span>
-                        </p>
+                      </div>
+                      <h3
+                        className="mb-4 leading-[1.05] min-h-[3.2em] md:min-h-[2.6em]"
+                        style={{ ...SERIF, color: "var(--pgm-petroleo)", fontSize: "clamp(1.6rem, 3vw, 2.4rem)" }}
+                      >
+                        {l.name}
+                      </h3>
+                      <p className="text-base leading-relaxed mb-8 flex items-start gap-3 max-w-md flex-1" style={{ color: "var(--pgm-ink-soft)" }}>
+                        <Navigation className="w-4 h-4 shrink-0 mt-1" style={{ color: "var(--pgm-petroleo)" }} aria-hidden="true" />
+                        <span>{l.address}</span>
+                      </p>
 
-                        <div className="flex items-center gap-6 flex-wrap">
-                          <Link
-                            to={bookLink}
-                            onClick={() =>
-                              trackCTAClick("agendar_local", `landing_paragominas_${l.utmContent}`, `Agendar — ${l.name}`)
-                            }
-                            className="pgm-btn pgm-btn--primary"
-                          >
-                            Agendar neste local
-                            <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
-                          </Link>
-                          <a
-                            href={l.mapsLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="pgm-btn--link-dark inline-flex items-center gap-1.5 text-sm"
-                            aria-label={`Abrir ${l.name} no Google Maps`}
-                          >
-                            <Navigation className="w-3.5 h-3.5" aria-hidden="true" />
-                            Ver rota
-                          </a>
-                        </div>
+                      <div className="flex items-center gap-6 flex-wrap">
+                        <Link
+                          to={bookLink}
+                          onClick={() =>
+                            trackCTAClick("agendar_local", `landing_paragominas_${l.utmContent}`, `Agendar — ${l.name}`)
+                          }
+                          className="pgm-btn pgm-btn--primary"
+                        >
+                          Agendar neste local
+                          <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+                        </Link>
+                        <a
+                          href={l.mapsLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="pgm-btn--link-dark inline-flex items-center gap-1.5 text-sm"
+                          aria-label={`Abrir ${l.name} no Google Maps`}
+                        >
+                          <Navigation className="w-3.5 h-3.5" aria-hidden="true" />
+                          Ver rota
+                        </a>
                       </div>
                     </article>
                   );
