@@ -5,18 +5,20 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import { Button } from "@/components/ui/button";
 
+// Ordem alinhada ao fluxo real do formulário em /agendamento
+// (PersonalDataStep → ConsultationDetailsStep + DateTimeStep → ConfirmationStep).
 const steps = [
   {
     number: "01",
-    icon: CalendarDays,
-    title: "Escolha o local e a data",
-    description: "Selecione a clínica em Paragominas (ou Belém) e o dia que funciona pra você.",
+    icon: ListChecks,
+    title: "Informe seus dados",
+    description: "Nome e WhatsApp para a equipe entrar em contato.",
   },
   {
     number: "02",
-    icon: ListChecks,
-    title: "Informe seus dados",
-    description: "Nome, WhatsApp, convênio ou particular e tipo de atendimento.",
+    icon: CalendarDays,
+    title: "Escolha o atendimento",
+    description: "Tipo, local, convênio, data e horário disponíveis.",
   },
   {
     number: "03",
@@ -69,7 +71,7 @@ const AgendarSimplesSection = () => {
             Agendar é <span className="gradient-text">simples</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-base md:text-lg leading-relaxed">
-            Em menos de 1 minuto você escolhe o horário e a equipe confirma — tudo pelo site, sem ligação.
+            Em três passos rápidos você registra seu pedido e a equipe confirma pelo WhatsApp.
           </p>
         </div>
 
@@ -129,11 +131,11 @@ const AgendarSimplesSection = () => {
               variant="obsidian"
               size="lg"
               onClick={() =>
-                trackCTAClick("agendar_consulta", "agendar_simples", "Agendar consulta online")
+                trackCTAClick("comecar_agendamento", "agendar_simples", "Começar agendamento")
               }
               className="w-full sm:w-auto text-base py-6 sm:py-3 min-h-[48px] group"
             >
-              Agendar consulta online
+              Começar agendamento
               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>

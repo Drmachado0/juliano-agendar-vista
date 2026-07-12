@@ -6,8 +6,19 @@ const LocationsSection = () => {
   const [activeLocation, setActiveLocation] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [showBelem, setShowBelem] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const belemTrackedRef = useRef(false);
   const sectionRef = useRef<HTMLDivElement>(null);
   const { trackPhoneClick, trackCTAClick } = useGoogleTag();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener?.("change", update);
+    return () => mq.removeEventListener?.("change", update);
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -98,7 +109,7 @@ const LocationsSection = () => {
 
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-0 items-stretch">
           {/* Location Cards */}
-          <div className="space-y-3 lg:pr-6 relative z-10">
+          <div id="belem-locations-region" className="space-y-3 lg:pr-6 relative z-10">
             {locations.map((location, index) => {
               if (!showBelem && location.city === "Belém") return null;
               const IconComponent = location.icon;
@@ -112,7 +123,7 @@ const LocationsSection = () => {
                   key={location.name}
                   onClick={() => setActiveLocation(index)}
                   aria-pressed={isActive}
-                  className={`card-shimmer w-full text-left card-glass rounded-2xl p-5 transition-all duration-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${borderColor} ${
+                  className={`card-shimmer w-full text-left card-glass rounded-2xl p-5 min-h-[44px] transition-all duration-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${borderColor} ${
                     isActive
                       ? `bg-primary/5 shadow-lg shadow-primary/10 scale-[1.01] ${isBelem ? 'border-r-2 border-r-accent' : 'border-r-2 border-r-primary'}`
                       : "hover:border-primary/25 hover:bg-primary/3"
@@ -151,36 +162,66 @@ const LocationsSection = () => {
               );
             })}
 
-            {!showBelem && (
-              <button
-                type="button"
-                onClick={() => {
+            <button
+              type="button"
+              aria-expanded={showBelem}
+              aria-controls="belem-locations-region"
+              onClick={() => {
+                if (showBelem) {
+                  // Ao ocultar Belém, se o ativo era Belém volta pra Clinicor.
+                  if (locations[activeLocation]?.city === "Belém") setActiveLocation(0);
+                  setShowBelem(false);
+                } else {
                   setShowBelem(true);
-                  trackCTAClick("ver_locais_belem", "locations", "Ver locais em Belém");
-                }}
-                className="w-full text-sm font-medium text-muted-foreground hover:text-primary transition-colors py-3 px-4 rounded-xl border border-dashed border-border/60 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[48px]"
-              >
-                + Ver 2 locais em Belém
-              </button>
-            )}
+                  if (!belemTrackedRef.current) {
+                    belemTrackedRef.current = true;
+                    trackCTAClick("ver_locais_belem", "locations", "Ver locais em Belém");
+                  }
+                }
+              }}
+              className="w-full text-sm font-medium text-muted-foreground hover:text-primary transition-colors py-3 px-4 rounded-xl border border-dashed border-border/60 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[48px]"
+            >
+              {showBelem ? "− Ocultar locais em Belém" : "+ Ver 2 locais em Belém"}
+            </button>
           </div>
 
 
-          {/* Map — Google Maps real do local selecionado */}
+          {/* Map — Google Maps real do local selecionado (desktop apenas; mobile mostra cards) */}
           <div className={`relative rounded-3xl overflow-hidden min-h-[500px] border border-border/60 flex flex-col transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}>
-            {/* Mapa */}
+            {/* Mapa (só desktop pra não montar iframe no mobile) */}
             <div className="relative flex-1 min-h-[300px] bg-secondary/40">
-              <iframe
-                title={`Mapa - ${activeLocationData.name}`}
-                src={mapEmbedSrc}
-                className="absolute inset-0 w-full h-full"
-                // mapa "dark" via filtro CSS (embed do Google não tem dark nativo sem JS API + key)
-                style={{ border: 0, filter: "invert(0.92) hue-rotate(180deg) saturate(0.85) brightness(0.95)" }}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                sandbox="allow-scripts allow-same-origin allow-popups"
-                allowFullScreen
-              />
+              {isDesktop ? (
+                <iframe
+                  key={activeLocationData.name}
+                  title={`Mapa - ${activeLocationData.name}`}
+                  src={mapEmbedSrc}
+                  className="absolute inset-0 w-full h-full"
+                  style={{ border: 0, filter: "invert(0.92) hue-rotate(180deg) saturate(0.85) brightness(0.95)" }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  sandbox="allow-scripts allow-same-origin allow-popups"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+                  <div>
+                    <MapPin className="w-8 h-8 text-primary mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {activeLocationData.address}
+                    </p>
+                    <a
+                      href={activeLocationData.mapsLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary/15 text-primary hover:bg-primary/25 transition-colors text-sm font-semibold min-h-[44px]"
+                    >
+                      <Navigation className="w-4 h-4" />
+                      Abrir no Google Maps
+                      <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                    </a>
+                  </div>
+                </div>
+              )}
               {/* badge cidade */}
               <div className="absolute top-5 left-5 px-3 py-1.5 rounded-full glass-panel text-xs font-semibold text-foreground z-[1] pointer-events-none">
                 {activeLocationData.city} · PA

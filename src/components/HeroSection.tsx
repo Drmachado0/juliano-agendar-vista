@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Star, CalendarCheck, MessageCircle, ShieldCheck, ArrowRight, MapPin, Pause, Play } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import drJulianoHeroWebp from "@/assets/dr-juliano-hero.webp";
 import drJulianoHeroVideo from "@/assets/dr-juliano-hero.mp4";
@@ -19,6 +19,18 @@ const HeroSection = () => {
   );
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoPaused, setVideoPaused] = useState(false);
+  // Decide se renderiza vídeo (desktop, sem reduced-motion e sem save-data).
+  // No mobile mantemos só a imagem WebP estática pra não baixar o mp4.
+  const [enableVideo, setEnableVideo] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const conn = (navigator as any).connection;
+    const saveData = !!(conn && (conn.saveData || /2g/.test(conn.effectiveType || "")));
+    setEnableVideo(isDesktop && !reducedMotion && !saveData);
+  }, []);
 
   const toggleVideo = () => {
     const v = videoRef.current;
@@ -26,6 +38,7 @@ const HeroSection = () => {
     if (v.paused) v.play().catch(() => {});
     else v.pause();
   };
+
 
   return (
     <section className="relative overflow-hidden hero-gradient min-h-[88vh] lg:min-h-[92vh] flex items-center pt-24 pb-12 sm:pt-32 sm:pb-16">
@@ -57,18 +70,18 @@ const HeroSection = () => {
               </span>
             </div>
 
-            {/* Heading — LCP, sem animação de opacity */}
-            <h1 className="text-[2.25rem] leading-[1.05] sm:text-5xl lg:text-[4.25rem] font-extrabold uppercase mb-5">
-              <span className="text-foreground">Enxergar bem</span>
-              <br />
-              <span className="gradient-text-accent">muda tudo.</span>
+            {/* Heading — LCP, sem animação de opacity/delay */}
+            <h1 className="text-[2rem] leading-[1.1] sm:text-4xl lg:text-[3.5rem] font-extrabold mb-5 text-foreground">
+              Cuide da sua visão com{" "}
+              <span className="gradient-text-accent">atendimento completo em Paragominas</span>
             </h1>
 
-            {/* Subtitle — direto, mobile-first */}
+            {/* Subtitle — apoio direto */}
             <p className="text-[15px] sm:text-lg text-muted-foreground leading-relaxed mb-7 max-w-xl mx-auto lg:mx-0">
-              Consultas, exames e cirurgias em <span className="text-foreground font-semibold">Paragominas</span> com o{" "}
-              <span className="text-foreground font-semibold">{DOCTOR.name}</span>. Agende online e receba a confirmação
-              pelo WhatsApp.
+              Consultas e acompanhamento oftalmológico com o{" "}
+              <span className="text-foreground font-semibold">{DOCTOR.name}</span> na{" "}
+              <span className="text-foreground font-semibold">Clinicor</span> e no{" "}
+              <span className="text-foreground font-semibold">HGP</span>.
             </p>
 
             {/* CTAs — CTA primária "Ver horários disponíveis" */}
@@ -122,30 +135,45 @@ const HeroSection = () => {
               <div className="absolute -inset-3 rounded-[2rem] bg-gradient-to-br from-primary/15 to-transparent blur-2xl" />
 
               <div className="relative w-44 h-56 sm:w-64 sm:h-80 lg:w-[23rem] lg:h-[30rem] rounded-[1.75rem] lg:rounded-[2rem] overflow-hidden ring-1 ring-white/10 shadow-2xl bg-card">
-                <video
-                  ref={videoRef}
-                  src={drJulianoHeroVideo}
-                  poster={drJulianoHeroWebp}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                  aria-label={`${DOCTOR.name} - ${DOCTOR.specialty}`}
-                  className="w-full h-full object-cover object-top"
-                  onPlay={() => setVideoPaused(false)}
-                  onPause={() => setVideoPaused(true)}
-                />
-                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-background/80 to-transparent" />
-                <div className="absolute inset-0 rounded-[1.75rem] lg:rounded-[2rem] ring-1 ring-inset ring-primary/15" />
-                <button
-                  type="button"
-                  onClick={toggleVideo}
-                  aria-label={videoPaused ? "Reproduzir vídeo" : "Pausar vídeo"}
-                  className="absolute bottom-2 right-2 z-10 w-9 h-9 rounded-full glass-panel flex items-center justify-center text-foreground/90 hover:text-foreground hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-colors"
-                >
-                  {videoPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                </button>
+                {enableVideo ? (
+                  <>
+                    <video
+                      ref={videoRef}
+                      src={drJulianoHeroVideo}
+                      poster={drJulianoHeroWebp}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      preload="none"
+                      aria-label={`${DOCTOR.name} - ${DOCTOR.specialty}`}
+                      className="w-full h-full object-cover object-top"
+                      onPlay={() => setVideoPaused(false)}
+                      onPause={() => setVideoPaused(true)}
+                    />
+                    <button
+                      type="button"
+                      onClick={toggleVideo}
+                      aria-label={videoPaused ? "Reproduzir vídeo" : "Pausar vídeo"}
+                      className="absolute bottom-2 right-2 z-10 w-9 h-9 rounded-full glass-panel flex items-center justify-center text-foreground/90 hover:text-foreground hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-colors"
+                    >
+                      {videoPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                    </button>
+                  </>
+                ) : (
+                  <img
+                    src={drJulianoHeroWebp}
+                    alt={`${DOCTOR.name} - ${DOCTOR.specialty}`}
+                    width={368}
+                    height={480}
+                    loading="eager"
+                    decoding="async"
+                    {...({ fetchpriority: "high" } as any)}
+                    className="w-full h-full object-cover object-top"
+                  />
+                )}
+                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-background/80 to-transparent pointer-events-none" />
+                <div className="absolute inset-0 rounded-[1.75rem] lg:rounded-[2rem] ring-1 ring-inset ring-primary/15 pointer-events-none" />
               </div>
 
               {/* Google rating chip — só desktop pra reduzir ruído no mobile */}
