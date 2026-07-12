@@ -900,7 +900,7 @@ const Paragominas = () => {
             <div className="container mx-auto px-4 max-w-4xl">
               <div className="flex items-center gap-4 mb-10">
                 <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                  VIII — Perguntas frequentes
+                  Perguntas frequentes
                 </span>
                 <div className="pgm-rule flex-1" />
               </div>
