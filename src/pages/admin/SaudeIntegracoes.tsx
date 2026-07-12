@@ -76,18 +76,45 @@ export default function SaudeIntegracoes() {
       icon: AlertTriangle,
     },
     {
-      label: "Pacientes aguardando resposta",
+      label: "Aguardando resposta (48h)",
       value: saude?.pacientes_aguardando_resposta ?? "—",
-      hint: "Última mensagem IN sem OUT posterior (48h)",
+      hint: "Última IN sem OUT posterior",
       danger: (saude?.pacientes_aguardando_resposta ?? 0) > 5,
       icon: Activity,
     },
     {
-      label: "Intents processadas (24h)",
+      label: "Intents (24h)",
       value: saude?.intents_24h ?? "—",
       hint: "conversation_intents gravadas",
       danger: (saude?.intents_24h ?? 0) === 0,
       icon: Link2,
+    },
+  ];
+
+  const netCards = [
+    {
+      label: "pg_net 2xx (24h)",
+      value: saude?.net_2xx_24h ?? "—",
+      icon: CheckCircle2,
+      danger: false,
+    },
+    {
+      label: "pg_net 4xx (24h)",
+      value: saude?.net_4xx_24h ?? "—",
+      icon: XCircle,
+      danger: (saude?.net_4xx_24h ?? 0) > 0,
+    },
+    {
+      label: "pg_net 5xx (24h)",
+      value: saude?.net_5xx_24h ?? "—",
+      icon: AlertTriangle,
+      danger: (saude?.net_5xx_24h ?? 0) > 0,
+    },
+    {
+      label: "Timeouts (24h)",
+      value: saude?.net_timeouts_24h ?? "—",
+      icon: Clock,
+      danger: (saude?.net_timeouts_24h ?? 0) > 0,
     },
   ];
 
