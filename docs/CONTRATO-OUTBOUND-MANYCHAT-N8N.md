@@ -84,6 +84,17 @@ preenchido; assim o Kanban registra o OUT tentado.
 
 ## Migração do legado
 
-O endpoint `n8n-registrar-envio` agora aplica as mesmas regras
-(idempotência, guarda de confirmation_status). Novos flows devem
-usar `registrar-envio-out-n8n` diretamente e enviar `provider_message_id`.
+O endpoint `n8n-registrar-envio` foi transformado em **PROXY puro** para
+`registrar-envio-out-n8n` (revisão 2026-07-12). Ele apenas:
+
+1. Encaminha `x-n8n-secret` e `x-request-id`.
+2. Mapeia `status_envio="falha_envio"` → `status="erro"` (semântica canônica).
+3. Preserva o status HTTP e o body do canônico.
+
+Isso elimina drift de regras (idempotência, mismatch 409, guarda de
+`confirmation_status`, filtro de ativos não-sandbox case-insensitive).
+
+**Novos flows devem chamar `registrar-envio-out-n8n` diretamente** e enviar
+`provider_message_id`. O legado permanece disponível apenas para não quebrar
+workflows antigos e será removido em janela futura.
+

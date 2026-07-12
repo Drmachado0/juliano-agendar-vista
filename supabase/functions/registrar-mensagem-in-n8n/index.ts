@@ -5,13 +5,15 @@
 //   1) requireN8nSecret (timing-safe) + x-request-id
 //   2) Idempotência forte por mensagem_externa_id ANTES de qualquer mutação.
 //      Se dup existir mas estiver órfã, tenta RPC de vinculação novamente.
-//   3) Normaliza telefone (E.164) e insere mensagens_whatsapp IN com
-//      agendamento_id=NULL, provider='manychat', provider_message_id=externo
-//      e payload sanitizado (sem tokens).
-//   4) Chama RPC public.vincular_mensagem_por_telefone(mensagem_id,nome).
-//      Lock advisory + regras 0/1/>1 ativos vivem na RPC.
-//   5) Backfill de nome quando o cadastro está com placeholder.
-// NUNCA cria lead diretamente na Edge Function.
+//   3) Normaliza telefone (E.164). Erro da RPC → 500 sem PII.
+//   4) Insere mensagens_whatsapp IN com agendamento_id=NULL,
+//      provider='manychat', provider_message_id=externo e payload sanitizado.
+//   5) Chama RPC public.vincular_mensagem_por_telefone(mensagem_id,nome).
+//      Erro da RPC → responde 500 { error:'vinculo_falhou', persisted:true,
+//      mensagem_id, request_id } para permitir retry idempotente pelo n8n
+//      (a próxima tentativa cai em duplicata órfã e re-executa a RPC).
+//   6) Backfill de nome quando o cadastro está com placeholder.
+// NUNCA cria lead diretamente na Edge Function. NUNCA vaza PII no response.
 // ============================================================================
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -70,12 +72,17 @@ function sanitizePayload(input: Record<string, unknown>): Record<string, unknown
   return out;
 }
 
+/**
+ * Tenta vincular a mensagem via RPC. Retorna { ok, info } — nunca lança.
+ * Em falha registra system_log SEM PII e devolve ok=false para o caller
+ * decidir HTTP code.
+ */
 async function tentarVinculo(
   supabase: ReturnType<typeof createClient>,
   mensagemId: string,
   nomeContato: string,
   rid: string,
-) {
+): Promise<{ ok: true; info: Record<string, any> } | { ok: false }> {
   const { data, error } = await supabase.rpc("vincular_mensagem_por_telefone", {
     p_mensagem_id: mensagemId,
     p_nome_contato: nomeContato || null,
@@ -85,18 +92,22 @@ async function tentarVinculo(
       level: "warn",
       category: "edge_function",
       source: "registrar-mensagem-in-n8n",
-      message: `Falha ao vincular mensagem: ${error.message}`,
-      details: { mensagem_id: mensagemId, request_id: rid },
+      message: "vinculo_falhou",
+      details: {
+        mensagem_id: mensagemId,
+        request_id: rid,
+        pg_code: (error as any).code ?? null,
+      },
       request_id: rid,
     });
-    return null;
+    return { ok: false };
   }
-  return (data ?? {}) as Record<string, any>;
+  return { ok: true, info: (data ?? {}) as Record<string, any> };
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
   const rid = requestId(req);
   const headers = { "x-request-id": rid };
@@ -110,12 +121,16 @@ serve(async (req) => {
   try {
     raw = await req.json();
   } catch {
-    return json({ error: "JSON inválido" }, 400, headers);
+    return json({ error: "invalid_json", request_id: rid }, 400, headers);
   }
 
   const parsed = BodySchema.safeParse(raw);
   if (!parsed.success) {
-    return json({ error: "Dados inválidos", details: parsed.error.flatten() }, 400, headers);
+    return json(
+      { error: "invalid_body", details: parsed.error.flatten(), request_id: rid },
+      400,
+      headers,
+    );
   }
   const body = parsed.data;
 
@@ -136,15 +151,27 @@ serve(async (req) => {
       .eq("mensagem_externa_id", providerMessageId)
       .maybeSingle();
     if (dupErr) {
-      return json({ error: `lookup: ${dupErr.message}` }, 500, headers);
+      return json({ error: "lookup_failed", request_id: rid }, 500, headers);
     }
     if (existente) {
-      // Se dup existe mas órfã, tenta vincular novamente (idempotente)
       let agendamentoId: string | null = existente.agendamento_id ?? null;
-      let info: Record<string, any> | null = null;
+      let info: Record<string, any> = {};
       if (!agendamentoId) {
-        info = await tentarVinculo(supabase, existente.id, nomeContato, rid);
-        agendamentoId = info?.agendamento_id ?? null;
+        const v = await tentarVinculo(supabase, existente.id, nomeContato, rid);
+        if (!v.ok) {
+          return json(
+            {
+              error: "vinculo_falhou",
+              persisted: true,
+              mensagem_id: existente.id,
+              request_id: rid,
+            },
+            500,
+            headers,
+          );
+        }
+        info = v.info;
+        agendamentoId = info.agendamento_id ?? null;
       }
       return json(
         {
@@ -152,8 +179,8 @@ serve(async (req) => {
           mensagem_id: existente.id,
           agendamento_id: agendamentoId,
           agendamento_encontrado: !!agendamentoId,
-          ambiguo: !!info?.ambiguo,
-          total_matches: info?.total_matches ?? null,
+          ambiguo: !!info.ambiguo,
+          total_matches: info.total_matches ?? null,
           duplicada: true,
           request_id: rid,
         },
@@ -163,11 +190,25 @@ serve(async (req) => {
     }
   }
 
-  // 2) Normaliza telefone (E.164 sem símbolos)
-  const { data: telNorm } = await supabase.rpc("normalizar_telefone", {
+  // 2) Normaliza telefone (E.164) — erro é fatal para o insert coerente
+  const { data: telNorm, error: telErr } = await supabase.rpc("normalizar_telefone", {
     p_telefone: body.telefone,
   });
-  const telefoneNormalizado = (telNorm as string) ?? body.telefone.replace(/\D/g, "");
+  if (telErr) {
+    await supabase.from("system_logs").insert({
+      level: "error",
+      category: "edge_function",
+      source: "registrar-mensagem-in-n8n",
+      message: "normalizar_telefone_falhou",
+      details: { request_id: rid, pg_code: (telErr as any).code ?? null },
+      request_id: rid,
+    });
+    return json({ error: "normalizar_telefone_falhou", request_id: rid }, 500, headers);
+  }
+  const telefoneNormalizado =
+    (typeof telNorm === "string" && telNorm.length > 0
+      ? telNorm
+      : body.telefone.replace(/\D/g, ""));
 
   // 3) Payload sanitizado
   const payloadSanit = sanitizePayload({
@@ -205,10 +246,23 @@ serve(async (req) => {
         .maybeSingle();
       if (existente) {
         let agendamentoId: string | null = existente.agendamento_id ?? null;
-        let info: Record<string, any> | null = null;
+        let info: Record<string, any> = {};
         if (!agendamentoId) {
-          info = await tentarVinculo(supabase, existente.id, nomeContato, rid);
-          agendamentoId = info?.agendamento_id ?? null;
+          const v = await tentarVinculo(supabase, existente.id, nomeContato, rid);
+          if (!v.ok) {
+            return json(
+              {
+                error: "vinculo_falhou",
+                persisted: true,
+                mensagem_id: existente.id,
+                request_id: rid,
+              },
+              500,
+              headers,
+            );
+          }
+          info = v.info;
+          agendamentoId = info.agendamento_id ?? null;
         }
         return json(
           {
@@ -216,8 +270,8 @@ serve(async (req) => {
             mensagem_id: existente.id,
             agendamento_id: agendamentoId,
             agendamento_encontrado: !!agendamentoId,
-            ambiguo: !!info?.ambiguo,
-            total_matches: info?.total_matches ?? null,
+            ambiguo: !!info.ambiguo,
+            total_matches: info.total_matches ?? null,
             duplicada: true,
             request_id: rid,
           },
@@ -230,23 +284,39 @@ serve(async (req) => {
       level: "error",
       category: "edge_function",
       source: "registrar-mensagem-in-n8n",
-      message: `Falha inserir IN: ${insErr.message}`,
+      message: "insert_in_falhou",
       details: {
         request_id: rid,
         telefone_mask: maskTelefone(telefoneNormalizado),
         has_provider_msg_id: !!providerMessageId,
+        pg_code: (insErr as any).code ?? null,
       },
       request_id: rid,
     });
-    return json({ error: insErr.message }, 500, headers);
+    return json({ error: "insert_in_falhou", request_id: rid }, 500, headers);
   }
 
-  // 4) Vinculação determinística via RPC
-  const info = await tentarVinculo(supabase, inserted.id, nomeContato, rid);
-  const agendamentoId = info?.agendamento_id ?? null;
+  // 4) Vinculação determinística via RPC.
+  //    Falha aqui → mensagem já foi persistida; devolvemos 500 com persisted=true
+  //    e mensagem_id para o n8n retentar idempotentemente.
+  const v = await tentarVinculo(supabase, inserted.id, nomeContato, rid);
+  if (!v.ok) {
+    return json(
+      {
+        error: "vinculo_falhou",
+        persisted: true,
+        mensagem_id: inserted.id,
+        request_id: rid,
+      },
+      500,
+      headers,
+    );
+  }
+  const info = v.info;
+  const agendamentoId = info.agendamento_id ?? null;
 
   // 5) Backfill de nome quando placeholder
-  if (agendamentoId && !info?.criado && nomeContato.length > 1) {
+  if (agendamentoId && !info.criado && nomeContato.length > 1) {
     const { data: atual } = await supabase
       .from("agendamentos")
       .select("nome_completo")
@@ -271,9 +341,9 @@ serve(async (req) => {
       mensagem_id: inserted.id,
       agendamento_id: agendamentoId,
       agendamento_encontrado: !!agendamentoId,
-      lead_criado: !!info?.criado,
-      ambiguo: !!info?.ambiguo,
-      total_matches: info?.total_matches ?? null,
+      lead_criado: !!info.criado,
+      ambiguo: !!info.ambiguo,
+      total_matches: info.total_matches ?? null,
       duplicada: false,
       request_id: rid,
     },

@@ -33,7 +33,7 @@ const MIG = (() => {
   throw new Error("Migration de ajustes não encontrada");
 })();
 
-describe("registrar-mensagem-in-n8n (P0)", () => {
+describe("registrar-mensagem-in-n8n (P0 + corretiva)", () => {
   it("usa requireN8nSecret timing-safe", () => {
     expect(INBOUND).toMatch(/requireN8nSecret/);
   });
@@ -44,7 +44,7 @@ describe("registrar-mensagem-in-n8n (P0)", () => {
     expect(idxLookup).toBeLessThan(idxInsert);
   });
   it("quando dup existe órfã, tenta RPC de vinculação novamente", () => {
-    expect(INBOUND).toMatch(/if \(!agendamentoId\)[\s\S]{0,120}tentarVinculo/);
+    expect(INBOUND).toMatch(/if \(!agendamentoId\)[\s\S]{0,180}tentarVinculo/);
   });
   it("insere provider='manychat' e provider_message_id", () => {
     expect(INBOUND).toMatch(/provider:\s*"manychat"/);
@@ -56,16 +56,32 @@ describe("registrar-mensagem-in-n8n (P0)", () => {
     expect(INBOUND).not.toMatch(/\.ilike\(.*telefone.*%.*\)/i);
   });
   it("nunca cria lead diretamente (delega para RPC)", () => {
-    // Não há INSERT into agendamentos no arquivo
     expect(INBOUND).not.toMatch(/\.from\(["']agendamentos["']\)\s*\.insert/);
   });
   it("sanitiza payload removendo tokens/secrets", () => {
     expect(INBOUND).toMatch(/sanitizePayload/);
-    expect(INBOUND).toMatch(/token|secret|password|authorization|apikey/);
+    expect(INBOUND).toMatch(/token\|secret\|password\|authorization\|apikey/);
+  });
+  it("trata erro de normalizar_telefone explicitamente (500 sem PII)", () => {
+    expect(INBOUND).toMatch(/normalizar_telefone[\s\S]{0,400}telErr/);
+    expect(INBOUND).toMatch(/normalizar_telefone_falhou/);
+  });
+  it("falha da RPC de vínculo → 500 com error=vinculo_falhou, persisted=true, mensagem_id, request_id", () => {
+    // Não deve responder 200 com agendamento_id null quando RPC falhou:
+    expect(INBOUND).toMatch(/error:\s*["']vinculo_falhou["']/);
+    expect(INBOUND).toMatch(/persisted:\s*true/);
+    // tentarVinculo devolve discriminated union { ok:false } → sem "agendamento_id null" implícito
+    expect(INBOUND).toMatch(/return\s*\{\s*ok:\s*false\s*\}/);
+  });
+  it("nunca vaza texto bruto do erro no response body", () => {
+    // Nenhum error com template literal usando .message da RPC/DB
+    expect(INBOUND).not.toMatch(/error:\s*`[^`]*\$\{[^}]+\.message\}/);
+    expect(INBOUND).not.toMatch(/error:\s*insErr\.message/);
+    expect(INBOUND).not.toMatch(/error:\s*vErr\.message/);
   });
 });
 
-describe("registrar-envio-out-n8n (outbound)", () => {
+describe("registrar-envio-out-n8n (outbound corretivo)", () => {
   it("mismatch agendamento_id x telefone_canonico retorna 409", () => {
     expect(OUTBOUND).toMatch(/telefone_agendamento_mismatch/);
     expect(OUTBOUND).toMatch(/409/);
@@ -74,26 +90,49 @@ describe("registrar-envio-out-n8n (outbound)", () => {
     expect(OUTBOUND).toMatch(/agendamento_not_found/);
     expect(OUTBOUND).toMatch(/404/);
   });
-  it("trata erros das queries explicitamente", () => {
-    expect(OUTBOUND).toMatch(/agendamento lookup:/);
-    expect(OUTBOUND).toMatch(/agendamentos:/);
+  it("trata erros das queries com códigos internos (sem PII/texto bruto)", () => {
+    expect(OUTBOUND).toMatch(/agendamento_lookup_failed/);
+    expect(OUTBOUND).toMatch(/agendamentos_lookup_failed/);
+    expect(OUTBOUND).toMatch(/insert_out_falhou/);
+    expect(OUTBOUND).not.toMatch(/error:\s*insErr\.message/);
+    expect(OUTBOUND).not.toMatch(/error:\s*`agendamento lookup:/);
+  });
+  it("trata erro explícito da RPC normalizar_telefone (500)", () => {
+    expect(OUTBOUND).toMatch(/normalizar_telefone[\s\S]{0,400}telErr/);
+    expect(OUTBOUND).toMatch(/normalizar_telefone_falhou/);
+  });
+  it("telefone_canonico com erro cai em fallback local (não fatal)", () => {
+    expect(OUTBOUND).toMatch(/canonicalFallback/);
+    expect(OUTBOUND).toMatch(/telefone_canonico[\s\S]{0,400}fallback/i);
+  });
+  it("match sem agendamento_id explícito filtra ativos não-sandbox e ignora terminais (case-insensitive)", () => {
+    expect(OUTBOUND).toMatch(/TERMINAIS\s*=\s*\[\s*"ATENDIDO"\s*,\s*"CANCELADO"\s*,\s*"COMPARECEU"\s*\]/);
+    expect(OUTBOUND).toMatch(/is_sandbox\s*!==\s*true/);
+    expect(OUTBOUND).toMatch(/toUpperCase\(\)/);
   });
   it("mascara telefone em system_logs", () => {
     expect(OUTBOUND).toMatch(/maskTelefone/);
   });
 });
 
-describe("n8n-registrar-envio (legado)", () => {
-  it("default tipo_mensagem = bot_agente", () => {
-    expect(LEGACY).toMatch(/tipo_mensagem:\s*z\.string\(\)\.default\(["']bot_agente["']\)/);
+describe("n8n-registrar-envio (proxy legado)", () => {
+  it("é proxy puro para registrar-envio-out-n8n (sem lógica duplicada)", () => {
+    expect(LEGACY).toMatch(/functions\/v1\/registrar-envio-out-n8n/);
+    // Sem createClient nem RPCs no legado
+    expect(LEGACY).not.toMatch(/createClient\(/);
+    expect(LEGACY).not.toMatch(/\.rpc\(/);
+    expect(LEGACY).not.toMatch(/CONFIRMATION_TYPES/);
   });
-  it("mantém requireN8nSecret timing-safe", () => {
-    expect(LEGACY).toMatch(/requireN8nSecret/);
+  it("mapeia falha_envio → erro", () => {
+    expect(LEGACY).toMatch(/falha_envio[\s\S]{0,60}["']erro["']/);
   });
-  it("só altera confirmation_* para tipos de confirmação", () => {
-    expect(LEGACY).toMatch(/CONFIRMATION_TYPES/);
-    expect(LEGACY).toMatch(/confirmacao_automatica/);
-    expect(LEGACY).toMatch(/confirmacao_consulta/);
+  it("encaminha x-n8n-secret e x-request-id", () => {
+    expect(LEGACY).toMatch(/x-n8n-secret/);
+    expect(LEGACY).toMatch(/x-request-id/);
+  });
+  it("preserva status HTTP e body do canônico", () => {
+    expect(LEGACY).toMatch(/status:\s*upstream\.status/);
+    expect(LEGACY).toMatch(/upstream\.text\(\)/);
   });
 });
 

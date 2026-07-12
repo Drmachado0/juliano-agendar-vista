@@ -71,3 +71,21 @@
   não tiver endpoint ativo para `message.received`, o evento é ignorado
   (log em `system_logs`).
 - Para validar: `SELECT * FROM crm_webhook_endpoints WHERE event='message.received';`
+
+## Contrato de erro (revisão 2026-07-12)
+
+`registrar-mensagem-in-n8n` nunca vaza texto bruto de erro/PII no body.
+Códigos internos:
+
+| HTTP | `error`                       | Semântica                                                                 |
+| ---- | ----------------------------- | ------------------------------------------------------------------------- |
+| 400  | `invalid_json` / `invalid_body` | Payload inválido; não retentar sem correção.                             |
+| 401  | (via authGuards)              | `x-n8n-secret` ausente ou inválido.                                       |
+| 500  | `lookup_failed`               | Falha ao consultar duplicata; retentar.                                   |
+| 500  | `normalizar_telefone_falhou`  | RPC de normalização caiu; retentar.                                       |
+| 500  | `insert_in_falhou`            | Falha ao persistir mensagem IN; retentar.                                 |
+| 500  | `vinculo_falhou` + `persisted:true` + `mensagem_id` | Mensagem persistida, mas RPC de vinculação falhou. **Retentar idempotentemente** — a próxima chamada cai no branch de duplicata órfã e re-executa a RPC. |
+| 200  | —                             | `mensagem_id`, `agendamento_id`, `ambiguo`, `duplicada`, `request_id`.    |
+
+Regra crítica: **falha de vínculo NUNCA vira 200 com `agendamento_id=null`**.
+Sempre 500 com `persisted=true` para o n8n poder retentar.
