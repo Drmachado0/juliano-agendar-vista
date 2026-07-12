@@ -15,6 +15,7 @@ import { buscarAvaliacoesGoogle, type AvaliacaoGoogle } from "@/services/avaliac
 import { useGoogleReviews } from "@/hooks/useGoogleReviews";
 import { GOOGLE_REVIEW_URL } from "@/lib/constants";
 import { formatReviewCount } from "@/lib/utils";
+import { buildTestimonialPool, MAX_TESTIMONIALS } from "@/lib/testimonialsPool";
 import {
   useDocumentHidden,
   useItemsPerPage,
