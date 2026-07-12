@@ -340,7 +340,7 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
 
       if (!successFiredRef.current) {
         successFiredRef.current = true;
-        trackAppointmentSuccess(pageType, {
+        trackAppointmentSuccess(pageType as any, {
           id: leadId ?? null,
           appointmentType: formData.appointmentTypeName,
           location: formData.locationName,
