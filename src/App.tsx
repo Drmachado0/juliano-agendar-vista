@@ -68,6 +68,7 @@ const App = () => (
               <Route path="/agendar" element={<RedirectToAgendamento />} />
               <Route path="/agendar-consulta" element={<RedirectToAgendamento />} />
               <Route path="/agendamento" element={<Agendamento />} />
+              <Route path="/paragominas" element={<Paragominas />} />
               <Route path="/procedimentos/cirurgia-de-catarata" element={<ProcCatarata />} />
               <Route path="/procedimentos/cirurgia-de-pterigio" element={<ProcPterigio />} />
               <Route path="/procedimentos/consulta-oftalmologica" element={<ProcConsulta />} />
