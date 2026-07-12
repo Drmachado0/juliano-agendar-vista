@@ -27,7 +27,7 @@ const CONFIRMATION_TYPES = new Set([
 const BodySchema = z.object({
   agendamento_id: z.string().uuid().nullable().optional(),
   telefone: z.string().min(8),
-  tipo_mensagem: z.string().default("confirmacao_automatica"),
+  tipo_mensagem: z.string().default("bot_agente"),
   canal: z.string().default("whatsapp_manychat"),
   status_envio: z.enum(["enviado", "falha_envio", "entregue", "lido"]),
   subscriber_id: z.string().optional().nullable(),

@@ -19,6 +19,7 @@ interface SaudeRow {
   net_ultimo_erro_status: number | null;
   out_confirmados_24h: number;
   pacientes_ultima_msg_in: number;
+  in_orfas_24h: number;
   gerado_em: string;
 }
 
@@ -94,15 +95,22 @@ export default function SaudeIntegracoes() {
     {
       label: "OUT confirmados (24h)",
       value: saude?.out_confirmados_24h ?? "—",
-      hint: "mensagens OUT registradas via n8n/ManyChat",
+      hint: "Somente enviado/entregue/lido — exclui 'solicitado' e 'erro'",
       danger: (saude?.out_confirmados_24h ?? 0) === 0,
       icon: CheckCircle2,
     },
     {
-      label: "Pacientes s/ resposta (última msg IN)",
+      label: "Pacientes s/ resposta (48h)",
       value: saude?.pacientes_ultima_msg_in ?? "—",
-      hint: "Kanban ainda considera direção IN",
+      hint: "Agrupado por telefone canônico (inclui órfãos)",
       danger: (saude?.pacientes_ultima_msg_in ?? 0) > 5,
+      icon: AlertTriangle,
+    },
+    {
+      label: "IN órfãs (24h)",
+      value: saude?.in_orfas_24h ?? "—",
+      hint: "Mensagens IN sem agendamento vinculado nas últimas 24h",
+      danger: (saude?.in_orfas_24h ?? 0) > 0,
       icon: AlertTriangle,
     },
   ];
