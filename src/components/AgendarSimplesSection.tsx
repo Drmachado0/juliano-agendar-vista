@@ -5,18 +5,20 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import { Button } from "@/components/ui/button";
 
+// Ordem alinhada ao fluxo real do formulário em /agendamento
+// (PersonalDataStep → ConsultationDetailsStep + DateTimeStep → ConfirmationStep).
 const steps = [
   {
     number: "01",
-    icon: CalendarDays,
-    title: "Escolha o local e a data",
-    description: "Selecione a clínica em Paragominas (ou Belém) e o dia que funciona pra você.",
+    icon: ListChecks,
+    title: "Informe seus dados",
+    description: "Nome e WhatsApp para a equipe entrar em contato.",
   },
   {
     number: "02",
-    icon: ListChecks,
-    title: "Informe seus dados",
-    description: "Nome, WhatsApp, convênio ou particular e tipo de atendimento.",
+    icon: CalendarDays,
+    title: "Escolha o atendimento",
+    description: "Tipo, local, convênio, data e horário disponíveis.",
   },
   {
     number: "03",
