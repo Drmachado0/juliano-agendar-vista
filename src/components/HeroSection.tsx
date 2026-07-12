@@ -125,7 +125,7 @@ const HeroSection = () => {
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <span className="w-1 h-1 rounded-full bg-primary" />
-                +{DOCTOR.yearsExperience} anos de experiência
+                {DOCTOR.yearsExperienceLong}
               </span>
             </div>
           </div>
