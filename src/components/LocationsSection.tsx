@@ -6,8 +6,19 @@ const LocationsSection = () => {
   const [activeLocation, setActiveLocation] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [showBelem, setShowBelem] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const belemTrackedRef = useRef(false);
   const sectionRef = useRef<HTMLDivElement>(null);
   const { trackPhoneClick, trackCTAClick } = useGoogleTag();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener?.("change", update);
+    return () => mq.removeEventListener?.("change", update);
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
