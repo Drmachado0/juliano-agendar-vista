@@ -12,6 +12,20 @@
 import { execSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 
+// Skip suite se psql/DB não estiverem disponíveis no ambiente de teste.
+const canRun = (() => {
+  try {
+    if (!process.env.PGHOST && !process.env.SUPABASE_DB_URL) return false;
+    execSync("which psql", { stdio: "ignore" });
+    execSync("psql -X -A -t -c 'SELECT 1'", { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+const d = canRun ? describe : describe.skip;
+
 function sql(query: string): string {
   return execSync(`psql -X -A -t -F '|' -v ON_ERROR_STOP=1 -c ${JSON.stringify(query)}`, {
     encoding: "utf8",
