@@ -219,7 +219,7 @@ serve(async (req) => {
       category: "edge_function",
       source: "registrar-envio-out-n8n",
       message: `Falha inserir OUT: ${insErr.message}`,
-      details: { request_id: rid, telefone: telefoneNormalizado },
+      details: { request_id: rid, telefone_mask: maskTelefone(telefoneNormalizado), provider, has_provider_msg_id: !!providerMessageId },
       request_id: rid,
     });
     return json({ error: insErr.message }, 500, headers);
