@@ -1,10 +1,23 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Props {
   onFirstInteract?: () => void;
 }
 
 const LINES = ["E F P", "T O Z", "L P E D"];
+
+/**
+ * Mapeia o valor do slider (0–100) em uma indicação estilo Snellen (20/XX).
+ * Faixas fixas — não é resultado clínico, apenas apoio visual à demonstração.
+ */
+export const snellenForValue = (v: number): string => {
+  if (v >= 100) return "20 / 20";
+  if (v >= 80) return "20 / 30";
+  if (v >= 60) return "20 / 40";
+  if (v >= 40) return "20 / 60";
+  if (v >= 20) return "20 / 100";
+  return "20 / 200";
+};
 
 /**
  * Seção-assinatura da /paragominas — versão premium.
@@ -14,6 +27,17 @@ const LINES = ["E F P", "T O Z", "L P E D"];
 const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
   const [value, setValue] = useState(35);
   const firedRef = useRef(false);
+  const snellen = snellenForValue(value);
+  const [announced, setAnnounced] = useState(snellen);
+  const lastAnnouncedRef = useRef(snellen);
+
+  // Anuncia apenas quando muda de faixa (evita reler a cada tick)
+  useEffect(() => {
+    if (snellen !== lastAnnouncedRef.current) {
+      lastAnnouncedRef.current = snellen;
+      setAnnounced(snellen);
+    }
+  }, [snellen]);
 
   const fire = () => {
     if (firedRef.current) return;
@@ -29,6 +53,7 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
   const blurPx = ((100 - value) / 100) * 7;
   const contrast = 0.55 + (value / 100) * 0.55;
   const opacity = 0.55 + (value / 100) * 0.45;
+  const progressPct = value;
 
   return (
     <section
@@ -53,7 +78,6 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
       </svg>
 
       <div className="container mx-auto px-4 max-w-6xl relative">
-        {/* Título editorial acima da grade */}
         <header className="mb-16 md:mb-20 max-w-3xl">
           <div className="flex items-center gap-4 mb-6">
             <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
@@ -82,41 +106,68 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
               Deslize para atravessar o que muitos vivem todos os dias.
             </p>
 
-            <div className="space-y-6">
-              <div className="flex items-baseline justify-between">
-                <label
-                  htmlFor="clarity-slider"
-                  className="pgm-eyebrow"
-                  style={{ color: "var(--pgm-champagne)" }}
-                >
-                  Ajustar nitidez da demonstração
-                </label>
+            <div className="space-y-5">
+              {/* Convite acima do trilho, com seta sutil apontando para baixo */}
+              <div className="flex items-end justify-between gap-4">
+                <div className="flex flex-col">
+                  <span
+                    className="pgm-eyebrow text-left"
+                    style={{ color: "var(--pgm-ciano)" }}
+                    aria-hidden="true"
+                  >
+                    Deslize aqui
+                  </span>
+                  <span
+                    className="text-xs mt-1"
+                    style={{ color: "rgba(243,240,232,0.6)" }}
+                    aria-hidden="true"
+                  >
+                    para ajustar a nitidez
+                  </span>
+                </div>
                 <span
-                  className="pgm-mono text-sm tabular-nums"
-                  style={{ color: "var(--pgm-ciano)" }}
                   aria-hidden="true"
+                  className="hidden md:inline-block pb-1"
+                  style={{ color: "var(--pgm-ciano)" }}
                 >
-                  {String(value).padStart(3, "0")}
+                  {/* Seta apontando para baixo, para o trilho */}
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <polyline points="6 13 12 19 18 13" />
+                  </svg>
                 </span>
               </div>
 
-              <input
-                id="clarity-slider"
-                type="range"
-                min={0}
-                max={100}
-                value={value}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={value}
-                onChange={(e) => {
-                  setValue(Number(e.target.value));
-                  fire();
+              {/* Trilho com progresso ciano preenchido */}
+              <div
+                className="relative"
+                style={{
+                  ["--pgm-progress" as string]: `${progressPct}%`,
                 }}
-                className="pgm-range"
-              />
+              >
+                <input
+                  id="clarity-slider"
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={value}
+                  aria-label="Deslize para ajustar a nitidez da demonstração"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={value}
+                  aria-valuetext={snellen}
+                  onChange={(e) => {
+                    setValue(Number(e.target.value));
+                    fire();
+                  }}
+                  className="pgm-range pgm-range--enhanced w-full"
+                  style={{
+                    background: `linear-gradient(to right, var(--pgm-ciano) 0%, var(--pgm-ciano) ${progressPct}%, rgba(243,240,232,0.18) ${progressPct}%, rgba(243,240,232,0.18) 100%)`,
+                  }}
+                />
+              </div>
 
-              <div className="flex items-center gap-3 pt-2">
+              <div className="flex items-center gap-3 pt-1">
                 <button
                   type="button"
                   onClick={() => bump(-10)}
@@ -132,6 +183,11 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
                   Mais nítido
                 </button>
               </div>
+
+              {/* Anúncio curto de faixa (aria-live) */}
+              <p className="sr-only" aria-live="polite">
+                Indicação atual: {announced}
+              </p>
 
               <div className="pgm-rule-dark mt-6" />
               <p className="text-xs leading-relaxed" style={{ color: "rgba(243,240,232,0.55)" }}>
@@ -176,11 +232,12 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
                 </p>
               </div>
               <p
+                data-testid="snellen-indicator"
                 className="mt-8 text-center pgm-mono text-[10px] tracking-[0.35em] uppercase"
                 style={{ color: "rgba(11,24,26,0.5)" }}
                 aria-hidden="true"
               >
-                20 / {Math.max(15, Math.round(200 - value * 1.7))}
+                {snellen}
               </p>
             </div>
 
@@ -199,7 +256,7 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
             </div>
 
             <p className="sr-only">
-              Placa simulada com linhas E F P, T O Z e L P E D. Nível atual de nitidez: {value} de 100.
+              Placa simulada com linhas E F P, T O Z e L P E D.
             </p>
           </div>
         </div>
