@@ -830,6 +830,12 @@
   box-shadow: 0 0 0 4px var(--pgm-marfim), 0 0 0 8px var(--pgm-ciano);
 }
 
+/* Crossfade do CTA de clareza */
+@keyframes pgmClarityFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* Reduz motion */
 @media (prefers-reduced-motion: reduce) {
   .theme-paragominas-premium * {
@@ -837,6 +843,7 @@
     transition-duration: 0.001ms !important;
   }
 }
+
 
 /* =============================================================
  * Agendamento Premium — /paragominas/agendamento
