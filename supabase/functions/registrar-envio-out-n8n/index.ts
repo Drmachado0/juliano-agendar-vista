@@ -105,7 +105,7 @@ serve(async (req) => {
       .eq("provider_message_id", providerMessageId)
       .maybeSingle();
     if (dupErr) {
-      return json({ error: `lookup: ${dupErr.message}` }, 500, headers);
+      return json({ error: "lookup_failed", request_id: rid }, 500, headers);
     }
     if (dup) {
       return json(
