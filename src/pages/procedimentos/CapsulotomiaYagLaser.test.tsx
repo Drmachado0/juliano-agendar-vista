@@ -2,16 +2,21 @@ import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import CapsulotomiaYagLaser from "./CapsulotomiaYagLaser";
 
-const renderPage = () =>
-  render(
-    <HelmetProvider>
-      <MemoryRouter>
-        <CapsulotomiaYagLaser />
-      </MemoryRouter>
-    </HelmetProvider>
+const renderPage = () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <HelmetProvider>
+        <MemoryRouter>
+          <CapsulotomiaYagLaser />
+        </MemoryRouter>
+      </HelmetProvider>
+    </QueryClientProvider>
   );
+};
 
 describe("CapsulotomiaYagLaser page", () => {
   it("comunica apenas Belém no H1 e não usa 'Paragominas e Belém' em copy de localização", () => {
