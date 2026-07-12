@@ -1,11 +1,10 @@
-import { Menu, X, LogIn, CalendarCheck, Phone } from "lucide-react";
+import { Menu, X, CalendarCheck, Phone } from "lucide-react";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { DOCTOR } from "@/lib/constants";
 import logoImage from "@/assets/dr-juliano-logo.svg";
 
@@ -13,7 +12,6 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("");
   const [scrolled, setScrolled] = useState(false);
-  const { user } = useAuth();
   const { trackWhatsAppClick, trackCTAClick } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
   const { waLinkBare, display } = useSiteWhatsApp();
