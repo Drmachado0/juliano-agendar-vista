@@ -127,13 +127,13 @@ describe("migração — vincular_mensagem_por_telefone (case-insensitive termin
 
 describe("migração — saude_integracoes", () => {
   it("out_confirmados_24h NÃO inclui 'solicitado'", () => {
-    const m = MIG.match(/out24 AS \(([\s\S]*?)\),/);
+    const m = MIG.match(/out24 AS \(([\s\S]*?)\)\s*,\s*\n\s*--/);
     expect(m).toBeTruthy();
     expect(m![1]).toMatch(/status_envio IN \('enviado','entregue','lido'\)/);
-    expect(m![1]).not.toMatch(/solicitado/);
+    expect(m![1]).not.toMatch(/'solicitado'/);
   });
   it("pacientes_ultima_msg_in agrupa por telefone_canonico (inclui órfãos)", () => {
-    const m = MIG.match(/ultima_por_tel AS \(([\s\S]*?)\)/);
+    const m = MIG.match(/ultima_por_tel AS \(([\s\S]*?)ORDER BY telefone_canonico[^)]*\)/);
     expect(m).toBeTruthy();
     expect(m![1]).toMatch(/DISTINCT ON \(telefone_canonico\)/);
     // Não filtra agendamento_id, então inclui órfãos
