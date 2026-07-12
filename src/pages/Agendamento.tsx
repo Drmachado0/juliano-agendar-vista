@@ -668,7 +668,7 @@ const Agendamento = () => {
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                     <span className="text-muted-foreground">
-                      <strong className="text-foreground">13+ anos</strong> de experiência em oftalmologia
+                      <strong className="text-foreground">Mais de 15 anos</strong> de experiência em oftalmologia
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
