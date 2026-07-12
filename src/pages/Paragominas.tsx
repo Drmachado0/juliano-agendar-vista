@@ -43,7 +43,6 @@ const CANONICAL = "https://drjulianomachado.com/paragominas";
 const SERIF: React.CSSProperties = { fontFamily: "Fraunces, 'Playfair Display', Georgia, serif" };
 
 type Local = {
-  number: string;
   name: string;
   address: string;
   mapsLink: string;
@@ -52,14 +51,12 @@ type Local = {
 
 const LOCAIS: readonly Local[] = [
   {
-    number: "01",
     name: "Clinicor",
     address: "Rua Eixo W1, R. Célio Miranda, 729 — Paragominas/PA",
     mapsLink: "https://maps.google.com/?q=Clinicor+Rua+Celio+Miranda+729+Paragominas+PA",
     utmContent: "local_clinicor",
   },
   {
-    number: "02",
     name: "Hospital Geral de Paragominas",
     address: "R. Santa Terezinha, 304 — Centro, Paragominas/PA",
     mapsLink: "https://maps.google.com/?q=Hospital+Geral+Paragominas+Santa+Terezinha+304",
@@ -68,18 +65,24 @@ const LOCAIS: readonly Local[] = [
 ] as const;
 
 const MOTIVOS = [
-  { n: "01", title: "Mudança no grau", note: "Perto, longe ou ao dirigir." },
-  { n: "02", title: "Avaliação de rotina", note: "Check-up periódico." },
-  { n: "03", title: "Catarata", note: "Avaliação do cristalino." },
-  { n: "04", title: "Glaucoma", note: "Pressão intraocular." },
-  { n: "05", title: "Pterígio", note: "Crescimento sobre a córnea." },
-  { n: "06", title: "Retorno e acompanhamento", note: "Reavaliação clínica." },
+  { title: "Mudança no grau", note: "Perto, longe ou ao dirigir." },
+  { title: "Avaliação de rotina", note: "Check-up periódico." },
+  { title: "Catarata", note: "Avaliação do cristalino." },
+  { title: "Glaucoma", note: "Pressão intraocular." },
+  { title: "Pterígio", note: "Crescimento sobre a córnea." },
+  { title: "Retorno e acompanhamento", note: "Reavaliação clínica." },
 ] as const;
 
 const PASSOS = [
-  { n: "01", t: "Dados", d: "Nome e WhatsApp para contato." },
-  { n: "02", t: "Atendimento", d: "Local, data e horário disponíveis." },
-  { n: "03", t: "Confirmação", d: "A equipe confirma pelo WhatsApp." },
+  { icon: User, t: "Dados", d: "Nome e WhatsApp para contato." },
+  { icon: CalendarDays, t: "Atendimento", d: "Local, data e horário disponíveis." },
+  { icon: CheckCircle2, t: "Confirmação", d: "A equipe confirma pelo WhatsApp." },
+] as const;
+
+const METODO = [
+  { icon: Ear, label: "Escutar" },
+  { icon: Eye, label: "Examinar" },
+  { icon: MessageSquare, label: "Explicar" },
 ] as const;
 
 const FAQ = [
