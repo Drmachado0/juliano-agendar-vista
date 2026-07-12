@@ -264,18 +264,18 @@ const Paragominas = () => {
             <div className="container mx-auto px-4 max-w-5xl">
               <p className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-wider mb-5">
                 <MapPin className="w-3.5 h-3.5" aria-hidden="true" />
-                Atendimento oftalmológico em Paragominas
+                Atendimento oftalmológico em Paragominas e Belém
               </p>
               <h1
                 id="hero-heading"
                 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground leading-tight mb-4"
               >
                 Consulta oftalmológica completa em{" "}
-                <span className="gradient-text">Paragominas</span>
+                <span className="gradient-text">Paragominas</span> e Belém
               </h1>
               <p className="text-base md:text-lg text-muted-foreground leading-relaxed mb-8 max-w-2xl">
                 Atendimento com o Dr. Juliano Machado na Clinicor e no Hospital Geral de
-                Paragominas.
+                Paragominas, e também no Instituto de Olhos de Belém e na Vitria.
               </p>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
