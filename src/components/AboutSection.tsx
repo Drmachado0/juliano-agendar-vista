@@ -33,7 +33,6 @@ const AboutSection = () => {
   }, []);
 
   const credentials = [
-    { icon: GraduationCap, text: "Membro da SBO" },
     { icon: Stethoscope, text: "13+ anos de oftalmologia" },
     { icon: Heart, text: "Explica cada passo ao paciente" },
     { icon: Cpu, text: "Equipamentos de última geração" },
