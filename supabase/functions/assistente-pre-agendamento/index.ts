@@ -263,11 +263,16 @@ async function escalarParaHumano(
     const statusAtual = agendamento?.status_crm;
     const protegidos = new Set(["CLINICOR", "HGP", "BELÉM", "ATENDIDO"]);
     if (!protegidos.has(statusAtual)) {
+      // Usa RPC para manter status_crm/status_funil/estado_atendimento coerentes
+      // e forçar bot_ativo=false ao escalar para humano.
+      await supabase.rpc("transicionar_estado_agendamento", {
+        p_id: id,
+        p_novo_status_crm: "PRECISA_DE_HUMANO",
+        p_motivo: `[BOT] ${motivo} · intenção: ${intencao}`,
+      });
       await supabase
         .from("agendamentos")
         .update({
-          status_crm: "PRECISA_DE_HUMANO",
-          status_funil: "aguardando_humano",
           bot_ultima_acao_at: new Date().toISOString(),
           observacoes_internas: obs,
         })
@@ -285,6 +290,9 @@ async function escalarParaHumano(
         origem: "bot_whatsapp",
         status_crm: "PRECISA_DE_HUMANO",
         status_funil: "aguardando_humano",
+        estado_atendimento: "humano",
+        bot_ativo: false,
+        bot_pausa_motivo: `[BOT] ${motivo} · intenção: ${intencao}`,
         bot_ultima_acao_at: new Date().toISOString(),
         observacoes_internas: obs,
       })
