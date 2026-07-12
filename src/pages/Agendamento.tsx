@@ -191,10 +191,27 @@ const Agendamento = () => {
     trackMetaContact("WhatsApp");
   };
 
+  const STEP_NAMES: Record<number, string> = {
+    1: "personal_data",
+    2: "consultation_details",
+    3: "date_time",
+    4: "confirmation",
+  };
+
   const nextStep = async () => {
     if (currentStep < totalSteps) {
       trackStepCompleted(currentStep, "landing_agendamento");
-      pushDL({ event: "booking_step_completed", page_type: "landing_agendamento", step: currentStep });
+      // Dedup: 1 booking_step_completed por etapa por tentativa, mesmo que o
+      // usuário volte e avance novamente. Sem PII no payload.
+      if (!stepsCompletedRef.current.has(currentStep)) {
+        stepsCompletedRef.current.add(currentStep);
+        pushDL({
+          event: "booking_step_completed",
+          page_type: "landing_agendamento",
+          step: currentStep,
+          step_name: STEP_NAMES[currentStep] ?? `step_${currentStep}`,
+        });
+      }
       if (currentStep === 2 && !leadId) {
         const leadData = {
           nome_completo: formData.fullName,
