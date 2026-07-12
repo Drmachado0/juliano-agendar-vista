@@ -112,7 +112,7 @@ describe("Paragominas landing page", () => {
   it("canonical, title e og:url apontam para /paragominas", async () => {
     renderPage();
     // Helmet aplica assíncronamente ao document.head.
-    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 50));
     expect(document.title).toMatch(/Oftalmologista em Paragominas/i);
     const canonical = document.querySelector('link[rel="canonical"]');
     expect(canonical?.getAttribute("href")).toBe("https://drjulianomachado.com/paragominas");
