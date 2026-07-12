@@ -167,24 +167,47 @@ describe("Paragominas landing page — restructure", () => {
 
 });
 
+const renderClarity = (props: { onFirstInteract?: () => void } = {}) =>
+  render(
+    <MemoryRouter initialEntries={["/paragominas"]}>
+      <RefractionClarityExperience {...props} />
+    </MemoryRouter>
+  );
+
 describe("RefractionClarityExperience — slider", () => {
-  it("expõe label acessível 'Deslize para ajustar a nitidez da demonstração', valor inicial 35 e limites 0-100", () => {
-    render(<RefractionClarityExperience />);
+  it("expõe label acessível, valor inicial 0 (ilegível) e limites 0-100", () => {
+    renderClarity();
     const slider = screen.getByLabelText(/Deslize para ajustar a nitidez da demonstração/i) as HTMLInputElement;
     expect(slider).toBeTruthy();
     expect(slider.min).toBe("0");
     expect(slider.max).toBe("100");
-    expect(slider.value).toBe("35");
+    expect(Number(slider.value)).toBeLessThanOrEqual(10);
+  });
+
+  it("indicador inicial mostra 20 / 200", () => {
+    renderClarity();
+    expect(screen.getByTestId("snellen-indicator").textContent).toBe("20 / 200");
+  });
+
+  it("não contém as palavras 'Refração' ou 'refração' na seção", () => {
+    const { container } = renderClarity();
+    expect(container.textContent || "").not.toMatch(/refra[cç][aã]o/i);
   });
 
   it("mostra a nota de demonstração ilustrativa", () => {
-    render(<RefractionClarityExperience />);
+    renderClarity();
     expect(screen.getByText(/Demonstração visual ilustrativa/i)).toBeTruthy();
+  });
+
+  it("mostra o novo texto de apoio ('Encontrar a melhor nitidez...')", () => {
+    renderClarity();
+    expect(screen.getByText(/Encontrar a melhor nitidez/i)).toBeTruthy();
+    expect(screen.getByText(/Deslize e veja a diferença/i)).toBeTruthy();
   });
 
   it("dispara evento genérico apenas UMA vez", () => {
     const spy = vi.fn();
-    render(<RefractionClarityExperience onFirstInteract={spy} />);
+    renderClarity({ onFirstInteract: spy });
     const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
     fireEvent.change(slider, { target: { value: "60" } });
     fireEvent.change(slider, { target: { value: "80" } });
@@ -193,27 +216,22 @@ describe("RefractionClarityExperience — slider", () => {
   });
 
   it("botões Mais nítido / Mais embaçado mudam o valor com step de 10", () => {
-    render(<RefractionClarityExperience />);
+    renderClarity();
     const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
     fireEvent.click(screen.getByRole("button", { name: /Mais nítido/i }));
-    expect(Number(slider.value)).toBe(45);
+    expect(Number(slider.value)).toBe(10);
     fireEvent.click(screen.getByRole("button", { name: /Mais embaçado/i }));
-    expect(Number(slider.value)).toBe(35);
+    expect(Number(slider.value)).toBe(0);
   });
 
   it("Alvos dos botões têm min-h 44px (classe min-h-[44px])", () => {
-    render(<RefractionClarityExperience />);
+    renderClarity();
     const b = screen.getByRole("button", { name: /Mais nítido/i });
     expect(b.className).toMatch(/min-h-\[44px\]/);
   });
 
-  it("indicador inicial (valor 35) mostra 20 / 100", () => {
-    render(<RefractionClarityExperience />);
-    expect(screen.getByTestId("snellen-indicator").textContent).toBe("20 / 100");
-  });
-
   it("mapeia todas as faixas do slider para indicador Snellen correto", () => {
-    const { rerender } = render(<RefractionClarityExperience />);
+    renderClarity();
     const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
     const cases: Array<[number, string]> = [
       [0, "20 / 200"],
@@ -232,13 +250,11 @@ describe("RefractionClarityExperience — slider", () => {
       fireEvent.change(slider, { target: { value: String(v) } });
       expect(screen.getByTestId("snellen-indicator").textContent).toBe(expected);
     }
-    rerender(<RefractionClarityExperience />);
   });
 
   it("End vai a 100 e mostra 20 / 20; Home vai a 0 e mostra 20 / 200", () => {
-    render(<RefractionClarityExperience />);
+    renderClarity();
     const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
-    // Simula End/Home via mudança de valor (comportamento nativo do range)
     fireEvent.keyDown(slider, { key: "End" });
     fireEvent.change(slider, { target: { value: "100" } });
     expect(slider.value).toBe("100");
@@ -249,18 +265,8 @@ describe("RefractionClarityExperience — slider", () => {
     expect(screen.getByTestId("snellen-indicator").textContent).toBe("20 / 200");
   });
 
-  it("ArrowRight/ArrowLeft (via change) alteram o valor sem estourar limites", () => {
-    render(<RefractionClarityExperience />);
-    const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
-    fireEvent.change(slider, { target: { value: "100" } });
-    fireEvent.change(slider, { target: { value: "100" } });
-    expect(Number(slider.value)).toBe(100);
-    fireEvent.change(slider, { target: { value: "0" } });
-    expect(Number(slider.value)).toBe(0);
-  });
-
   it("Botão 'Mais nítido' repetido chega a 100 e exibe 20 / 20", () => {
-    render(<RefractionClarityExperience />);
+    renderClarity();
     const btn = screen.getByRole("button", { name: /Mais nítido/i });
     for (let i = 0; i < 20; i++) fireEvent.click(btn);
     const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
@@ -269,9 +275,50 @@ describe("RefractionClarityExperience — slider", () => {
   });
 
   it("Exibe convite 'Deslize aqui' e apoio 'para ajustar a nitidez'", () => {
-    render(<RefractionClarityExperience />);
+    renderClarity();
     expect(screen.getByText(/Deslize aqui/i)).toBeTruthy();
     expect(screen.getByText(/para ajustar a nitidez/i)).toBeTruthy();
+  });
+
+  it("CTA 'Agende sua consulta' fica aria-hidden e fora do tab order antes de 100", () => {
+    renderClarity();
+    const slot = screen.getByTestId("clarity-cta-slot");
+    expect(slot.getAttribute("aria-hidden")).toBe("true");
+    const link = slot.querySelector("a") as HTMLAnchorElement;
+    expect(link).toBeTruthy();
+    expect(link.getAttribute("tabindex")).toBe("-1");
+  });
+
+  it("Em 100, CTA fica acessível e aponta para /paragominas/agendamento com utm_content=clareza_paragominas", () => {
+    renderClarity();
+    const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
+    fireEvent.change(slider, { target: { value: "100" } });
+    const slot = screen.getByTestId("clarity-cta-slot");
+    expect(slot.getAttribute("aria-hidden")).toBe("false");
+    expect(screen.getByText(/Agora está mais nítido\?/i)).toBeTruthy();
+    const link = slot.querySelector("a") as HTMLAnchorElement;
+    expect(link.getAttribute("tabindex")).toBe("0");
+    const href = link.getAttribute("href") || "";
+    expect(href).toContain("/paragominas/agendamento");
+    expect(href).toContain("utm_content=clareza_paragominas");
+    expect(href).toContain("utm_campaign=paragominas");
+  });
+
+  it("Tracking do CTA de clareza não inclui PII nem valor do slider", () => {
+    renderClarity();
+    const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
+    fireEvent.change(slider, { target: { value: "100" } });
+    fireEvent.click(screen.getByRole("link", { name: /Agende sua consulta/i }));
+    expect(trackEventMock).toHaveBeenCalledWith("cta_click", {
+      action: "agendar_clareza",
+      placement: "landing_paragominas_clarity_demo",
+    });
+    // Nenhuma chamada carregou dados sensíveis
+    for (const call of trackEventMock.mock.calls) {
+      const payload = JSON.stringify(call);
+      expect(payload).not.toMatch(/nome|email|cpf|telefone|nasc/i);
+      expect(payload).not.toMatch(/"value":\s*\d/);
+    }
   });
 });
 
