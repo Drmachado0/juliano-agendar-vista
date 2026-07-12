@@ -455,18 +455,40 @@ const Paragominas = () => {
               borderBottom: "1px solid var(--pgm-line)",
             }}
           >
-            <div className="container mx-auto px-4 py-7 max-w-6xl">
-              <ul className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-2 text-sm">
+            <div className="container mx-auto px-4 py-8 md:py-10 max-w-5xl">
+              <ul className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                 {[
                   { k: "Onde", v: "Clinicor e HGP · Paragominas" },
-                  { k: "Como", v: "Agendamento 100% online" },
+                  { k: "Como", v: "Agendamento online" },
                   { k: "Contato", v: "Confirmação pelo WhatsApp" },
                 ].map((it) => (
-                  <li key={it.k} className="flex items-baseline gap-3 md:justify-center">
-                    <span className="pgm-eyebrow whitespace-nowrap" style={{ color: "var(--pgm-champagne)" }}>
+                  <li
+                    key={it.k}
+                    className="flex flex-col gap-1.5 md:items-center md:text-center"
+                    style={{ paddingBlock: "6px" }}
+                  >
+                    <span
+                      className="uppercase"
+                      style={{
+                        color: "var(--pgm-champagne)",
+                        fontWeight: 700,
+                        letterSpacing: "0.12em",
+                        fontSize: "clamp(12px, 2vw, 13px)",
+                        lineHeight: 1.4,
+                      }}
+                    >
                       {it.k}
                     </span>
-                    <span style={{ color: "var(--pgm-petroleo)" }}>{it.v}</span>
+                    <span
+                      style={{
+                        color: "var(--pgm-petroleo)",
+                        fontWeight: 600,
+                        fontSize: "clamp(15px, 2.2vw, 17px)",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {it.v}
+                    </span>
                   </li>
                 ))}
               </ul>
