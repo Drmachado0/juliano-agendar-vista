@@ -820,7 +820,7 @@ const Paragominas = () => {
                 <div>
                   <div className="flex items-center gap-4 mb-6">
                     <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                      VII — Palavra dos pacientes
+                      Palavra dos pacientes
                     </span>
                     <div className="pgm-rule flex-1 max-w-[200px]" />
                   </div>
