@@ -149,7 +149,21 @@ const LocationsSection = () => {
                 </button>
               );
             })}
+
+            {!showBelem && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBelem(true);
+                  trackCTAClick("ver_locais_belem", "locations", "Ver locais em Belém");
+                }}
+                className="w-full text-sm font-medium text-muted-foreground hover:text-primary transition-colors py-3 px-4 rounded-xl border border-dashed border-border/60 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[48px]"
+              >
+                + Ver 2 locais em Belém
+              </button>
+            )}
           </div>
+
 
           {/* Map — Google Maps real do local selecionado */}
           <div className={`relative rounded-3xl overflow-hidden min-h-[500px] border border-border/60 flex flex-col transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}>
