@@ -10,6 +10,12 @@ import {
   Navigation,
   Menu,
   X,
+  User,
+  CalendarDays,
+  CheckCircle2,
+  Ear,
+  Eye,
+  MessageSquare,
 } from "lucide-react";
 import {
   Accordion,
