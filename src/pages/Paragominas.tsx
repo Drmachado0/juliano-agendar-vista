@@ -174,16 +174,14 @@ const Paragominas = () => {
     url: CANONICAL,
     telephone: undefined,
     identifier: DOCTOR.crm,
-    areaServed: {
-      "@type": "City",
-      name: "Paragominas",
-      addressRegion: "PA",
-      addressCountry: "BR",
-    },
+    areaServed: [
+      { "@type": "City", name: "Paragominas", addressRegion: "PA", addressCountry: "BR" },
+      { "@type": "City", name: "Belém", addressRegion: "PA", addressCountry: "BR" },
+    ],
     address: LOCAIS.map((l) => ({
       "@type": "PostalAddress",
       streetAddress: l.address,
-      addressLocality: "Paragominas",
+      addressLocality: l.city,
       addressRegion: "PA",
       addressCountry: "BR",
     })),
