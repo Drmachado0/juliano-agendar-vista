@@ -249,14 +249,12 @@ const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
                     </Button>
                   </Link>
                   <div className="mt-5 pt-5 border-t border-border/50 space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>Clinicor e Hospital Geral — Paragominas</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>IOB e Vitria — Belém</span>
-                    </div>
+                    {locations.sidebarItems.map((item) => (
+                      <div key={item} className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                        <span>{item}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </aside>
