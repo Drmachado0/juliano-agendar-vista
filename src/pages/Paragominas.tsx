@@ -75,9 +75,9 @@ const MOTIVOS = [
 ] as const;
 
 const PASSOS = [
-  { icon: User, t: "Dados", d: "Nome e WhatsApp para contato." },
-  { icon: CalendarDays, t: "Atendimento", d: "Local, data e horário disponíveis." },
-  { icon: CheckCircle2, t: "Confirmação", d: "A equipe confirma pelo WhatsApp." },
+  { icon: User, t: "Dados", d: "Informe seu nome e WhatsApp." },
+  { icon: CalendarDays, t: "Atendimento", d: "Escolha Clinicor ou HGP e o tipo de atendimento." },
+  { icon: CheckCircle2, t: "Confirmação", d: "Selecione o horário e aguarde a confirmação da equipe." },
 ] as const;
 
 const METODO = [
@@ -797,7 +797,7 @@ const Paragominas = () => {
             </div>
           </section>
 
-          {/* =========================== VI · AGENDAMENTO =========================== */}
+          {/* =========================== AGENDAMENTO =========================== */}
           <section
             id="agendamento"
             aria-labelledby="passos-heading"
@@ -805,52 +805,50 @@ const Paragominas = () => {
             style={{ background: "var(--pgm-petroleo)", color: "var(--pgm-marfim)" }}
           >
             <div className="container mx-auto px-4 max-w-6xl relative">
-              <header className="mb-16 md:mb-20 max-w-3xl">
+              <header className="mb-14 md:mb-20 max-w-3xl">
                 <div className="flex items-center gap-4 mb-6">
                   <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                    Agendamento
+                    Agendamento online
                   </span>
                   <div className="pgm-rule-dark flex-1 max-w-[200px]" />
                 </div>
                 <h2
                   id="passos-heading"
-                  className="leading-[0.98] tracking-[-0.02em]"
-                  style={{ ...SERIF, fontSize: "clamp(2.2rem, 6vw, 4.4rem)" }}
+                  className="leading-[1.02] tracking-[-0.02em] mb-6"
+                  style={{ ...SERIF, fontSize: "clamp(2rem, 5.5vw, 3.8rem)" }}
                 >
-                  Três passos claros,
-                  <br />
-                  <span className="italic" style={{ color: "var(--pgm-ciano)" }}>
-                    como um raio de luz.
-                  </span>
+                  Seu atendimento começa aqui.
                 </h2>
+                <p
+                  className="text-base md:text-lg leading-relaxed max-w-xl"
+                  style={{ color: "rgba(243,240,232,0.78)" }}
+                >
+                  Informe seus dados, escolha o local e consulte os horários disponíveis em Paragominas.
+                </p>
               </header>
 
-              {/* Passos — ícones + timeline, sem numeração visual */}
-              <ol className="grid md:grid-cols-3 gap-10 md:gap-0 relative">
-                {/* Linha conectora desktop */}
+              {/* Etapas — timeline horizontal desktop / vertical mobile, sem numeração */}
+              <ol className="relative grid gap-10 md:grid-cols-3 md:gap-12">
+                {/* Filete conector desktop — fino, champagne, apenas conecta as etapas */}
                 <div
                   aria-hidden="true"
-                  className="hidden md:block absolute top-6 left-[8%] right-[8%] h-px"
-                  style={{ background: "var(--pgm-line-dark)" }}
+                  className="hidden md:block absolute top-[14px] left-[10%] right-[10%] h-px"
+                  style={{ background: "var(--pgm-champagne)", opacity: 0.35 }}
                 />
                 {PASSOS.map((s) => {
                   const Icon = s.icon;
                   return (
-                    <li
-                      key={s.t}
-                      className="relative md:px-8 first:md:pl-0 last:md:pr-0"
-                      style={{ borderLeft: "1px solid var(--pgm-line-dark)" }}
-                    >
-                      {/* ponto ciano no eixo da timeline */}
+                    <li key={s.t} className="relative md:pt-0">
+                      {/* marcador circular sobre o filete */}
                       <span
-                        className="absolute -left-[7px] top-4 w-3 h-3 rounded-full"
+                        aria-hidden="true"
+                        className="hidden md:block absolute -top-[3px] left-0 w-2 h-2 rounded-full"
                         style={{
                           background: "var(--pgm-ciano)",
                           boxShadow: "0 0 0 4px var(--pgm-petroleo)",
                         }}
-                        aria-hidden="true"
                       />
-                      <div className="pl-6 md:pl-8">
+                      <div className="md:pt-10">
                         <Icon
                           className="w-6 h-6 mb-5"
                           style={{ color: "var(--pgm-champagne)" }}
@@ -859,11 +857,11 @@ const Paragominas = () => {
                         />
                         <h3
                           className="mb-3"
-                          style={{ ...SERIF, fontSize: "1.6rem", lineHeight: 1.1 }}
+                          style={{ ...SERIF, fontSize: "1.5rem", lineHeight: 1.15 }}
                         >
                           {s.t}
                         </h3>
-                        <p className="text-sm md:text-base leading-relaxed" style={{ color: "rgba(243,240,232,0.72)" }}>
+                        <p className="text-sm md:text-base leading-relaxed max-w-[28ch]" style={{ color: "rgba(243,240,232,0.78)" }}>
                           {s.d}
                         </p>
                       </div>
@@ -872,13 +870,20 @@ const Paragominas = () => {
                 })}
               </ol>
 
-              <div className="mt-16 md:mt-20 flex items-center gap-6 flex-wrap">
+              <div className="mt-14 md:mt-20 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
                 <Link
                   to={stepsLink}
-                  onClick={() => trackCTAClick("comecar_agendamento", "landing_paragominas_passos", "Começar agendamento")}
-                  className="pgm-btn pgm-btn--ivory"
+                  onClick={() => trackCTAClick("ver_horarios_disponiveis", "landing_paragominas_passos", "Ver horários disponíveis")}
+                  className="pgm-btn pgm-btn--ivory w-full sm:w-auto justify-center"
+                  style={{
+                    minHeight: 56,
+                    paddingInline: 28,
+                    background: "var(--pgm-petroleo)",
+                    color: "var(--pgm-marfim)",
+                    border: "1px solid var(--pgm-marfim)",
+                  }}
                 >
-                  Começar agendamento
+                  Ver horários disponíveis
                   <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
                 </Link>
                 <a
@@ -886,16 +891,25 @@ const Paragominas = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() =>
-                    trackWhatsAppClick(whatsappHelpUrl, "WhatsApp agendamento", "whatsapp_landing_paragominas_steps", "landing_paragominas_steps")
+                    trackWhatsAppClick(whatsappHelpUrl, "Tirar dúvidas antes", "whatsapp_landing_paragominas_steps", "landing_paragominas_steps")
                   }
-                  className="pgm-btn pgm-btn--ghost text-sm min-h-[44px]"
+                  className="inline-flex items-center justify-center gap-2 text-sm font-medium min-h-[44px]"
+                  style={{ color: "var(--pgm-marfim)", opacity: 0.85 }}
                 >
                   <MessageCircle className="w-4 h-4" aria-hidden="true" />
                   Tirar dúvidas antes
                 </a>
               </div>
+
+              <p
+                className="mt-5 text-sm"
+                style={{ color: "rgba(243,240,232,0.6)" }}
+              >
+                Você poderá revisar todas as informações antes de confirmar.
+              </p>
             </div>
           </section>
+
 
           {/* =========================== VII · AVALIAÇÕES =========================== */}
           <section

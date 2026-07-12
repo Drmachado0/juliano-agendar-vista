@@ -165,6 +165,23 @@ describe("Paragominas landing page — restructure", () => {
     expect(screen.getAllByText(/Sociedade Brasileira de Glaucoma/i).length).toBeGreaterThan(0);
   });
 
+  it("Seção agendamento usa nova copy premium e não contém 'raio de luz' nem 'Três passos claros'", () => {
+    renderPage();
+    const main = screen.getByRole("main");
+    const text = main.textContent || "";
+    expect(text).not.toMatch(/raio de luz/i);
+    expect(text).not.toMatch(/Três passos claros/i);
+    expect(screen.getAllByText(/Agendamento online/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { level: 2, name: /Seu atendimento começa aqui\./i })).toBeTruthy();
+    expect(screen.getByText(/Informe seus dados, escolha o local/i)).toBeTruthy();
+    expect(screen.getByText(/Você poderá revisar todas as informações antes de confirmar/i)).toBeTruthy();
+    expect(screen.getByText(/Informe seu nome e WhatsApp\./i)).toBeTruthy();
+    expect(screen.getByText(/Escolha Clinicor ou HGP e o tipo de atendimento\./i)).toBeTruthy();
+    expect(screen.getByText(/Selecione o horário e aguarde a confirmação da equipe\./i)).toBeTruthy();
+    const ctas = screen.getAllByRole("link", { name: /Ver horários disponíveis/i });
+    expect(ctas.length).toBeGreaterThanOrEqual(2);
+  });
+
 });
 
 const renderClarity = (props: { onFirstInteract?: () => void } = {}) =>
