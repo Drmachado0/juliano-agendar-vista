@@ -84,11 +84,12 @@ describe("Paragominas landing page", () => {
 
   it("renderiza foto do Dr. Juliano no hero com alt descritivo", () => {
     renderPage();
-    const img = screen.getByAltText(/Dr\. Juliano Machado/i) as HTMLImageElement;
-    expect(img).toBeTruthy();
-    expect(img.getAttribute("width")).toBeTruthy();
-    expect(img.getAttribute("height")).toBeTruthy();
-    expect(img.getAttribute("fetchpriority")).toBe("high");
+    const imgs = screen.getAllByAltText(/Dr\. Juliano Machado/i) as HTMLImageElement[];
+    expect(imgs.length).toBeGreaterThan(0);
+    const hero = imgs[0];
+    expect(hero.getAttribute("width")).toBeTruthy();
+    expect(hero.getAttribute("height")).toBeTruthy();
+    expect(hero.getAttribute("fetchpriority")).toBe("high");
   });
 
   it("CTAs específicos da landing carregam UTMs internas da campanha paragominas", () => {
