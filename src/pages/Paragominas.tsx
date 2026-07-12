@@ -932,7 +932,7 @@ const Paragominas = () => {
           >
             <div className="container mx-auto px-4 max-w-5xl text-center relative">
               <p className="pgm-eyebrow mb-8" style={{ color: "var(--pgm-champagne)" }}>
-                IX — Encerramento
+                Encerramento
               </p>
               <h3
                 className="leading-[0.95] tracking-[-0.025em] mb-10"
