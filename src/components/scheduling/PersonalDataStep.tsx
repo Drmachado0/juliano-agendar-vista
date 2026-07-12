@@ -198,12 +198,18 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
             value={formData.fullName}
             onChange={(e) => updateFormData({ fullName: e.target.value })}
             placeholder="Ex: Maria Oliveira"
+            autoComplete="name"
+            aria-required="true"
+            aria-invalid={!!errors.fullName}
+            aria-describedby={errors.fullName ? "fullName-error" : undefined}
             className={`bg-secondary border-border focus:border-primary ${
               errors.fullName ? "border-destructive" : ""
             }`}
           />
           {errors.fullName && (
-            <p className="text-sm text-destructive">{errors.fullName}</p>
+            <p id="fullName-error" role="alert" className="text-sm text-destructive">
+              {errors.fullName}
+            </p>
           )}
         </div>
 
@@ -219,36 +225,49 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
             onChange={handlePhoneChange}
             placeholder="(91) 99999-9999"
             inputMode="tel"
+            autoComplete="tel"
             maxLength={15}
+            aria-required="true"
+            aria-invalid={!!errors.phone}
+            aria-describedby={errors.phone ? "phone-error" : undefined}
             className={`bg-secondary border-border focus:border-primary ${
               errors.phone ? "border-destructive" : ""
             }`}
           />
           {errors.phone && (
-            <p className="text-sm text-destructive">{errors.phone}</p>
+            <p id="phone-error" role="alert" className="text-sm text-destructive">
+              {errors.phone}
+            </p>
           )}
         </div>
 
-        {/* Birth Date */}
+        {/* Birth Date — OBRIGATÓRIO */}
         <div className="space-y-2">
           <Label htmlFor="birthDate" className="text-foreground flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-primary" />
-            Data de nascimento (opcional)
+            <Calendar className="w-4 h-4 text-primary" aria-hidden="true" />
+            Data de nascimento *
           </Label>
           <Input
             id="birthDate"
             type="text"
             inputMode="numeric"
+            autoComplete="bday"
             value={birthDateBr}
             onChange={handleBirthDateChange}
             placeholder="dd/mm/aaaa"
             maxLength={10}
+            required
+            aria-required="true"
+            aria-invalid={!!errors.birthDate}
+            aria-describedby={errors.birthDate ? "birthDate-error" : undefined}
             className={`bg-secondary border-border focus:border-primary ${
               errors.birthDate ? "border-destructive" : ""
             }`}
           />
           {errors.birthDate && (
-            <p className="text-sm text-destructive">{errors.birthDate}</p>
+            <p id="birthDate-error" role="alert" className="text-sm text-destructive">
+              {errors.birthDate}
+            </p>
           )}
         </div>
 
@@ -264,15 +283,21 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
             value={formData.email}
             onChange={(e) => updateFormData({ email: e.target.value })}
             placeholder="seu@email.com"
+            autoComplete="email"
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? "email-error" : undefined}
             className={`bg-secondary border-border focus:border-primary ${
               errors.email ? "border-destructive" : ""
             }`}
           />
           {errors.email && (
-            <p className="text-sm text-destructive">{errors.email}</p>
+            <p id="email-error" role="alert" className="text-sm text-destructive">
+              {errors.email}
+            </p>
           )}
         </div>
       </div>
+
 
       <div className="flex justify-end pt-4">
         <Button variant="hero" onClick={handleNext}>
