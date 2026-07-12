@@ -152,7 +152,7 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
   const updateFormData = (data: Partial<FormData>) => {
     if (!formStartFiredRef.current) {
       formStartFiredRef.current = true;
-      trackFormStart(pageType);
+      trackFormStart(pageType as any);
       pushDL(withVariant({ event: "booking_start", page_type: pageType }));
     }
     setFormData((prev) => ({ ...prev, ...data }));
@@ -167,7 +167,7 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
   const nextStep = async () => {
     if (currentStep >= TOTAL_STEPS) return;
 
-    trackStepCompleted(currentStep, pageType);
+    trackStepCompleted(currentStep, pageType as any);
     if (!stepsCompletedRef.current.has(currentStep)) {
       stepsCompletedRef.current.add(currentStep);
       pushDL(
