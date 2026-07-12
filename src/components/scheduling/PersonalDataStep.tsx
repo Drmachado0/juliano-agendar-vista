@@ -133,26 +133,26 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
       newErrors.email = "Por favor, digite um e-mail válido (ex: nome@email.com)";
     }
 
-    // Data de nascimento é opcional, mas se preenchida precisa estar completa e válida
-    if (birthDateBr.trim()) {
-      if (birthDateBr.length !== 10 || !brToIso(birthDateBr)) {
-        newErrors.birthDate = "Data inválida. Use o formato dd/mm/aaaa";
-      } else {
-        const iso = brToIso(birthDateBr);
-        const [ano, mes, dia] = iso.split("-").map(Number);
-        const dataNasc = new Date(ano, mes - 1, dia);
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        const idadeMaxima = new Date();
-        idadeMaxima.setFullYear(idadeMaxima.getFullYear() - 120);
+    // Data de nascimento OBRIGATÓRIA
+    const bd = birthDateBr.trim();
+    if (!bd) {
+      newErrors.birthDate = "Informe a data de nascimento.";
+    } else if (bd.length !== 10 || !brToIso(bd)) {
+      newErrors.birthDate = "Digite uma data válida no formato DD/MM/AAAA.";
+    } else {
+      const iso = brToIso(bd);
+      const [ano, mes, dia] = iso.split("-").map(Number);
+      const dataNasc = new Date(ano, mes - 1, dia);
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
 
-        if (dataNasc > hoje) {
-          newErrors.birthDate = "A data de nascimento não pode ser futura";
-        } else if (dataNasc < idadeMaxima) {
-          newErrors.birthDate = "Data de nascimento inválida";
-        }
+      if (ano < 1900) {
+        newErrors.birthDate = "Digite uma data válida no formato DD/MM/AAAA.";
+      } else if (dataNasc > hoje) {
+        newErrors.birthDate = "A data de nascimento não pode estar no futuro.";
       }
     }
+
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
