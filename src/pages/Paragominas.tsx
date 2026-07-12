@@ -481,9 +481,9 @@ const Paragominas = () => {
               <header className="mb-14 md:mb-20 max-w-3xl">
                 <div className="flex items-center gap-4 mb-6">
                   <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                    III — Quando procurar
+                    Quando procurar
                   </span>
-                  <div className="pgm-rule flex-1" />
+                  <div className="pgm-rule flex-1 max-w-[200px]" />
                 </div>
                 <h2
                   id="motivos-heading"
@@ -496,7 +496,7 @@ const Paragominas = () => {
                 </h2>
               </header>
 
-              <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-12 lg:gap-20 items-start">
+              <div className="grid lg:grid-cols-[0.85fr_1.15fr] gap-12 lg:gap-20 items-start">
                 <div>
                   <p className="text-base md:text-lg leading-relaxed max-w-md mb-10" style={{ color: "var(--pgm-ink-soft)" }}>
                     A conduta é sempre individual e definida em consulta. Se algum destes sinais soa familiar, uma avaliação faz sentido.
@@ -514,23 +514,17 @@ const Paragominas = () => {
                 <ul role="list" className="border-t" style={{ borderColor: "var(--pgm-line)" }}>
                   {MOTIVOS.map((m) => (
                     <li
-                      key={m.n}
-                      className="grid grid-cols-[auto_1fr_auto] items-baseline gap-6 py-6 border-b"
+                      key={m.title}
+                      className="grid grid-cols-1 md:grid-cols-[1fr_1.1fr] items-baseline gap-2 md:gap-8 py-5 md:py-6 border-b"
                       style={{ borderColor: "var(--pgm-line)" }}
                     >
-                      <span
-                        className="pgm-mono text-sm tabular-nums"
-                        style={{ color: "var(--pgm-champagne)" }}
-                      >
-                        {m.n}
-                      </span>
                       <p
                         className="pgm-serif text-xl md:text-2xl leading-snug"
                         style={{ ...SERIF, color: "var(--pgm-petroleo)" }}
                       >
                         {m.title}
                       </p>
-                      <p className="text-sm hidden md:block" style={{ color: "var(--pgm-ink-soft)" }}>
+                      <p className="text-sm md:text-base leading-relaxed" style={{ color: "var(--pgm-ink-soft)" }}>
                         {m.note}
                       </p>
                     </li>
