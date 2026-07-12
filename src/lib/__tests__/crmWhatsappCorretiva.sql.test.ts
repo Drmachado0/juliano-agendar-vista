@@ -38,7 +38,7 @@ function sqlJSON(query: string): any {
   return out ? JSON.parse(out) : null;
 }
 
-describe("SQL — telefone_canonico", () => {
+d("SQL — telefone_canonico", () => {
   it("normaliza formatos brasileiros equivalentes", () => {
     const r = sql(`SELECT
       public.telefone_canonico('+55 (91) 99115-0174') = public.telefone_canonico('91991150174')
@@ -48,7 +48,7 @@ describe("SQL — telefone_canonico", () => {
   });
 });
 
-describe("SQL — vincular_mensagem_por_telefone (ambiguidade e lock)", () => {
+d("SQL — vincular_mensagem_por_telefone (ambiguidade e lock)", () => {
   it("fonte tem pg_advisory_xact_lock (proteção de concorrência)", () => {
     const out = sql(
       `SELECT pg_get_functiondef('public.vincular_mensagem_por_telefone(uuid,text)'::regprocedure) ILIKE '%pg_advisory_xact_lock%'`,
@@ -89,7 +89,7 @@ describe("SQL — vincular_mensagem_por_telefone (ambiguidade e lock)", () => {
   });
 });
 
-describe("SQL — UNIQUE parciais (idempotência forte)", () => {
+d("SQL — UNIQUE parciais (idempotência forte)", () => {
   it("mensagens_whatsapp.mensagem_externa_id tem UNIQUE parcial", () => {
     const r = sql(`SELECT EXISTS (
       SELECT 1 FROM pg_indexes
@@ -129,7 +129,7 @@ describe("SQL — UNIQUE parciais (idempotência forte)", () => {
   });
 });
 
-describe("SQL — máquina de estados transicionar_estado_agendamento", () => {
+d("SQL — máquina de estados transicionar_estado_agendamento", () => {
   it("mapeia todos os status oficiais e ajusta bot_ativo/estado", () => {
     const tel = `91${Math.floor(Math.random() * 900000000 + 100000000)}`;
     const id = sql(
@@ -195,7 +195,7 @@ describe("SQL — máquina de estados transicionar_estado_agendamento", () => {
   });
 });
 
-describe("SQL — cron legado removido", () => {
+d("SQL — cron legado removido", () => {
   it("jobs legados não existem mais em cron.job", () => {
     const r = sql(`SELECT count(*) FROM cron.job WHERE jobname IN (
       'enviar-boas-vindas-lead',
@@ -213,7 +213,7 @@ describe("SQL — cron legado removido", () => {
   });
 });
 
-describe("SQL — v_saude_integracoes expõe métricas pg_net", () => {
+d("SQL — v_saude_integracoes expõe métricas pg_net", () => {
   it("colunas 2xx/4xx/5xx/timeouts existem", () => {
     const r = sql(`SELECT string_agg(column_name, ',' ORDER BY column_name)
       FROM information_schema.columns
