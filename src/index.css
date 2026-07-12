@@ -702,3 +702,122 @@
 @keyframes pa-focus { 0%, 100% { transform: scale(1); opacity: 0.7; } 50% { transform: scale(0.85); opacity: 1; } }
 .group:hover .proc-icon .pa-focus  { animation: pa-focus 1.2s ease-in-out infinite; }
 .group:hover .proc-icon .pa-focus2 { animation: pa-focus 1.2s ease-in-out infinite 0.3s; }
+
+/* ============================================================================
+   THEME: PARAGOMINAS PREMIUM  (rota /paragominas)
+   Editorial • marca médica particular • paleta exclusiva.
+   Escopado — não afeta home nem admin.
+   ============================================================================ */
+.theme-paragominas-premium {
+  --pgm-marfim:    #F3F0E8;
+  --pgm-marfim-2:  #ECE7DA;    /* variação sutil (bandas, filetes) */
+  --pgm-petroleo:  #082E33;
+  --pgm-petroleo-2:#0B3A40;
+  --pgm-grafite:   #11181A;
+  --pgm-champagne: #C8AA72;
+  --pgm-champagne-soft: #D8BE8E;
+  --pgm-ciano:     #41D8CE;    /* somente foco / interação / nitidez */
+  --pgm-line:      rgba(11, 46, 51, 0.12);
+  --pgm-line-dark: rgba(200, 170, 114, 0.28);
+  --pgm-ink:       #0B1013;
+  --pgm-ink-soft:  rgba(11, 16, 19, 0.72);
+  color-scheme: light;
+}
+
+/* Reset seletivo apenas dentro da landing */
+.theme-paragominas-premium ::selection {
+  background: var(--pgm-champagne);
+  color: var(--pgm-petroleo);
+}
+.theme-paragominas-premium *:focus-visible {
+  outline: 2px solid var(--pgm-ciano);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Ruído sutil (usar UMA vez, no hero) */
+.pgm-grain {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.05  0 0 0 0 0.05  0 0 0 0 0.05  0 0 0 0.35 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  opacity: .09; mix-blend-mode: multiply;
+}
+.theme-paragominas-premium.on-dark .pgm-grain,
+.theme-paragominas-premium .pgm-section--dark .pgm-grain {
+  mix-blend-mode: screen; opacity: .06;
+}
+
+/* Filetes champagne (substituem sombras/glass) */
+.pgm-rule       { height: 1px; background: var(--pgm-champagne); opacity: .55; }
+.pgm-rule-soft  { height: 1px; background: var(--pgm-line); }
+.pgm-rule-dark  { height: 1px; background: var(--pgm-line-dark); }
+
+/* Botões */
+.pgm-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: .6rem; min-height: 52px; padding: 0 1.6rem;
+  font-weight: 600; font-size: .95rem; letter-spacing: .01em;
+  border-radius: 999px; transition: transform .2s ease, background .2s ease, color .2s ease, border-color .2s ease;
+}
+.pgm-btn:hover { transform: translateY(-1px); }
+.pgm-btn:active { transform: translateY(0); }
+.pgm-btn--primary {
+  background: var(--pgm-petroleo); color: var(--pgm-marfim);
+}
+.pgm-btn--primary:hover { background: var(--pgm-petroleo-2); }
+.pgm-btn--ivory {
+  background: var(--pgm-marfim); color: var(--pgm-petroleo);
+}
+.pgm-btn--ivory:hover { background: #fff; }
+.pgm-btn--ghost {
+  background: transparent; color: var(--pgm-marfim);
+  border: 1px solid var(--pgm-line-dark);
+}
+.pgm-btn--ghost:hover { border-color: var(--pgm-champagne); color: #fff; }
+.pgm-btn--link-dark {
+  color: var(--pgm-petroleo); font-weight: 600;
+  border-bottom: 1px solid var(--pgm-champagne); padding-bottom: 2px;
+}
+.pgm-btn--link-dark:hover { color: var(--pgm-grafite); }
+
+/* Eyebrow tipográfico */
+.pgm-eyebrow {
+  font-size: 10px; letter-spacing: .32em; text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* Ciano só para interação */
+.pgm-accent { color: var(--pgm-ciano); }
+
+/* Serif utilitário */
+.pgm-serif  { font-family: 'Fraunces', 'Playfair Display', Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
+.pgm-mono   { font-family: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace; }
+
+/* Slider (refração) */
+.pgm-range {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 2px; background: rgba(11,46,51,.20); border-radius: 2px;
+  outline: none;
+}
+.pgm-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--pgm-ciano);
+  border: 3px solid var(--pgm-petroleo);
+  cursor: grab; transition: transform .15s ease;
+  box-shadow: 0 0 0 4px rgba(65,216,206,.15);
+}
+.pgm-range::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.08); }
+.pgm-range::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--pgm-ciano);
+  border: 3px solid var(--pgm-petroleo);
+  cursor: grab;
+}
+
+/* Reduz motion */
+@media (prefers-reduced-motion: reduce) {
+  .theme-paragominas-premium * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
