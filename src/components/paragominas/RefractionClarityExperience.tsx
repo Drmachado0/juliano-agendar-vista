@@ -57,9 +57,9 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
         <header className="mb-16 md:mb-20 max-w-3xl">
           <div className="flex items-center gap-4 mb-6">
             <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-              II — Refração
+              Refração
             </span>
-            <div className="pgm-rule-dark flex-1" />
+            <div className="pgm-rule-dark flex-1 max-w-[220px]" />
           </div>
           <h2
             id="clareza-heading"

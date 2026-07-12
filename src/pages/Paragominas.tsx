@@ -10,6 +10,12 @@ import {
   Navigation,
   Menu,
   X,
+  User,
+  CalendarDays,
+  CheckCircle2,
+  Ear,
+  Eye,
+  MessageSquare,
 } from "lucide-react";
 import {
   Accordion,
@@ -37,7 +43,6 @@ const CANONICAL = "https://drjulianomachado.com/paragominas";
 const SERIF: React.CSSProperties = { fontFamily: "Fraunces, 'Playfair Display', Georgia, serif" };
 
 type Local = {
-  number: string;
   name: string;
   address: string;
   mapsLink: string;
@@ -46,14 +51,12 @@ type Local = {
 
 const LOCAIS: readonly Local[] = [
   {
-    number: "01",
     name: "Clinicor",
     address: "Rua Eixo W1, R. Célio Miranda, 729 — Paragominas/PA",
     mapsLink: "https://maps.google.com/?q=Clinicor+Rua+Celio+Miranda+729+Paragominas+PA",
     utmContent: "local_clinicor",
   },
   {
-    number: "02",
     name: "Hospital Geral de Paragominas",
     address: "R. Santa Terezinha, 304 — Centro, Paragominas/PA",
     mapsLink: "https://maps.google.com/?q=Hospital+Geral+Paragominas+Santa+Terezinha+304",
@@ -62,18 +65,24 @@ const LOCAIS: readonly Local[] = [
 ] as const;
 
 const MOTIVOS = [
-  { n: "01", title: "Mudança no grau", note: "Perto, longe ou ao dirigir." },
-  { n: "02", title: "Avaliação de rotina", note: "Check-up periódico." },
-  { n: "03", title: "Catarata", note: "Avaliação do cristalino." },
-  { n: "04", title: "Glaucoma", note: "Pressão intraocular." },
-  { n: "05", title: "Pterígio", note: "Crescimento sobre a córnea." },
-  { n: "06", title: "Retorno e acompanhamento", note: "Reavaliação clínica." },
+  { title: "Mudança no grau", note: "Perto, longe ou ao dirigir." },
+  { title: "Avaliação de rotina", note: "Check-up periódico." },
+  { title: "Catarata", note: "Avaliação do cristalino." },
+  { title: "Glaucoma", note: "Pressão intraocular." },
+  { title: "Pterígio", note: "Crescimento sobre a córnea." },
+  { title: "Retorno e acompanhamento", note: "Reavaliação clínica." },
 ] as const;
 
 const PASSOS = [
-  { n: "01", t: "Dados", d: "Nome e WhatsApp para contato." },
-  { n: "02", t: "Atendimento", d: "Local, data e horário disponíveis." },
-  { n: "03", t: "Confirmação", d: "A equipe confirma pelo WhatsApp." },
+  { icon: User, t: "Dados", d: "Nome e WhatsApp para contato." },
+  { icon: CalendarDays, t: "Atendimento", d: "Local, data e horário disponíveis." },
+  { icon: CheckCircle2, t: "Confirmação", d: "A equipe confirma pelo WhatsApp." },
+] as const;
+
+const METODO = [
+  { icon: Ear, label: "Escutar" },
+  { icon: Eye, label: "Examinar" },
+  { icon: MessageSquare, label: "Explicar" },
 ] as const;
 
 const FAQ = [
@@ -299,12 +308,9 @@ const Paragominas = () => {
               {/* Cabeçalho de campanha */}
               <div className="mb-10 md:mb-14 flex items-center gap-5">
                 <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                  I — Oftalmologista em Paragominas
+                  Oftalmologista em Paragominas
                 </span>
                 <div className="pgm-rule flex-1 max-w-[280px]" />
-                <span className="hidden md:inline pgm-mono text-[10px] tracking-[0.3em] uppercase" style={{ color: "var(--pgm-ink-soft)" }}>
-                  Consultório · 2026
-                </span>
               </div>
 
               <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-10 lg:gap-16 items-end">
@@ -393,22 +399,6 @@ const Paragominas = () => {
 
                 {/* Foto */}
                 <div className="relative">
-                  {/* Numeração enorme (marca d'água) */}
-                  <span
-                    aria-hidden="true"
-                    className="pgm-serif absolute -top-4 md:-top-6 -left-2 select-none pointer-events-none"
-                    style={{
-                      ...SERIF,
-                      fontSize: "clamp(6rem, 14vw, 11rem)",
-                      lineHeight: 0.85,
-                      color: "var(--pgm-champagne)",
-                      opacity: 0.4,
-                      fontStyle: "italic",
-                    }}
-                  >
-                    01
-                  </span>
-
                   <div className="relative">
                     <picture>
                       <source
@@ -438,13 +428,10 @@ const Paragominas = () => {
                   </div>
 
                   {/* Caption */}
-                  <div className="mt-6 flex items-start justify-between gap-4 pl-1">
+                  <div className="mt-6 pl-1">
                     <p className="pgm-serif italic text-base max-w-xs leading-snug" style={{ ...SERIF, color: "var(--pgm-grafite)" }}>
                       &ldquo;Tecnologia para examinar. Tempo para explicar.&rdquo;
                     </p>
-                    <span className="pgm-mono text-[10px] tracking-[0.3em] uppercase whitespace-nowrap" style={{ color: "var(--pgm-ink-soft)" }}>
-                      Fig. 01
-                    </span>
                   </div>
                 </div>
               </div>
@@ -494,9 +481,9 @@ const Paragominas = () => {
               <header className="mb-14 md:mb-20 max-w-3xl">
                 <div className="flex items-center gap-4 mb-6">
                   <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                    III — Quando procurar
+                    Quando procurar
                   </span>
-                  <div className="pgm-rule flex-1" />
+                  <div className="pgm-rule flex-1 max-w-[200px]" />
                 </div>
                 <h2
                   id="motivos-heading"
@@ -509,7 +496,7 @@ const Paragominas = () => {
                 </h2>
               </header>
 
-              <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-12 lg:gap-20 items-start">
+              <div className="grid lg:grid-cols-[0.85fr_1.15fr] gap-12 lg:gap-20 items-start">
                 <div>
                   <p className="text-base md:text-lg leading-relaxed max-w-md mb-10" style={{ color: "var(--pgm-ink-soft)" }}>
                     A conduta é sempre individual e definida em consulta. Se algum destes sinais soa familiar, uma avaliação faz sentido.
@@ -527,23 +514,17 @@ const Paragominas = () => {
                 <ul role="list" className="border-t" style={{ borderColor: "var(--pgm-line)" }}>
                   {MOTIVOS.map((m) => (
                     <li
-                      key={m.n}
-                      className="grid grid-cols-[auto_1fr_auto] items-baseline gap-6 py-6 border-b"
+                      key={m.title}
+                      className="grid grid-cols-1 md:grid-cols-[1fr_1.1fr] items-baseline gap-2 md:gap-8 py-5 md:py-6 border-b"
                       style={{ borderColor: "var(--pgm-line)" }}
                     >
-                      <span
-                        className="pgm-mono text-sm tabular-nums"
-                        style={{ color: "var(--pgm-champagne)" }}
-                      >
-                        {m.n}
-                      </span>
                       <p
                         className="pgm-serif text-xl md:text-2xl leading-snug"
                         style={{ ...SERIF, color: "var(--pgm-petroleo)" }}
                       >
                         {m.title}
                       </p>
-                      <p className="text-sm hidden md:block" style={{ color: "var(--pgm-ink-soft)" }}>
+                      <p className="text-sm md:text-base leading-relaxed" style={{ color: "var(--pgm-ink-soft)" }}>
                         {m.note}
                       </p>
                     </li>
@@ -576,17 +557,14 @@ const Paragominas = () => {
                   {/* Filetes champagne */}
                   <span className="absolute -top-2 -left-2 w-14 h-px" style={{ background: "var(--pgm-champagne)" }} />
                   <span className="absolute -top-2 -left-2 w-px h-14" style={{ background: "var(--pgm-champagne)" }} />
-                  <p className="mt-5 pgm-mono text-[10px] tracking-[0.3em] uppercase" style={{ color: "rgba(243,240,232,0.6)" }}>
-                    Fig. 02 · Consultório · Paragominas
-                  </p>
                 </div>
 
                 <div className="order-1 lg:order-2">
                   <div className="flex items-center gap-4 mb-6">
                     <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                      IV — Método
+                      Método
                     </span>
-                    <div className="pgm-rule-dark flex-1 max-w-[200px]" />
+                    <div className="pgm-rule-dark flex-1 max-w-[160px]" />
                   </div>
                   <h2
                     id="humana-heading"
@@ -604,18 +582,31 @@ const Paragominas = () => {
                     conforme a sua necessidade clínica — sem pressa, sem excesso, sem termos vagos.
                   </p>
 
-                  {/* Três verbos como banner tipográfico */}
-                  <ul className="grid grid-cols-3 gap-4 max-w-lg mb-10">
-                    {["Escutar", "Examinar", "Explicar"].map((v, i) => (
-                      <li key={v} className="flex flex-col gap-2 border-t pt-3" style={{ borderColor: "var(--pgm-line-dark)" }}>
-                        <span className="pgm-mono text-[10px] tracking-[0.3em] uppercase" style={{ color: "var(--pgm-champagne)" }}>
-                          0{i + 1}
-                        </span>
-                        <span className="pgm-serif text-lg md:text-xl" style={{ ...SERIF }}>
-                          {v}
-                        </span>
-                      </li>
-                    ))}
+                  {/* Três verbos com ícones — sem numeração */}
+                  <ul className="flex items-center gap-5 md:gap-8 max-w-lg mb-10 flex-wrap">
+                    {METODO.map((m, i) => {
+                      const Icon = m.icon;
+                      return (
+                        <li key={m.label} className="flex items-center gap-3">
+                          <Icon
+                            className="w-5 h-5"
+                            style={{ color: "var(--pgm-champagne)" }}
+                            aria-hidden="true"
+                            strokeWidth={1.4}
+                          />
+                          <span className="pgm-serif text-lg md:text-xl" style={{ ...SERIF }}>
+                            {m.label}
+                          </span>
+                          {i < METODO.length - 1 && (
+                            <span
+                              className="hidden md:inline-block w-6 h-px ml-3"
+                              style={{ background: "var(--pgm-line-dark)" }}
+                              aria-hidden="true"
+                            />
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
 
                   <p className="text-sm" style={{ color: "rgba(243,240,232,0.65)" }}>
@@ -634,16 +625,16 @@ const Paragominas = () => {
           <section
             id="locais"
             aria-labelledby="locais-heading"
-            className="py-24 md:py-32"
+            className="pt-24 md:pt-32 pb-16 md:pb-20"
             style={{ background: "var(--pgm-marfim)" }}
           >
             <div className="container mx-auto px-4 max-w-6xl">
-              <header className="mb-14 md:mb-20 max-w-3xl">
+              <header className="mb-10 md:mb-14 max-w-3xl">
                 <div className="flex items-center gap-4 mb-6">
                   <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                    V — Onde atendo
+                    Onde atendo
                   </span>
-                  <div className="pgm-rule flex-1" />
+                  <div className="pgm-rule flex-1 max-w-[200px]" />
                 </div>
                 <h2
                   id="locais-heading"
@@ -658,64 +649,58 @@ const Paragominas = () => {
                 </h2>
               </header>
 
-              <div className="grid md:grid-cols-2 gap-10 md:gap-16">
+              <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-stretch">
                 {LOCAIS.map((l) => {
                   const bookLink = buildAgendamentoLink({ utm_content: l.utmContent });
                   return (
-                    <article key={l.name} className="relative">
-                      {/* Numeral gigante */}
-                      <span
-                        aria-hidden="true"
-                        className="pgm-serif absolute -top-8 -left-1 pointer-events-none select-none"
-                        style={{
-                          ...SERIF,
-                          fontSize: "clamp(6rem, 12vw, 9rem)",
-                          lineHeight: 0.85,
-                          color: "var(--pgm-champagne)",
-                          opacity: 0.35,
-                          fontStyle: "italic",
-                        }}
-                      >
-                        {l.number}
-                      </span>
-
-                      <div className="pt-16 md:pt-20 border-t" style={{ borderColor: "var(--pgm-line)" }}>
-                        <p className="pgm-eyebrow mb-3" style={{ color: "var(--pgm-champagne)" }}>
+                    <article
+                      key={l.name}
+                      className="relative flex flex-col pt-8 border-t"
+                      style={{ borderColor: "var(--pgm-line)" }}
+                    >
+                      <div className="flex items-center gap-3 mb-4">
+                        <MapPin
+                          className="w-4 h-4"
+                          style={{ color: "var(--pgm-champagne)" }}
+                          strokeWidth={1.6}
+                          aria-hidden="true"
+                        />
+                        <p className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
                           Paragominas · PA
                         </p>
-                        <h3
-                          className="mb-4 leading-[1.02]"
-                          style={{ ...SERIF, color: "var(--pgm-petroleo)", fontSize: "clamp(1.6rem, 3vw, 2.4rem)" }}
-                        >
-                          {l.name}
-                        </h3>
-                        <p className="text-base leading-relaxed mb-8 flex items-start gap-3 max-w-md" style={{ color: "var(--pgm-ink-soft)" }}>
-                          <MapPin className="w-4 h-4 shrink-0 mt-1" style={{ color: "var(--pgm-petroleo)" }} aria-hidden="true" />
-                          <span>{l.address}</span>
-                        </p>
+                      </div>
+                      <h3
+                        className="mb-4 leading-[1.05] min-h-[3.2em] md:min-h-[2.6em]"
+                        style={{ ...SERIF, color: "var(--pgm-petroleo)", fontSize: "clamp(1.6rem, 3vw, 2.4rem)" }}
+                      >
+                        {l.name}
+                      </h3>
+                      <p className="text-base leading-relaxed mb-8 flex items-start gap-3 max-w-md flex-1" style={{ color: "var(--pgm-ink-soft)" }}>
+                        <Navigation className="w-4 h-4 shrink-0 mt-1" style={{ color: "var(--pgm-petroleo)" }} aria-hidden="true" />
+                        <span>{l.address}</span>
+                      </p>
 
-                        <div className="flex items-center gap-6 flex-wrap">
-                          <Link
-                            to={bookLink}
-                            onClick={() =>
-                              trackCTAClick("agendar_local", `landing_paragominas_${l.utmContent}`, `Agendar — ${l.name}`)
-                            }
-                            className="pgm-btn pgm-btn--primary"
-                          >
-                            Agendar neste local
-                            <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
-                          </Link>
-                          <a
-                            href={l.mapsLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="pgm-btn--link-dark inline-flex items-center gap-1.5 text-sm"
-                            aria-label={`Abrir ${l.name} no Google Maps`}
-                          >
-                            <Navigation className="w-3.5 h-3.5" aria-hidden="true" />
-                            Ver rota
-                          </a>
-                        </div>
+                      <div className="flex items-center gap-6 flex-wrap">
+                        <Link
+                          to={bookLink}
+                          onClick={() =>
+                            trackCTAClick("agendar_local", `landing_paragominas_${l.utmContent}`, `Agendar — ${l.name}`)
+                          }
+                          className="pgm-btn pgm-btn--primary"
+                        >
+                          Agendar neste local
+                          <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+                        </Link>
+                        <a
+                          href={l.mapsLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="pgm-btn--link-dark inline-flex items-center gap-1.5 text-sm"
+                          aria-label={`Abrir ${l.name} no Google Maps`}
+                        >
+                          <Navigation className="w-3.5 h-3.5" aria-hidden="true" />
+                          Ver rota
+                        </a>
                       </div>
                     </article>
                   );
@@ -735,9 +720,9 @@ const Paragominas = () => {
               <header className="mb-16 md:mb-20 max-w-3xl">
                 <div className="flex items-center gap-4 mb-6">
                   <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                    VI — Agendamento
+                    Agendamento
                   </span>
-                  <div className="pgm-rule-dark flex-1 max-w-[240px]" />
+                  <div className="pgm-rule-dark flex-1 max-w-[200px]" />
                 </div>
                 <h2
                   id="passos-heading"
@@ -752,7 +737,7 @@ const Paragominas = () => {
                 </h2>
               </header>
 
-              {/* Passos — grid editorial */}
+              {/* Passos — ícones + timeline, sem numeração visual */}
               <ol className="grid md:grid-cols-3 gap-10 md:gap-0 relative">
                 {/* Linha conectora desktop */}
                 <div
@@ -760,41 +745,43 @@ const Paragominas = () => {
                   className="hidden md:block absolute top-6 left-[8%] right-[8%] h-px"
                   style={{ background: "var(--pgm-line-dark)" }}
                 />
-                {PASSOS.map((s, i) => (
-                  <li
-                    key={s.n}
-                    className="relative md:px-8 first:md:pl-0 last:md:pr-0"
-                    style={{
-                      borderLeft: "1px solid var(--pgm-line-dark)",
-                    }}
-                  >
-                    {/* ponto ciano */}
-                    <span
-                      className="absolute -left-[7px] top-4 w-3 h-3 rounded-full"
-                      style={{
-                        background: "var(--pgm-ciano)",
-                        boxShadow: "0 0 0 4px var(--pgm-petroleo)",
-                      }}
-                      aria-hidden="true"
-                    />
-                    <div className="pl-6 md:pl-8">
-                      <p className="pgm-mono text-sm tabular-nums mb-4" style={{ color: "var(--pgm-champagne)" }}>
-                        {s.n} / 03
-                      </p>
-                      <h3
-                        className="mb-3"
-                        style={{ ...SERIF, fontSize: "1.6rem", lineHeight: 1.1 }}
-                      >
-                        {s.t}
-                      </h3>
-                      <p className="text-sm md:text-base leading-relaxed" style={{ color: "rgba(243,240,232,0.72)" }}>
-                        {s.d}
-                      </p>
-                    </div>
-                    {/* apenas visual */}
-                    {i === PASSOS.length - 1 && null}
-                  </li>
-                ))}
+                {PASSOS.map((s) => {
+                  const Icon = s.icon;
+                  return (
+                    <li
+                      key={s.t}
+                      className="relative md:px-8 first:md:pl-0 last:md:pr-0"
+                      style={{ borderLeft: "1px solid var(--pgm-line-dark)" }}
+                    >
+                      {/* ponto ciano no eixo da timeline */}
+                      <span
+                        className="absolute -left-[7px] top-4 w-3 h-3 rounded-full"
+                        style={{
+                          background: "var(--pgm-ciano)",
+                          boxShadow: "0 0 0 4px var(--pgm-petroleo)",
+                        }}
+                        aria-hidden="true"
+                      />
+                      <div className="pl-6 md:pl-8">
+                        <Icon
+                          className="w-6 h-6 mb-5"
+                          style={{ color: "var(--pgm-champagne)" }}
+                          strokeWidth={1.4}
+                          aria-hidden="true"
+                        />
+                        <h3
+                          className="mb-3"
+                          style={{ ...SERIF, fontSize: "1.6rem", lineHeight: 1.1 }}
+                        >
+                          {s.t}
+                        </h3>
+                        <p className="text-sm md:text-base leading-relaxed" style={{ color: "rgba(243,240,232,0.72)" }}>
+                          {s.d}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
               </ol>
 
               <div className="mt-16 md:mt-20 flex items-center gap-6 flex-wrap">
@@ -833,7 +820,7 @@ const Paragominas = () => {
                 <div>
                   <div className="flex items-center gap-4 mb-6">
                     <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                      VII — Palavra dos pacientes
+                      Palavra dos pacientes
                     </span>
                     <div className="pgm-rule flex-1 max-w-[200px]" />
                   </div>
@@ -913,7 +900,7 @@ const Paragominas = () => {
             <div className="container mx-auto px-4 max-w-4xl">
               <div className="flex items-center gap-4 mb-10">
                 <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                  VIII — Perguntas frequentes
+                  Perguntas frequentes
                 </span>
                 <div className="pgm-rule flex-1" />
               </div>
@@ -945,7 +932,7 @@ const Paragominas = () => {
           >
             <div className="container mx-auto px-4 max-w-5xl text-center relative">
               <p className="pgm-eyebrow mb-8" style={{ color: "var(--pgm-champagne)" }}>
-                IX — Encerramento
+                Encerramento
               </p>
               <h3
                 className="leading-[0.95] tracking-[-0.025em] mb-10"

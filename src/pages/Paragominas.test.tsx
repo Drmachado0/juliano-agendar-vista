@@ -124,6 +124,33 @@ describe("Paragominas landing page — restructure", () => {
     const canonical = document.querySelector('link[rel="canonical"]');
     expect(canonical?.getAttribute("href")).toBe("https://drjulianomachado.com/paragominas");
   });
+
+  it("Não exibe numerais romanos decorativos de seção (I—IX) no main", () => {
+    renderPage();
+    const main = screen.getByRole("main");
+    const text = main.textContent || "";
+    // Padrão: numeral romano + separador (— ou ·) usado como prefixo de eyebrow
+    expect(text).not.toMatch(/\b(I|II|III|IV|V|VI|VII|VIII|IX)\s*[—·-]\s/);
+  });
+
+  it("Não exibe numerações decorativas (01/02, 01 / 03, Fig. 0X, Consultório · 2026) no main", () => {
+    renderPage();
+    const main = screen.getByRole("main");
+    const text = main.textContent || "";
+    expect(text).not.toMatch(/Fig\.\s*0\d/);
+    expect(text).not.toMatch(/Consultório\s*·\s*2026/);
+    expect(text).not.toMatch(/\b0\d\s*\/\s*03\b/);
+    // Não deve haver "01" ou "02" isolados como marcador de local (não confundir com CRM 15253/anos/rating)
+    expect(text).not.toMatch(/(Clinicor|Hospital Geral de Paragominas)[^]{0,40}\b0[12]\b/);
+  });
+
+  it("Preserva números reais funcionais: CRM-PA 15253, rating 5.0, +13 anos e 14 avaliações", () => {
+    renderPage();
+    expect(screen.getAllByText(/CRM-PA 15253/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/5\.0/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/\+13\s*anos/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/14/).length).toBeGreaterThan(0);
+  });
 });
 
 describe("RefractionClarityExperience — slider", () => {
