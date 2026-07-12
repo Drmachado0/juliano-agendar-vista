@@ -134,7 +134,33 @@ const TestimonialCard = ({ t }: { t: Testimonial }) => {
   );
 };
 
-const TestimonialsSection = () => {
+export interface TestimonialsSectionProps {
+  /** "compact" = sem header grande e sem CTA para o Google (uso em landings). */
+  variant?: "default" | "compact";
+  /** id da section para deep-link/anchor. */
+  sectionId?: string;
+  /** Limite máximo de cards visíveis por página (cap adicional sobre o responsive). */
+  maxVisible?: number;
+  /** Exibir bloco de header (badge + h2 + rating). Default true. */
+  showHeader?: boolean;
+  /** Exibir CTA "Ler todas no Google". Default true. */
+  showCTA?: boolean;
+  /** Rótulo alternativo para aria-label. */
+  ariaLabel?: string;
+}
+
+const TestimonialsSection = ({
+  variant = "default",
+  sectionId = "depoimentos",
+  maxVisible,
+  showHeader,
+  showCTA,
+  ariaLabel = "Depoimentos de pacientes",
+}: TestimonialsSectionProps = {}) => {
+  const isCompact = variant === "compact";
+  const effectiveShowHeader = showHeader ?? !isCompact;
+  const effectiveShowCTA = showCTA ?? !isCompact;
+  const effectiveMaxVisible = maxVisible ?? (isCompact ? 3 : undefined);
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const reviews = useGoogleReviews();
