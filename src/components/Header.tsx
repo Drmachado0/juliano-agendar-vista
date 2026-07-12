@@ -101,19 +101,11 @@ const Header = () => {
 
           {/* CTA Desktop */}
           <div className="hidden md:flex items-center gap-2">
-            {!user && (
-              <Link to="/auth">
-                <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
-                  <LogIn className="h-5 w-5" />
-                  Entrar
-                </Button>
-              </Link>
-            )}
             <Link
               to="/agendamento"
               onClick={() => trackCTAClick('agendar_consulta', 'header_desktop', 'Agendar Online')}
             >
-              <Button variant="obsidian" size="sm" className="gap-1.5">
+              <Button variant="obsidian" size="sm" className="gap-1.5 min-h-[44px]">
                 <CalendarCheck className="h-5 w-5" />
                 Agendar avaliação
               </Button>
@@ -122,30 +114,17 @@ const Header = () => {
 
           {/* Mobile Actions */}
           <div className="flex md:hidden items-center gap-1.5">
-            <a
-              href={waLinkBare}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                trackWhatsAppClick(waLinkBare, display, 'whatsapp_header', 'header_top');
-                trackMetaContact('WhatsApp');
-              }}
-              className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
-              aria-label="WhatsApp"
-            >
-              <Phone className="w-4 h-4" />
-            </a>
             <Link
               to="/agendamento"
               onClick={() => trackCTAClick('agendar_consulta', 'header_mobile', 'Agendar')}
             >
-              <Button variant="obsidian" size="sm" className="gap-1 text-xs px-3 py-1.5 h-auto">
+              <Button variant="obsidian" size="sm" className="gap-1 text-xs px-3 min-h-[44px]">
                 <CalendarCheck className="h-3.5 w-3.5" />
                 Agendar
               </Button>
             </Link>
             <button
-              className="text-foreground p-2 rounded-lg hover:bg-secondary transition-colors"
+              className="text-foreground p-2 rounded-lg hover:bg-secondary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label={isMenuOpen ? "Fechar menu" : "Abrir menu"}
             >
