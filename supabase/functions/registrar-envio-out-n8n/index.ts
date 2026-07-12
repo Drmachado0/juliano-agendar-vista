@@ -286,11 +286,17 @@ serve(async (req) => {
       level: "error",
       category: "edge_function",
       source: "registrar-envio-out-n8n",
-      message: `Falha inserir OUT: ${insErr.message}`,
-      details: { request_id: rid, telefone_mask: maskTelefone(telefoneNormalizado), provider, has_provider_msg_id: !!providerMessageId },
+      message: "insert_out_falhou",
+      details: {
+        request_id: rid,
+        telefone_mask: maskTelefone(telefoneNormalizado),
+        provider,
+        has_provider_msg_id: !!providerMessageId,
+        pg_code: (insErr as any).code ?? null,
+      },
       request_id: rid,
     });
-    return json({ error: insErr.message }, 500, headers);
+    return json({ error: "insert_out_falhou", request_id: rid }, 500, headers);
   }
 
   // 5) Atualizar campos de confirmação SOMENTE para tipos explícitos
