@@ -75,9 +75,9 @@ const MOTIVOS = [
 ] as const;
 
 const PASSOS = [
-  { icon: User, t: "Dados", d: "Nome e WhatsApp para contato." },
-  { icon: CalendarDays, t: "Atendimento", d: "Local, data e horário disponíveis." },
-  { icon: CheckCircle2, t: "Confirmação", d: "A equipe confirma pelo WhatsApp." },
+  { icon: User, t: "Dados", d: "Informe seu nome e WhatsApp." },
+  { icon: CalendarDays, t: "Atendimento", d: "Escolha Clinicor ou HGP e o tipo de atendimento." },
+  { icon: CheckCircle2, t: "Confirmação", d: "Selecione o horário e aguarde a confirmação da equipe." },
 ] as const;
 
 const METODO = [
