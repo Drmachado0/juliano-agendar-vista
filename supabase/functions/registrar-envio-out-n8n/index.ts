@@ -98,12 +98,15 @@ serve(async (req) => {
 
   // 1) Idempotência via (provider, provider_message_id)
   if (providerMessageId) {
-    const { data: dup } = await supabase
+    const { data: dup, error: dupErr } = await supabase
       .from("mensagens_whatsapp")
       .select("id, agendamento_id")
       .eq("provider", provider)
       .eq("provider_message_id", providerMessageId)
       .maybeSingle();
+    if (dupErr) {
+      return json({ error: `lookup: ${dupErr.message}` }, 500, headers);
+    }
     if (dup) {
       return json(
         {
@@ -119,8 +122,8 @@ serve(async (req) => {
   }
 
   // 2) Normalizar telefone
-  //    - telefoneNormalizado (E.164 sem símbolos, ex.: 5591991150174) → salvo em mensagens_whatsapp.telefone
-  //    - telefoneCanonico    (BR sem DDI, ex.: 91991150174)          → usado para buscar em agendamentos.telefone_canonico
+  //    - telefoneNormalizado (E.164 sem símbolos) → mensagens_whatsapp.telefone
+  //    - telefoneCanonico    (BR sem DDI)          → agendamentos.telefone_canonico
   const { data: telNorm } = await supabase.rpc("normalizar_telefone", {
     p_telefone: body.telefone,
   });
@@ -138,16 +141,54 @@ serve(async (req) => {
   }
   if (!telefoneCanon) telefoneCanon = canonicalFallback(body.telefone);
 
-  // 3) Resolver agendamento: explícito > match único por telefone_canonico
+  // 3) Resolver agendamento
+  //    a) explícito: validar existência + telefone_canonico compatível (409 no mismatch)
+  //    b) sem explícito: match único por telefone_canonico
   let agendamentoId: string | null = body.agendamento_id ?? null;
   let ambiguo = false;
-  if (!agendamentoId && telefoneCanon) {
-    const { data: matches } = await supabase
+
+  if (agendamentoId) {
+    const { data: agend, error: agErr } = await supabase
+      .from("agendamentos")
+      .select("id, telefone_canonico")
+      .eq("id", agendamentoId)
+      .maybeSingle();
+    if (agErr) {
+      return json({ error: `agendamento lookup: ${agErr.message}` }, 500, headers);
+    }
+    if (!agend) {
+      return json({ error: "agendamento_not_found", agendamento_id: agendamentoId }, 404, headers);
+    }
+    if (telefoneCanon && agend.telefone_canonico && agend.telefone_canonico !== telefoneCanon) {
+      await supabase.from("system_logs").insert({
+        level: "warn",
+        category: "edge_function",
+        source: "registrar-envio-out-n8n",
+        message: "mismatch telefone x agendamento — recusado (409)",
+        details: {
+          request_id: rid,
+          agendamento_id: agendamentoId,
+          telefone_mask: maskTelefone(telefoneNormalizado),
+          provider,
+        },
+        request_id: rid,
+      });
+      return json(
+        { error: "telefone_agendamento_mismatch", agendamento_id: agendamentoId },
+        409,
+        headers,
+      );
+    }
+  } else if (telefoneCanon) {
+    const { data: matches, error: mErr } = await supabase
       .from("agendamentos")
       .select("id, status_crm, created_at")
       .eq("telefone_canonico", telefoneCanon)
       .order("created_at", { ascending: false })
       .limit(2);
+    if (mErr) {
+      return json({ error: `agendamentos: ${mErr.message}` }, 500, headers);
+    }
     if (matches && matches.length === 1) {
       agendamentoId = matches[0].id;
     } else if (matches && matches.length > 1) {
