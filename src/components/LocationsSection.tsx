@@ -5,11 +5,10 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 const LocationsSection = () => {
   const [activeLocation, setActiveLocation] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
-  const [showBelem, setShowBelem] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
-  const belemTrackedRef = useRef(false);
   const sectionRef = useRef<HTMLDivElement>(null);
-  const { trackPhoneClick, trackCTAClick } = useGoogleTag();
+  const { trackPhoneClick } = useGoogleTag();
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -73,8 +72,8 @@ const LocationsSection = () => {
     },
   ];
 
-  const rawActive = locations[activeLocation];
-  const activeLocationData = !showBelem && rawActive.city === "Belém" ? locations[0] : rawActive;
+  const activeLocationData = locations[activeLocation];
+
   // Google Maps embed (sem API key) do local ativo
   const mapEmbedSrc = `https://www.google.com/maps?q=${encodeURIComponent(
     `${activeLocationData.name}, ${activeLocationData.address}`
@@ -99,19 +98,19 @@ const LocationsSection = () => {
             Onde atendemos
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Atendimento em <span className="gradient-text">Paragominas</span>
-            <span className="text-muted-foreground/70 text-2xl md:text-3xl font-semibold"> e Belém</span>
+            Atendimento em <span className="gradient-text">Paragominas e Belém</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Base em Paragominas, com atendimento também em Belém para procedimentos específicos.
+            4 endereços entre Paragominas e Belém para consultas, exames e cirurgias.
           </p>
+
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-0 items-stretch">
           {/* Location Cards */}
-          <div id="belem-locations-region" className="space-y-3 lg:pr-6 relative z-10">
+          <div id="all-locations-region" className="space-y-3 lg:pr-6 relative z-10">
             {locations.map((location, index) => {
-              if (!showBelem && location.city === "Belém") return null;
+
               const IconComponent = location.icon;
               const isActive = activeLocation === index;
               const isBelem = location.city === "Belém";
@@ -162,28 +161,8 @@ const LocationsSection = () => {
               );
             })}
 
-            <button
-              type="button"
-              aria-expanded={showBelem}
-              aria-controls="belem-locations-region"
-              onClick={() => {
-                if (showBelem) {
-                  // Ao ocultar Belém, se o ativo era Belém volta pra Clinicor.
-                  if (locations[activeLocation]?.city === "Belém") setActiveLocation(0);
-                  setShowBelem(false);
-                } else {
-                  setShowBelem(true);
-                  if (!belemTrackedRef.current) {
-                    belemTrackedRef.current = true;
-                    trackCTAClick("ver_locais_belem", "locations", "Ver locais em Belém");
-                  }
-                }
-              }}
-              className="w-full text-sm font-medium text-muted-foreground hover:text-primary transition-colors py-3 px-4 rounded-xl border border-dashed border-border/60 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[48px]"
-            >
-              {showBelem ? "− Ocultar locais em Belém" : "+ Ver 2 locais em Belém"}
-            </button>
           </div>
+
 
 
           {/* Map — Google Maps real do local selecionado (desktop apenas; mobile mostra cards) */}
