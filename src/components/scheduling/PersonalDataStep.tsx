@@ -133,26 +133,26 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
       newErrors.email = "Por favor, digite um e-mail válido (ex: nome@email.com)";
     }
 
-    // Data de nascimento é opcional, mas se preenchida precisa estar completa e válida
-    if (birthDateBr.trim()) {
-      if (birthDateBr.length !== 10 || !brToIso(birthDateBr)) {
-        newErrors.birthDate = "Data inválida. Use o formato dd/mm/aaaa";
-      } else {
-        const iso = brToIso(birthDateBr);
-        const [ano, mes, dia] = iso.split("-").map(Number);
-        const dataNasc = new Date(ano, mes - 1, dia);
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        const idadeMaxima = new Date();
-        idadeMaxima.setFullYear(idadeMaxima.getFullYear() - 120);
+    // Data de nascimento OBRIGATÓRIA
+    const bd = birthDateBr.trim();
+    if (!bd) {
+      newErrors.birthDate = "Informe a data de nascimento.";
+    } else if (bd.length !== 10 || !brToIso(bd)) {
+      newErrors.birthDate = "Digite uma data válida no formato DD/MM/AAAA.";
+    } else {
+      const iso = brToIso(bd);
+      const [ano, mes, dia] = iso.split("-").map(Number);
+      const dataNasc = new Date(ano, mes - 1, dia);
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
 
-        if (dataNasc > hoje) {
-          newErrors.birthDate = "A data de nascimento não pode ser futura";
-        } else if (dataNasc < idadeMaxima) {
-          newErrors.birthDate = "Data de nascimento inválida";
-        }
+      if (ano < 1900) {
+        newErrors.birthDate = "Digite uma data válida no formato DD/MM/AAAA.";
+      } else if (dataNasc > hoje) {
+        newErrors.birthDate = "A data de nascimento não pode estar no futuro.";
       }
     }
+
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -161,8 +161,21 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
   const handleNext = () => {
     if (validate()) {
       onNext();
+      return;
     }
+    // Foca o primeiro campo inválido na ordem visual
+    requestAnimationFrame(() => {
+      const order = ["fullName", "phone", "birthDate", "email"];
+      // Reexecuta validação síncrona para descobrir erros novamente sem depender do setState
+      const invalid = order.find((id) => {
+        const el = document.getElementById(id) as HTMLInputElement | null;
+        return el?.getAttribute("aria-invalid") === "true";
+      });
+      if (invalid) document.getElementById(invalid)?.focus();
+    });
   };
+
+
 
   return (
     <div className="space-y-6">
@@ -185,12 +198,18 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
             value={formData.fullName}
             onChange={(e) => updateFormData({ fullName: e.target.value })}
             placeholder="Ex: Maria Oliveira"
+            autoComplete="name"
+            aria-required="true"
+            aria-invalid={!!errors.fullName}
+            aria-describedby={errors.fullName ? "fullName-error" : undefined}
             className={`bg-secondary border-border focus:border-primary ${
               errors.fullName ? "border-destructive" : ""
             }`}
           />
           {errors.fullName && (
-            <p className="text-sm text-destructive">{errors.fullName}</p>
+            <p id="fullName-error" role="alert" className="text-sm text-destructive">
+              {errors.fullName}
+            </p>
           )}
         </div>
 
@@ -206,36 +225,49 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
             onChange={handlePhoneChange}
             placeholder="(91) 99999-9999"
             inputMode="tel"
+            autoComplete="tel"
             maxLength={15}
+            aria-required="true"
+            aria-invalid={!!errors.phone}
+            aria-describedby={errors.phone ? "phone-error" : undefined}
             className={`bg-secondary border-border focus:border-primary ${
               errors.phone ? "border-destructive" : ""
             }`}
           />
           {errors.phone && (
-            <p className="text-sm text-destructive">{errors.phone}</p>
+            <p id="phone-error" role="alert" className="text-sm text-destructive">
+              {errors.phone}
+            </p>
           )}
         </div>
 
-        {/* Birth Date */}
+        {/* Birth Date — OBRIGATÓRIO */}
         <div className="space-y-2">
           <Label htmlFor="birthDate" className="text-foreground flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-primary" />
-            Data de nascimento (opcional)
+            <Calendar className="w-4 h-4 text-primary" aria-hidden="true" />
+            Data de nascimento *
           </Label>
           <Input
             id="birthDate"
             type="text"
             inputMode="numeric"
+            autoComplete="bday"
             value={birthDateBr}
             onChange={handleBirthDateChange}
             placeholder="dd/mm/aaaa"
             maxLength={10}
+            required
+            aria-required="true"
+            aria-invalid={!!errors.birthDate}
+            aria-describedby={errors.birthDate ? "birthDate-error" : undefined}
             className={`bg-secondary border-border focus:border-primary ${
               errors.birthDate ? "border-destructive" : ""
             }`}
           />
           {errors.birthDate && (
-            <p className="text-sm text-destructive">{errors.birthDate}</p>
+            <p id="birthDate-error" role="alert" className="text-sm text-destructive">
+              {errors.birthDate}
+            </p>
           )}
         </div>
 
@@ -251,15 +283,21 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
             value={formData.email}
             onChange={(e) => updateFormData({ email: e.target.value })}
             placeholder="seu@email.com"
+            autoComplete="email"
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? "email-error" : undefined}
             className={`bg-secondary border-border focus:border-primary ${
               errors.email ? "border-destructive" : ""
             }`}
           />
           {errors.email && (
-            <p className="text-sm text-destructive">{errors.email}</p>
+            <p id="email-error" role="alert" className="text-sm text-destructive">
+              {errors.email}
+            </p>
           )}
         </div>
       </div>
+
 
       <div className="flex justify-end pt-4">
         <Button variant="hero" onClick={handleNext}>
