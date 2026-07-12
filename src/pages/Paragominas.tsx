@@ -470,6 +470,61 @@ const Paragominas = () => {
             </div>
           </section>
 
+          {/* ====================== ASSOCIAÇÕES PROFISSIONAIS ====================== */}
+          <section
+            aria-labelledby="associacoes-heading"
+            style={{
+              background: "var(--pgm-marfim)",
+              borderBottom: "1px solid var(--pgm-line)",
+            }}
+          >
+            <div className="container mx-auto px-4 py-10 md:py-14 max-w-5xl">
+              <div className="flex items-center gap-4 mb-6">
+                <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
+                  Associações profissionais
+                </span>
+                <div className="pgm-rule flex-1 max-w-[200px]" />
+              </div>
+              <h2
+                id="associacoes-heading"
+                className="sr-only"
+              >
+                Associações profissionais
+              </h2>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                {DOCTOR.memberships.map((org) => (
+                  <li
+                    key={org}
+                    className="flex items-start gap-3 py-4 md:py-5 px-4 md:px-5"
+                    style={{
+                      background: "var(--pgm-marfim-2)",
+                      border: "1px solid var(--pgm-line)",
+                    }}
+                  >
+                    <BadgeCheck
+                      className="w-5 h-5 mt-0.5 shrink-0"
+                      style={{ color: "var(--pgm-champagne)" }}
+                      aria-hidden="true"
+                      strokeWidth={1.4}
+                    />
+                    <div className="min-w-0">
+                      <p className="pgm-eyebrow mb-1" style={{ color: "var(--pgm-ink-soft)" }}>
+                        Membro
+                      </p>
+                      <p
+                        className="pgm-serif text-lg md:text-xl leading-snug"
+                        style={{ ...SERIF, color: "var(--pgm-petroleo)" }}
+                      >
+                        {org}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+
+
           {/* ============================== II · REFRAÇÃO ============================== */}
           <RefractionClarityExperience
             onFirstInteract={() => trackEvent("clarity_demo_interaction", { section: "landing_paragominas" })}
