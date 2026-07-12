@@ -297,40 +297,46 @@ describe("RefractionClarityExperience — slider", () => {
     expect(screen.getByText(/para ajustar a nitidez/i)).toBeTruthy();
   });
 
-  it("CTA 'Agende sua consulta' fica aria-hidden e fora do tab order antes de 100", () => {
+  it("Antes de 100: letras presentes e CTA ausente do DOM", () => {
     renderClarity();
-    const slot = screen.getByTestId("clarity-cta-slot");
-    expect(slot.getAttribute("aria-hidden")).toBe("true");
-    const link = slot.querySelector("a") as HTMLAnchorElement;
-    expect(link).toBeTruthy();
-    expect(link.getAttribute("tabindex")).toBe("-1");
+    expect(screen.getByTestId("clarity-letters")).toBeTruthy();
+    expect(screen.queryByTestId("clarity-cta")).toBeNull();
   });
 
-  it("Em 100, CTA fica acessível e aponta para /paragominas/agendamento com utm_content=clareza_paragominas", () => {
+  it("Em 100: letras ocultas e CTA visível apontando para /paragominas/agendamento com utm_content=clareza_paragominas", () => {
     renderClarity();
     const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
     fireEvent.change(slider, { target: { value: "100" } });
-    const slot = screen.getByTestId("clarity-cta-slot");
-    expect(slot.getAttribute("aria-hidden")).toBe("false");
-    expect(screen.getByText(/Agora está mais nítido\?/i)).toBeTruthy();
-    const link = slot.querySelector("a") as HTMLAnchorElement;
-    expect(link.getAttribute("tabindex")).toBe("0");
-    const href = link.getAttribute("href") || "";
+    const letters = screen.getByTestId("clarity-letters") as HTMLElement;
+    expect(letters.style.visibility).toBe("hidden");
+    const cta = screen.getByTestId("clarity-cta") as HTMLAnchorElement;
+    expect(cta.getAttribute("aria-label")).toMatch(/Agende sua consulta/i);
+    const href = cta.getAttribute("href") || "";
     expect(href).toContain("/paragominas/agendamento");
     expect(href).toContain("utm_content=clareza_paragominas");
     expect(href).toContain("utm_campaign=paragominas");
+  });
+
+  it("Voltar de 100 para 99 restaura as letras e remove o CTA", () => {
+    renderClarity();
+    const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
+    fireEvent.change(slider, { target: { value: "100" } });
+    expect(screen.getByTestId("clarity-cta")).toBeTruthy();
+    fireEvent.change(slider, { target: { value: "99" } });
+    expect(screen.queryByTestId("clarity-cta")).toBeNull();
+    const letters = screen.getByTestId("clarity-letters") as HTMLElement;
+    expect(letters.style.visibility).not.toBe("hidden");
   });
 
   it("Tracking do CTA de clareza não inclui PII nem valor do slider", () => {
     renderClarity();
     const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
     fireEvent.change(slider, { target: { value: "100" } });
-    fireEvent.click(screen.getByRole("link", { name: /Agende sua consulta/i }));
+    fireEvent.click(screen.getByTestId("clarity-cta"));
     expect(trackEventMock).toHaveBeenCalledWith("cta_click", {
       action: "agendar_clareza",
       placement: "landing_paragominas_clarity_demo",
     });
-    // Nenhuma chamada carregou dados sensíveis
     for (const call of trackEventMock.mock.calls) {
       const payload = JSON.stringify(call);
       expect(payload).not.toMatch(/nome|email|cpf|telefone|nasc/i);
@@ -338,6 +344,7 @@ describe("RefractionClarityExperience — slider", () => {
     }
   });
 });
+
 
 describe("buildAgendamentoLink", () => {
   beforeEach(() => window.history.replaceState({}, "", "/paragominas"));
