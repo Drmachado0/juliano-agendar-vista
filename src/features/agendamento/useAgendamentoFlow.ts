@@ -371,7 +371,7 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
     } catch (err) {
       console.error("[useAgendamentoFlow] Erro inesperado:", err);
       trackAppointmentError(
-        pageType,
+        pageType as any,
         "unexpected",
         err instanceof Error ? err.message : "unknown",
       );
