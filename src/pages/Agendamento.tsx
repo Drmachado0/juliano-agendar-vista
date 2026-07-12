@@ -171,6 +171,7 @@ const Agendamento = () => {
     if (!formStartFiredRef.current) {
       formStartFiredRef.current = true;
       trackFormStart("landing_agendamento");
+      pushDL({ event: "booking_start", page_type: "landing_agendamento" });
     }
     setFormData((prev) => ({ ...prev, ...data }));
   };
