@@ -31,11 +31,9 @@ interface Testimonial {
   rating: number;
   text: string;
   date: string;
-  source: "Google";
 }
 
 const AUTO_ROTATE_INTERVAL = 6000;
-const MAX_CARDS = 20;
 const TEXT_TRUNCATE_AT = 220;
 
 function initialsFrom(name: string): string {
@@ -47,34 +45,6 @@ function initialsFrom(name: string): string {
     .toUpperCase();
 }
 
-function convertToTestimonial(avaliacao: AvaliacaoGoogle): Testimonial | null {
-  const text = (avaliacao.text || "").trim();
-  // Sem texto real => omitir do carrossel textual (regra do briefing).
-  if (!text) return null;
-  return {
-    id: avaliacao.id,
-    name: avaliacao.author_name,
-    avatar: initialsFrom(avaliacao.author_name),
-    image: avaliacao.author_photo_url || undefined,
-    rating: Math.max(1, Math.min(5, Math.round(avaliacao.rating || 5))),
-    text,
-    date: avaliacao.relative_time_description || "Avaliação recente",
-    source: "Google",
-  };
-}
-
-/** Deduplica por google_review_id (canônico), com fallback ao id da linha. */
-function dedupe(list: AvaliacaoGoogle[]): AvaliacaoGoogle[] {
-  const seen = new Set<string>();
-  const out: AvaliacaoGoogle[] = [];
-  for (const item of list) {
-    const key = item.google_review_id || item.id;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(item);
-  }
-  return out;
-}
 
 const GoogleIcon = () => (
   <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
