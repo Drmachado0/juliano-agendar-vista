@@ -339,6 +339,15 @@ const Agendamento = () => {
           appointmentType: formData.appointmentTypeName,
           location: formData.locationName,
         });
+        pushDL({
+          event: "booking_submit",
+          page_type: "landing_agendamento",
+          appointment_id: leadId ?? null,
+          appointment_type: formData.appointmentTypeName,
+          location: formData.locationName,
+          value: 300,
+          currency: "BRL",
+        });
       }
 
       pushDL({
