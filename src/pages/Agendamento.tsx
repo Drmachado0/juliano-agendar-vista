@@ -185,6 +185,7 @@ const Agendamento = () => {
   const nextStep = async () => {
     if (currentStep < totalSteps) {
       trackStepCompleted(currentStep, "landing_agendamento");
+      pushDL({ event: "booking_step_completed", page_type: "landing_agendamento", step: currentStep });
       if (currentStep === 2 && !leadId) {
         const leadData = {
           nome_completo: formData.fullName,
