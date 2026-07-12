@@ -196,7 +196,7 @@ const Paragominas = () => {
   const stickyLink = buildAgendamentoLink({ utm_content: "sticky_paragominas" });
 
   const heroRef = useRef<HTMLElement>(null);
-  const footerRef = useRef<HTMLElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
   const stickyVisible = useMobileStickyVisibility(heroRef, footerRef);
 
   const structuredData = {
