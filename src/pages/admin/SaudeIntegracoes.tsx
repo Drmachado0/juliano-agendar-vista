@@ -19,6 +19,7 @@ interface SaudeRow {
   net_ultimo_erro_status: number | null;
   out_confirmados_24h: number;
   pacientes_ultima_msg_in: number;
+  in_orfas_24h: number;
   gerado_em: string;
 }
 
