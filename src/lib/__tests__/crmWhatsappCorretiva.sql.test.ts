@@ -140,3 +140,29 @@ d("Migração corretiva CRM — observabilidade pg_net", () => {
     expect(Number(r)).toBeGreaterThanOrEqual(1);
   });
 });
+
+d("Outbound ManyChat/n8n — provider + provider_message_id", () => {
+  it("mensagens_whatsapp tem colunas provider e provider_message_id", () => {
+    const r = q(
+      `SELECT string_agg(column_name, ',' ORDER BY column_name) FROM information_schema.columns WHERE table_schema='public' AND table_name='mensagens_whatsapp' AND column_name IN ('provider','provider_message_id')`,
+    );
+    expect(r).toBe("provider,provider_message_id");
+  });
+
+  it("UNIQUE parcial em (provider, provider_message_id)", () => {
+    const r = q(
+      `SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='mensagens_whatsapp_provider_msgid_uniq'`,
+    );
+    expect(r).toMatch(/UNIQUE/i);
+    expect(r).toMatch(/provider_message_id IS NOT NULL/i);
+    expect(r).toMatch(/provider IS NOT NULL/i);
+  });
+
+  it("v_saude_integracoes expõe out_confirmados_24h e pacientes_ultima_msg_in", () => {
+    const r = q(
+      `SELECT string_agg(column_name, ',' ORDER BY column_name) FROM information_schema.columns WHERE table_schema='public' AND table_name='v_saude_integracoes' AND column_name IN ('out_confirmados_24h','pacientes_ultima_msg_in')`,
+    );
+    expect(r).toBe("out_confirmados_24h,pacientes_ultima_msg_in");
+  });
+});
+
