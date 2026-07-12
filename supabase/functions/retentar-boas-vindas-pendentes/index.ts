@@ -17,6 +17,8 @@ import {
   normalizePhoneNumber,
   sanitizePayload,
 } from "../_shared/evolutionApiClient.ts";
+import { requireCronSecret } from "../_shared/authGuards.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
