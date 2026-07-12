@@ -74,12 +74,22 @@ describe("Paragominas landing page", () => {
     expect(main.textContent || "").not.toMatch(/Capsulotomia/i);
   });
 
-  it("apresenta os 4 locais de atendimento (2 em Paragominas + 2 em Belém)", () => {
+  it("apresenta apenas os 2 locais em Paragominas (sem Belém na landing)", () => {
     renderPage();
     expect(screen.getAllByText(/Clinicor/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Hospital Geral de Paragominas/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Instituto de Olhos de Bel[eé]m/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Vitria/i).length).toBeGreaterThan(0);
+    const main = screen.getByRole("main");
+    expect(main.textContent || "").not.toMatch(/Bel[eé]m/i);
+  });
+
+  it("renderiza foto do Dr. Juliano no hero com alt descritivo", () => {
+    renderPage();
+    const imgs = screen.getAllByAltText(/Dr\. Juliano Machado/i) as HTMLImageElement[];
+    expect(imgs.length).toBeGreaterThan(0);
+    const hero = imgs[0];
+    expect(hero.getAttribute("width")).toBeTruthy();
+    expect(hero.getAttribute("height")).toBeTruthy();
+    expect(hero.getAttribute("fetchpriority")).toBe("high");
   });
 
   it("CTAs específicos da landing carregam UTMs internas da campanha paragominas", () => {
@@ -102,7 +112,7 @@ describe("Paragominas landing page", () => {
   it("canonical, title e og:url apontam para /paragominas", async () => {
     renderPage();
     // Helmet aplica assíncronamente ao document.head.
-    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 50));
     expect(document.title).toMatch(/Oftalmologista em Paragominas/i);
     const canonical = document.querySelector('link[rel="canonical"]');
     expect(canonical?.getAttribute("href")).toBe("https://drjulianomachado.com/paragominas");
