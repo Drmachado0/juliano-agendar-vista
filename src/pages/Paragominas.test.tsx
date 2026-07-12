@@ -144,13 +144,27 @@ describe("Paragominas landing page — restructure", () => {
     expect(text).not.toMatch(/(Clinicor|Hospital Geral de Paragominas)[^]{0,40}\b0[12]\b/);
   });
 
-  it("Preserva números reais funcionais: CRM-PA 15253, rating 5.0, +13 anos e 14 avaliações", () => {
+  it("Preserva números reais funcionais: CRM-PA 15253, rating 5.0, 14 avaliações e 'Mais de 15 anos'", () => {
     renderPage();
     expect(screen.getAllByText(/CRM-PA 15253/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/5\.0/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/\+13\s*anos/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Mais de 15 anos/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/14/).length).toBeGreaterThan(0);
   });
+
+  it("Não exibe versões antigas '+13 anos' ou '13+ anos'", () => {
+    renderPage();
+    const main = screen.getByRole("main");
+    const text = main.textContent || "";
+    expect(text).not.toMatch(/\+?13\+?\s*anos/i);
+  });
+
+  it("Mostra associações: Sociedade Brasileira de Oftalmologia e de Glaucoma", () => {
+    renderPage();
+    expect(screen.getAllByText(/Sociedade Brasileira de Oftalmologia/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Sociedade Brasileira de Glaucoma/i).length).toBeGreaterThan(0);
+  });
+
 });
 
 describe("RefractionClarityExperience — slider", () => {
