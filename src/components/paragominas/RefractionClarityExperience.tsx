@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowUpRight } from "lucide-react";
+import { buildAgendamentoLink } from "@/lib/agendamentoLink";
+import { useGoogleTag } from "@/hooks/useGoogleTag";
 
 interface Props {
   onFirstInteract?: () => void;
@@ -21,23 +25,26 @@ export const snellenForValue = (v: number): string => {
 
 /**
  * Seção-assinatura da /paragominas — versão premium.
- * Paleta: petróleo #082E33 / marfim #F3F0E8 / ciano #41D8CE (apenas interação).
- * O slider revela a "nitidez" (blur 7px → 0) sobre uma placa de Snellen simulada.
+ * O slider revela a "nitidez" (blur 12px → 0) sobre uma placa Snellen simulada.
  */
 const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
-  const [value, setValue] = useState(35);
+  const [value, setValue] = useState(0);
   const firedRef = useRef(false);
   const snellen = snellenForValue(value);
-  const [announced, setAnnounced] = useState(snellen);
-  const lastAnnouncedRef = useRef(snellen);
+  const [announced, setAnnounced] = useState<string>("");
+  const lastAnnouncedRef = useRef<string>("");
+  const { trackEvent } = useGoogleTag();
 
-  // Anuncia apenas quando muda de faixa (evita reler a cada tick)
+  const isMax = value >= 100;
+
+  // Anuncia apenas ao atingir nitidez máxima
   useEffect(() => {
-    if (snellen !== lastAnnouncedRef.current) {
-      lastAnnouncedRef.current = snellen;
-      setAnnounced(snellen);
+    const msg = isMax ? "Nitidez máxima. Opção de agendamento disponível." : "";
+    if (msg !== lastAnnouncedRef.current) {
+      lastAnnouncedRef.current = msg;
+      setAnnounced(msg);
     }
-  }, [snellen]);
+  }, [isMax]);
 
   const fire = () => {
     if (firedRef.current) return;
@@ -50,10 +57,23 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
     fire();
   };
 
-  const blurPx = ((100 - value) / 100) * 7;
-  const contrast = 0.55 + (value / 100) * 0.55;
-  const opacity = 0.55 + (value / 100) * 0.45;
+  // Blur: 12px em 0 → 0px em 100
+  const blurPx = ((100 - value) / 100) * 12;
+  const contrast = 0.5 + (value / 100) * 0.6;
+  const opacity = 0.6 + (value / 100) * 0.4;
   const progressPct = value;
+
+  const clarezaLink = buildAgendamentoLink({
+    utm_content: "clareza_paragominas",
+    basePath: "/paragominas/agendamento",
+  });
+
+  const handleCtaClick = () => {
+    trackEvent("cta_click", {
+      action: "agendar_clareza",
+      placement: "landing_paragominas_clarity_demo",
+    });
+  };
 
   return (
     <section
@@ -79,12 +99,6 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
 
       <div className="container mx-auto px-4 max-w-6xl relative">
         <header className="mb-16 md:mb-20 max-w-3xl">
-          <div className="flex items-center gap-4 mb-6">
-            <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-              Refração
-            </span>
-            <div className="pgm-rule-dark flex-1 max-w-[220px]" />
-          </div>
           <h2
             id="clareza-heading"
             className="pgm-serif text-[2.2rem] sm:text-[3rem] md:text-[4rem] leading-[0.98] tracking-[-0.02em]"
@@ -101,25 +115,33 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
         <div className="grid lg:grid-cols-[1fr_1fr] gap-16 lg:gap-24 items-center">
           {/* Coluna esquerda — controle */}
           <div className="order-2 lg:order-1 max-w-md">
-            <p className="text-base md:text-lg leading-relaxed mb-10" style={{ color: "rgba(243,240,232,0.78)" }}>
-              A refração é o ponto de encontro entre a sua percepção e a lente correta.
-              Deslize para atravessar o que muitos vivem todos os dias.
+            <p className="text-base md:text-lg leading-relaxed mb-10" style={{ color: "rgba(243,240,232,0.85)" }}>
+              Encontrar a melhor nitidez faz parte de uma avaliação cuidadosa da visão.
+              Deslize e veja a diferença.
             </p>
 
             <div className="space-y-5">
-              {/* Convite acima do trilho, com seta sutil apontando para baixo */}
+              {/* Convite acima do trilho */}
               <div className="flex items-end justify-between gap-4">
                 <div className="flex flex-col">
                   <span
-                    className="pgm-eyebrow text-left"
-                    style={{ color: "var(--pgm-ciano)" }}
+                    className="uppercase"
+                    style={{
+                      color: "var(--pgm-ciano)",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      letterSpacing: "0.16em",
+                    }}
                     aria-hidden="true"
                   >
                     Deslize aqui
                   </span>
                   <span
-                    className="text-xs mt-1"
-                    style={{ color: "rgba(243,240,232,0.6)" }}
+                    style={{
+                      color: "rgba(243,240,232,0.82)",
+                      fontSize: "14px",
+                      marginTop: 4,
+                    }}
                     aria-hidden="true"
                   >
                     para ajustar a nitidez
@@ -130,10 +152,9 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
                   className="hidden md:inline-block pb-1"
                   style={{ color: "var(--pgm-ciano)" }}
                 >
-                  {/* Seta apontando para baixo, para o trilho */}
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <polyline points="6 13 12 19 18 13" />
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="4" x2="12" y2="20" />
+                    <polyline points="5 13 12 20 19 13" />
                   </svg>
                 </span>
               </div>
@@ -162,7 +183,7 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
                   }}
                   className="pgm-range pgm-range--enhanced w-full"
                   style={{
-                    background: `linear-gradient(to right, var(--pgm-ciano) 0%, var(--pgm-ciano) ${progressPct}%, rgba(243,240,232,0.18) ${progressPct}%, rgba(243,240,232,0.18) 100%)`,
+                    background: `linear-gradient(to right, var(--pgm-ciano) 0%, var(--pgm-ciano) ${progressPct}%, rgba(243,240,232,0.22) ${progressPct}%, rgba(243,240,232,0.22) 100%)`,
                   }}
                 />
               </div>
@@ -184,9 +205,9 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
                 </button>
               </div>
 
-              {/* Anúncio curto de faixa (aria-live) */}
+              {/* Anúncio aria-live: só ao atingir nitidez máxima */}
               <p className="sr-only" aria-live="polite">
-                Indicação atual: {announced}
+                {announced}
               </p>
 
               <div className="pgm-rule-dark mt-6" />
@@ -198,7 +219,7 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
 
           {/* Coluna direita — placa Snellen editorial */}
           <div className="order-1 lg:order-2 relative">
-            {/* Filetes de referência (moldura editorial) */}
+            {/* Filetes de referência */}
             <div className="absolute -inset-6 md:-inset-10 pointer-events-none">
               <div className="absolute top-0 left-0 w-8 h-px" style={{ background: "var(--pgm-champagne)" }} />
               <div className="absolute top-0 left-0 w-px h-8" style={{ background: "var(--pgm-champagne)" }} />
@@ -241,18 +262,33 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
               </p>
             </div>
 
-            {/* Ponto de foco ciano — só aparece com nitidez próxima do máximo */}
+            {/* CTA revelado em 100 / nitidez máxima — espaço reservado para evitar layout shift */}
             <div
-              aria-hidden="true"
-              className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 pgm-mono text-[10px] tracking-[0.3em] uppercase"
+              data-testid="clarity-cta-slot"
+              className="mt-8 min-h-[112px] flex flex-col items-center justify-center text-center"
               style={{
-                color: "var(--pgm-ciano)",
-                opacity: value > 75 ? 1 : 0,
+                opacity: isMax ? 1 : 0,
                 transition: "opacity .35s ease",
+                pointerEvents: isMax ? "auto" : "none",
               }}
+              aria-hidden={isMax ? "false" : "true"}
             >
-              <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: "var(--pgm-ciano)" }} />
-              Foco
+              <p
+                className="mb-4 pgm-serif italic"
+                style={{ ...{ fontFamily: "Fraunces, Georgia, serif" }, color: "var(--pgm-marfim)", fontSize: "1.25rem" }}
+              >
+                Agora está mais nítido?
+              </p>
+              <Link
+                to={isMax ? clarezaLink : "#"}
+                onClick={isMax ? handleCtaClick : (e) => e.preventDefault()}
+                tabIndex={isMax ? 0 : -1}
+                className="pgm-btn pgm-btn--ivory inline-flex items-center gap-2"
+                style={{ minHeight: 48, paddingInline: 24 }}
+              >
+                Agende sua consulta
+                <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+              </Link>
             </div>
 
             <p className="sr-only">
