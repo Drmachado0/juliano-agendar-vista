@@ -14,7 +14,7 @@ import {
 import PersonalDataStep from "@/components/scheduling/PersonalDataStep";
 import ConsultationDetailsStep from "@/components/scheduling/ConsultationDetailsStep";
 import DateTimeStep from "@/components/scheduling/DateTimeStep";
-import ConfirmationStep from "@/components/scheduling/ConfirmationStep";
+import ParagominasConfirmationStep from "@/components/scheduling/ParagominasConfirmationStep";
 import SuccessStep from "@/components/scheduling/SuccessStep";
 import { useAgendamentoFlow } from "@/features/agendamento/useAgendamentoFlow";
 import type { Clinica } from "@/services/clinicas";
@@ -394,10 +394,11 @@ const ParagominasAgendamento = () => {
                     />
                   )}
                   {currentStep === 4 && (
-                    <ConfirmationStep
+                    <ParagominasConfirmationStep
                       formData={formData}
                       onSubmit={handleSubmit}
                       onPrev={prevStep}
+                      onEditStep={goToStep}
                       isSubmitting={isSubmitting}
                     />
                   )}
