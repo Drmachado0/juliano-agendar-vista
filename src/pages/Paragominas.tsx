@@ -399,22 +399,6 @@ const Paragominas = () => {
 
                 {/* Foto */}
                 <div className="relative">
-                  {/* Numeração enorme (marca d'água) */}
-                  <span
-                    aria-hidden="true"
-                    className="pgm-serif absolute -top-4 md:-top-6 -left-2 select-none pointer-events-none"
-                    style={{
-                      ...SERIF,
-                      fontSize: "clamp(6rem, 14vw, 11rem)",
-                      lineHeight: 0.85,
-                      color: "var(--pgm-champagne)",
-                      opacity: 0.4,
-                      fontStyle: "italic",
-                    }}
-                  >
-                    01
-                  </span>
-
                   <div className="relative">
                     <picture>
                       <source
@@ -444,13 +428,10 @@ const Paragominas = () => {
                   </div>
 
                   {/* Caption */}
-                  <div className="mt-6 flex items-start justify-between gap-4 pl-1">
+                  <div className="mt-6 pl-1">
                     <p className="pgm-serif italic text-base max-w-xs leading-snug" style={{ ...SERIF, color: "var(--pgm-grafite)" }}>
                       &ldquo;Tecnologia para examinar. Tempo para explicar.&rdquo;
                     </p>
-                    <span className="pgm-mono text-[10px] tracking-[0.3em] uppercase whitespace-nowrap" style={{ color: "var(--pgm-ink-soft)" }}>
-                      Fig. 01
-                    </span>
                   </div>
                 </div>
               </div>
