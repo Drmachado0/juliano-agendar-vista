@@ -508,7 +508,7 @@ const Agendamento = () => {
             </span>
             <span className="flex items-center gap-1">
               <Award className="h-3.5 w-3.5 text-accent" />
-              <strong className="text-foreground">13+</strong> anos
+              <strong className="text-foreground">Mais de 15 anos</strong>
             </span>
           </div>
 
