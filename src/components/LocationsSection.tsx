@@ -108,9 +108,9 @@ const LocationsSection = () => {
 
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-0 items-stretch">
           {/* Location Cards */}
-          <div id="belem-locations-region" className="space-y-3 lg:pr-6 relative z-10">
+          <div id="all-locations-region" className="space-y-3 lg:pr-6 relative z-10">
             {locations.map((location, index) => {
-              if (!showBelem && location.city === "Belém") return null;
+
               const IconComponent = location.icon;
               const isActive = activeLocation === index;
               const isBelem = location.city === "Belém";
