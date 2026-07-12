@@ -34,7 +34,7 @@ export function useGoogleReviews(): GoogleReviewsData {
         .eq("id", true)
         .maybeSingle();
       if (error || !data) return null;
-      const row = data as Record<string, unknown>;
+      const row = data as unknown as Record<string, unknown>;
       return {
         google_reviews_total:
           typeof row.google_reviews_total === "number" ? row.google_reviews_total : null,
