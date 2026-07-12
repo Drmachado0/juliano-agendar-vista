@@ -154,9 +154,9 @@ describe("Paragominas landing page — restructure", () => {
 });
 
 describe("RefractionClarityExperience — slider", () => {
-  it("expõe label, valor padrão e limites 0-100", () => {
+  it("expõe label acessível 'Deslize para ajustar a nitidez da demonstração', valor inicial 35 e limites 0-100", () => {
     render(<RefractionClarityExperience />);
-    const slider = screen.getByLabelText(/Ajustar nitidez da demonstração/i) as HTMLInputElement;
+    const slider = screen.getByLabelText(/Deslize para ajustar a nitidez da demonstração/i) as HTMLInputElement;
     expect(slider).toBeTruthy();
     expect(slider.min).toBe("0");
     expect(slider.max).toBe("100");
@@ -171,7 +171,7 @@ describe("RefractionClarityExperience — slider", () => {
   it("dispara evento genérico apenas UMA vez", () => {
     const spy = vi.fn();
     render(<RefractionClarityExperience onFirstInteract={spy} />);
-    const slider = screen.getByLabelText(/Ajustar nitidez/i) as HTMLInputElement;
+    const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
     fireEvent.change(slider, { target: { value: "60" } });
     fireEvent.change(slider, { target: { value: "80" } });
     fireEvent.click(screen.getByRole("button", { name: /Mais nítido/i }));
@@ -180,7 +180,7 @@ describe("RefractionClarityExperience — slider", () => {
 
   it("botões Mais nítido / Mais embaçado mudam o valor com step de 10", () => {
     render(<RefractionClarityExperience />);
-    const slider = screen.getByLabelText(/Ajustar nitidez/i) as HTMLInputElement;
+    const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
     fireEvent.click(screen.getByRole("button", { name: /Mais nítido/i }));
     expect(Number(slider.value)).toBe(45);
     fireEvent.click(screen.getByRole("button", { name: /Mais embaçado/i }));
@@ -191,6 +191,73 @@ describe("RefractionClarityExperience — slider", () => {
     render(<RefractionClarityExperience />);
     const b = screen.getByRole("button", { name: /Mais nítido/i });
     expect(b.className).toMatch(/min-h-\[44px\]/);
+  });
+
+  it("indicador inicial (valor 35) mostra 20 / 100", () => {
+    render(<RefractionClarityExperience />);
+    expect(screen.getByTestId("snellen-indicator").textContent).toBe("20 / 100");
+  });
+
+  it("mapeia todas as faixas do slider para indicador Snellen correto", () => {
+    const { rerender } = render(<RefractionClarityExperience />);
+    const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
+    const cases: Array<[number, string]> = [
+      [0, "20 / 200"],
+      [19, "20 / 200"],
+      [20, "20 / 100"],
+      [39, "20 / 100"],
+      [40, "20 / 60"],
+      [59, "20 / 60"],
+      [60, "20 / 40"],
+      [79, "20 / 40"],
+      [80, "20 / 30"],
+      [99, "20 / 30"],
+      [100, "20 / 20"],
+    ];
+    for (const [v, expected] of cases) {
+      fireEvent.change(slider, { target: { value: String(v) } });
+      expect(screen.getByTestId("snellen-indicator").textContent).toBe(expected);
+    }
+    rerender(<RefractionClarityExperience />);
+  });
+
+  it("End vai a 100 e mostra 20 / 20; Home vai a 0 e mostra 20 / 200", () => {
+    render(<RefractionClarityExperience />);
+    const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
+    // Simula End/Home via mudança de valor (comportamento nativo do range)
+    fireEvent.keyDown(slider, { key: "End" });
+    fireEvent.change(slider, { target: { value: "100" } });
+    expect(slider.value).toBe("100");
+    expect(screen.getByTestId("snellen-indicator").textContent).toBe("20 / 20");
+    fireEvent.keyDown(slider, { key: "Home" });
+    fireEvent.change(slider, { target: { value: "0" } });
+    expect(slider.value).toBe("0");
+    expect(screen.getByTestId("snellen-indicator").textContent).toBe("20 / 200");
+  });
+
+  it("ArrowRight/ArrowLeft (via change) alteram o valor sem estourar limites", () => {
+    render(<RefractionClarityExperience />);
+    const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
+    fireEvent.change(slider, { target: { value: "100" } });
+    fireEvent.change(slider, { target: { value: "100" } });
+    expect(Number(slider.value)).toBe(100);
+    fireEvent.change(slider, { target: { value: "0" } });
+    expect(Number(slider.value)).toBe(0);
+  });
+
+  it("Botão 'Mais nítido' repetido chega a 100 e exibe 20 / 20", () => {
+    render(<RefractionClarityExperience />);
+    const btn = screen.getByRole("button", { name: /Mais nítido/i });
+    for (let i = 0; i < 20; i++) fireEvent.click(btn);
+    const slider = screen.getByLabelText(/Deslize para ajustar/i) as HTMLInputElement;
+    expect(Number(slider.value)).toBe(100);
+    expect(screen.getByTestId("snellen-indicator").textContent).toBe("20 / 20");
+  });
+
+  it("Exibe convite 'Deslize aqui' e apoio 'para ajustar a nitidez'", () => {
+    render(<RefractionClarityExperience />);
+    expect(screen.getByText(/Deslize aqui/i)).toBeTruthy();
+    expect(screen.getByText(/para ajustar a nitidez/i)).toBeTruthy();
   });
 });
 
