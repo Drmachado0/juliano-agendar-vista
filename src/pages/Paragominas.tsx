@@ -193,6 +193,10 @@ const Paragominas = () => {
       bestRating: "5",
       ratingCount: String(ratingCount),
     },
+    memberOf: DOCTOR.memberships.map((name) => ({
+      "@type": "MedicalOrganization",
+      name,
+    })),
   };
 
   const [menuOpen, setMenuOpen] = useState(false);
