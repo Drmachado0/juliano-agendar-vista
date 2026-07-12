@@ -803,7 +803,7 @@
   width: 22px; height: 22px; border-radius: 50%;
   background: var(--pgm-ciano);
   border: 3px solid var(--pgm-petroleo);
-  cursor: grab; transition: transform .15s ease;
+  cursor: grab; transition: transform .15s ease, box-shadow .15s ease;
   box-shadow: 0 0 0 4px rgba(65,216,206,.15);
 }
 .pgm-range::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.08); }
@@ -812,6 +812,22 @@
   background: var(--pgm-ciano);
   border: 3px solid var(--pgm-petroleo);
   cursor: grab;
+}
+
+/* Variante realçada — trilho mais alto, thumb maior, foco visível */
+.pgm-range--enhanced { height: 6px; border-radius: 999px; }
+.pgm-range--enhanced::-webkit-slider-thumb {
+  width: 28px; height: 28px; border-width: 4px;
+  box-shadow: 0 0 0 6px rgba(65,216,206,.18);
+}
+.pgm-range--enhanced::-moz-range-thumb {
+  width: 28px; height: 28px; border-width: 4px;
+}
+.pgm-range--enhanced:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px var(--pgm-marfim), 0 0 0 8px var(--pgm-ciano);
+}
+.pgm-range--enhanced:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 4px var(--pgm-marfim), 0 0 0 8px var(--pgm-ciano);
 }
 
 /* Reduz motion */
