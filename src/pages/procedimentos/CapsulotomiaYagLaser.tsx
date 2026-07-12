@@ -11,6 +11,11 @@ const data: ProcedurePageData = {
     "A capsulotomia YAG é um procedimento a laser realizado no consultório para tratar a opacificação da cápsula posterior — também conhecida como catarata secundária — que pode ocorrer meses ou anos após a cirurgia de catarata. Procedimento realizado em Belém, mediante avaliação e agendamento com o Dr. Juliano Machado.",
   medicalProcedureType: "https://schema.org/TherapeuticProcedure",
   bodyLocation: "Olho",
+  locations: {
+    label: "Belém",
+    sidebarItems: ["IOB e Vitria — Belém"],
+    ctaSuffix: "Belém",
+  },
   sections: [
     {
       title: "O que é a opacificação da cápsula posterior",
