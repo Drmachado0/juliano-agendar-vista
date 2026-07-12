@@ -165,7 +165,7 @@ const ConsultationDetailsStep = ({
             }}
             className="grid grid-cols-1 gap-2"
           >
-            {clinicas.map((clinica) => (
+            {clinicasVisiveis.map((clinica) => (
               <Label
                 key={clinica.id}
                 htmlFor={`loc-${clinica.slug}`}
