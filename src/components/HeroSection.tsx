@@ -57,18 +57,18 @@ const HeroSection = () => {
               </span>
             </div>
 
-            {/* Heading — LCP, sem animação de opacity */}
-            <h1 className="text-[2.25rem] leading-[1.05] sm:text-5xl lg:text-[4.25rem] font-extrabold uppercase mb-5">
-              <span className="text-foreground">Enxergar bem</span>
-              <br />
-              <span className="gradient-text-accent">muda tudo.</span>
+            {/* Heading — LCP, sem animação de opacity/delay */}
+            <h1 className="text-[2rem] leading-[1.1] sm:text-4xl lg:text-[3.5rem] font-extrabold mb-5 text-foreground">
+              Cuide da sua visão com{" "}
+              <span className="gradient-text-accent">atendimento completo em Paragominas</span>
             </h1>
 
-            {/* Subtitle — direto, mobile-first */}
+            {/* Subtitle — apoio direto */}
             <p className="text-[15px] sm:text-lg text-muted-foreground leading-relaxed mb-7 max-w-xl mx-auto lg:mx-0">
-              Consultas, exames e cirurgias em <span className="text-foreground font-semibold">Paragominas</span> com o{" "}
-              <span className="text-foreground font-semibold">{DOCTOR.name}</span>. Agende online e receba a confirmação
-              pelo WhatsApp.
+              Consultas e acompanhamento oftalmológico com o{" "}
+              <span className="text-foreground font-semibold">{DOCTOR.name}</span> na{" "}
+              <span className="text-foreground font-semibold">Clinicor</span> e no{" "}
+              <span className="text-foreground font-semibold">HGP</span>.
             </p>
 
             {/* CTAs — CTA primária "Ver horários disponíveis" */}
