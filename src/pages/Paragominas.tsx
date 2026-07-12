@@ -621,15 +621,15 @@ const Paragominas = () => {
                 {LOCAIS.map((l, idx) => {
                   const bookLink = buildAgendamentoLink({ utm_content: l.utmContent });
                   return (
-                    <>
+                    <Fragment key={l.name}>
                       {idx === 1 && (
-                        <svg key="route" aria-hidden="true" viewBox="0 0 120 100" fill="none" className="w-full h-20">
+                        <svg aria-hidden="true" viewBox="0 0 120 100" fill="none" className="w-full h-20">
                           <path d="M5 50 C 40 20, 80 80, 115 50" stroke="hsl(var(--primary) / 0.5)" strokeWidth="1.2" strokeDasharray="4 5" />
                           <circle cx="5" cy="50" r="4" fill="hsl(var(--primary))" />
                           <circle cx="115" cy="50" r="4" fill="hsl(var(--primary))" />
                         </svg>
                       )}
-                      <div key={l.name}>
+                      <div>
                         <p className="text-[10px] uppercase tracking-[0.25em] text-[hsl(var(--primary))] mb-2">
                           {l.number} · Paragominas
                         </p>
@@ -668,7 +668,7 @@ const Paragominas = () => {
                           </a>
                         </div>
                       </div>
-                    </>
+                    </Fragment>
                   );
                 })}
               </div>
