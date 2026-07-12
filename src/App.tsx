@@ -18,6 +18,7 @@ import RouteChangeTracker from "./components/RouteChangeTracker";
 // Code-splitting: a página pública /agendamento e toda a área /admin
 // vivem em chunks separados — não pesam no bundle inicial da home.
 const Agendamento = lazy(() => import("./pages/Agendamento"));
+const Paragominas = lazy(() => import("./pages/Paragominas"));
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
 const AdminAgendamentos = lazy(() => import("./pages/admin/Agendamentos"));
 const AdminCRM = lazy(() => import("./pages/admin/CRM"));
