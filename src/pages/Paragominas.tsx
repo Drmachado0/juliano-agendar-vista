@@ -717,7 +717,7 @@ const Paragominas = () => {
 
               <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-stretch">
                 {LOCAIS.map((l) => {
-                  const bookLink = buildAgendamentoLink({ utm_content: l.utmContent });
+                  const bookLink = buildAgendamentoLink({ utm_content: l.utmContent, basePath: PGM_BOOKING });
                   return (
                     <article
                       key={l.name}
