@@ -196,7 +196,10 @@ const TestimonialsSection = ({
   const displayCount = reviews.hasRealAggregate ? reviews.count : pool.length;
 
   // Layout responsivo + auto-rotate controls.
-  const itemsPerPage = useItemsPerPage();
+  const itemsPerPageRaw = useItemsPerPage();
+  const itemsPerPage = effectiveMaxVisible
+    ? Math.min(itemsPerPageRaw, effectiveMaxVisible)
+    : itemsPerPageRaw;
   const reducedMotion = useReducedMotion();
   const documentHidden = useDocumentHidden();
   const [hovering, setHovering] = useState(false);
