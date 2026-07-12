@@ -271,26 +271,72 @@ const KanbanCard = ({
               frio — há {Math.floor(horasDesdeUltimaIn / 24)}d sem resposta
             </span>
           )}
-          {humanoAssumiu ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/30">
-                  <UserIcon className="h-2.5 w-2.5" />
-                  Humano assumiu
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                {pausaVigente
-                  ? `Bot pausado até ${format(new Date(pausaAteMs), "dd/MM HH:mm", { locale: ptBR })}`
-                  : "Bot desativado para este lead"}
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/30">
-              <Bot className="h-2.5 w-2.5" />
-              Bot atendendo
-            </span>
-          )}
+          {(() => {
+            const precisaHumano = agendamento.status_crm === "PRECISA_DE_HUMANO";
+            const semRespostaBot =
+              !humanoAssumiu &&
+              !precisaHumano &&
+              horasDesdeUltimaIn != null &&
+              horasDesdeUltimaIn >= 1;
+
+            if (precisaHumano) {
+              return (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                      <AlertTriangle className="h-2.5 w-2.5" />
+                      Precisa humano
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Conversa escalada para atendimento humano
+                    {(agendamento as any).bot_pausa_motivo
+                      ? ` — motivo: ${(agendamento as any).bot_pausa_motivo}`
+                      : ""}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            }
+            if (humanoAssumiu) {
+              return (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/30">
+                      <UserIcon className="h-2.5 w-2.5" />
+                      Humano assumiu
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {pausaVigente
+                      ? `Bot pausado até ${format(new Date(pausaAteMs), "dd/MM HH:mm", { locale: ptBR })}`
+                      : "Bot desativado para este lead"}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            }
+            if (semRespostaBot) {
+              return (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                      <AlertTriangle className="h-2.5 w-2.5" />
+                      Sem resposta do bot
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Última mensagem recebida há {horasDesdeUltimaIn}h sem OUT registrada
+                  </TooltipContent>
+                </Tooltip>
+              );
+            }
+            return (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/30">
+                <Bot className="h-2.5 w-2.5" />
+                Bot atendendo
+              </span>
+            );
+          })()}
+
           {naoQualificado && (
             <Tooltip>
               <TooltipTrigger asChild>
