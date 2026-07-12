@@ -95,6 +95,6 @@ describe("ParagominasConfirmationStep — summary premium", () => {
     // Superfície principal deve ser marfim claro
     const card = container.querySelector(".pgm-summary-card") as HTMLElement;
     expect(card).not.toBeNull();
-    expect(card.style.background).toMatch(/#FAF8F2/i);
+    expect(card.style.background.toLowerCase()).toMatch(/#faf8f2|250,\s*248,\s*242/);
   });
 });
