@@ -10,7 +10,7 @@ import CapsulotomiaYagLaser from "./CapsulotomiaYagLaser";
 import { createElement } from "react";
 
 describe("CapsulotomiaYagLaser page metadata", () => {
-  const rendered = CapsulotomiaYagLaser({} as never) as ReturnType<typeof createElement> & {
+  const rendered = (CapsulotomiaYagLaser as unknown as () => ReturnType<typeof createElement>)() as {
     props: { data: Record<string, unknown> };
   };
   const data = rendered.props.data as {
