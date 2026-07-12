@@ -391,7 +391,7 @@ const Paragominas = () => {
                     <div>
                       <dt className="pgm-eyebrow mb-1.5" style={{ color: "var(--pgm-ink-soft)" }}>Experiência</dt>
                       <dd className="font-semibold" style={{ color: "var(--pgm-petroleo)" }}>
-                        +{DOCTOR.yearsExperience} anos
+                        {DOCTOR.yearsExperienceLabel}
                       </dd>
                     </div>
                   </dl>
