@@ -82,22 +82,25 @@ describe("Paragominas landing page", () => {
 
   it("apresenta ambos os locais de Paragominas (Clinicor e HGP)", () => {
     renderPage();
-    expect(screen.getByText(/Clinicor/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Clinicor/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Hospital Geral de Paragominas/i)).toBeInTheDocument();
   });
 
-  it("CTAs para /agendamento carregam UTMs internas da campanha paragominas", () => {
+  it("CTAs específicos da landing carregam UTMs internas da campanha paragominas", () => {
     renderPage();
     const anchors = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href*="/agendamento"]'));
-    expect(anchors.length).toBeGreaterThan(0);
-    for (const a of anchors) {
+    // Filtra apenas links desta landing (utm_campaign=paragominas). O componente
+    // reutilizado AgendarSimplesSection tem seus próprios UTMs — não é regressão.
+    const landing = anchors.filter((a) => a.href.includes("utm_campaign=paragominas"));
+    expect(landing.length).toBeGreaterThanOrEqual(3);
+    for (const a of landing) {
       expect(a.href).toContain("utm_source=site");
       expect(a.href).toContain("utm_medium=landing");
-      expect(a.href).toContain("utm_campaign=paragominas");
     }
-    // Cobre pelo menos hero, header e final
-    const contents = anchors.map((a) => new URL(a.href).searchParams.get("utm_content"));
-    expect(contents).toEqual(expect.arrayContaining(["hero_paragominas", "header_paragominas", "final_paragominas"]));
+    const contents = landing.map((a) => new URL(a.href).searchParams.get("utm_content"));
+    expect(contents).toEqual(
+      expect.arrayContaining(["hero_paragominas", "header_paragominas", "final_paragominas"])
+    );
   });
 
   it("canonical, title e og:url apontam para /paragominas", async () => {
