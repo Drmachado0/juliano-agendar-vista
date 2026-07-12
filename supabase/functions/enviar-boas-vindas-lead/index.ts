@@ -4,6 +4,8 @@ import { buscarTemplate, renderizarTemplate } from "../_shared/templateRenderer.
 import { isKnownInvalidWhatsapp } from "../_shared/whatsappGuards.ts";
 import { podeEnviarOutbound, LIMITES_PADRAO, logarBloqueioRateLimit } from "../_shared/rateLimitOutbound.ts";
 import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
+import { requireCronSecret } from "../_shared/authGuards.ts";
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
