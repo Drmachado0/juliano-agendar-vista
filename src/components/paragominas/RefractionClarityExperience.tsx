@@ -239,84 +239,87 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
                 minHeight: 340,
               }}
             >
-              {/* Grupo das LETRAS — visível de 0 a 99, blur aplicado só aqui */}
-              <div
-                data-testid="clarity-letters"
-                aria-hidden="true"
-                className="text-center pgm-mono select-none"
-                style={{
-                  color: "var(--pgm-grafite)",
-                  filter: `blur(${blurPx.toFixed(2)}px) contrast(${contrast.toFixed(2)})`,
-                  opacity: isMax ? 0 : opacity,
-                  visibility: isMax ? "hidden" : "visible",
-                  transition: "opacity .25s ease, filter .3s ease",
-                }}
-              >
-                <p className="text-[3.5rem] md:text-[4rem] leading-none tracking-[0.32em] mb-5">
-                  {LINES[0]}
-                </p>
-                <p className="text-[2.25rem] md:text-[2.75rem] leading-none tracking-[0.36em] mb-5">
-                  {LINES[1]}
-                </p>
-                <p className="text-[1.5rem] md:text-[1.75rem] leading-none tracking-[0.4em]">
-                  {LINES[2]}
-                </p>
-              </div>
-
-              {/* CTA interno — só em 100, totalmente nítido, sem blur */}
-              {isMax && (
-                <Link
-                  to={clarezaLink}
-                  onClick={handleCtaClick}
-                  aria-label="Agende sua consulta em Paragominas"
-                  data-testid="clarity-cta"
-                  className="absolute inset-0 m-6 md:m-8 flex flex-col items-center justify-center text-center rounded-sm focus:outline-none focus-visible:ring-2 group"
+              {/* Área das letras + CTA sobreposto (mantém dimensões fixas) */}
+              <div className="relative">
+                {/* Grupo das LETRAS — visível de 0 a 99, blur aplicado só aqui */}
+                <div
+                  data-testid="clarity-letters"
+                  aria-hidden="true"
+                  className="text-center pgm-mono select-none"
                   style={{
-                    background: "var(--pgm-marfim)",
-                    color: "var(--pgm-petroleo)",
-                    minHeight: 48,
-                    opacity: 0,
-                    animation: "pgmClarityFade 260ms ease-out forwards",
-                    // foco ciano
-                    ["--tw-ring-color" as string]: "var(--pgm-ciano)",
+                    color: "var(--pgm-grafite)",
+                    filter: `blur(${blurPx.toFixed(2)}px) contrast(${contrast.toFixed(2)})`,
+                    opacity: isMax ? 0 : opacity,
+                    visibility: isMax ? "hidden" : "visible",
+                    transition: "opacity .25s ease, filter .3s ease",
                   }}
                 >
-                  <span
-                    className="uppercase mb-2 md:mb-3"
+                  <p className="text-[3.5rem] md:text-[4rem] leading-none tracking-[0.32em] mb-5">
+                    {LINES[0]}
+                  </p>
+                  <p className="text-[2.25rem] md:text-[2.75rem] leading-none tracking-[0.36em] mb-5">
+                    {LINES[1]}
+                  </p>
+                  <p className="text-[1.5rem] md:text-[1.75rem] leading-none tracking-[0.4em]">
+                    {LINES[2]}
+                  </p>
+                </div>
+
+                {/* CTA interno — só em 100, totalmente nítido, sem blur */}
+                {isMax && (
+                  <Link
+                    to={clarezaLink}
+                    onClick={handleCtaClick}
+                    aria-label="Agende sua consulta em Paragominas"
+                    data-testid="clarity-cta"
+                    className="absolute inset-0 flex flex-col items-center justify-center text-center rounded-sm focus:outline-none focus-visible:ring-2 group"
                     style={{
-                      fontSize: "0.72rem",
-                      fontWeight: 600,
-                      letterSpacing: "0.32em",
+                      background: "var(--pgm-marfim)",
                       color: "var(--pgm-petroleo)",
+                      minHeight: 48,
+                      opacity: 0,
+                      animation: "pgmClarityFade 260ms ease-out forwards",
+                      ["--tw-ring-color" as string]: "var(--pgm-ciano)",
                     }}
-                  >
-                    Agende
-                  </span>
-                  <span
-                    className="pgm-serif block leading-[0.96] tracking-[-0.01em] px-2"
-                    style={{
-                      fontFamily: "Fraunces, Georgia, serif",
-                      color: "var(--pgm-petroleo)",
-                      fontSize: "clamp(1.9rem, 6.5vw, 2.9rem)",
-                      fontWeight: 500,
-                      wordBreak: "keep-all",
-                    }}
-                  >
-                    sua consulta
-                  </span>
-                  <span
-                    aria-hidden="true"
-                    className="mt-4 inline-flex items-center gap-1 transition-transform duration-200 group-hover:translate-x-1"
-                    style={{ color: "var(--pgm-petroleo)" }}
                   >
                     <span
-                      className="inline-block h-px"
-                      style={{ width: 28, background: "var(--pgm-champagne)" }}
-                    />
-                    <ArrowUpRight className="w-4 h-4" />
-                  </span>
-                </Link>
-              )}
+                      className="uppercase mb-2 md:mb-3"
+                      style={{
+                        fontSize: "0.72rem",
+                        fontWeight: 600,
+                        letterSpacing: "0.32em",
+                        color: "var(--pgm-petroleo)",
+                      }}
+                    >
+                      Agende
+                    </span>
+                    <span
+                      className="pgm-serif block leading-[0.96] tracking-[-0.01em] px-2"
+                      style={{
+                        fontFamily: "Fraunces, Georgia, serif",
+                        color: "var(--pgm-petroleo)",
+                        fontSize: "clamp(1.9rem, 6.5vw, 2.9rem)",
+                        fontWeight: 500,
+                        wordBreak: "keep-all",
+                      }}
+                    >
+                      sua consulta
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className="mt-4 inline-flex items-center gap-1 transition-transform duration-200 group-hover:translate-x-1"
+                      style={{ color: "var(--pgm-petroleo)" }}
+                    >
+                      <span
+                        className="inline-block h-px"
+                        style={{ width: 28, background: "var(--pgm-champagne)" }}
+                      />
+                      <ArrowUpRight className="w-4 h-4" />
+                    </span>
+                  </Link>
+                )}
+              </div>
+
 
               <p
                 data-testid="snellen-indicator"
