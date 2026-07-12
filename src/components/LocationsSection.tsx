@@ -5,8 +5,9 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 const LocationsSection = () => {
   const [activeLocation, setActiveLocation] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+  const [showBelem, setShowBelem] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
-  const { trackPhoneClick } = useGoogleTag();
+  const { trackPhoneClick, trackCTAClick } = useGoogleTag();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
