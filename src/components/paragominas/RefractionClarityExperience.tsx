@@ -231,17 +231,27 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
               <div className="absolute bottom-0 right-0 w-px h-8" style={{ background: "var(--pgm-champagne)" }} />
             </div>
 
-            {/* Placa em marfim */}
+            {/* Placa em marfim — o blur NUNCA é aplicado ao quadro, apenas ao grupo das letras */}
             <div
               className="relative mx-auto max-w-md px-10 py-14 md:px-14 md:py-20"
               style={{
                 background: "var(--pgm-marfim)",
-                filter: `blur(${blurPx.toFixed(2)}px) contrast(${contrast.toFixed(2)})`,
-                opacity,
-                transition: "filter .3s ease, opacity .3s ease",
+                minHeight: 340,
               }}
             >
-              <div className="text-center pgm-mono select-none" aria-hidden="true" style={{ color: "var(--pgm-grafite)" }}>
+              {/* Grupo das LETRAS — visível de 0 a 99, blur aplicado só aqui */}
+              <div
+                data-testid="clarity-letters"
+                aria-hidden="true"
+                className="text-center pgm-mono select-none"
+                style={{
+                  color: "var(--pgm-grafite)",
+                  filter: `blur(${blurPx.toFixed(2)}px) contrast(${contrast.toFixed(2)})`,
+                  opacity: isMax ? 0 : opacity,
+                  visibility: isMax ? "hidden" : "visible",
+                  transition: "opacity .25s ease, filter .3s ease",
+                }}
+              >
                 <p className="text-[3.5rem] md:text-[4rem] leading-none tracking-[0.32em] mb-5">
                   {LINES[0]}
                 </p>
@@ -252,43 +262,70 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
                   {LINES[2]}
                 </p>
               </div>
+
+              {/* CTA interno — só em 100, totalmente nítido, sem blur */}
+              {isMax && (
+                <Link
+                  to={clarezaLink}
+                  onClick={handleCtaClick}
+                  aria-label="Agende sua consulta em Paragominas"
+                  data-testid="clarity-cta"
+                  className="absolute inset-0 m-6 md:m-8 flex flex-col items-center justify-center text-center rounded-sm focus:outline-none focus-visible:ring-2 group"
+                  style={{
+                    background: "var(--pgm-marfim)",
+                    color: "var(--pgm-petroleo)",
+                    minHeight: 48,
+                    opacity: 0,
+                    animation: "pgmClarityFade 260ms ease-out forwards",
+                    // foco ciano
+                    ["--tw-ring-color" as string]: "var(--pgm-ciano)",
+                  }}
+                >
+                  <span
+                    className="uppercase mb-2 md:mb-3"
+                    style={{
+                      fontSize: "0.72rem",
+                      fontWeight: 600,
+                      letterSpacing: "0.32em",
+                      color: "var(--pgm-petroleo)",
+                    }}
+                  >
+                    Agende
+                  </span>
+                  <span
+                    className="pgm-serif block leading-[0.96] tracking-[-0.01em] px-2"
+                    style={{
+                      fontFamily: "Fraunces, Georgia, serif",
+                      color: "var(--pgm-petroleo)",
+                      fontSize: "clamp(1.9rem, 6.5vw, 2.9rem)",
+                      fontWeight: 500,
+                      wordBreak: "keep-all",
+                    }}
+                  >
+                    sua consulta
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="mt-4 inline-flex items-center gap-1 transition-transform duration-200 group-hover:translate-x-1"
+                    style={{ color: "var(--pgm-petroleo)" }}
+                  >
+                    <span
+                      className="inline-block h-px"
+                      style={{ width: 28, background: "var(--pgm-champagne)" }}
+                    />
+                    <ArrowUpRight className="w-4 h-4" />
+                  </span>
+                </Link>
+              )}
+
               <p
                 data-testid="snellen-indicator"
-                className="mt-8 text-center pgm-mono text-[10px] tracking-[0.35em] uppercase"
+                className="mt-8 text-center pgm-mono text-[10px] tracking-[0.35em] uppercase relative z-10"
                 style={{ color: "rgba(11,24,26,0.5)" }}
                 aria-hidden="true"
               >
                 {snellen}
               </p>
-            </div>
-
-            {/* CTA revelado em 100 / nitidez máxima — espaço reservado para evitar layout shift */}
-            <div
-              data-testid="clarity-cta-slot"
-              className="mt-8 min-h-[112px] flex flex-col items-center justify-center text-center"
-              style={{
-                opacity: isMax ? 1 : 0,
-                transition: "opacity .35s ease",
-                pointerEvents: isMax ? "auto" : "none",
-              }}
-              aria-hidden={isMax ? "false" : "true"}
-            >
-              <p
-                className="mb-4 pgm-serif italic"
-                style={{ ...{ fontFamily: "Fraunces, Georgia, serif" }, color: "var(--pgm-marfim)", fontSize: "1.25rem" }}
-              >
-                Agora está mais nítido?
-              </p>
-              <Link
-                to={isMax ? clarezaLink : "#"}
-                onClick={isMax ? handleCtaClick : (e) => e.preventDefault()}
-                tabIndex={isMax ? 0 : -1}
-                className="pgm-btn pgm-btn--ivory inline-flex items-center gap-2"
-                style={{ minHeight: 48, paddingInline: 24 }}
-              >
-                Agende sua consulta
-                <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
-              </Link>
             </div>
 
             <p className="sr-only">
