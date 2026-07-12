@@ -119,6 +119,9 @@ const Agendamento = () => {
   const WHATSAPP_URL = waLink(WHATSAPP_DEFAULT_MSG);
   const formStartFiredRef = useRef(false);
   const successFiredRef = useRef(false);
+  const viewFiredRef = useRef(false);
+  const stepsCompletedRef = useRef<Set<number>>(new Set());
+
 
 
   const totalSteps = 4;
