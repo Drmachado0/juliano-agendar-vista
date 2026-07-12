@@ -16,7 +16,13 @@ export const DOCTOR = {
   name: "Dr. Juliano Machado",
   specialty: "Oftalmologista",
   crm: "CRM-PA 15253",
-  yearsExperience: 13,
+  yearsExperience: 15,
+  yearsExperienceLabel: "Mais de 15 anos",
+  yearsExperienceLong: "Mais de 15 anos de experiência",
   patientsServed: 6000,
   cities: "Paragominas e Belém",
+  memberships: [
+    "Sociedade Brasileira de Oftalmologia",
+    "Sociedade Brasileira de Glaucoma",
+  ],
 } as const;
