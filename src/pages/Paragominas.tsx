@@ -616,6 +616,9 @@ const Paragominas = () => {
                     {" · "}
                     <span>Oftalmologia</span>
                   </p>
+                  <p className="text-sm mt-2" style={{ color: "rgba(243,240,232,0.6)" }}>
+                    Membro da Sociedade Brasileira de Oftalmologia e da Sociedade Brasileira de Glaucoma.
+                  </p>
                 </div>
               </div>
             </div>
