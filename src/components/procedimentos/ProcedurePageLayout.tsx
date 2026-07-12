@@ -31,6 +31,16 @@ export interface ProcedurePageData {
   faqs: ProcedureFAQ[];
   medicalProcedureType?: string; // schema.org procedureType
   bodyLocation?: string;
+  /** Override opcional dos locais exibidos (chip, sidebar e CTA final).
+   *  Usado quando o procedimento é ofertado apenas em algumas cidades. */
+  locations?: {
+    /** Rótulo curto exibido no chip do hero. Ex.: "Belém" ou "Paragominas e Belém". */
+    label: string;
+    /** Itens da sidebar (cidade + clínicas). */
+    sidebarItems: string[];
+    /** Frase usada no CTA final ("Atendimento em <ctaSuffix>."). */
+    ctaSuffix: string;
+  };
 }
 
 const BASE_URL = "https://drjulianomachado.com";
