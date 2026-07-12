@@ -142,12 +142,15 @@ const Paragominas = () => {
     "Olá! Tenho uma dúvida sobre a consulta em Paragominas antes de agendar. (origem: landing_paragominas)"
   );
 
-  const heroLink    = buildAgendamentoLink({ utm_content: "hero_paragominas" });
-  const headerLink  = buildAgendamentoLink({ utm_content: "header_paragominas" });
-  const finalLink   = buildAgendamentoLink({ utm_content: "final_paragominas" });
-  const stepsLink   = buildAgendamentoLink({ utm_content: "steps_paragominas" });
-  const stickyLink  = buildAgendamentoLink({ utm_content: "sticky_paragominas" });
-  const motivosLink = buildAgendamentoLink({ utm_content: "motivos_paragominas" });
+  // Todos os CTAs internos da landing apontam para a nova rota premium
+  // /paragominas/agendamento (mesma máquina de estados, shell editorial).
+  const PGM_BOOKING = "/paragominas/agendamento";
+  const heroLink    = buildAgendamentoLink({ utm_content: "hero_paragominas", basePath: PGM_BOOKING });
+  const headerLink  = buildAgendamentoLink({ utm_content: "header_paragominas", basePath: PGM_BOOKING });
+  const finalLink   = buildAgendamentoLink({ utm_content: "final_paragominas", basePath: PGM_BOOKING });
+  const stepsLink   = buildAgendamentoLink({ utm_content: "steps_paragominas", basePath: PGM_BOOKING });
+  const stickyLink  = buildAgendamentoLink({ utm_content: "sticky_paragominas", basePath: PGM_BOOKING });
+  const motivosLink = buildAgendamentoLink({ utm_content: "motivos_paragominas", basePath: PGM_BOOKING });
 
   const heroRef = useRef<HTMLElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
@@ -714,7 +717,7 @@ const Paragominas = () => {
 
               <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-stretch">
                 {LOCAIS.map((l) => {
-                  const bookLink = buildAgendamentoLink({ utm_content: l.utmContent });
+                  const bookLink = buildAgendamentoLink({ utm_content: l.utmContent, basePath: PGM_BOOKING });
                   return (
                     <article
                       key={l.name}

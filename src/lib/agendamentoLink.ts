@@ -13,6 +13,12 @@ export interface AgendamentoLinkOptions {
   utm_term?: string;
   /** Parâmetros internos adicionais (não médicos, não PII). */
   extra?: Record<string, string>;
+  /**
+   * Caminho base opcional. Default `/agendamento` (rota original). A landing
+   * premium /paragominas usa `/paragominas/agendamento`. Home e demais páginas
+   * continuam sem informar, preservando /agendamento.
+   */
+  basePath?: string;
 }
 
 const INTERNAL_DEFAULTS = {
@@ -20,6 +26,8 @@ const INTERNAL_DEFAULTS = {
   utm_medium: "landing",
   utm_campaign: "paragominas",
 } as const;
+
+const DEFAULT_BASE_PATH = "/agendamento";
 
 export function buildAgendamentoLink(opts: AgendamentoLinkOptions = {}): string {
   const params = new URLSearchParams();
@@ -48,6 +56,7 @@ export function buildAgendamentoLink(opts: AgendamentoLinkOptions = {}): string 
     if (!params.has(k)) params.set(k, v);
   }
 
+  const base = opts.basePath ?? DEFAULT_BASE_PATH;
   const qs = params.toString();
-  return qs ? `/agendamento?${qs}` : "/agendamento";
+  return qs ? `${base}?${qs}` : base;
 }

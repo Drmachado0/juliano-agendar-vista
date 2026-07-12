@@ -1,53 +1,82 @@
-# Aplicar Blocos A + B1 + B2 + C1 – Auditoria de Tracking
+## Objetivo
 
-Migration de auditoria (B2) já foi criada e aprovada — trigger `trg_log_site_config_pixel_change` grava em `system_logs` toda alteração do Pixel ID. Falta o código.
+Criar `/paragominas/agendamento` com direção visual da landing premium, sem tocar em `/agendamento` (comportamento, visual e integrações preservados). Reutilizar 100% do motor (estado, validações, hooks, tracking, edge functions, CRM/CAPI, Obrigado).
 
-## Correção importante ao relatório anterior
-`trackLead` e `trackCompleteRegistration` do `useMetaPixel` **NÃO são código morto** — ainda são chamados em `src/pages/Agendamento.tsx` (linhas 210 e 327) e em `src/components/scheduling/SchedulingModal.tsx` (linhas 175-176). Só o `/obrigado` deixou de disparar. Portanto **não vou remover as funções**; vou apenas atualizar o inventário para refletir as origens reais.
+## Estratégia arquitetural
 
----
+Extrair de `src/pages/Agendamento.tsx` (727 linhas) apenas a **máquina de estados + integrações** para um hook compartilhado. Cada rota fica com um **shell visual próprio** que consome esse hook e monta os steps existentes.
 
-## Arquivos a alterar
+```
+src/pages/Agendamento.tsx           (shell atual, intocado visualmente)
+src/pages/ParagominasAgendamento.tsx (novo shell premium)
+src/features/agendamento/
+  useAgendamentoFlow.ts             (extraído — estado, submit, tracking, UTMs)
+  filters.ts                        (filtro Clinicor/HGP, sem YAG — só p/ premium)
+  types.ts
+```
 
-### 1. `supabase/functions/meta-capi/index.ts`
-Adicionar `logSystem({ level: 'info', source: 'meta-capi', message: 'CAPI OK <event>', … })` logo após o `console.log` de sucesso (linha 395). Assim a seção CAPI da tela consegue mostrar contagem de sucessos. Erros já são logados.
+Os steps (`PersonalDataStep`, `ConsultationDetailsStep`, `DateTimeStep`, `ConfirmationStep`, `SuccessStep`) permanecem os mesmos componentes de campo — o shell define o wrapper visual (tokens, tipografia, indicador de progresso, painel lateral).
 
-### 2. `src/pages/admin/AuditoriaTracking.tsx` — reescrita
-- **Bloco A1.** Atualizar `TRACKING_INVENTORY` (adicionar entradas para os eventos e origens hoje ausentes) e `DATALAYER_EVENTS` com a lista completa real:
-  - `view_scheduling_page`, `lp_step_view`, `lead_created`, `lp_appointment_scheduled` (Agendamento.tsx)
-  - `lp_form_start`, `lp_step_completed`, `lp_appointment_success`, `lp_appointment_error`, `modal_form_start`, `modal_step_completed`, `modal_appointment_success`, `modal_appointment_error` (useGoogleTag)
-  - `meta_appointment_form_started`, `meta_appointment_booked`, `meta_appointment_confirmed` (useMetaPixel)
-  - `thank_you_page_view` (Obrigado.tsx)
-  - fallback `meta_<eventName>` (useMetaPixel.trackEvent)
-- **Bloco A2.** `meta_lead` / `meta_complete_registration` continuam ativos — atualizar origens para incluir `Agendamento.tsx` e `SchedulingModal.tsx` em vez de marcar como mortos.
-- **Bloco A3.** `RuntimeBadge` de `gtag()` sem prop `optional` (esperado, não opcional).
-- **Bloco A4.** Banner amarelo no topo:
-  > "Esta tela roda em /admin, onde GTM/Pixel podem estar bloqueados por Consent Mode / guard de admin. O 'Status em Runtime' abaixo pode aparecer vazio mesmo com tudo funcionando. Para validar runtime real, abra páginas públicas."
-- **Bloco A5.** 4 botões no cabeçalho: "Abrir /agendamento", "Abrir /obrigado", "Abrir GTM Preview" (`https://tagassistant.google.com/`), "Abrir Meta Events Manager" (`https://business.facebook.com/events_manager2/list/pixel/{pixelId}/overview`).
-- **Bloco B1.** No mount, `SELECT expected_meta_pixel_id FROM site_config` via supabase. Usar valor do banco como fonte da verdade; `1003792428067622` só como fallback visual se select falhar, com badge "fallback" na UI. Manter `localStorage` apenas como cache inicial otimista (mostra rápido enquanto o banco carrega), reidratado imediatamente pelo valor real.
-- **Bloco B1.** Botão "Salvar": `UPDATE site_config SET expected_meta_pixel_id = ..., updated_by = auth.uid()` (o trigger já cuida do log). Se falhar por RLS, toast avisa "somente admins podem alterar".
-- **Bloco C1.** Nova seção **Meta CAPI** que consulta `system_logs WHERE source = 'meta-capi'`:
-  - contagem success (`level='info'`) vs erro (`level in ('warn','error','critical')`) nas últimas 24h e 7d;
-  - timestamp e mensagem do último evento;
-  - timestamp e detalhes do último erro (se houver);
-  - tabela dos 10 últimos eventos (created_at, level, message, event_name/event_id de `details`);
-  - se retornar 0 linhas: card vazio com texto "Nenhum log CAPI encontrado ainda. Após o próximo evento server-side, ele aparecerá aqui."
-  - botão "Atualizar".
+`ConsultationDetailsStep` já recebe listas via props/hook de opções — o shell premium injeta uma prop `locationFilter` que restringe a Clinicor/HGP e oculta YAG. A rota antiga passa `undefined` e mantém o comportamento atual.
 
-Sem alteração em `useMetaPixel.ts`, `useGoogleTag.ts` ou `Obrigado.tsx`.
+Passo a passo:
 
----
+1. **Extrair `useAgendamentoFlow`** de `Agendamento.tsx` sem mudar comportamento:
+   - Estado (`currentStep`, `formData`, `leadId`, `isSubmitted`, `isSubmitting`), refs (`formStartFiredRef`, etc.), `totalSteps`.
+   - Handlers: `handleNext`, `handleBack`, `handleSubmit`, `handleChange`, validações.
+   - Efeitos de tracking (`booking_view`, `booking_start`, `booking_step_completed`, `booking_submit`, ViewContent/Lead/Schedule/CompleteRegistration).
+   - Captura/persistência de UTMs + fbclid/gclid.
+   - Aceitar `options: { experienceVariant?: string, locationFilter?: (l) => boolean, basePath?: string }` — apenas metadados de tracking e filtro. Zero mudança no payload de submit.
+   - `Agendamento.tsx` passa a chamar o hook sem passar opções extras — comportamento idêntico.
 
-## Pontos de teste manual
-1. **B1 leitura.** Abrir `/admin/auditoria-tracking` → campo "Pixel ID esperado" mostra o valor do banco (`1003792428067622` atual), sem depender de localStorage.
-2. **B1 escrita.** Alterar para outro Pixel válido (ex.: `1234567890123456`) → toast de sucesso; recarregar página em outra sessão → valor persistiu.
-3. **B2 auditoria.** `SELECT message, details, user_email, created_at FROM system_logs WHERE source='admin/auditoria-tracking' ORDER BY created_at DESC LIMIT 3` deve mostrar a alteração com `old_value` e `new_value`.
-4. **B1 permissão.** Logar como não-admin e tentar salvar → toast de erro, valor não muda.
-5. **A5 botões.** Cada um dos 4 botões abre a URL correta em nova aba. "Meta Events Manager" usa o Pixel ID atual do banco.
-6. **A4 banner.** Aviso aparece no topo em amarelo/gold.
-7. **A1/A3.** Verificar tabelas de inventário e eventos com os novos itens listados; badge de `gtag()` marca como "Ausente" (não "Não usado") se estiver bloqueado em /admin.
-8. **C1 vazio.** Antes do próximo evento CAPI, a seção mostra "Nenhum log CAPI encontrado ainda."
-9. **C1 populado.** Chamar `/agendamento` em outra aba e concluir um lead (dispara CAPI). Voltar à auditoria → contador 24h > 0, tabela mostra a última linha `info / CAPI OK Lead`.
-10. **C1 erro.** Se ocorrer erro CAPI real (token inválido), aparece card vermelho "Último erro" com `fbtrace_id` e mensagem.
+2. **Criar `/paragominas/agendamento` (`ParagominasAgendamento.tsx`)**:
+   - Aplica classe `theme-paragominas-premium` no root.
+   - Layout desktop 40/60: painel esquerdo sticky em petróleo (nome, título, apoio, foto pequena existente, Clinicor+HGP, CRM, "Mais de 15 anos", associações, link "Voltar para /paragominas"). Painel direito marfim com formulário.
+   - Layout mobile: header compacto (logo + link voltar), pequena identificação, formulário fluido, safe-area.
+   - Indicador de progresso editorial: rótulos + ícones (Dados/Atendimento/Horário/Confirmação), filete horizontal desktop, dots+rótulo atual mobile, `aria-current="step"`, cliques em steps futuros bloqueados.
+   - Consome `useAgendamentoFlow({ experienceVariant: "paragominas_premium", locationFilter: onlyParagominas, basePath: "/paragominas/agendamento" })`.
+   - `<Helmet>`: `<meta name="robots" content="noindex,follow">`, título "Agendamento em Paragominas | Dr. Juliano Machado", sem sitemap.
+   - Focus management: mover foco ao H2 da nova etapa ao trocar; scroll top mobile.
 
-Confirma que posso executar?
+3. **`buildAgendamentoLink`**:
+   - Aceitar `basePath?: string` (default `/agendamento`).
+   - Atualizar CTAs de `src/pages/Paragominas.tsx` para `buildAgendamentoLink({ ..., basePath: "/paragominas/agendamento" })`.
+   - Home, sticky CTA, procedimentos e demais chamadas continuam sem `basePath` → `/agendamento`.
+
+4. **Rota**: adicionar `<Route path="/paragominas/agendamento" element={<ParagominasAgendamento />} />` em `src/App.tsx` acima da 404. Sitemap não alterado.
+
+5. **Filtro Clinicor/HGP**: função `onlyParagominas(location)` que filtra Belém e serviços YAG antes de passar para `ConsultationDetailsStep`. Se o step hoje lê listas hardcoded, refatorar aceitando prop opcional `filterOptions`; fallback ao comportamento atual.
+
+6. **Tracking**:
+   - Adicionar `experience_variant: "paragominas_premium"` nos eventos `booking_view/start/step_completed/submit` **apenas quando** o hook recebe a opção — na rota antiga o campo é omitido.
+   - Sem novos eventos Meta. Sem duplicação CAPI. Sem PII em nenhum evento.
+
+## Testes
+
+- `src/pages/ParagominasAgendamento.test.tsx`:
+  - Renderiza shell premium (título "Vamos cuidar do seu agendamento.").
+  - `<meta robots noindex,follow>` presente.
+  - Filtro: Belém e YAG ausentes da etapa Atendimento.
+  - Progresso: aria-current no step atual; futuros não clicáveis.
+  - `experience_variant=paragominas_premium` no dataLayer.
+- `src/pages/Agendamento.test.tsx` (novo ou existente): garantir shell atual + ausência de `experience_variant`.
+- `src/lib/agendamentoLink.test.ts`: `basePath` respeitado; UTMs externas não sobrescritas; default continua `/agendamento`.
+- Rodar suíte completa (incluindo `Obrigado.test`, `Paragominas.test`) + typecheck.
+
+## QA visual
+
+Playwright em 360, 390, 768, 1440, 1920 nas duas rotas. Screenshots comparativos, zero console error, zero overflow.
+
+## Fora de escopo (não mexer)
+
+Schema, edge functions, webhooks, secrets, `criarLead`, `converterLeadEmAgendamento`, `notificarN8n`, `Obrigado.tsx`, CAPI, disponibilidade, sitemap, tema global.
+
+## Riscos e mitigação
+
+- **Regressão em /agendamento**: extração puramente mecânica; hook com opções default equivalentes ao código atual. Teste snapshot do shell antigo antes/depois.
+- **Steps hardcoded de local**: se `ConsultationDetailsStep` não aceitar filtro, adiciono prop opcional com fallback — nenhuma mudança de comportamento quando ausente.
+- **Tamanho do arquivo Agendamento.tsx (727 linhas)**: extração incremental, mantendo import e assinatura pública iguais.
+
+## Entregáveis finais
+
+Lista de arquivos criados/alterados, rotas, resumo de tracking, suíte verde, SHA do commit e URLs de preview de ambas as rotas. Sem publicar.

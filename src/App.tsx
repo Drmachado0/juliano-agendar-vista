@@ -19,6 +19,7 @@ import RouteChangeTracker from "./components/RouteChangeTracker";
 // vivem em chunks separados — não pesam no bundle inicial da home.
 const Agendamento = lazy(() => import("./pages/Agendamento"));
 const Paragominas = lazy(() => import("./pages/Paragominas"));
+const ParagominasAgendamento = lazy(() => import("./pages/ParagominasAgendamento"));
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
 const AdminAgendamentos = lazy(() => import("./pages/admin/Agendamentos"));
 const AdminCRM = lazy(() => import("./pages/admin/CRM"));
@@ -69,6 +70,7 @@ const App = () => (
               <Route path="/agendar-consulta" element={<RedirectToAgendamento />} />
               <Route path="/agendamento" element={<Agendamento />} />
               <Route path="/paragominas" element={<Paragominas />} />
+              <Route path="/paragominas/agendamento" element={<ParagominasAgendamento />} />
               <Route path="/procedimentos/cirurgia-de-catarata" element={<ProcCatarata />} />
               <Route path="/procedimentos/cirurgia-de-pterigio" element={<ProcPterigio />} />
               <Route path="/procedimentos/consulta-oftalmologica" element={<ProcConsulta />} />

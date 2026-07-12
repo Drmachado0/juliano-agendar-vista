@@ -14,6 +14,10 @@ interface ConsultationDetailsStepProps {
   updateFormData: (data: Partial<FormData>) => void;
   onNext: () => void;
   onPrev: () => void;
+  /** Filtro opcional para restringir clínicas exibidas (ex.: só Paragominas). */
+  filterClinicas?: (c: Clinica) => boolean;
+  /** Filtro opcional para restringir tipos de atendimento exibidos. */
+  filterTipos?: (t: TipoAtendimento) => boolean;
 }
 
 const ConsultationDetailsStep = ({
@@ -21,6 +25,8 @@ const ConsultationDetailsStep = ({
   updateFormData,
   onNext,
   onPrev,
+  filterClinicas,
+  filterTipos,
 }: ConsultationDetailsStepProps) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -46,6 +52,9 @@ const ConsultationDetailsStep = ({
     if (conveniosRes.data) setConvenios(conveniosRes.data);
     setLoading(false);
   }
+
+  const tiposVisiveis = filterTipos ? tiposAtendimento.filter(filterTipos) : tiposAtendimento;
+  const clinicasVisiveis = filterClinicas ? clinicas.filter(filterClinicas) : clinicas;
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -114,7 +123,7 @@ const ConsultationDetailsStep = ({
             }}
             className="grid grid-cols-1 gap-2"
           >
-            {tiposAtendimento.map((tipo) => (
+            {tiposVisiveis.map((tipo) => (
               <Label
                 key={tipo.id}
                 htmlFor={tipo.slug}
@@ -156,7 +165,7 @@ const ConsultationDetailsStep = ({
             }}
             className="grid grid-cols-1 gap-2"
           >
-            {clinicas.map((clinica) => (
+            {clinicasVisiveis.map((clinica) => (
               <Label
                 key={clinica.id}
                 htmlFor={`loc-${clinica.slug}`}
