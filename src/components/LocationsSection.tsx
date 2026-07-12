@@ -98,10 +98,6 @@ const LocationsSection = () => {
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-0 items-stretch">
           {/* Location Cards */}
           <div className="space-y-3 lg:pr-6 relative z-10">
-            {locations
-              .map((loc, idx) => ({ loc, idx }))
-              .filter(({ loc }) => showBelem || loc.city !== "Belém")
-              .map(({ loc: _location, idx: _idx }) => null) && null}
             {locations.map((location, index) => {
               if (!showBelem && location.city === "Belém") return null;
               const IconComponent = location.icon;
