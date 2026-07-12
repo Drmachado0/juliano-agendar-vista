@@ -98,12 +98,12 @@ const LocationsSection = () => {
             Onde atendemos
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Atendimento em <span className="gradient-text">Paragominas</span>
-            <span className="text-muted-foreground/70 text-2xl md:text-3xl font-semibold"> e Belém</span>
+            Atendimento em <span className="gradient-text">Paragominas e Belém</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Base em Paragominas, com atendimento também em Belém para procedimentos específicos.
+            4 endereços entre Paragominas e Belém para consultas, exames e cirurgias.
           </p>
+
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-0 items-stretch">
