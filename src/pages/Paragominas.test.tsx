@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -67,12 +67,6 @@ describe("Paragominas landing page", () => {
     expect(screen.getAllByText(/CRM-PA 15253/i).length).toBeGreaterThan(0);
   });
 
-  it("não menciona Belém no conteúdo principal (main)", () => {
-    renderPage();
-    const main = screen.getByRole("main");
-    expect(within(main).queryByText(/Belém/i)).toBeNull();
-  });
-
   it("não menciona YAG / Capsulotomia (procedimento exclusivo de Belém)", () => {
     renderPage();
     const main = screen.getByRole("main");
@@ -80,10 +74,12 @@ describe("Paragominas landing page", () => {
     expect(main.textContent || "").not.toMatch(/Capsulotomia/i);
   });
 
-  it("apresenta ambos os locais de Paragominas (Clinicor e HGP)", () => {
+  it("apresenta os 4 locais de atendimento (2 em Paragominas + 2 em Belém)", () => {
     renderPage();
     expect(screen.getAllByText(/Clinicor/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Hospital Geral de Paragominas/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Instituto de Olhos de Bel[eé]m/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Vitria/i).length).toBeGreaterThan(0);
   });
 
   it("CTAs específicos da landing carregam UTMs internas da campanha paragominas", () => {

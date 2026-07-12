@@ -38,9 +38,21 @@ import { buildAgendamentoLink } from "@/lib/agendamentoLink";
 
 const CANONICAL = "https://drjulianomachado.com/paragominas";
 
-const LOCAIS = [
+type Local = {
+  name: string;
+  city: "Paragominas" | "Belém";
+  cityLabel: string;
+  address: string;
+  mapsLink: string;
+  icon: typeof Heart;
+  utmContent: string;
+};
+
+const LOCAIS: readonly Local[] = [
   {
     name: "Clinicor",
+    city: "Paragominas",
+    cityLabel: "Paragominas · PA",
     address: "Rua Eixo W1, R. Célio Miranda, N° 729 — Paragominas/PA",
     mapsLink:
       "https://maps.google.com/?q=Clinicor+Rua+Celio+Miranda+729+Paragominas+PA",
@@ -49,11 +61,34 @@ const LOCAIS = [
   },
   {
     name: "Hospital Geral de Paragominas",
+    city: "Paragominas",
+    cityLabel: "Paragominas · PA",
     address: "R. Santa Terezinha, 304 — Centro, Paragominas/PA",
     mapsLink:
       "https://maps.google.com/?q=Hospital+Geral+Paragominas+Santa+Terezinha+304",
     icon: Hospital,
     utmContent: "local_hgp",
+  },
+  {
+    name: "Instituto de Olhos de Belém",
+    city: "Belém",
+    cityLabel: "Belém · PA",
+    address: "Av. Generalíssimo Deodoro, 904 — Nazaré, Belém/PA",
+    mapsLink:
+      "https://maps.google.com/?q=Instituto+de+Olhos+de+Belem+Av+Generalissimo+Deodoro+904+Nazare+Belem+PA",
+    icon: Eye,
+    utmContent: "local_iob_belem",
+  },
+  {
+    name: "Vitria — Ed. Síntese 21",
+    city: "Belém",
+    cityLabel: "Belém · PA",
+    address:
+      "Av. Conselheiro Furtado, 2865 — Sobreloja, salas 08-10, São Braz, Belém/PA",
+    mapsLink:
+      "https://maps.google.com/?q=Vitria+Ed+Sintese+21+Av+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA",
+    icon: Hospital,
+    utmContent: "local_vitria_belem",
   },
 ] as const;
 
@@ -139,16 +174,14 @@ const Paragominas = () => {
     url: CANONICAL,
     telephone: undefined,
     identifier: DOCTOR.crm,
-    areaServed: {
-      "@type": "City",
-      name: "Paragominas",
-      addressRegion: "PA",
-      addressCountry: "BR",
-    },
+    areaServed: [
+      { "@type": "City", name: "Paragominas", addressRegion: "PA", addressCountry: "BR" },
+      { "@type": "City", name: "Belém", addressRegion: "PA", addressCountry: "BR" },
+    ],
     address: LOCAIS.map((l) => ({
       "@type": "PostalAddress",
       streetAddress: l.address,
-      addressLocality: "Paragominas",
+      addressLocality: l.city,
       addressRegion: "PA",
       addressCountry: "BR",
     })),
@@ -163,24 +196,24 @@ const Paragominas = () => {
   return (
     <>
       <Helmet>
-        <title>Oftalmologista em Paragominas | Dr. Juliano Machado</title>
+        <title>Oftalmologista em Paragominas e Belém | Dr. Juliano Machado</title>
         <meta
           name="description"
-          content="Consulta oftalmológica em Paragominas com Dr. Juliano Machado (CRM-PA 15253). Atendimento na Clinicor e no Hospital Geral de Paragominas."
+          content="Consulta oftalmológica em Paragominas e Belém com Dr. Juliano Machado (CRM-PA 15253). Atendimento na Clinicor, HGP, Instituto de Olhos de Belém e Vitria."
         />
         <link rel="canonical" href={CANONICAL} />
-        <meta property="og:title" content="Oftalmologista em Paragominas | Dr. Juliano Machado" />
+        <meta property="og:title" content="Oftalmologista em Paragominas e Belém | Dr. Juliano Machado" />
         <meta
           property="og:description"
-          content="Consulta oftalmológica em Paragominas: Clinicor e Hospital Geral de Paragominas. Agende online."
+          content="Consultas em Paragominas (Clinicor, HGP) e Belém (Instituto de Olhos de Belém, Vitria). Agende online."
         />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={CANONICAL} />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Oftalmologista em Paragominas | Dr. Juliano Machado" />
+        <meta name="twitter:title" content="Oftalmologista em Paragominas e Belém | Dr. Juliano Machado" />
         <meta
           name="twitter:description"
-          content="Atendimento oftalmológico em Paragominas com o Dr. Juliano Machado (CRM-PA 15253)."
+          content="Atendimento oftalmológico em Paragominas e Belém com Dr. Juliano Machado (CRM-PA 15253)."
         />
         <meta name="robots" content="index, follow" />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
@@ -231,18 +264,18 @@ const Paragominas = () => {
             <div className="container mx-auto px-4 max-w-5xl">
               <p className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-wider mb-5">
                 <MapPin className="w-3.5 h-3.5" aria-hidden="true" />
-                Atendimento oftalmológico em Paragominas
+                Atendimento oftalmológico em Paragominas e Belém
               </p>
               <h1
                 id="hero-heading"
                 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground leading-tight mb-4"
               >
                 Consulta oftalmológica completa em{" "}
-                <span className="gradient-text">Paragominas</span>
+                <span className="gradient-text">Paragominas</span> e Belém
               </h1>
               <p className="text-base md:text-lg text-muted-foreground leading-relaxed mb-8 max-w-2xl">
                 Atendimento com o Dr. Juliano Machado na Clinicor e no Hospital Geral de
-                Paragominas.
+                Paragominas, e também no Instituto de Olhos de Belém e na Vitria.
               </p>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
@@ -352,10 +385,10 @@ const Paragominas = () => {
             <div className="container mx-auto px-4 max-w-5xl">
               <div className="text-center mb-10">
                 <h2 id="locais-heading" className="text-2xl md:text-3xl font-bold text-foreground mb-3">
-                  Onde atendo em <span className="gradient-text">Paragominas</span>
+                  Onde atendo em <span className="gradient-text">Paragominas</span> e Belém
                 </h2>
                 <p className="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto">
-                  Escolha o local mais conveniente para a sua consulta.
+                  4 locais de atendimento. Escolha o mais conveniente para a sua consulta.
                 </p>
               </div>
 
@@ -375,7 +408,7 @@ const Paragominas = () => {
                         <div>
                           <h3 className="text-lg font-semibold text-foreground">{l.name}</h3>
                           <p className="text-xs text-muted-foreground uppercase tracking-wide mt-0.5">
-                            Paragominas · PA
+                            {l.cityLabel}
                           </p>
                         </div>
                       </div>
