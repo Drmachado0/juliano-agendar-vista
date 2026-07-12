@@ -156,18 +156,20 @@ const Header = () => {
 
               <div className="h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent my-2" />
 
-              <div className={`transition-all duration-300 ${isMenuOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}
-                style={{ transitionDelay: isMenuOpen ? `${navItems.length * 50}ms` : '0ms' }}
+              <a
+                href={waLinkBare}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  trackWhatsAppClick(waLinkBare, display, 'whatsapp_header', 'header_menu_mobile');
+                  trackMetaContact('WhatsApp');
+                  setIsMenuOpen(false);
+                }}
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-primary hover:bg-primary/10 transition-colors min-h-[44px]"
               >
-                {!user && (
-                  <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                    <Button variant="ghost" size="sm" className="w-full gap-2 justify-start px-4">
-                      <LogIn className="h-4 w-4" />
-                      Entrar
-                    </Button>
-                  </Link>
-                )}
-              </div>
+                <Phone className="w-4 h-4" />
+                Falar no WhatsApp
+              </a>
             </nav>
           </div>
         </div>
