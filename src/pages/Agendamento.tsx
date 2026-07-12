@@ -131,6 +131,7 @@ const Agendamento = () => {
       page_path: "/agendamento",
       page_type: "landing_agendamento",
     });
+    pushDL({ event: "booking_view", page_type: "landing_agendamento" });
 
     try {
       const params = new URLSearchParams(window.location.search);
