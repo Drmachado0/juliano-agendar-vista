@@ -16,6 +16,7 @@ import {
   Ear,
   Eye,
   MessageSquare,
+  BadgeCheck,
 } from "lucide-react";
 import {
   Accordion,
