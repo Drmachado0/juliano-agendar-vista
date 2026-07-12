@@ -8,7 +8,7 @@ const mk = (over: Partial<AvaliacaoGoogle>): AvaliacaoGoogle => ({
   author_name: over.author_name ?? "Paciente Teste",
   author_photo_url: over.author_photo_url ?? null,
   rating: over.rating ?? 5,
-  text: over.text ?? "Ótimo atendimento e explicação clara.",
+  text: "text" in over ? (over.text as string) : "Ótimo atendimento e explicação clara.",
   relative_time_description: over.relative_time_description ?? "há 1 semana",
   time_epoch: over.time_epoch ?? Math.floor(Date.now() / 1000),
   language: over.language ?? "pt-BR",
