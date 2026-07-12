@@ -7,11 +7,9 @@ interface Props {
 const LINES = ["E F P", "T O Z", "L P E D"];
 
 /**
- * Seção-assinatura da landing /paragominas.
- * - Slider controla nitidez de uma "tabela de Snellen" simulada em HTML.
- * - blur ~7px → 0px, contraste crescente. Anel/lente CSS acompanha.
- * - Sem coleta de dados; tracking opcional dispara UMA vez.
- * - reduced-motion desliga transições.
+ * Seção-assinatura da /paragominas — versão premium.
+ * Paleta: petróleo #082E33 / marfim #F3F0E8 / ciano #41D8CE (apenas interação).
+ * O slider revela a "nitidez" (blur 7px → 0) sobre uma placa de Snellen simulada.
  */
 const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
   const [value, setValue] = useState(35);
@@ -29,40 +27,79 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
   };
 
   const blurPx = ((100 - value) / 100) * 7;
-  const contrast = 0.55 + (value / 100) * 0.55; // 0.55 → 1.10
+  const contrast = 0.55 + (value / 100) * 0.55;
   const opacity = 0.55 + (value / 100) * 0.45;
 
   return (
     <section
       aria-labelledby="clareza-heading"
-      className="relative py-20 md:py-28"
-      style={{
-        background: "#F3F1EC",
-        color: "#12181E",
-      }}
+      className="pgm-section--dark relative overflow-hidden py-24 md:py-32"
+      style={{ background: "var(--pgm-petroleo)", color: "var(--pgm-marfim)" }}
     >
-      <div className="container mx-auto px-4 max-w-6xl">
-        <div className="grid lg:grid-cols-[1fr_1fr] gap-12 lg:gap-20 items-center">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.2em] font-semibold text-neutral-500 mb-4">
-              Refração
-            </p>
-            <h2
-              id="clareza-heading"
-              className="font-serif text-3xl md:text-4xl lg:text-5xl leading-[1.05] tracking-tight mb-5"
-              style={{ fontFamily: "Fraunces, Georgia, serif" }}
-            >
-              Da visão embaçada <br />
-              <span className="italic">à clareza.</span>
-            </h2>
-            <p className="text-base md:text-lg text-neutral-700 leading-relaxed max-w-md mb-8">
-              A refração ajuda a encontrar a correção que oferece melhor nitidez para cada pessoa.
+      {/* Linhas de referência ópticas */}
+      <svg
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 w-full h-full opacity-[0.06]"
+        preserveAspectRatio="none"
+        viewBox="0 0 1200 800"
+      >
+        <g stroke="#F3F0E8" strokeWidth="1">
+          <line x1="0" y1="200" x2="1200" y2="200" />
+          <line x1="0" y1="400" x2="1200" y2="400" />
+          <line x1="0" y1="600" x2="1200" y2="600" />
+          <line x1="300" y1="0" x2="300" y2="800" />
+          <line x1="900" y1="0" x2="900" y2="800" />
+        </g>
+      </svg>
+
+      <div className="container mx-auto px-4 max-w-6xl relative">
+        {/* Título editorial acima da grade */}
+        <header className="mb-16 md:mb-20 max-w-3xl">
+          <div className="flex items-center gap-4 mb-6">
+            <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
+              II — Refração
+            </span>
+            <div className="pgm-rule-dark flex-1" />
+          </div>
+          <h2
+            id="clareza-heading"
+            className="pgm-serif text-[2.2rem] sm:text-[3rem] md:text-[4rem] leading-[0.98] tracking-[-0.02em]"
+            style={{ fontFamily: "Fraunces, Georgia, serif" }}
+          >
+            Da visão embaçada
+            <br />
+            <span className="italic" style={{ color: "var(--pgm-ciano)" }}>
+              à clareza.
+            </span>
+          </h2>
+        </header>
+
+        <div className="grid lg:grid-cols-[1fr_1fr] gap-16 lg:gap-24 items-center">
+          {/* Coluna esquerda — controle */}
+          <div className="order-2 lg:order-1 max-w-md">
+            <p className="text-base md:text-lg leading-relaxed mb-10" style={{ color: "rgba(243,240,232,0.78)" }}>
+              A refração é o ponto de encontro entre a sua percepção e a lente correta.
+              Deslize para atravessar o que muitos vivem todos os dias.
             </p>
 
-            <div className="space-y-4 max-w-md">
-              <label htmlFor="clarity-slider" className="block text-sm font-medium text-neutral-800">
-                Ajustar nitidez da demonstração
-              </label>
+            <div className="space-y-6">
+              <div className="flex items-baseline justify-between">
+                <label
+                  htmlFor="clarity-slider"
+                  className="pgm-eyebrow"
+                  style={{ color: "var(--pgm-champagne)" }}
+                >
+                  Ajustar nitidez da demonstração
+                </label>
+                <span
+                  className="pgm-mono text-sm tabular-nums"
+                  style={{ color: "var(--pgm-ciano)" }}
+                  aria-hidden="true"
+                >
+                  {String(value).padStart(3, "0")}
+                </span>
+              </div>
+
               <input
                 id="clarity-slider"
                 type="range"
@@ -76,69 +113,93 @@ const RefractionClarityExperience = ({ onFirstInteract }: Props) => {
                   setValue(Number(e.target.value));
                   fire();
                 }}
-                className="w-full accent-[#0F766E] h-2 cursor-pointer"
+                className="pgm-range"
               />
-              <div className="flex items-center gap-3">
+
+              <div className="flex items-center gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => bump(-10)}
-                  className="min-h-[44px] px-4 rounded-full border border-neutral-300 text-sm font-medium text-neutral-800 hover:border-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F766E]"
+                  className="pgm-btn pgm-btn--ghost min-h-[44px] text-sm px-5"
                 >
                   Mais embaçado
                 </button>
                 <button
                   type="button"
                   onClick={() => bump(10)}
-                  className="min-h-[44px] px-4 rounded-full bg-[#0F766E] text-white text-sm font-semibold hover:bg-[#0B5E58] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F766E]/50"
+                  className="pgm-btn pgm-btn--ivory min-h-[44px] text-sm px-5"
                 >
                   Mais nítido
                 </button>
               </div>
-              <p className="text-xs text-neutral-500 leading-relaxed">
+
+              <div className="pgm-rule-dark mt-6" />
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(243,240,232,0.55)" }}>
                 Demonstração visual ilustrativa. Não substitui avaliação oftalmológica.
               </p>
             </div>
           </div>
 
-          {/* Placa Snellen simulada + anel de lente */}
-          <div className="relative order-first lg:order-last">
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 flex items-center justify-center pointer-events-none"
-            >
-              <div
-                className="rounded-full border border-[#0F766E]/25 motion-reduce:transition-none"
-                style={{
-                  width: `${180 + value * 2.2}px`,
-                  height: `${180 + value * 2.2}px`,
-                  boxShadow: `0 0 ${40 + value * 0.8}px hsl(180 60% 40% / ${0.05 + value / 400})`,
-                  transition: "width .35s ease, height .35s ease, box-shadow .35s ease",
-                }}
-              />
+          {/* Coluna direita — placa Snellen editorial */}
+          <div className="order-1 lg:order-2 relative">
+            {/* Filetes de referência (moldura editorial) */}
+            <div className="absolute -inset-6 md:-inset-10 pointer-events-none">
+              <div className="absolute top-0 left-0 w-8 h-px" style={{ background: "var(--pgm-champagne)" }} />
+              <div className="absolute top-0 left-0 w-px h-8" style={{ background: "var(--pgm-champagne)" }} />
+              <div className="absolute top-0 right-0 w-8 h-px" style={{ background: "var(--pgm-champagne)" }} />
+              <div className="absolute top-0 right-0 w-px h-8" style={{ background: "var(--pgm-champagne)" }} />
+              <div className="absolute bottom-0 left-0 w-8 h-px" style={{ background: "var(--pgm-champagne)" }} />
+              <div className="absolute bottom-0 left-0 w-px h-8" style={{ background: "var(--pgm-champagne)" }} />
+              <div className="absolute bottom-0 right-0 w-8 h-px" style={{ background: "var(--pgm-champagne)" }} />
+              <div className="absolute bottom-0 right-0 w-px h-8" style={{ background: "var(--pgm-champagne)" }} />
             </div>
 
+            {/* Placa em marfim */}
             <div
-              className="relative mx-auto max-w-md bg-white rounded-sm px-8 py-10 md:px-12 md:py-14 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.25)] border border-neutral-200 motion-reduce:transition-none"
+              className="relative mx-auto max-w-md px-10 py-14 md:px-14 md:py-20"
               style={{
+                background: "var(--pgm-marfim)",
                 filter: `blur(${blurPx.toFixed(2)}px) contrast(${contrast.toFixed(2)})`,
                 opacity,
                 transition: "filter .3s ease, opacity .3s ease",
               }}
             >
-              <div className="text-center font-mono select-none" aria-hidden="true">
-                <p className="text-[3.25rem] leading-none tracking-[0.3em] mb-4 text-neutral-900">
+              <div className="text-center pgm-mono select-none" aria-hidden="true" style={{ color: "var(--pgm-grafite)" }}>
+                <p className="text-[3.5rem] md:text-[4rem] leading-none tracking-[0.32em] mb-5">
                   {LINES[0]}
                 </p>
-                <p className="text-[2.25rem] leading-none tracking-[0.35em] mb-4 text-neutral-900">
+                <p className="text-[2.25rem] md:text-[2.75rem] leading-none tracking-[0.36em] mb-5">
                   {LINES[1]}
                 </p>
-                <p className="text-[1.5rem] leading-none tracking-[0.4em] text-neutral-900">
+                <p className="text-[1.5rem] md:text-[1.75rem] leading-none tracking-[0.4em]">
                   {LINES[2]}
                 </p>
               </div>
+              <p
+                className="mt-8 text-center pgm-mono text-[10px] tracking-[0.35em] uppercase"
+                style={{ color: "rgba(11,24,26,0.5)" }}
+                aria-hidden="true"
+              >
+                20 / {Math.max(15, Math.round(200 - value * 1.7))}
+              </p>
             </div>
+
+            {/* Ponto de foco ciano — só aparece com nitidez próxima do máximo */}
+            <div
+              aria-hidden="true"
+              className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 pgm-mono text-[10px] tracking-[0.3em] uppercase"
+              style={{
+                color: "var(--pgm-ciano)",
+                opacity: value > 75 ? 1 : 0,
+                transition: "opacity .35s ease",
+              }}
+            >
+              <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: "var(--pgm-ciano)" }} />
+              Foco
+            </div>
+
             <p className="sr-only">
-              Tabela simulada com as linhas E F P, T O Z e L P E D. Nível atual de nitidez: {value} de 100.
+              Placa simulada com linhas E F P, T O Z e L P E D. Nível atual de nitidez: {value} de 100.
             </p>
           </div>
         </div>
