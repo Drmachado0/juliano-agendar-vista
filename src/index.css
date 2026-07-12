@@ -899,3 +899,113 @@
   outline-offset: 3px;
   border-radius: 999px;
 }
+
+/* ---- CTA legibility fix (override shadcn `hero` gradient) ---- */
+.theme-paragominas-agendamento button[class*="from-gold"],
+.theme-paragominas-agendamento button[class*="bg-gradient-to-r"] {
+  background-image: none !important;
+  background-color: var(--pgm-petroleo) !important;
+  color: var(--pgm-marfim) !important;
+  border: 1px solid var(--pgm-petroleo) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  min-height: 52px;
+  min-width: 180px;
+  border-radius: 12px !important;
+  letter-spacing: 0.01em;
+  padding: 0 22px;
+  transition: background-color .18s ease, transform .12s ease;
+}
+.theme-paragominas-agendamento button[class*="from-gold"]:hover:not(:disabled),
+.theme-paragominas-agendamento button[class*="bg-gradient-to-r"]:hover:not(:disabled) {
+  background-color: #0B3B40 !important;
+  transform: none !important;
+}
+.theme-paragominas-agendamento button[class*="from-gold"]:active:not(:disabled),
+.theme-paragominas-agendamento button[class*="bg-gradient-to-r"]:active:not(:disabled) {
+  transform: scale(0.99) !important;
+}
+.theme-paragominas-agendamento button[class*="from-gold"]:focus-visible,
+.theme-paragominas-agendamento button[class*="bg-gradient-to-r"]:focus-visible {
+  outline: 2px solid var(--pgm-ciano) !important;
+  outline-offset: 3px !important;
+}
+.theme-paragominas-agendamento button[class*="from-gold"]:disabled,
+.theme-paragominas-agendamento button[class*="bg-gradient-to-r"]:disabled {
+  background-color: #D7D2C6 !important;
+  color: #5C625F !important;
+  border-color: #D7D2C6 !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+}
+
+/* Outline / Voltar */
+.theme-paragominas-agendamento .border.border-input {
+  border-color: var(--pgm-petroleo) !important;
+  color: var(--pgm-petroleo) !important;
+  background: transparent !important;
+  min-height: 52px;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  min-width: 120px;
+}
+.theme-paragominas-agendamento .border.border-input:hover:not(:disabled) {
+  background: rgba(8, 46, 51, 0.06) !important;
+  color: var(--pgm-petroleo) !important;
+}
+
+/* Inputs 16px pra evitar zoom iOS + altura confortável */
+.theme-paragominas-agendamento input:not([type="checkbox"]):not([type="radio"]),
+.theme-paragominas-agendamento select,
+.theme-paragominas-agendamento textarea {
+  font-size: 16px !important;
+  min-height: 52px;
+  background: #fff !important;
+  border-color: var(--pgm-line) !important;
+  color: var(--pgm-petroleo) !important;
+}
+.theme-paragominas-agendamento input::placeholder,
+.theme-paragominas-agendamento textarea::placeholder {
+  color: #7A8385 !important;
+}
+.theme-paragominas-agendamento input:focus,
+.theme-paragominas-agendamento textarea:focus,
+.theme-paragominas-agendamento select:focus {
+  outline: 2px solid var(--pgm-ciano) !important;
+  outline-offset: 1px !important;
+  border-color: var(--pgm-petroleo) !important;
+}
+.theme-paragominas-agendamento label {
+  font-weight: 600;
+  color: var(--pgm-petroleo);
+}
+
+/* Headings — foco programático não deve deixar borda persistente */
+.theme-paragominas-agendamento h1:focus,
+.theme-paragominas-agendamento h2:focus,
+.theme-paragominas-agendamento h3:focus { outline: none !important; }
+
+/* Mobile: CTAs full-width, altura 56 e empilhamento */
+@media (max-width: 767px) {
+  .theme-paragominas-agendamento .flex.justify-end,
+  .theme-paragominas-agendamento .flex.justify-between {
+    flex-direction: column-reverse;
+    gap: 12px;
+  }
+  .theme-paragominas-agendamento .flex.justify-end > button,
+  .theme-paragominas-agendamento .flex.justify-between > button {
+    width: 100% !important;
+    min-height: 56px !important;
+  }
+  /* Reduz cartão pesado do formulário no mobile */
+  .theme-paragominas-agendamento .pgm-form-card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+}
+
