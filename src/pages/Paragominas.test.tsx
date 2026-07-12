@@ -83,7 +83,7 @@ describe("Paragominas landing page", () => {
   it("apresenta ambos os locais de Paragominas (Clinicor e HGP)", () => {
     renderPage();
     expect(screen.getAllByText(/Clinicor/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Hospital Geral de Paragominas/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Hospital Geral de Paragominas/i).length).toBeGreaterThan(0);
   });
 
   it("CTAs específicos da landing carregam UTMs internas da campanha paragominas", () => {
