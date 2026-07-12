@@ -168,7 +168,7 @@ const HeroSection = () => {
                     height={480}
                     loading="eager"
                     decoding="async"
-                    fetchPriority="high"
+                    {...({ fetchpriority: "high" } as any)}
                     className="w-full h-full object-cover object-top"
                   />
                 )}
