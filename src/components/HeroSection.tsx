@@ -135,30 +135,45 @@ const HeroSection = () => {
               <div className="absolute -inset-3 rounded-[2rem] bg-gradient-to-br from-primary/15 to-transparent blur-2xl" />
 
               <div className="relative w-44 h-56 sm:w-64 sm:h-80 lg:w-[23rem] lg:h-[30rem] rounded-[1.75rem] lg:rounded-[2rem] overflow-hidden ring-1 ring-white/10 shadow-2xl bg-card">
-                <video
-                  ref={videoRef}
-                  src={drJulianoHeroVideo}
-                  poster={drJulianoHeroWebp}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                  aria-label={`${DOCTOR.name} - ${DOCTOR.specialty}`}
-                  className="w-full h-full object-cover object-top"
-                  onPlay={() => setVideoPaused(false)}
-                  onPause={() => setVideoPaused(true)}
-                />
-                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-background/80 to-transparent" />
-                <div className="absolute inset-0 rounded-[1.75rem] lg:rounded-[2rem] ring-1 ring-inset ring-primary/15" />
-                <button
-                  type="button"
-                  onClick={toggleVideo}
-                  aria-label={videoPaused ? "Reproduzir vídeo" : "Pausar vídeo"}
-                  className="absolute bottom-2 right-2 z-10 w-9 h-9 rounded-full glass-panel flex items-center justify-center text-foreground/90 hover:text-foreground hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-colors"
-                >
-                  {videoPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                </button>
+                {enableVideo ? (
+                  <>
+                    <video
+                      ref={videoRef}
+                      src={drJulianoHeroVideo}
+                      poster={drJulianoHeroWebp}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      preload="none"
+                      aria-label={`${DOCTOR.name} - ${DOCTOR.specialty}`}
+                      className="w-full h-full object-cover object-top"
+                      onPlay={() => setVideoPaused(false)}
+                      onPause={() => setVideoPaused(true)}
+                    />
+                    <button
+                      type="button"
+                      onClick={toggleVideo}
+                      aria-label={videoPaused ? "Reproduzir vídeo" : "Pausar vídeo"}
+                      className="absolute bottom-2 right-2 z-10 w-9 h-9 rounded-full glass-panel flex items-center justify-center text-foreground/90 hover:text-foreground hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-colors"
+                    >
+                      {videoPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                    </button>
+                  </>
+                ) : (
+                  <img
+                    src={drJulianoHeroWebp}
+                    alt={`${DOCTOR.name} - ${DOCTOR.specialty}`}
+                    width={368}
+                    height={480}
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority="high"
+                    className="w-full h-full object-cover object-top"
+                  />
+                )}
+                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-background/80 to-transparent pointer-events-none" />
+                <div className="absolute inset-0 rounded-[1.75rem] lg:rounded-[2rem] ring-1 ring-inset ring-primary/15 pointer-events-none" />
               </div>
 
               {/* Google rating chip — só desktop pra reduzir ruído no mobile */}
