@@ -276,6 +276,17 @@ async function computarEPersistirDecisao(params: {
   // (urgência é tratada em camadas superiores)
   // ---------------------------------------------------------------------------
 
+  // Rev-4: detecta se o histórico recente já tem preço tabelado, para não
+  // herdar handoff genérico ao receber "sim/pode/quero..." de continuação.
+  const historicoContemPrecoTabelado = (() => {
+    const historicoIn = historicoRecente
+      .slice(-5)
+      .map((m) => (m.conteudo || "").toString())
+      .filter(Boolean)
+      .join(" \n ");
+    return classificarExamePreco(historicoIn).kind === "preco_tabelado";
+  })();
+
   if (precoExame.kind === "preco_tabelado") {
     const composed = composePatientReplyPrecoExame(
       precoExame.label,
@@ -286,7 +297,38 @@ async function computarEPersistirDecisao(params: {
     decisao.immediate_reason = "valor_exame_tabelado";
     decisao.patient_reply = composed.reply;
     decisao.resume_agent = false;
-    // NÃO altera bot_ativo/status: guard de preço tabelado é benigno.
+
+    // Rev-4: converte o card para EXAMES_HGP e mantém bot ATIVO,
+    // preenchendo tipo/detalhe/local para o funil de agendamento HGP.
+    const podeAlterar =
+      !!contextoAgendamento &&
+      isRegistroAtivo({
+        is_sandbox: contextoAgendamento.is_sandbox,
+        status_crm: contextoAgendamento.status_crm,
+        status_funil: contextoAgendamento.status_funil,
+      });
+    if (logSideEffects && podeAlterar && contextoAgendamento) {
+      try {
+        await supabase
+          .from("agendamentos")
+          .update({
+            status_crm: "EXAMES_HGP",
+            status_funil: "exames_hgp",
+            tipo_atendimento: "Exame",
+            detalhe_exame_ou_cirurgia: detalheCanonicoExame(precoExame.exame),
+            local_atendimento: LOCAL_HGP_CANONICO,
+            bot_ativo: true,
+            bot_pausado_ate: null,
+            bot_pausa_motivo: null,
+            motivo_status: "valor_exame_tabelado",
+            bot_ultima_acao_at: new Date().toISOString(),
+          })
+          .eq("id", contextoAgendamento.id);
+      } catch (e) {
+        console.warn("[registrar-mensagem-in-n8n] update_exames_hgp falhou:", (e as Error).message);
+      }
+    }
+
     if (logSideEffects) {
       await supabase.from("system_logs").insert({
         level: "info",
@@ -299,8 +341,7 @@ async function computarEPersistirDecisao(params: {
           provider_message_id: providerMessageId,
           exame: precoExame.exame,
           agendamento_id: contextoAgendamento?.id ?? null,
-          estado_atendimento: contextoAgendamento?.estado_atendimento ?? null,
-          retomada_aplicada: composed.hasRetomada,
+          card_convertido_para_exames_hgp: podeAlterar,
         },
         agendamento_id: contextoAgendamento?.id ?? null,
         request_id: rid,
@@ -327,7 +368,12 @@ async function computarEPersistirDecisao(params: {
         request_id: rid,
       });
     }
-  } else if (exames.matched || precoExame.kind === "handoff_exame_nao_tabelado") {
+  } else if (
+    (exames.matched || precoExame.kind === "handoff_exame_nao_tabelado") &&
+    // Rev-4: NÃO herda handoff quando o histórico é preço tabelado —
+    // "sim/pode/quero..." deve fluir para o funil de agendamento do exame.
+    !(exames.matched && exames.matchedInHistory && historicoContemPrecoTabelado)
+  ) {
     const exameMencionado =
       precoExame.kind === "handoff_exame_nao_tabelado" ? precoExame.exameMencionado : null;
     const hits = exames.matched ? exames.hits : ["exame_nao_tabelado"];
@@ -348,21 +394,25 @@ async function computarEPersistirDecisao(params: {
 
     if (logSideEffects && podeAlterar && contextoAgendamento) {
       try {
-        await supabase.rpc("transicionar_estado_agendamento", {
-          p_id: contextoAgendamento.id,
-          p_novo_status_crm: "PRECISA_DE_HUMANO",
-          p_motivo: `[GUARD] exame_avaliacao_hgp · request_id=${rid}`,
-        });
+        // Rev-4: status canônico é EXAMES_HGP (não mais PRECISA_DE_HUMANO).
         await supabase
           .from("agendamentos")
           .update({
+            status_crm: "EXAMES_HGP",
+            status_funil: "exames_hgp",
+            tipo_atendimento: "Exame",
+            detalhe_exame_ou_cirurgia:
+              exameMencionado ? detalheCanonicoExame(exameMencionado) : "Avaliação do pedido",
+            local_atendimento: LOCAL_HGP_CANONICO,
             bot_ativo: false,
+            estado_atendimento: "aguardando_humano",
+            motivo_status: "exame_avaliacao_hgp",
             bot_pausa_motivo: "exame_avaliacao_hgp",
             bot_ultima_acao_at: new Date().toISOString(),
           })
           .eq("id", contextoAgendamento.id);
       } catch (e) {
-        console.warn("[registrar-mensagem-in-n8n] transicao_falhou", (e as Error).message);
+        console.warn("[registrar-mensagem-in-n8n] transicao_exames_hgp falhou:", (e as Error).message);
       }
     }
 
@@ -394,32 +444,7 @@ async function computarEPersistirDecisao(params: {
           agendamento_id: contextoAgendamento?.id ?? null,
           pode_alterar_registro: podeAlterar,
           handoff_reason: "exame_avaliacao_hgp",
-        },
-        agendamento_id: contextoAgendamento?.id ?? null,
-        request_id: rid,
-      });
-    }
-  } else if (valor.matched) {
-    const composed = composePatientReplyValor(contextoAgendamento?.estado_atendimento ?? null);
-    decisao.immediate_reply = true;
-    decisao.immediate_reason = valor.reason;
-    decisao.patient_reply = composed.reply;
-    // n8n envia UMA mensagem e NÃO chama LLM neste turno.
-    decisao.resume_agent = false;
-
-    if (logSideEffects) {
-      await supabase.from("system_logs").insert({
-        level: "info",
-        category: "whatsapp",
-        source: "registrar-mensagem-in-n8n",
-        message: "immediate_reply_valor_consulta",
-        details: {
-          request_id: rid,
-          mensagem_id: mensagemId,
-          provider_message_id: providerMessageId,
-          agendamento_id: contextoAgendamento?.id ?? null,
-          estado_atendimento: contextoAgendamento?.estado_atendimento ?? null,
-          retomada_aplicada: composed.hasRetomada,
+          status_crm_alvo: "EXAMES_HGP",
         },
         agendamento_id: contextoAgendamento?.id ?? null,
         request_id: rid,
