@@ -1,14 +1,26 @@
 # Contrato — Handoff automático de EXAMES e Respostas imediatas
 
-**Revisado:** 2026-07-13 (rev-2: janela de exames + idempotência da decisão + valor sem 2ª IA)
+**Revisado:** 2026-07-13 (rev-3: preço de exames tabelados + handoff HGP renomeado + guard_decision v3)
 
 ## Objetivo
 
-Impedir que o bot (LLM) responda ou avance o funil em três situações reais:
+Impedir que o bot (LLM) responda ou avance o funil em quatro situações reais:
 
-- **A)** Qualquer assunto envolvendo **exames** → handoff obrigatório para humano.
-- **B)** Pergunta sobre **valor da consulta** → resposta fixa imediata (R$ 300,00), sem desviar a coleta.
-- **C)** Pedido de disponibilidade **relativa** (amanhã, à tarde, esta semana) sem agenda → oferecer somente próximas datas reais; **nunca** oferecer horários antes da escolha explícita da data.
+- **A)** Assunto de **exames** SEM preço tabelado (OCT, tomografia, campo visual, topografia, microscopia, ultrassom, cobertura, autorização, resultado, laudo, preparo, agendar, retorno, local etc.) → handoff obrigatório para a secretaria do HGP.
+- **B)** Pergunta sobre **preço de exame TABELADO** (retinografia, mapeamento de retina, biometria, paquimetria) → resposta imediata "R$ 300,00", **sem** handoff, sem pausar bot.
+- **C)** Pergunta sobre **valor da consulta** → resposta fixa imediata (R$ 300,00), sem desviar a coleta.
+- **D)** Pedido de disponibilidade **relativa** (amanhã, à tarde, esta semana) sem agenda → oferecer somente próximas datas reais; **nunca** oferecer horários antes da escolha explícita da data.
+
+### Precedência obrigatória (rev-3)
+
+1. urgência ocular (camadas superiores);
+2. **preço de exame tabelado** (retinografia | mapeamento de retina | biometria | paquimetria);
+3. **pergunta genérica de preço de exame sem nome** → pergunta qual exame;
+4. demais assuntos de exame → **handoff HGP** (`exame_avaliacao_hgp`);
+5. valor da consulta;
+6. agente normal.
+
+`valor da retinografia` **nunca** cai primeiro no handoff genérico.
 
 Todas as decisões acontecem **antes** do classificador de intenção / qualquer LLM.
 
@@ -23,8 +35,8 @@ Além da resposta canônica (`mensagem_id`, `agendamento_id`, `duplicada`, `ambi
 
 | Campo                  | Tipo    | Descrição                                                                 |
 | ---------------------- | ------- | ------------------------------------------------------------------------- |
-| `handoff_required`     | boolean | `true` quando o guard de exames dispara.                                  |
-| `handoff_reason`       | string  | Só populado quando `handoff_required=true`. Atualmente: `"assunto_exames"`. |
+| `handoff_required`     | boolean | `true` quando o guard de exames dispara (agora só para HGP).              |
+| `handoff_reason`       | string  | Só populado quando `handoff_required=true`. Rev-3: `"exame_avaliacao_hgp"`. |
 | `notify_required`      | boolean | `true` quando o handoff exige notificar equipe.                           |
 | `notification_phone`   | string  | Telefone-destino (E.164) para a equipe interna. Fixo: `5591991300174`.   |
 | `notification_summary` | string  | Resumo curto para a equipe (nome se conhecido, telefone mascarado, última mensagem, contexto do agendamento). |
