@@ -450,6 +450,31 @@ async function computarEPersistirDecisao(params: {
         request_id: rid,
       });
     }
+  } else if (valor.matched) {
+    const composed = composePatientReplyValor(contextoAgendamento?.estado_atendimento ?? null);
+    decisao.immediate_reply = true;
+    decisao.immediate_reason = valor.reason;
+    decisao.patient_reply = composed.reply;
+    decisao.resume_agent = false;
+
+    if (logSideEffects) {
+      await supabase.from("system_logs").insert({
+        level: "info",
+        category: "whatsapp",
+        source: "registrar-mensagem-in-n8n",
+        message: "immediate_reply_valor_consulta",
+        details: {
+          request_id: rid,
+          mensagem_id: mensagemId,
+          provider_message_id: providerMessageId,
+          agendamento_id: contextoAgendamento?.id ?? null,
+          estado_atendimento: contextoAgendamento?.estado_atendimento ?? null,
+          retomada_aplicada: composed.hasRetomada,
+        },
+        agendamento_id: contextoAgendamento?.id ?? null,
+        request_id: rid,
+      });
+    }
   }
 
   await persistirDecisao(supabase, mensagemId, decisao);
