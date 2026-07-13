@@ -16,15 +16,26 @@ export interface NotificationOutcome {
   code: string; // categoria sanitizada, sem PII
 }
 
-/** Extrai um código sanitizado (nome do erro ou "rejected" etc.). */
+// Allowlist estrita: identificadores curtos (letras/dígitos/_.:-), sem espaços,
+// sem caracteres livres, para GARANTIR que nenhum texto de erro/motivo/telefone
+// vaze nos logs. Qualquer coisa fora disso vira a categoria fixa "reported_failure".
+const SAFE_CODE_RE = /^[A-Za-z0-9_.:-]{1,64}$/;
+
+/** Sanitiza um valor para virar um código de log seguro (allowlist). */
 function safeCode(x: unknown): string {
-  if (!x) return "unknown";
-  if (typeof x === "string") return x.slice(0, 64);
-  if (typeof x === "object") {
-    const o = x as any;
-    return String(o.name ?? o.code ?? o.status ?? "error").slice(0, 64);
-  }
-  return "unknown";
+  if (x == null) return "unknown";
+  const raw =
+    typeof x === "string"
+      ? x
+      : typeof x === "object"
+      ? String(
+          (x as any).name ??
+            (x as any).code ??
+            (x as any).status ??
+            "reported_failure",
+        )
+      : "unknown";
+  return SAFE_CODE_RE.test(raw) ? raw : "reported_failure";
 }
 
 /**
