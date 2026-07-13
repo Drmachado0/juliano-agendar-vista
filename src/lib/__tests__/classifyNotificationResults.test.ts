@@ -87,3 +87,48 @@ describe("classifyNotificationResults (agregado)", () => {
     expect(r.ok).toBe(false);
   });
 });
+
+describe("classifyNotificationResult — sanitização estrita (sem PII nos logs)", () => {
+  it("motivo com nome do paciente vira 'reported_failure' (não vaza texto)", () => {
+    const r = fulfilled({
+      data: {
+        success: false,
+        motivo: "Falha ao enviar para João da Silva (91) 99130-0174",
+      },
+      error: null,
+    });
+    const o = classifyNotificationResult(r);
+    expect(o.ok).toBe(false);
+    expect(o.code).toBe("payload_false:reported_failure");
+    expect(o.code).not.toMatch(/João|Silva|9130|91\)/);
+  });
+
+  it("error.message com telefone/frase não aparece no code", () => {
+    const r = fulfilled({
+      data: null,
+      error: {
+        name: "FunctionsHttpError",
+        message: "Timeout ao contatar 5591991300174 - conteúdo bruto",
+      },
+    });
+    const o = classifyNotificationResult(r);
+    expect(o.code).toBe("invoke_error:FunctionsHttpError");
+    expect(o.code).not.toMatch(/5591991300174|Timeout|conteúdo/);
+  });
+
+  it("rejected com Error contendo PII no message → 'rejected:Error' (sem texto)", () => {
+    const o = classifyNotificationResult(rejected(new Error("Paciente Maria 91999999999")));
+    expect(o.code).toBe("rejected:Error");
+    expect(o.code).not.toMatch(/Maria|999999999/);
+  });
+
+  it("motivo com espaço/pontuação livre é rejeitado pela allowlist", () => {
+    const r = fulfilled({ data: { success: false, motivo: "n8n down: quota exceeded!" }, error: null });
+    expect(classifyNotificationResult(r).code).toBe("payload_false:reported_failure");
+  });
+
+  it("motivo em formato slug seguro é preservado", () => {
+    const r = fulfilled({ data: { success: false, motivo: "n8n_down" }, error: null });
+    expect(classifyNotificationResult(r).code).toBe("payload_false:n8n_down");
+  });
+});
