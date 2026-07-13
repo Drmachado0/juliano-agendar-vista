@@ -459,6 +459,10 @@ serve(async (req) => {
         info = v.info;
         agendamentoId = info.agendamento_id ?? null;
       }
+      const decisao = await resolverDecisaoDuplicata({
+        supabase, mensagemId: existente.id, conteudoAtual: body.conteudo,
+        providerMessageId, rid,
+      });
       return json(
         {
           ok: true,
@@ -468,6 +472,15 @@ serve(async (req) => {
           ambiguo: !!info.ambiguo,
           total_matches: info.total_matches ?? null,
           duplicada: true,
+          handoff_required: decisao.handoff_required,
+          handoff_reason: decisao.handoff_reason,
+          notify_required: decisao.notify_required,
+          notification_phone: decisao.notification_phone,
+          notification_summary: decisao.notification_summary,
+          immediate_reply: decisao.immediate_reply,
+          immediate_reason: decisao.immediate_reason,
+          resume_agent: decisao.resume_agent,
+          patient_reply: decisao.patient_reply,
           request_id: rid,
         },
         200,
