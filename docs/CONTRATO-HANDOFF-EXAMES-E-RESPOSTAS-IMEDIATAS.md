@@ -1,14 +1,26 @@
 # Contrato — Handoff automático de EXAMES e Respostas imediatas
 
-**Revisado:** 2026-07-13 (rev-2: janela de exames + idempotência da decisão + valor sem 2ª IA)
+**Revisado:** 2026-07-13 (rev-3: preço de exames tabelados + handoff HGP renomeado + guard_decision v3)
 
 ## Objetivo
 
-Impedir que o bot (LLM) responda ou avance o funil em três situações reais:
+Impedir que o bot (LLM) responda ou avance o funil em quatro situações reais:
 
-- **A)** Qualquer assunto envolvendo **exames** → handoff obrigatório para humano.
-- **B)** Pergunta sobre **valor da consulta** → resposta fixa imediata (R$ 300,00), sem desviar a coleta.
-- **C)** Pedido de disponibilidade **relativa** (amanhã, à tarde, esta semana) sem agenda → oferecer somente próximas datas reais; **nunca** oferecer horários antes da escolha explícita da data.
+- **A)** Assunto de **exames** SEM preço tabelado (OCT, tomografia, campo visual, topografia, microscopia, ultrassom, cobertura, autorização, resultado, laudo, preparo, agendar, retorno, local etc.) → handoff obrigatório para a secretaria do HGP.
+- **B)** Pergunta sobre **preço de exame TABELADO** (retinografia, mapeamento de retina, biometria, paquimetria) → resposta imediata "R$ 300,00", **sem** handoff, sem pausar bot.
+- **C)** Pergunta sobre **valor da consulta** → resposta fixa imediata (R$ 300,00), sem desviar a coleta.
+- **D)** Pedido de disponibilidade **relativa** (amanhã, à tarde, esta semana) sem agenda → oferecer somente próximas datas reais; **nunca** oferecer horários antes da escolha explícita da data.
+
+### Precedência obrigatória (rev-3)
+
+1. urgência ocular (camadas superiores);
+2. **preço de exame tabelado** (retinografia | mapeamento de retina | biometria | paquimetria);
+3. **pergunta genérica de preço de exame sem nome** → pergunta qual exame;
+4. demais assuntos de exame → **handoff HGP** (`exame_avaliacao_hgp`);
+5. valor da consulta;
+6. agente normal.
+
+`valor da retinografia` **nunca** cai primeiro no handoff genérico.
 
 Todas as decisões acontecem **antes** do classificador de intenção / qualquer LLM.
 
@@ -23,19 +35,19 @@ Além da resposta canônica (`mensagem_id`, `agendamento_id`, `duplicada`, `ambi
 
 | Campo                  | Tipo    | Descrição                                                                 |
 | ---------------------- | ------- | ------------------------------------------------------------------------- |
-| `handoff_required`     | boolean | `true` quando o guard de exames dispara.                                  |
-| `handoff_reason`       | string  | Só populado quando `handoff_required=true`. Atualmente: `"assunto_exames"`. |
+| `handoff_required`     | boolean | `true` quando o guard de exames dispara (agora só para HGP).              |
+| `handoff_reason`       | string  | Só populado quando `handoff_required=true`. Rev-3: `"exame_avaliacao_hgp"`. |
 | `notify_required`      | boolean | `true` quando o handoff exige notificar equipe.                           |
 | `notification_phone`   | string  | Telefone-destino (E.164) para a equipe interna. Fixo: `5591991300174`.   |
 | `notification_summary` | string  | Resumo curto para a equipe (nome se conhecido, telefone mascarado, última mensagem, contexto do agendamento). |
 | `immediate_reply`      | boolean | `true` quando há uma resposta fixa a enviar antes do agente.              |
-| `immediate_reason`     | string  | Ex.: `"valor_consulta"`.                                                  |
+| `immediate_reason`     | string  | `"valor_consulta"` \| `"valor_exame_tabelado"` \| `"exame_nao_informado"`.  |
 | `patient_reply`        | string  | Texto exato a enviar ao paciente pelo ManyChat.                           |
-| `resume_agent`         | boolean | `true` = após enviar `patient_reply`, o agente deve retomar o próximo dado pendente. `false` = o texto já resolve o turno (caso de handoff).  |
+| `resume_agent`         | boolean | `true` = após enviar `patient_reply`, o agente deve retomar o próximo dado pendente. `false` = o texto já resolve o turno (handoff, preço tabelado, preço da consulta).  |
 
 ### Regra para o n8n
 1. Se `handoff_required=true`: envia `patient_reply` ao paciente e envia `notification_summary` para `notification_phone`. **Não invoca `assistente-pre-agendamento`.**
-2. Se `immediate_reply=true`: envia `patient_reply` primeiro e, se `resume_agent=true`, dispara o agente normal em seguida.
+2. Se `immediate_reply=true`: envia `patient_reply` e, se `resume_agent=true`, dispara o agente normal em seguida. Rev-3 mantém `resume_agent=false` para `valor_exame_tabelado`, `exame_nao_informado` e `valor_consulta`.
 3. Caso contrário: fluxo normal.
 
 ---
@@ -45,16 +57,16 @@ Além da resposta canônica (`mensagem_id`, `agendamento_id`, `duplicada`, `ambi
 Repete os mesmos guards antes do classificador (defesa em profundidade).
 Se o guard disparar, retorna os mesmos campos acima e **não classifica intenção**.
 
-Também garante a regra C:
-- Se a mensagem atual não trouxer uma data explícita (formato `DD/MM` ou `DD-MM`), o assistente **só oferece datas** (nunca horários).
-- Só oferece horários quando `podeOferecerHorarios(estado)` for `true`, isto é, quando `data_escolhida != null` e a fase for `data_escolhida | oferecendo_horarios`.
-- Se a janela pedida (`amanhã`, `à tarde`, `esta semana`) não tiver slot, a mensagem explicita "Não localizei agenda para X" e lista próximas datas.
+Também garante a regra D (disponibilidade relativa):
+- Se a mensagem atual não trouxer uma data explícita, o assistente **só oferece datas** (nunca horários).
+- Só oferece horários quando `podeOferecerHorarios(estado)` for `true`.
+- Se a janela pedida (`amanhã`, `à tarde`, `esta semana`) não tiver slot, explicita "Não localizei agenda para X" e lista próximas datas.
 
 ---
 
 ## Exemplos
 
-### A) Exames
+### A) Exame sem preço tabelado (handoff HGP)
 Entrada:
 ```json
 {"telefone":"5591991300174","conteudo":"meu convênio cobre exame de OCT?"}
@@ -63,28 +75,49 @@ Resposta relevante:
 ```json
 {
   "handoff_required": true,
-  "handoff_reason": "assunto_exames",
+  "handoff_reason": "exame_avaliacao_hgp",
   "notify_required": true,
   "notification_phone": "5591991300174",
-  "patient_reply": "Entendi. Como sua mensagem envolve exames, encaminhei o atendimento para nossa equipe responsável. Eles vão analisar seu caso e continuar por aqui.",
-  "notification_summary": "Handoff automático — assunto: EXAMES\nPaciente: … (****0174)\n…"
+  "patient_reply": "Para esse exame, a secretaria do HGP precisa avaliar o pedido. Encaminhei seu atendimento para a equipe responsável, que continuará por aqui.",
+  "notification_summary": "Handoff automático — EXAMES (avaliação HGP)\nPaciente: … (****0174)\n…"
+}
+```
+Também dispara para: resultado, laudo, autorização, cobertura, preparo, local, agendar/marcar/remarcar exame, retorno com exames, OCT/tomografia/campo visual/topografia/microscopia/ultrassom/ecobiometria etc.
+
+### B1) Preço de exame TABELADO (sem handoff, bot ativo)
+Entrada: `"quanto custa a retinografia?"` ou apenas `"retinografia"`.
+```json
+{
+  "immediate_reply": true,
+  "immediate_reason": "valor_exame_tabelado",
+  "patient_reply": "O exame de retinografia custa R$ 300,00.\n\n<próximo dado pendente>",
+  "resume_agent": false
+}
+```
+Mesma resposta para mapeamento de retina, biometria e paquimetria. Não pausa bot, não escala para humano.
+
+### B2) Preço genérico sem informar exame
+Entrada: `"qual o valor do exame?"`.
+```json
+{
+  "immediate_reply": true,
+  "immediate_reason": "exame_nao_informado",
+  "patient_reply": "Qual exame foi solicitado? Pode me informar o nome que aparece no pedido?",
+  "resume_agent": false
 }
 ```
 
-Caso especial (histórico): mensagem atual "já fiz a consulta" após IN anterior "meu convênio cobre exame de OCT?" também dispara.
-
-### B) Valor da consulta no meio da coleta
-Entrada: `"quanto é a consulta?"` ou `"qual o valor?"`
-Resposta relevante:
+### C) Valor da consulta no meio da coleta
+Entrada: `"quanto é a consulta?"`
 ```json
 {
   "immediate_reply": true,
   "immediate_reason": "valor_consulta",
   "patient_reply": "A consulta particular com o Dr. Juliano Machado custa R$ 300,00.",
-  "resume_agent": true
+  "resume_agent": false
 }
 ```
-Não confundir com cirurgia (`"quanto custa a cirurgia de catarata?"` → não dispara) nem com exames (`"valor do exame de OCT?"` → cai no handoff A).
+Não confundir com cirurgia (`"quanto custa a cirurgia de catarata?"` → não dispara) nem com exames não tabelados (`"valor do exame de OCT?"` → handoff HGP).
 
 ### C) Amanhã à tarde sem agenda
 Fluxo do assistente:
@@ -106,12 +139,31 @@ Fluxo do assistente:
 - Janela de **45 minutos** — mensagens fora disso não geram handoff.
 - Só herda handoff via histórico se a mensagem atual for uma **continuação contextual** (`isMensagemContinuacao`): respostas curtas (`sim`, `não`, `ok`), retomadas (`já fiz`, `e pelo plano?`, `no HGP`, `como faço?`, `onde faço?`, `prefiro quando estiver pronto`, `fico no aguardo`). Uma mensagem nova e independente (`quero agendar uma consulta`) **não** herda handoff antigo.
 
-## Idempotência da decisão (rev-2)
+## Idempotência da decisão (rev-3)
 
-- Após computar os guards, a decisão completa é persistida em `mensagens_whatsapp.payload.guard_decision` (`version=2`).
-- Duplicatas por `mensagem_externa_id` (early return ou race no UNIQUE) **carregam a mesma decisão persistida** e devolvem os mesmos campos (`handoff_required`, `notification_summary`, `patient_reply`, `resume_agent`, …), sempre com `duplicada:true`.
-- **Nunca reenviam, re-logam nem re-escalam.** Se um registro legado não tiver `guard_decision`, ele é reavaliado UMA vez de forma segura (sem log, sem transição de status/bot) e a decisão passa a ser persistida.
-- Auditoria em `system_logs` (`category="whatsapp"`, `source="registrar-mensagem-in-n8n"`, `message ∈ {"handoff_exames","immediate_reply_valor_consulta"}`) só ocorre no primeiro cálculo.
+- Após computar os guards, a decisão completa é persistida em `mensagens_whatsapp.payload.guard_decision` (`version=3`).
+- Decisões `version<3` são invalidadas automaticamente para forçar recomputo com as novas regras de preço tabelado.
+- Duplicatas por `mensagem_externa_id` **carregam a mesma decisão persistida** e devolvem os mesmos campos, sempre com `duplicada:true`.
+- **Nunca reenviam, re-logam nem re-escalam.** Registros legados sem `guard_decision` v3 são reavaliados UMA vez de forma segura (sem log, sem transição de status/bot) e a decisão passa a ser persistida.
+- Auditoria em `system_logs` (`category="whatsapp"`, `source="registrar-mensagem-in-n8n"`, `message ∈ {"handoff_exames","immediate_reply_valor_consulta","immediate_reply_valor_exame_tabelado","immediate_reply_exame_nao_informado"}`) só ocorre no primeiro cálculo.
+
+## Exames tabelados (rev-3)
+
+Preço fixo publicável pelo bot, sem handoff, sem pausar bot, sem alterar status:
+
+| Exame                  | Preço      |
+| ---------------------- | ---------- |
+| Retinografia           | R$ 300,00  |
+| Mapeamento de retina   | R$ 300,00  |
+| Biometria              | R$ 300,00  |
+| Paquimetria            | R$ 300,00  |
+
+Regras determinísticas em `_shared/examesPrecoGuard.ts`:
+- reconhece sem acento e sem distinção de caixa (`Retinografia`, `RETINOGRAFIA`, `paquimetria`);
+- reconhece o nome isolado (paciente responde `retinografia` após bot perguntar) até 4 palavras;
+- `mapeamento` isolado equivale a `mapeamento de retina`;
+- `ecobiometria` NÃO casa como `biometria` tabelada (vai para handoff);
+- se aparecer contexto operacional (`resultado`, `laudo`, `cobre`, `plano`, `convênio`, `agendar`, `marcar`, `remarcar`, `local`, `onde`, `preparo`, `retorno`, `guia`, `pedido`, `autorização`, `fazer`, `realizar`) junto com nome do exame tabelado, é HANDOFF HGP mesmo assim.
 
 ## VALOR DA CONSULTA — retomada sem 2ª IA (rev-2)
 

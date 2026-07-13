@@ -17,7 +17,7 @@
 export type ExamesDetectResult = {
   matched: boolean;
   reason:
-    | "assunto_exames"
+    | "exame_avaliacao_hgp"
     | null;
   hits: string[];        // termos que casaram (para debug/log, sem PII)
   matchedInHistory: boolean;
@@ -236,7 +236,7 @@ export function detectarAssuntoExames(
   if (atual.matched) {
     return {
       matched: true,
-      reason: "assunto_exames",
+      reason: "exame_avaliacao_hgp",
       hits: atual.hits,
       matchedInHistory: false,
     };
@@ -273,7 +273,7 @@ export function detectarAssuntoExames(
     if (contexto.matched) {
       return {
         matched: true,
-        reason: "assunto_exames",
+        reason: "exame_avaliacao_hgp",
         hits: contexto.hits,
         matchedInHistory: true,
       };
@@ -288,7 +288,7 @@ export function detectarAssuntoExames(
 // -----------------------------
 
 export const HANDOFF_EXAMES_REPLY =
-  "Entendi. Como sua mensagem envolve exames, encaminhei o atendimento para nossa equipe responsável. Eles vão analisar seu caso e continuar por aqui.";
+  "Para esse exame, a secretaria do HGP precisa avaliar o pedido. Encaminhei seu atendimento para a equipe responsável, que continuará por aqui.";
 
 export const HANDOFF_NOTIFICATION_PHONE = "5591991300174";
 
@@ -302,6 +302,7 @@ export interface HandoffSummaryInput {
   statusCrm?: string | null;
   statusFunil?: string | null;
   localAtendimento?: string | null;
+  exameMencionado?: string | null;
 }
 
 export function buildHandoffExamesSummary(input: HandoffSummaryInput): string {
@@ -309,10 +310,13 @@ export function buildHandoffExamesSummary(input: HandoffSummaryInput): string {
   const nomeTxt = nome ? nome : "Paciente sem nome cadastrado";
   const trecho = (input.mensagemAtual || "").trim().slice(0, 240);
   const linhas: string[] = [
-    `Handoff automático — assunto: EXAMES`,
+    `Handoff automático — EXAMES (avaliação HGP)`,
     `Paciente: ${nomeTxt} (${input.telefoneMascarado})`,
     `Última mensagem: "${trecho}"`,
   ];
+  if (input.exameMencionado) {
+    linhas.push(`Exame mencionado: ${input.exameMencionado}`);
+  }
   if (input.matchedInHistory) {
     linhas.push(`Detecção via histórico recente (mensagens IN anteriores).`);
   }

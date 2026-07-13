@@ -13,6 +13,11 @@ import {
   HANDOFF_NOTIFICATION_PHONE,
 } from "../_shared/handoffExamesGuard.ts";
 import { detectarValorConsulta } from "../_shared/respostasImediatasGuard.ts";
+import {
+  classificarExamePreco,
+  replyPrecoExameTabelado,
+  REPLY_EXAME_NAO_INFORMADO,
+} from "../_shared/examesPrecoGuard.ts";
 import { parseJanelaRelativa, podeOferecerHorarios } from "../_shared/disponibilidadeRelativa.ts";
 import { maskTelefone } from "../_shared/telefoneCanonico.ts";
 
@@ -414,37 +419,73 @@ serve(async (req) => {
     // Espelham a lógica de registrar-mensagem-in-n8n (defesa em profundidade,
     // caso o n8n dispare o assistente diretamente).
     // =========================================================================
+    // Precedência (rev-3): preço exame tabelado > handoff HGP > valor consulta
+    const precoExame = classificarExamePreco(body.conteudo);
+    if (precoExame.kind === "preco_tabelado") {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          agiu: false,
+          immediate_reply: true,
+          immediate_reason: "valor_exame_tabelado",
+          patient_reply: replyPrecoExameTabelado(precoExame.label),
+          resume_agent: false,
+          request_id: rid,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
+      );
+    }
+    if (precoExame.kind === "preco_generico_sem_exame") {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          agiu: false,
+          immediate_reply: true,
+          immediate_reason: "exame_nao_informado",
+          patient_reply: REPLY_EXAME_NAO_INFORMADO,
+          resume_agent: false,
+          request_id: rid,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
+      );
+    }
+
     const exames = detectarAssuntoExames(body.conteudo, historico);
-    if (exames.matched) {
+    if (exames.matched || precoExame.kind === "handoff_exame_nao_tabelado") {
+      const exameMencionado =
+        precoExame.kind === "handoff_exame_nao_tabelado" ? precoExame.exameMencionado : null;
+      const hits = exames.matched ? exames.hits : ["exame_nao_tabelado"];
       const idEscalado = await escalarParaHumano(supabase, {
         telefone: body.telefone,
         agendamentoId: body.agendamento_id ?? null,
         agendamento,
-        motivo: "assunto_exames",
+        motivo: "exame_avaliacao_hgp",
         intencao: "exames",
         detalhes: {
           request_id: rid,
-          hits: exames.hits,
+          hits,
           matched_in_history: exames.matchedInHistory,
+          exame_mencionado: exameMencionado,
         },
       });
       const notification_summary = buildHandoffExamesSummary({
         nome: agendamento?.nome_completo ?? null,
         telefoneMascarado: maskTelefone(body.telefone),
         mensagemAtual: body.conteudo,
-        hits: exames.hits,
+        hits,
         matchedInHistory: exames.matchedInHistory,
         agendamentoId: idEscalado ?? agendamento?.id ?? null,
         statusCrm: agendamento?.status_crm ?? null,
         statusFunil: agendamento?.status_funil ?? null,
         localAtendimento: agendamento?.local_atendimento ?? null,
+        exameMencionado,
       });
       return new Response(
         JSON.stringify({
           ok: true,
           agiu: false,
           handoff_required: true,
-          handoff_reason: "assunto_exames",
+          handoff_reason: "exame_avaliacao_hgp",
           notify_required: true,
           notification_phone: HANDOFF_NOTIFICATION_PHONE,
           patient_reply: HANDOFF_EXAMES_REPLY,

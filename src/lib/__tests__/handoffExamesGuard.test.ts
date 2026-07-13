@@ -59,7 +59,7 @@ describe("detectarAssuntoExames — via histórico (janela + continuação)", ()
     const r = detectarAssuntoExames("já fiz a consulta", hist, { now });
     expect(r.matched).toBe(true);
     expect(r.matchedInHistory).toBe(true);
-    expect(r.reason).toBe("assunto_exames");
+    expect(r.reason).toBe("exame_avaliacao_hgp");
   });
 
   it("exame 2h atrás + 'quero agendar consulta' => normal (fora da janela)", () => {
@@ -150,7 +150,8 @@ describe("buildHandoffExamesSummary", () => {
 
 describe("constantes canônicas", () => {
   it("resposta e telefone de notificação estão travados", () => {
-    expect(HANDOFF_EXAMES_REPLY).toMatch(/encaminhei o atendimento para nossa equipe/);
+    expect(HANDOFF_EXAMES_REPLY).toMatch(/secretaria do HGP/);
+    expect(HANDOFF_EXAMES_REPLY).toMatch(/Encaminhei seu atendimento/);
     expect(HANDOFF_NOTIFICATION_PHONE).toBe("5591991300174");
   });
 });
