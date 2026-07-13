@@ -208,3 +208,71 @@ describe("timezone Belém correto", () => {
     }
   });
 });
+
+// ============================================================================
+// Revisão corretiva 31b3b91c: default seguro + periodo_ajustado + off-by-one
+// ============================================================================
+describe("default seguro para mes/ano ausente ou inválido", () => {
+  it("não retorna mais 400 quando mes/ano faltam ou são inválidos", () => {
+    // A string de erro antiga não deve mais existir
+    expect(SRC_DATAS).not.toMatch(/"mes"\s*\(1-12\)\s*e\s*"ano"\s*são obrigatórios/);
+    // Não deve haver return 400 remanescente relacionado a validação de mes/ano
+    expect(SRC_DATAS).not.toMatch(/return json\([^)]*obrigatórios[^)]*\},\s*400\)/);
+  });
+  it("classifica ausente, inválido e passado com motivo_ajuste", () => {
+    expect(SRC_DATAS).toMatch(/"periodo_ausente"/);
+    expect(SRC_DATAS).toMatch(/"periodo_invalido"/);
+    expect(SRC_DATAS).toMatch(/"periodo_passado"/);
+    expect(SRC_DATAS).toMatch(/motivo_ajuste/);
+  });
+  it("expõe chave periodo_ajustado além de ajustado_periodo_passado", () => {
+    expect(SRC_DATAS).toMatch(/periodo_ajustado:\s*periodoAjustado/);
+    expect(SRC_DATAS).toMatch(/ajustado_periodo_passado:\s*ajustadoPeriodoPassado/);
+  });
+  it("valida ano fora da faixa 2000-2100", () => {
+    expect(SRC_DATAS).toMatch(/anoNum\s*>\s*2100/);
+    expect(SRC_DATAS).toMatch(/anoNum\s*<\s*2000/);
+  });
+  it("valida mes fora da faixa 1-12", () => {
+    expect(SRC_DATAS).toMatch(/mesNum\s*<\s*1/);
+    expect(SRC_DATAS).toMatch(/mesNum\s*>\s*12/);
+  });
+  it("preserva periodo_solicitado com valores originais ou null", () => {
+    expect(SRC_DATAS).toMatch(/periodoSolicitado/);
+    expect(SRC_DATAS).toMatch(/Number\.isInteger\(anoNum\)\s*\?\s*anoNum\s*:\s*null/);
+    expect(SRC_DATAS).toMatch(/Number\.isInteger\(mesNum\)\s*\?\s*mesNum\s*:\s*null/);
+  });
+});
+
+describe("off-by-one no loop de auto_avancar", () => {
+  it("não avança periodoConsultado no último ciclo (6º mês)", () => {
+    expect(SRC_DATAS).toMatch(/i\s*===\s*HORIZONTE_MESES_MAX\s*-\s*1/);
+  });
+  it("atribui periodoConsultado ANTES de calcular, não depois de avançar", () => {
+    // A atribuição de periodoConsultado precisa estar no topo do laço.
+    const trecho = SRC_DATAS.match(/for \(let i = 0; i < HORIZONTE_MESES_MAX[\s\S]*?\n\s*\}/);
+    expect(trecho).not.toBeNull();
+    expect(trecho![0]).toMatch(/periodoConsultado\s*=\s*\{\s*ano:\s*anoAtual,\s*mes:\s*mesAtual\s*\}[\s\S]*calcularDatasDoMes/);
+  });
+  it("retorna motivo=sem_disponibilidade_no_horizonte quando 6 meses vazios", () => {
+    expect(SRC_DATAS).toMatch(/"sem_disponibilidade_no_horizonte"/);
+  });
+  it("retorna motivo=sem_disponibilidade_no_periodo quando auto_avancar=false vazio", () => {
+    expect(SRC_DATAS).toMatch(/"sem_disponibilidade_no_periodo"/);
+  });
+});
+
+describe("cenários de entrada — mes/ano", () => {
+  it("corpo {} (sem mes/ano) deve cair em periodo_ausente", () => {
+    // Presença simultânea das condições ausente e do rótulo
+    expect(SRC_DATAS).toMatch(/mesAusente\s*\|\|\s*anoAusente[\s\S]*?"periodo_ausente"/);
+  });
+  it("mes=13 cai em periodo_invalido", () => {
+    // A checagem inclui mesNum > 12 dentro de mesInvalido
+    expect(SRC_DATAS).toMatch(/mesInvalido[\s\S]*?anoInvalido[\s\S]*?"periodo_invalido"/);
+  });
+  it("ano fora da faixa também dispara periodo_invalido", () => {
+    expect(SRC_DATAS).toMatch(/anoInvalido\s*=\s*!anoAusente\s*&&\s*\(!Number\.isInteger\(anoNum\)\s*\|\|\s*anoNum\s*<\s*2000\s*\|\|\s*anoNum\s*>\s*2100\)/);
+  });
+});
+
