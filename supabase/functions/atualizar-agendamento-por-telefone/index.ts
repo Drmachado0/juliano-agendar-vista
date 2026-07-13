@@ -17,6 +17,7 @@ import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { requireN8nSecret, unauthorizedResponse, requestId } from "../_shared/authGuards.ts";
 import { telefoneCanonico as telefoneCanonicoLocal, maskTelefone } from "../_shared/telefoneCanonico.ts";
 import { isFunilTerminal, isRegistroAtivo } from "../_shared/statusTerminais.ts";
+import { sanitizeOptionalPayload } from "../_shared/sanitizeOptionalFields.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,20 +26,22 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-
-
-
+// Schema mínimo: só telefone_whatsapp é obrigatório e validado por formato.
+// Campos opcionais são higienizados fora do zod (podem vir como "undefined"/"null"
+// vindos do $fromAI do n8n/ManyChat). Aplicamos limites de tamanho após sanitizar.
 const BodySchema = z.object({
   telefone_whatsapp: z.string().min(8),
-  nome_completo: z.string().min(1).max(200).optional(),
-  convenio: z.string().max(100).optional(),
-  tipo_atendimento: z.string().max(50).optional(),
-  local_atendimento: z.string().max(200).optional(),
-  detalhe_exame_ou_cirurgia: z.string().max(500).optional(),
-  observacoes_internas: z.string().max(2000).optional(),
-  data_nascimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  estado_atendimento: z.string().max(60).optional(),
-});
+}).passthrough();
+
+const LIMITES: Record<string, number> = {
+  nome_completo: 200,
+  convenio: 100,
+  tipo_atendimento: 50,
+  local_atendimento: 200,
+  detalhe_exame_ou_cirurgia: 500,
+  observacoes_internas: 2000,
+  estado_atendimento: 60,
+};
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -82,7 +85,22 @@ serve(async (req) => {
   if (!parsed.success) {
     return json({ error: "invalid_body", request_id: rid }, 400);
   }
-  const body = parsed.data;
+  const rawBody = parsed.data as Record<string, unknown>;
+
+  // Higieniza opcionais: "undefined"/"null"/"n/a"/vazio => ausente.
+  const { clean, ignorados } = sanitizeOptionalPayload(rawBody);
+  // Aplica limites de tamanho após sanitização (trunca para o limite).
+  for (const [k, max] of Object.entries(LIMITES)) {
+    const v = (clean as Record<string, string | undefined>)[k];
+    if (typeof v === "string" && v.length > max) {
+      (clean as Record<string, string>)[k] = v.slice(0, max);
+    }
+  }
+  const body = {
+    telefone_whatsapp: rawBody.telefone_whatsapp as string,
+    ...clean,
+  };
+  const camposIgnorados = ignorados;
 
   const url = Deno.env.get("SUPABASE_URL");
   const svc = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -123,7 +141,7 @@ serve(async (req) => {
   if (!match) {
     // Cria novo lead — NUNCA atualiza histórico/cancelado.
     const insertLead: Record<string, unknown> = {
-      nome_completo: body.nome_completo?.trim() || "Lead WhatsApp",
+      nome_completo: body.nome_completo || "Lead WhatsApp",
       telefone_whatsapp: body.telefone_whatsapp,
       tipo_atendimento: body.tipo_atendimento || "Consulta",
       local_atendimento: body.local_atendimento || "A definir",
@@ -135,9 +153,9 @@ serve(async (req) => {
       status_funil: "novo",
       origem: "whatsapp",
     };
-    if (body.observacoes_internas && body.observacoes_internas.trim().length > 0) {
+    if (body.observacoes_internas) {
       const stamp = new Date().toISOString().replace("T", " ").slice(0, 19);
-      insertLead.observacoes_internas = `[${stamp} · n8n] ${body.observacoes_internas.trim()}`;
+      insertLead.observacoes_internas = `[${stamp} · n8n] ${body.observacoes_internas}`;
     }
     const { data: novoLead, error: insErr } = await supabase
       .from("agendamentos")
@@ -154,12 +172,13 @@ serve(async (req) => {
       acao: "criar_lead_por_telefone_n8n",
       status_anterior: null,
       status_novo: "novo",
-      detalhes: { telefone_mask: maskTelefone(body.telefone_whatsapp), campos: Object.keys(insertLead), request_id: rid },
+      detalhes: { telefone_mask: maskTelefone(body.telefone_whatsapp), campos: Object.keys(insertLead), campos_ignorados: camposIgnorados, request_id: rid },
     });
 
     return json({
       agendamento_id: novoLead.id,
       campos_atualizados: Object.keys(insertLead),
+      campos_ignorados: camposIgnorados,
       lead_criado: true,
       request_id: rid,
     });
@@ -178,16 +197,17 @@ serve(async (req) => {
     "estado_atendimento",
   ];
   for (const k of passthrough) {
-    if (body[k] !== undefined && body[k] !== null && String(body[k]).length > 0) {
-      updates[k] = body[k];
+    const v = (body as Record<string, unknown>)[k];
+    if (typeof v === "string" && v.length > 0) {
+      updates[k] = v;
       camposAtualizados.push(k);
     }
   }
 
   // observacoes_internas: APPEND com timestamp
-  if (body.observacoes_internas && body.observacoes_internas.trim().length > 0) {
+  if (body.observacoes_internas) {
     const stamp = new Date().toISOString().replace("T", " ").slice(0, 19);
-    const linhaNova = `[${stamp} · n8n] ${body.observacoes_internas.trim()}`;
+    const linhaNova = `[${stamp} · n8n] ${body.observacoes_internas}`;
     const atual = (match as any).observacoes_internas;
     const base = atual && atual !== "[ENCRYPTED]" ? `${atual}\n` : "";
     updates.observacoes_internas = `${base}${linhaNova}`;
@@ -217,7 +237,7 @@ serve(async (req) => {
   }
 
   if (camposAtualizados.length === 0 && !promocao) {
-    return json({ agendamento_id: match.id, campos_atualizados: [], request_id: rid });
+    return json({ agendamento_id: match.id, campos_atualizados: [], campos_ignorados: camposIgnorados, request_id: rid });
   }
 
   updates.updated_at = new Date().toISOString();
@@ -237,7 +257,7 @@ serve(async (req) => {
     acao: "atualizar_por_telefone_n8n",
     status_anterior: null,
     status_novo: null,
-    detalhes: { campos_atualizados: camposAtualizados, telefone_mask: maskTelefone(body.telefone_whatsapp), request_id: rid },
+    detalhes: { campos_atualizados: camposAtualizados, campos_ignorados: camposIgnorados, telefone_mask: maskTelefone(body.telefone_whatsapp), request_id: rid },
   });
 
   if (promocao) {
@@ -256,6 +276,7 @@ serve(async (req) => {
   return json({
     agendamento_id: match.id,
     campos_atualizados: camposAtualizados,
+    campos_ignorados: camposIgnorados,
     status_funil: promocao?.para ?? statusAtual,
     promovido: !!promocao,
     request_id: rid,
