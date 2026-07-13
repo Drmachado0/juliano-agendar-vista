@@ -26,8 +26,41 @@ import {
   HANDOFF_EXAMES_REPLY,
   HANDOFF_NOTIFICATION_PHONE,
 } from "../_shared/handoffExamesGuard.ts";
-import { detectarValorConsulta } from "../_shared/respostasImediatasGuard.ts";
+import {
+  detectarValorConsulta,
+  composePatientReplyValor,
+} from "../_shared/respostasImediatasGuard.ts";
 import { isRegistroAtivo } from "../_shared/statusTerminais.ts";
+
+// Estrutura persistida em mensagens_whatsapp.payload.guard_decision para
+// garantir idempotência: duplicatas retornam EXATAMENTE a mesma decisão.
+type GuardDecision = {
+  handoff_required: boolean;
+  handoff_reason: string | null;
+  notify_required: boolean;
+  notification_phone: string | null;
+  notification_summary: string | null;
+  immediate_reply: boolean;
+  immediate_reason: string | null;
+  resume_agent: boolean;
+  patient_reply: string | null;
+  computed_at: string;
+  version: 2;
+};
+
+const EMPTY_DECISION: GuardDecision = {
+  handoff_required: false,
+  handoff_reason: null,
+  notify_required: false,
+  notification_phone: null,
+  notification_summary: null,
+  immediate_reply: false,
+  immediate_reason: null,
+  resume_agent: true,
+  patient_reply: null,
+  computed_at: "",
+  version: 2,
+};
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
