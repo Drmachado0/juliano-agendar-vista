@@ -38,9 +38,6 @@ const STATUS_VALIDOS = [
   "YAG_LASER",
 ] as const;
 
-const TERMINAIS_CRM = ["ATENDIDO", "CANCELADO", "COMPARECEU"];
-const TERMINAIS_FUNIL = ["cancelado", "compareceu", "faltou"];
-
 const BodySchema = z
   .object({
     agendamento_id: z.string().uuid().optional(),
@@ -58,11 +55,6 @@ function json(body: unknown, status = 200) {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
