@@ -134,6 +134,16 @@ describe("n8n-registrar-envio (proxy legado)", () => {
     expect(LEGACY).toMatch(/status:\s*upstream\.status/);
     expect(LEGACY).toMatch(/upstream\.text\(\)/);
   });
+  it("default tipo_mensagem = 'bot_agente' (nunca confirmacao_automatica)", () => {
+    expect(LEGACY).toMatch(/tipo_mensagem:\s*raw\.tipo_mensagem\s*\?\?\s*["']bot_agente["']/);
+    // Não pode ter default legado que altere funil
+    expect(LEGACY).not.toMatch(/\?\?\s*["']confirmacao_automatica["']/);
+  });
+  it("proxy_upstream_unreachable não vaza detalhe bruto do erro", () => {
+    expect(LEGACY).not.toMatch(/detail:\s*\(e as Error\)\.message/);
+    expect(LEGACY).toMatch(/"error":\s*"proxy_upstream_unreachable"|error:\s*["']proxy_upstream_unreachable["']/);
+  });
+
 });
 
 describe("config.toml — verify_jwt", () => {

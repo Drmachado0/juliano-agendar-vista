@@ -3,8 +3,10 @@
 // DEPRECATED: use `registrar-envio-out-n8n`. Mantido como PROXY puro para
 // evitar drift de regras. Encaminha o mesmo x-n8n-secret e x-request-id,
 // mapeia `status_envio` legado (falha_envio -> erro) e preserva status HTTP
-// e body do canônico.
-// ============================================================================
+// e body do canônico. Default seguro `tipo_mensagem='bot_agente'` — payload
+// legado sem tipo NUNCA altera confirmation_* (só confirmacao_automatica/
+// confirmacao_consulta com status=enviado/entregue/lido alteram o funil).
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const corsHeaders = {
@@ -54,8 +56,10 @@ serve(async (req) => {
     telefone: raw.telefone,
     agendamento_id: raw.agendamento_id ?? null,
     conteudo: raw.conteudo,
-    // default legado sempre foi confirmacao_automatica; preserva se ausente
-    tipo_mensagem: raw.tipo_mensagem ?? "confirmacao_automatica",
+    // Default seguro: bot_agente. Nunca voltar a confirmacao_automatica —
+    // isso alteraria confirmation_* em payloads legados sem tipo explícito.
+    tipo_mensagem: raw.tipo_mensagem ?? "bot_agente",
+
     canal: raw.canal ?? "whatsapp_manychat",
     provider: (raw as any).provider,
     provider_message_id: raw.provider_message_id ?? null,
@@ -98,15 +102,19 @@ serve(async (req) => {
       body: JSON.stringify(canonicalBody),
     });
   } catch (e) {
+    // Log interno sem PII; resposta sem detalhe bruto do erro.
+    console.error(JSON.stringify({
+      source: "n8n-registrar-envio",
+      event: "proxy_upstream_unreachable",
+      request_id: rid,
+      err_name: (e as Error).name ?? null,
+    }));
     return new Response(
-      JSON.stringify({
-        error: "proxy_upstream_unreachable",
-        request_id: rid,
-        detail: (e as Error).message,
-      }),
+      JSON.stringify({ error: "proxy_upstream_unreachable", request_id: rid }),
       { status: 502, headers: { ...outHeaders, "Content-Type": "application/json" } },
     );
   }
+
 
   // Preserva status/body e propaga x-request-id do upstream se vier
   const upstreamText = await upstream.text();
