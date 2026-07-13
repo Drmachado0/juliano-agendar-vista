@@ -305,13 +305,13 @@ async function executarCriarAgendamento(
     }),
   ]);
 
-  const notificacoes_ok = results.every((r) => r.status === "fulfilled");
+  const { ok: notificacoes_ok, outcomes } = classifyNotificationResults(results);
   if (!notificacoes_ok) {
-    for (const r of results) {
-      if (r.status === "rejected") {
+    for (const o of outcomes) {
+      if (!o.ok) {
         console.warn("[mcp criar_agendamento] notificacao_falhou", {
           agendamento_id: agendamentoId,
-          reason_code: (r.reason as any)?.name ?? "unknown",
+          code: o.code,
         });
       }
     }
