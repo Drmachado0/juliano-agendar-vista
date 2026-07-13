@@ -67,6 +67,22 @@ export function getNomeDiaSemana(dia: number): string {
   return DIAS_SEMANA[dia] || "Desconhecido";
 }
 
+// ─────────────────────────────────────────────
+// Timezone America/Belem (UTC-3, sem DST)
+// ─────────────────────────────────────────────
+export function nowBelemDateStr(now: Date = new Date()): string {
+  // desloca -3h e usa componentes UTC
+  const t = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  const y = t.getUTCFullYear();
+  const m = String(t.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(t.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+export function nowBelemMs(now: Date = new Date()): number {
+  // instante atual em ms UTC; comparações abaixo usam data_hora com offset -03:00
+  return now.getTime();
+}
+
 /** Resolve nome do local para clinica_id */
 export function resolverClinica(local: string): { id: string; nome: string } | null {
   const key = local.toLowerCase().trim()
