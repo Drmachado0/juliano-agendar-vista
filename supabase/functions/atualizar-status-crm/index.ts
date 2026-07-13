@@ -59,17 +59,11 @@ function json(body: unknown, status = 200) {
   });
 }
 
-export function isCrmTerminal(status: string | null | undefined): boolean {
-  return TERMINAIS_CRM.includes(String(status ?? "").toUpperCase());
-}
-export function isFunilTerminal(status: string | null | undefined): boolean {
-  return TERMINAIS_FUNIL.includes(String(status ?? "").toLowerCase());
-}
-export function isRegistroAtivo(r: { is_sandbox?: boolean | null; status_crm?: string | null; status_funil?: string | null }): boolean {
-  if (r.is_sandbox === true) return false;
-  if (isCrmTerminal(r.status_crm)) return false;
-  if (isFunilTerminal(r.status_funil)) return false;
-  return true;
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 async function resolveTelefoneCanonico(

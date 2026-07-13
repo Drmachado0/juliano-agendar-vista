@@ -13,7 +13,7 @@ import {
   isCrmTerminal,
   isFunilTerminal,
   isRegistroAtivo,
-} from "../../../supabase/functions/atualizar-status-crm/index.ts";
+} from "../../../supabase/functions/_shared/statusTerminais.ts";
 
 const NOVO_LEAD = {
   id: "c08dde0b-510d-482f-9512-519cd0ad34de",
