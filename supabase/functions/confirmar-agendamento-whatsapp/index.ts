@@ -100,11 +100,13 @@ serve(async (req) => {
         raw: agendamentoData?.nome_completo,
       });
       if (agendamentoId) {
+        // Escala para humano: pausa bot por 24h e marca status de confirmação
+        const pausaAte = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
         await supabase.from("agendamentos").update({
           confirmation_status: "bloqueado_nome_invalido",
           confirmation_sent_at: new Date().toISOString(),
-          precisa_humano: true,
-          motivo_humano: `nome_paciente_invalido:${nomeCheck.motivo}`,
+          bot_pausado_ate: pausaAte,
+          bot_pausa_motivo: `nome_paciente_invalido:${nomeCheck.motivo}`,
         }).eq("id", agendamentoId).then(() => {}, () => {});
         // registra em system_logs para alerta/monitoramento
         await supabase.from("system_logs").insert({
