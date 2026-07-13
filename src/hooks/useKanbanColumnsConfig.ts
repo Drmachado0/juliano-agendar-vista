@@ -92,5 +92,6 @@ export function normalizeStatusFunil(raw: string | null | undefined): string {
   if (v === "confirmado") return "agendado";
   if (v === "finalizado" || v === "atendido") return "compareceu";
   if (v === "bloqueio") return "__hidden__";
+  if (v === "exames_hgp" || v === "exames-hgp") return "exames_hgp";
   return v;
 }
