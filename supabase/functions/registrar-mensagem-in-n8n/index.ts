@@ -34,7 +34,6 @@ import {
 import {
   classificarExamePreco,
   composePatientReplyPrecoExame,
-  replyPrecoExameTabelado,
   REPLY_EXAME_NAO_INFORMADO,
 } from "../_shared/examesPrecoGuard.ts";
 import { isRegistroAtivo } from "../_shared/statusTerminais.ts";
