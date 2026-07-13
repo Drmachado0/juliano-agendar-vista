@@ -160,7 +160,24 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    console.log(`[criar-agendamento] Received data for: ${body.nome_completo}`);
+    console.log(`[criar-agendamento] Received data for: ${body?.nome_completo}`);
+
+    // Guard nome inválido/placeholder ANTES de qualquer validação/insert.
+    // Impede o bug em que o MCP $fromAI enviava "undefined" e o agendamento era criado.
+    const nomeCheck = assertNomePacienteValido(body?.nome_completo);
+    if (!nomeCheck.ok) {
+      console.warn(`[criar-agendamento] nome_paciente_invalido motivo=${nomeCheck.motivo} raw=${JSON.stringify(body?.nome_completo)}`);
+      return new Response(
+        JSON.stringify({
+          error: "Nome do paciente inválido ou ausente. Peça o nome completo antes de agendar.",
+          code: "nome_paciente_invalido",
+          motivo: nomeCheck.motivo,
+        }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    // Normaliza para o restante do fluxo
+    body.nome_completo = nomeCheck.nome;
 
     // Validate input
     const validation = validateAgendamento(body);
