@@ -20,6 +20,14 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { requireN8nSecret, unauthorizedResponse, requestId } from "../_shared/authGuards.ts";
 import { maskTelefone } from "../_shared/telefoneCanonico.ts";
+import {
+  detectarAssuntoExames,
+  buildHandoffExamesSummary,
+  HANDOFF_EXAMES_REPLY,
+  HANDOFF_NOTIFICATION_PHONE,
+} from "../_shared/handoffExamesGuard.ts";
+import { detectarValorConsulta } from "../_shared/respostasImediatasGuard.ts";
+import { isRegistroAtivo } from "../_shared/statusTerminais.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
