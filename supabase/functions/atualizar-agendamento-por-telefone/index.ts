@@ -237,7 +237,7 @@ serve(async (req) => {
   }
 
   if (camposAtualizados.length === 0 && !promocao) {
-    return json({ agendamento_id: match.id, campos_atualizados: [], request_id: rid });
+    return json({ agendamento_id: match.id, campos_atualizados: [], campos_ignorados: camposIgnorados, request_id: rid });
   }
 
   updates.updated_at = new Date().toISOString();
@@ -257,7 +257,7 @@ serve(async (req) => {
     acao: "atualizar_por_telefone_n8n",
     status_anterior: null,
     status_novo: null,
-    detalhes: { campos_atualizados: camposAtualizados, telefone_mask: maskTelefone(body.telefone_whatsapp), request_id: rid },
+    detalhes: { campos_atualizados: camposAtualizados, campos_ignorados: camposIgnorados, telefone_mask: maskTelefone(body.telefone_whatsapp), request_id: rid },
   });
 
   if (promocao) {
@@ -276,6 +276,7 @@ serve(async (req) => {
   return json({
     agendamento_id: match.id,
     campos_atualizados: camposAtualizados,
+    campos_ignorados: camposIgnorados,
     status_funil: promocao?.para ?? statusAtual,
     promovido: !!promocao,
     request_id: rid,
