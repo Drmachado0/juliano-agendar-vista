@@ -139,12 +139,31 @@ Fluxo do assistente:
 - Janela de **45 minutos** — mensagens fora disso não geram handoff.
 - Só herda handoff via histórico se a mensagem atual for uma **continuação contextual** (`isMensagemContinuacao`): respostas curtas (`sim`, `não`, `ok`), retomadas (`já fiz`, `e pelo plano?`, `no HGP`, `como faço?`, `onde faço?`, `prefiro quando estiver pronto`, `fico no aguardo`). Uma mensagem nova e independente (`quero agendar uma consulta`) **não** herda handoff antigo.
 
-## Idempotência da decisão (rev-2)
+## Idempotência da decisão (rev-3)
 
-- Após computar os guards, a decisão completa é persistida em `mensagens_whatsapp.payload.guard_decision` (`version=2`).
-- Duplicatas por `mensagem_externa_id` (early return ou race no UNIQUE) **carregam a mesma decisão persistida** e devolvem os mesmos campos (`handoff_required`, `notification_summary`, `patient_reply`, `resume_agent`, …), sempre com `duplicada:true`.
-- **Nunca reenviam, re-logam nem re-escalam.** Se um registro legado não tiver `guard_decision`, ele é reavaliado UMA vez de forma segura (sem log, sem transição de status/bot) e a decisão passa a ser persistida.
-- Auditoria em `system_logs` (`category="whatsapp"`, `source="registrar-mensagem-in-n8n"`, `message ∈ {"handoff_exames","immediate_reply_valor_consulta"}`) só ocorre no primeiro cálculo.
+- Após computar os guards, a decisão completa é persistida em `mensagens_whatsapp.payload.guard_decision` (`version=3`).
+- Decisões `version<3` são invalidadas automaticamente para forçar recomputo com as novas regras de preço tabelado.
+- Duplicatas por `mensagem_externa_id` **carregam a mesma decisão persistida** e devolvem os mesmos campos, sempre com `duplicada:true`.
+- **Nunca reenviam, re-logam nem re-escalam.** Registros legados sem `guard_decision` v3 são reavaliados UMA vez de forma segura (sem log, sem transição de status/bot) e a decisão passa a ser persistida.
+- Auditoria em `system_logs` (`category="whatsapp"`, `source="registrar-mensagem-in-n8n"`, `message ∈ {"handoff_exames","immediate_reply_valor_consulta","immediate_reply_valor_exame_tabelado","immediate_reply_exame_nao_informado"}`) só ocorre no primeiro cálculo.
+
+## Exames tabelados (rev-3)
+
+Preço fixo publicável pelo bot, sem handoff, sem pausar bot, sem alterar status:
+
+| Exame                  | Preço      |
+| ---------------------- | ---------- |
+| Retinografia           | R$ 300,00  |
+| Mapeamento de retina   | R$ 300,00  |
+| Biometria              | R$ 300,00  |
+| Paquimetria            | R$ 300,00  |
+
+Regras determinísticas em `_shared/examesPrecoGuard.ts`:
+- reconhece sem acento e sem distinção de caixa (`Retinografia`, `RETINOGRAFIA`, `paquimetria`);
+- reconhece o nome isolado (paciente responde `retinografia` após bot perguntar) até 4 palavras;
+- `mapeamento` isolado equivale a `mapeamento de retina`;
+- `ecobiometria` NÃO casa como `biometria` tabelada (vai para handoff);
+- se aparecer contexto operacional (`resultado`, `laudo`, `cobre`, `plano`, `convênio`, `agendar`, `marcar`, `remarcar`, `local`, `onde`, `preparo`, `retorno`, `guia`, `pedido`, `autorização`, `fazer`, `realizar`) junto com nome do exame tabelado, é HANDOFF HGP mesmo assim.
 
 ## VALOR DA CONSULTA — retomada sem 2ª IA (rev-2)
 
