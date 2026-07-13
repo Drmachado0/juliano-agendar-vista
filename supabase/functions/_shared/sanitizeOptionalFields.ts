@@ -32,6 +32,62 @@ export function sanitizeNomeCompleto(v: unknown): string | null {
   return t;
 }
 
+/**
+ * Nomes genéricos/placeholder que jamais devem ser aceitos como nome real do paciente
+ * em criação/confirmação de agendamento. Comparação case-insensitive, ignorando espaços.
+ * Bug 2026-07-13: MCP $fromAI enviou "undefined" e a rotina de confirmação disparou
+ * mensagem "Paciente: undefined" — este guard bloqueia isso na origem.
+ */
+const NOMES_PACIENTE_PROIBIDOS = new Set([
+  "lead whatsapp",
+  "lead",
+  "paciente",
+  "novo lead",
+  "novo paciente",
+  "sem nome",
+  "desconhecido",
+  "teste",
+  "test",
+  "user",
+  "usuario",
+  "usuário",
+  "cliente",
+  "contato",
+]);
+
+export type NomePacienteInvalidoMotivo =
+  | "ausente"
+  | "placeholder"
+  | "curto_demais"
+  | "sem_letras"
+  | "generico";
+
+export interface NomePacienteResult {
+  ok: boolean;
+  motivo?: NomePacienteInvalidoMotivo;
+  nome?: string;
+}
+
+/**
+ * Valida se `raw` é um nome de paciente utilizável para criar/confirmar agendamento.
+ * Rejeita:
+ *  - vazio/null/undefined
+ *  - placeholders ("undefined", "null", "n/a", ...)
+ *  - strings < 2 chars ou sem letras
+ *  - nomes genéricos ("Paciente", "Lead WhatsApp", "Novo Lead", ...)
+ */
+export function assertNomePacienteValido(raw: unknown): NomePacienteResult {
+  if (raw === null || raw === undefined) return { ok: false, motivo: "ausente" };
+  if (typeof raw !== "string") return { ok: false, motivo: "ausente" };
+  const trimmed = raw.trim().replace(/\s+/g, " ");
+  if (trimmed.length === 0) return { ok: false, motivo: "ausente" };
+  if (PLACEHOLDERS.has(trimmed.toLowerCase())) return { ok: false, motivo: "placeholder" };
+  if (trimmed.length < 2) return { ok: false, motivo: "curto_demais" };
+  if (!/\p{L}/u.test(trimmed)) return { ok: false, motivo: "sem_letras" };
+  if (NOMES_PACIENTE_PROIBIDOS.has(trimmed.toLowerCase())) return { ok: false, motivo: "generico" };
+  return { ok: true, nome: trimmed };
+}
+
 /** Data ISO YYYY-MM-DD válida no calendário. */
 export function sanitizeDataNascimento(v: unknown): string | null {
   const t = sanitizeOptionalText(v);
