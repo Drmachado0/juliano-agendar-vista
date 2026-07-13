@@ -14,6 +14,7 @@ import { assertNomePacienteValido } from "../_shared/sanitizeOptionalFields.ts";
 import { telefoneCanonico, maskTelefone } from "../_shared/telefoneCanonico.ts";
 import { resolverClinica } from "../_shared/validarDisponibilidade.ts";
 import { isCrmTerminal, isFunilTerminal } from "../_shared/statusTerminais.ts";
+import { classifyNotificationResults } from "../_shared/classifyNotificationResults.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
