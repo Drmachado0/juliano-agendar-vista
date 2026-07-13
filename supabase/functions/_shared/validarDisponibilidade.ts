@@ -218,16 +218,27 @@ export async function listarHorariosDisponiveis(
     .select("clinica_id, hora_inicio, hora_fim")
     .eq("data", data);
 
-  // 3. Buscar agendamentos existentes nesta data (descontando o próprio, se for edição)
+  // 3. Buscar agendamentos existentes nesta data (descontando o próprio, se for edição).
+  //    Excluímos TODOS os status terminais reais (uppercase) e também a variante
+  //    'cancelado' minúscula legada — cancelados não ocupam slot.
   let agQuery = supabase
     .from("agendamentos")
-    .select("id, hora_agendamento, clinica_id")
-    .eq("data_agendamento", data)
-    .not("status_crm", "in", "(cancelado)");
+    .select("id, hora_agendamento, clinica_id, status_crm, status_funil, is_sandbox")
+    .eq("data_agendamento", data);
   if (excluirAgendamentoId) {
     agQuery = agQuery.neq("id", excluirAgendamentoId);
   }
-  const { data: agendamentos } = await agQuery;
+  const { data: agendamentosRaw } = await agQuery;
+  const TERMINAIS_UP = new Set(["CANCELADO", "ATENDIDO", "COMPARECEU", "FALTOU", "EXCLUIDO"]);
+  const TERMINAIS_LOW = new Set(["cancelado", "atendido", "compareceu", "faltou", "excluido"]);
+  const agendamentos = (agendamentosRaw || []).filter((a: any) => {
+    if (a.is_sandbox === true) return false;
+    const sc = String(a.status_crm ?? "").toUpperCase();
+    if (TERMINAIS_UP.has(sc)) return false;
+    const sf = String(a.status_funil ?? "").toLowerCase();
+    if (TERMINAIS_LOW.has(sf)) return false;
+    return true;
+  });
 
   const ocupados = new Set(
     (agendamentos || []).map((a: any) => {
