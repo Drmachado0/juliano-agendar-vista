@@ -102,15 +102,19 @@ serve(async (req) => {
       body: JSON.stringify(canonicalBody),
     });
   } catch (e) {
+    // Log interno sem PII; resposta sem detalhe bruto do erro.
+    console.error(JSON.stringify({
+      source: "n8n-registrar-envio",
+      event: "proxy_upstream_unreachable",
+      request_id: rid,
+      err_name: (e as Error).name ?? null,
+    }));
     return new Response(
-      JSON.stringify({
-        error: "proxy_upstream_unreachable",
-        request_id: rid,
-        detail: (e as Error).message,
-      }),
+      JSON.stringify({ error: "proxy_upstream_unreachable", request_id: rid }),
       { status: 502, headers: { ...outHeaders, "Content-Type": "application/json" } },
     );
   }
+
 
   // Preserva status/body e propaga x-request-id do upstream se vier
   const upstreamText = await upstream.text();
