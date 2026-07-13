@@ -85,8 +85,8 @@ describe("classificarExamePreco — falsos positivos", () => {
   });
 });
 
-describe("composePatientReplyPrecoExame — retomada por estado", () => {
-  it("adiciona próximo dado quando estado é conhecido", () => {
+describe("composePatientReplyPrecoExame — rev-4 (sem retomada, pivota para agendar HGP)", () => {
+  it("resposta contém preço, exame e oferta de agendamento; NÃO acrescenta próximo dado", () => {
     const r = composePatientReplyPrecoExame(
       "retinografia",
       "coletando_nome",
@@ -94,11 +94,14 @@ describe("composePatientReplyPrecoExame — retomada por estado", () => {
     );
     expect(r.reply).toContain("retinografia");
     expect(r.reply).toContain(VALOR_EXAME_TABELADO_TEXTO);
-    expect(r.reply).toContain(PROXIMO_DADO_POR_ESTADO.coletando_nome);
-    expect(r.hasRetomada).toBe(true);
+    expect(r.reply).toMatch(/HGP/);
+    expect(r.reply).toMatch(/agendar/i);
+    // Rev-4: não anexa mais o próximo dado; funil pivota para agendar exame.
+    expect(r.reply).not.toContain(PROXIMO_DADO_POR_ESTADO.coletando_nome);
+    expect(r.hasRetomada).toBe(false);
   });
 
-  it("apenas frase fixa quando estado desconhecido", () => {
+  it("mesma frase quando estado é desconhecido", () => {
     const r = composePatientReplyPrecoExame("biometria", null, PROXIMO_DADO_POR_ESTADO);
     expect(r.reply).toBe(replyPrecoExameTabelado("biometria"));
     expect(r.hasRetomada).toBe(false);
