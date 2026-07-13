@@ -141,7 +141,7 @@ serve(async (req) => {
   if (!match) {
     // Cria novo lead — NUNCA atualiza histórico/cancelado.
     const insertLead: Record<string, unknown> = {
-      nome_completo: body.nome_completo?.trim() || "Lead WhatsApp",
+      nome_completo: body.nome_completo || "Lead WhatsApp",
       telefone_whatsapp: body.telefone_whatsapp,
       tipo_atendimento: body.tipo_atendimento || "Consulta",
       local_atendimento: body.local_atendimento || "A definir",
@@ -153,9 +153,9 @@ serve(async (req) => {
       status_funil: "novo",
       origem: "whatsapp",
     };
-    if (body.observacoes_internas && body.observacoes_internas.trim().length > 0) {
+    if (body.observacoes_internas) {
       const stamp = new Date().toISOString().replace("T", " ").slice(0, 19);
-      insertLead.observacoes_internas = `[${stamp} · n8n] ${body.observacoes_internas.trim()}`;
+      insertLead.observacoes_internas = `[${stamp} · n8n] ${body.observacoes_internas}`;
     }
     const { data: novoLead, error: insErr } = await supabase
       .from("agendamentos")
@@ -172,12 +172,13 @@ serve(async (req) => {
       acao: "criar_lead_por_telefone_n8n",
       status_anterior: null,
       status_novo: "novo",
-      detalhes: { telefone_mask: maskTelefone(body.telefone_whatsapp), campos: Object.keys(insertLead), request_id: rid },
+      detalhes: { telefone_mask: maskTelefone(body.telefone_whatsapp), campos: Object.keys(insertLead), campos_ignorados: camposIgnorados, request_id: rid },
     });
 
     return json({
       agendamento_id: novoLead.id,
       campos_atualizados: Object.keys(insertLead),
+      campos_ignorados: camposIgnorados,
       lead_criado: true,
       request_id: rid,
     });
@@ -196,16 +197,17 @@ serve(async (req) => {
     "estado_atendimento",
   ];
   for (const k of passthrough) {
-    if (body[k] !== undefined && body[k] !== null && String(body[k]).length > 0) {
-      updates[k] = body[k];
+    const v = (body as Record<string, unknown>)[k];
+    if (typeof v === "string" && v.length > 0) {
+      updates[k] = v;
       camposAtualizados.push(k);
     }
   }
 
   // observacoes_internas: APPEND com timestamp
-  if (body.observacoes_internas && body.observacoes_internas.trim().length > 0) {
+  if (body.observacoes_internas) {
     const stamp = new Date().toISOString().replace("T", " ").slice(0, 19);
-    const linhaNova = `[${stamp} · n8n] ${body.observacoes_internas.trim()}`;
+    const linhaNova = `[${stamp} · n8n] ${body.observacoes_internas}`;
     const atual = (match as any).observacoes_internas;
     const base = atual && atual !== "[ENCRYPTED]" ? `${atual}\n` : "";
     updates.observacoes_internas = `${base}${linhaNova}`;
