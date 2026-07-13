@@ -35,6 +35,8 @@ import {
   classificarExamePreco,
   composePatientReplyPrecoExame,
   REPLY_EXAME_NAO_INFORMADO,
+  detalheCanonicoExame,
+  LOCAL_HGP_CANONICO,
 } from "../_shared/examesPrecoGuard.ts";
 import { isRegistroAtivo } from "../_shared/statusTerminais.ts";
 
@@ -51,7 +53,7 @@ type GuardDecision = {
   resume_agent: boolean;
   patient_reply: string | null;
   computed_at: string;
-  version: 3;
+  version: 4;
 };
 
 const EMPTY_DECISION: GuardDecision = {
@@ -65,7 +67,7 @@ const EMPTY_DECISION: GuardDecision = {
   resume_agent: true,
   patient_reply: null,
   computed_at: "",
-  version: 3,
+  version: 4,
 };
 
 const corsHeaders = {
