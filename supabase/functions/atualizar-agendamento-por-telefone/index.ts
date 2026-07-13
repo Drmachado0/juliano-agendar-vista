@@ -17,6 +17,7 @@ import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { requireN8nSecret, unauthorizedResponse, requestId } from "../_shared/authGuards.ts";
 import { telefoneCanonico as telefoneCanonicoLocal, maskTelefone } from "../_shared/telefoneCanonico.ts";
 import { isFunilTerminal, isRegistroAtivo } from "../_shared/statusTerminais.ts";
+import { sanitizeOptionalPayload } from "../_shared/sanitizeOptionalFields.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,20 +26,22 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-
-
-
+// Schema mínimo: só telefone_whatsapp é obrigatório e validado por formato.
+// Campos opcionais são higienizados fora do zod (podem vir como "undefined"/"null"
+// vindos do $fromAI do n8n/ManyChat). Aplicamos limites de tamanho após sanitizar.
 const BodySchema = z.object({
   telefone_whatsapp: z.string().min(8),
-  nome_completo: z.string().min(1).max(200).optional(),
-  convenio: z.string().max(100).optional(),
-  tipo_atendimento: z.string().max(50).optional(),
-  local_atendimento: z.string().max(200).optional(),
-  detalhe_exame_ou_cirurgia: z.string().max(500).optional(),
-  observacoes_internas: z.string().max(2000).optional(),
-  data_nascimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  estado_atendimento: z.string().max(60).optional(),
-});
+}).passthrough();
+
+const LIMITES: Record<string, number> = {
+  nome_completo: 200,
+  convenio: 100,
+  tipo_atendimento: 50,
+  local_atendimento: 200,
+  detalhe_exame_ou_cirurgia: 500,
+  observacoes_internas: 2000,
+  estado_atendimento: 60,
+};
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
