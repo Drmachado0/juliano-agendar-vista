@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export type KanbanColuna =
   | 'NOVO LEAD'
   | 'PRECISA DE HUMANO'
+  | 'EXAMES_HGP'
   | 'AGUARDANDO'
   | 'CLINICOR'
   | 'HGP'
