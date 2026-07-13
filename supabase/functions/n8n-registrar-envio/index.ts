@@ -3,8 +3,10 @@
 // DEPRECATED: use `registrar-envio-out-n8n`. Mantido como PROXY puro para
 // evitar drift de regras. Encaminha o mesmo x-n8n-secret e x-request-id,
 // mapeia `status_envio` legado (falha_envio -> erro) e preserva status HTTP
-// e body do canônico.
-// ============================================================================
+// e body do canônico. Default seguro `tipo_mensagem='bot_agente'` — payload
+// legado sem tipo NUNCA altera confirmation_* (só confirmacao_automatica/
+// confirmacao_consulta com status=enviado/entregue/lido alteram o funil).
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const corsHeaders = {
