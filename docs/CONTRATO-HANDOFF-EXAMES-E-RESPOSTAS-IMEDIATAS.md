@@ -100,11 +100,39 @@ Fluxo do assistente:
 - Guard de exames não dispara em: `"exame de consciência"`, `"exame nacional da OAB"`, perguntas genéricas de convênio (`"meu convênio é Bradesco"`) sem menção a exame.
 - Guard de valor não dispara para cirurgia/exame/lente/YAG/refrativa/LASIK/PRK.
 
-## Idempotência
+## Janela de contexto para EXAMES (rev-2)
 
-- `registrar-mensagem-in-n8n` é idempotente por `mensagem_externa_id` (UNIQUE parcial). Reprocessos retornam a decisão anterior, com `duplicada:true`, sem duplicar logs de auditoria.
-- Auditoria dos guards vai para `system_logs` (`category="whatsapp"`, `source="registrar-mensagem-in-n8n"`, `message ∈ {"handoff_exames","immediate_reply_valor_consulta"}`).
-- Handoff nunca reativa registro terminal/sandbox: só altera `status_crm`/`bot_ativo` se `isRegistroAtivo(agendamento)` for `true`. Mesmo quando não altera, o log de handoff é registrado.
+- Só considera mensagens IN **anteriores** à atual (exclusão por `id` **e** por `created_at`).
+- Janela de **45 minutos** — mensagens fora disso não geram handoff.
+- Só herda handoff via histórico se a mensagem atual for uma **continuação contextual** (`isMensagemContinuacao`): respostas curtas (`sim`, `não`, `ok`), retomadas (`já fiz`, `e pelo plano?`, `no HGP`, `como faço?`, `onde faço?`, `prefiro quando estiver pronto`, `fico no aguardo`). Uma mensagem nova e independente (`quero agendar uma consulta`) **não** herda handoff antigo.
+
+## Idempotência da decisão (rev-2)
+
+- Após computar os guards, a decisão completa é persistida em `mensagens_whatsapp.payload.guard_decision` (`version=2`).
+- Duplicatas por `mensagem_externa_id` (early return ou race no UNIQUE) **carregam a mesma decisão persistida** e devolvem os mesmos campos (`handoff_required`, `notification_summary`, `patient_reply`, `resume_agent`, …), sempre com `duplicada:true`.
+- **Nunca reenviam, re-logam nem re-escalam.** Se um registro legado não tiver `guard_decision`, ele é reavaliado UMA vez de forma segura (sem log, sem transição de status/bot) e a decisão passa a ser persistida.
+- Auditoria em `system_logs` (`category="whatsapp"`, `source="registrar-mensagem-in-n8n"`, `message ∈ {"handoff_exames","immediate_reply_valor_consulta"}`) só ocorre no primeiro cálculo.
+
+## VALOR DA CONSULTA — retomada sem 2ª IA (rev-2)
+
+Quando `valor_consulta` casa, `registrar-mensagem-in-n8n` lê `agendamentos.estado_atendimento` do card e devolve `patient_reply = "A consulta particular … R$ 300,00." + próximo campo pendente`, com `resume_agent:false`. O n8n envia UMA mensagem e **não chama LLM neste turno**.
+
+Mapa determinístico (`PROXIMO_DADO_POR_ESTADO`):
+
+| `estado_atendimento`         | Próximo campo pedido               |
+| ---------------------------- | ---------------------------------- |
+| `coletando_nome`             | Nome completo                      |
+| `coletando_data_nascimento`  | Data de nascimento (dd/mm/aaaa)    |
+| `coletando_tipo_atendimento` | Particular ou convênio             |
+| `coletando_convenio`         | Nome do convênio                   |
+| `coletando_local`            | Clinicor ou HGP                    |
+| `oferecendo_datas`           | Data de preferência                |
+| `oferecendo_horarios`        | Horário de preferência             |
+| `aguardando_confirmacao`     | "Posso confirmar seu agendamento?" |
+
+Estado ausente/desconhecido → devolve apenas a frase fixa, `resume_agent:false`.
+
+Handoff (exames) permanece com `resume_agent:false` também: o `patient_reply` já resolve o turno.
 
 ## Não faz
 
