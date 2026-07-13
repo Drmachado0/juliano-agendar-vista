@@ -39,6 +39,10 @@ import {
   LOCAL_HGP_CANONICO,
 } from "../_shared/examesPrecoGuard.ts";
 import { isRegistroAtivo } from "../_shared/statusTerminais.ts";
+import {
+  resolveNextEstadoAtendimento,
+  precisaRecomputar,
+} from "../_shared/estadoAtendimentoResolver.ts";
 
 // Estrutura persistida em mensagens_whatsapp.payload.guard_decision para
 // garantir idempotência: duplicatas retornam EXATAMENTE a mesma decisão.
