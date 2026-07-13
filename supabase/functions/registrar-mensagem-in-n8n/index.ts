@@ -52,7 +52,7 @@ type GuardDecision = {
   resume_agent: boolean;
   patient_reply: string | null;
   computed_at: string;
-  version: 2;
+  version: 3;
 };
 
 const EMPTY_DECISION: GuardDecision = {
@@ -66,7 +66,7 @@ const EMPTY_DECISION: GuardDecision = {
   resume_agent: true,
   patient_reply: null,
   computed_at: "",
-  version: 2,
+  version: 3,
 };
 
 const corsHeaders = {
