@@ -302,6 +302,7 @@ export interface HandoffSummaryInput {
   statusCrm?: string | null;
   statusFunil?: string | null;
   localAtendimento?: string | null;
+  exameMencionado?: string | null;
 }
 
 export function buildHandoffExamesSummary(input: HandoffSummaryInput): string {
@@ -309,10 +310,13 @@ export function buildHandoffExamesSummary(input: HandoffSummaryInput): string {
   const nomeTxt = nome ? nome : "Paciente sem nome cadastrado";
   const trecho = (input.mensagemAtual || "").trim().slice(0, 240);
   const linhas: string[] = [
-    `Handoff automático — assunto: EXAMES`,
+    `Handoff automático — EXAMES (avaliação HGP)`,
     `Paciente: ${nomeTxt} (${input.telefoneMascarado})`,
     `Última mensagem: "${trecho}"`,
   ];
+  if (input.exameMencionado) {
+    linhas.push(`Exame mencionado: ${input.exameMencionado}`);
+  }
   if (input.matchedInHistory) {
     linhas.push(`Detecção via histórico recente (mensagens IN anteriores).`);
   }
