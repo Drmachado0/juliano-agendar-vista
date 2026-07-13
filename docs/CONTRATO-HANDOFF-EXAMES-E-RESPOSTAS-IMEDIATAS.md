@@ -1,6 +1,16 @@
 # Contrato — Handoff automático de EXAMES e Respostas imediatas
 
-**Revisado:** 2026-07-13 (rev-3: preço de exames tabelados + handoff HGP renomeado + guard_decision v3)
+**Revisado:** 2026-07-13 (rev-4: nova etapa canônica **EXAMES_HGP** no CRM · quatro exames tabelados agendáveis automaticamente no HGP · handoff HGP passa a gravar `status_crm=EXAMES_HGP` (não mais `PRECISA_DE_HUMANO`) · `guard_decision.version=4`)
+
+> ### Rev-4 — o que mudou
+>
+> - Novo status canônico `EXAMES_HGP` (coluna "🧪 EXAMES — HGP" no Kanban) para todo o funil de exames, seja pergunta de preço tabelado (bot ativo) ou handoff (bot pausado).
+> - **Preço tabelado** (retinografia · mapeamento de retina · biometria · paquimetria = R$ 300,00) responde: *"O valor da <exame> é R$ 300,00. Esse exame é realizado somente no HGP. Posso te ajudar a agendar?"* e converte o card: `tipo_atendimento=Exame`, `detalhe_exame_ou_cirurgia=<nome canônico>`, `local_atendimento=Hospital Geral de Paragominas`, `bot_ativo=true`. `"sim/pode/quero..."` continua o funil normal (data → hora → confirmação), reusando `listar-datas-disponiveis`/`listar-horarios-disponiveis` (que já filtram por `local_atendimento`) — nenhum agendamento novo mistura Clinicor/Belém.
+> - **Handoff genérico** (OCT, campo visual, resultado, autorização etc.) grava `status_crm=EXAMES_HGP`, `bot_ativo=false`, `estado_atendimento=aguardando_humano` — não usa mais `PRECISA_DE_HUMANO`.
+> - Guarda contra herança: se a última pergunta do histórico foi de preço tabelado, o `"sim"` de continuação **não** cai no handoff genérico.
+> - `guard_decision.version` incrementado para 4 — invalida cache das decisões v3 automaticamente.
+> - Confirmação por WhatsApp usa `rotulo_atendimento` derivado (`exame de Retinografia` vs `consulta`).
+> - Migração idempotente aplicada exclusivamente ao card `ff5ee055-58fe-40ca-a7df-3ddcdd661177` (Retinografia). Os outros 8 achados históricos permanecem intactos.
 
 ## Objetivo
 

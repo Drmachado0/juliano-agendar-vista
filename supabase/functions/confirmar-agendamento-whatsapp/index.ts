@@ -179,12 +179,22 @@ serve(async (req) => {
     const horaFmt = formatarHora(agendamentoData.hora_agendamento);
     const linkStatus = agendamentoId ? `https://drjulianomachado.com/status/${agendamentoId}` : undefined;
 
+    // Rev-4: quando tipo_atendimento="Exame", o template deve dizer "exame"
+    // e opcionalmente o nome do exame (detalhe_exame_ou_cirurgia).
+    const ehExame = /^exame$/i.test(String(agendamentoData.tipo_atendimento ?? "").trim());
+    const detalheExame = String(agendamentoData.detalhe_exame_ou_cirurgia ?? "").trim();
+    const rotuloAtendimento = ehExame
+      ? (detalheExame ? `exame de ${detalheExame}` : "exame")
+      : String(agendamentoData.tipo_atendimento ?? "consulta").toLowerCase();
+
     const mensagem = await gerarMensagemDoTemplate('confirmacao_agendamento', {
       nome: agendamentoData.nome_completo,
       data: dataFmt,
       hora: horaFmt,
       local: agendamentoData.local_atendimento,
       tipo_atendimento: agendamentoData.tipo_atendimento,
+      rotulo_atendimento: rotuloAtendimento,
+      detalhe_exame: detalheExame,
       link_status: linkStatus,
     });
 
@@ -218,6 +228,8 @@ serve(async (req) => {
       hora: horaFmt,
       local: agendamentoData.local_atendimento,
       tipo: agendamentoData.tipo_atendimento ?? '',
+      rotulo_atendimento: rotuloAtendimento,
+      detalhe_exame: detalheExame,
       convenio: agendamentoData.convenio ?? '',
       nascimento: nascimentoFmt,
       link_status: linkStatus ?? '',
