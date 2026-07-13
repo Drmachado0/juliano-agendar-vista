@@ -84,7 +84,8 @@ async function classificarIntencao(
   const systemPrompt = `Você é um classificador de intenção para conversas de WhatsApp de uma clínica oftalmológica.
 Categorias possíveis: ${INTENCOES.join(", ")}.
 Regras:
-- "agendar": paciente quer marcar uma consulta/exame/cirurgia nova.
+- "agendar": paciente quer marcar uma CONSULTA nova (nunca exame; exames vão para "exames").
+- "exames": qualquer menção a exame(s) — pedido, guia, agendamento, local, autorização, cobertura, resultado, laudo, retorno com exames. NÃO tratar como agendar.
 - "remarcar": paciente já tem agendamento e quer trocar data/hora.
 - "cancelar": paciente quer desmarcar.
 - "confirmar_presenca": confirmando ou negando presença em consulta marcada.
