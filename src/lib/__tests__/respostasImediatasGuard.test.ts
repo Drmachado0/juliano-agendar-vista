@@ -53,3 +53,37 @@ describe("reforcarProximoDadoPendente", () => {
     expect(reforcarProximoDadoPendente(VALOR_CONSULTA_REPLY, null)).toBe(VALOR_CONSULTA_REPLY);
   });
 });
+
+describe("composePatientReplyValor — mapa determinístico", () => {
+  it("coletando_nome pede nome completo após frase de valor", () => {
+    const r = composePatientReplyValor("coletando_nome");
+    expect(r.reply).toContain(VALOR_CONSULTA_TEXTO);
+    expect(r.reply).toContain(PROXIMO_DADO_POR_ESTADO.coletando_nome);
+    expect(r.hasRetomada).toBe(true);
+    expect(r.estadoUsado).toBe("coletando_nome");
+  });
+
+  it("oferecendo_datas pede data de preferência", () => {
+    const r = composePatientReplyValor("oferecendo_datas");
+    expect(r.reply).toContain(PROXIMO_DADO_POR_ESTADO.oferecendo_datas);
+    expect(r.hasRetomada).toBe(true);
+  });
+
+  it("estado desconhecido devolve apenas a frase fixa", () => {
+    const r = composePatientReplyValor("foo_bar_baz");
+    expect(r.reply).toBe(VALOR_CONSULTA_REPLY);
+    expect(r.hasRetomada).toBe(false);
+    expect(r.estadoUsado).toBe(null);
+  });
+
+  it("null/undefined devolve apenas a frase fixa", () => {
+    expect(composePatientReplyValor(null).reply).toBe(VALOR_CONSULTA_REPLY);
+    expect(composePatientReplyValor(undefined).reply).toBe(VALOR_CONSULTA_REPLY);
+  });
+
+  it("é idempotente para o mesmo estado", () => {
+    const a = composePatientReplyValor("aguardando_confirmacao");
+    const b = composePatientReplyValor("aguardando_confirmacao");
+    expect(a).toEqual(b);
+  });
+});
