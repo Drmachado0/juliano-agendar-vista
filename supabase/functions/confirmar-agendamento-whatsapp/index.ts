@@ -6,6 +6,7 @@ import { gerarMensagemDoTemplate, formatarData, formatarHora } from "../_shared/
 import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
 import { isBotPaused, isKnownInvalidWhatsapp } from "../_shared/whatsappGuards.ts";
 import { podeEnviarOutbound, LIMITES_PADRAO } from "../_shared/rateLimitOutbound.ts";
+import { assertNomePacienteValido } from "../_shared/sanitizeOptionalFields.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -88,6 +89,50 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Guard nome inválido/placeholder: NUNCA gerar/disparar "Paciente: undefined".
+    // Escala para humano marcando o agendamento (se houver id) e devolve erro monitorável.
+    const nomeCheck = assertNomePacienteValido(agendamentoData?.nome_completo);
+    if (!nomeCheck.ok) {
+      console.error("[ConfirmarWhatsApp] BLOQUEADO nome_paciente_invalido", {
+        motivo: nomeCheck.motivo,
+        agendamento_id: agendamentoId,
+        raw: agendamentoData?.nome_completo,
+      });
+      if (agendamentoId) {
+        // Escala para humano: pausa bot por 24h e marca status de confirmação
+        const pausaAte = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        await supabase.from("agendamentos").update({
+          confirmation_status: "bloqueado_nome_invalido",
+          confirmation_sent_at: new Date().toISOString(),
+          bot_pausado_ate: pausaAte,
+          bot_pausa_motivo: `nome_paciente_invalido:${nomeCheck.motivo}`,
+        }).eq("id", agendamentoId).then(() => {}, () => {});
+        // registra em system_logs para alerta/monitoramento
+        await supabase.from("system_logs").insert({
+          level: "error",
+          category: "whatsapp",
+          source: "confirmar-agendamento-whatsapp",
+          message: "confirmacao_bloqueada_nome_invalido",
+          agendamento_id: agendamentoId,
+          details: {
+            motivo: nomeCheck.motivo,
+            nome_raw: agendamentoData?.nome_completo ?? null,
+          },
+        }).then(() => {}, () => {});
+      }
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Nome do paciente inválido — confirmação não enviada. Escalado para humano.",
+          code: "nome_paciente_invalido",
+          motivo: nomeCheck.motivo,
+        }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    agendamentoData.nome_completo = nomeCheck.nome!;
+
 
     // ===== Guards (mantidos) =====
     const liberado = await envioAutomaticoLiberado(supabase);
