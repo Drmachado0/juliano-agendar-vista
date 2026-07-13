@@ -15,7 +15,7 @@ const src = readFileSync(
 
 describe("listarHorariosDisponiveis — fail-closed em erros de query", () => {
   it("captura errB de bloqueios_agenda (não descarta com destructuring parcial)", () => {
-    expect(src).toMatch(/from\("bloqueios_agenda"\)[\s\S]{0,300}error:\s*errB/);
+    expect(src).toMatch(/error:\s*errB\s*\}\s*=\s*await\s+supabase[\s\S]{0,200}from\("bloqueios_agenda"\)/);
   });
 
   it("em errB retorna [] e loga 'bloqueios_err' com apenas code (sem PII)", () => {
