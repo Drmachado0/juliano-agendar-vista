@@ -236,7 +236,7 @@ export function detectarAssuntoExames(
   if (atual.matched) {
     return {
       matched: true,
-      reason: "assunto_exames",
+      reason: "exame_avaliacao_hgp",
       hits: atual.hits,
       matchedInHistory: false,
     };
