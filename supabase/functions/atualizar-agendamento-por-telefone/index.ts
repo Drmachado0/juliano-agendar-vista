@@ -1,12 +1,32 @@
+// ============================================================================
+// atualizar-agendamento-por-telefone
+// Atualiza campos do lead a partir do telefone. Endpoint n8n/ManyChat.
+//
+// Correção 2026-07-13 (bug 91991300174):
+//   - requireN8nSecret timing-safe + x-request-id.
+//   - Seleção por telefone_canonico EXATO (RPC + fallback). Zero last8/scan200.
+//   - Só considera ativo: is_sandbox != true, status_crm NÃO terminal
+//     (ATENDIDO/CANCELADO/COMPARECEU) E status_funil NÃO terminal
+//     (cancelado/compareceu/faltou). Nunca reativa registro histórico cancelado.
+//   - 0 ativos → cria novo lead. >1 → 409 ambiguo sem mutação. 1 → update.
+//   - Erros sanitizados; PII mascarada em logs.
+// ============================================================================
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { requireN8nSecret, unauthorizedResponse, requestId } from "../_shared/authGuards.ts";
+import { telefoneCanonico as telefoneCanonicoLocal, maskTelefone } from "../_shared/telefoneCanonico.ts";
+import { isFunilTerminal, isRegistroAtivo } from "../_shared/statusTerminais.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-n8n-secret",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-n8n-secret, x-request-id",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+
+
 
 const BodySchema = z.object({
   telefone_whatsapp: z.string().min(8),
@@ -27,60 +47,81 @@ function json(body: unknown, status = 200) {
   });
 }
 
+
+
+
+async function resolveTelefoneCanonico(
+  supabase: ReturnType<typeof createClient>,
+  input: string,
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.rpc("telefone_canonico", { p_telefone: input });
+    if (!error && typeof data === "string" && data.length > 0) return data;
+  } catch (_e) {
+    /* fallback */
+  }
+  return telefoneCanonicoLocal(input);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
-  const sharedSecret = Deno.env.get("N8N_SHARED_SECRET");
-  const provided = req.headers.get("x-n8n-secret");
-  if (!sharedSecret || !provided || provided !== sharedSecret) {
-    return json({ error: "Unauthorized" }, 401);
-  }
+  const guard = await requireN8nSecret(req);
+  if (!guard.ok) return unauthorizedResponse(guard.reason ?? "unauthorized", corsHeaders);
+  const rid = requestId(req);
 
   let raw: unknown;
   try {
     raw = await req.json();
   } catch {
-    return json({ error: "JSON inválido" }, 400);
+    return json({ error: "invalid_json", request_id: rid }, 400);
   }
 
   const parsed = BodySchema.safeParse(raw);
   if (!parsed.success) {
-    return json({ error: "Dados inválidos", details: parsed.error.flatten() }, 400);
+    return json({ error: "invalid_body", request_id: rid }, 400);
   }
   const body = parsed.data;
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  const url = Deno.env.get("SUPABASE_URL");
+  const svc = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !svc) return json({ error: "server_misconfigured", request_id: rid }, 500);
+  const supabase = createClient(url, svc, { auth: { persistSession: false } });
 
-  // Busca agendamento mais recente por telefone normalizado (últimos 8 dígitos)
-  const norm = body.telefone_whatsapp.replace(/\D/g, "");
-  const last8 = norm.slice(-8);
-  if (last8.length < 8) return json({ error: "Telefone inválido" }, 400);
+  const telCanon = await resolveTelefoneCanonico(supabase, body.telefone_whatsapp);
+  if (!telCanon) return json({ error: "telefone_invalido", request_id: rid }, 400);
 
   const { data: candidatos, error: selErr } = await supabase
     .from("agendamentos")
-    .select("id, telefone_whatsapp, observacoes_internas, status_crm, status_funil, hora_agendamento, created_at, is_sandbox, data_agendamento")
+    .select("id, telefone_whatsapp, observacoes_internas, status_crm, status_funil, hora_agendamento, data_agendamento, created_at, is_sandbox")
+    .eq("telefone_canonico", telCanon)
+    .neq("is_sandbox", true)
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(50);
 
-  if (selErr) return json({ error: selErr.message }, 500);
+  if (selErr) {
+    await supabase.from("system_logs").insert({
+      level: "error",
+      category: "edge_function",
+      source: "atualizar-agendamento-por-telefone",
+      message: "agendamentos_lookup_failed",
+      details: { request_id: rid, telefone_mask: maskTelefone(body.telefone_whatsapp), pg_code: (selErr as any).code ?? null },
+      request_id: rid,
+    });
+    return json({ error: "agendamentos_lookup_failed", request_id: rid }, 500);
+  }
 
-  const match = (candidatos ?? [])
-    .filter((a: any) => (a.telefone_whatsapp ?? "").replace(/\D/g, "").endsWith(last8))
-    .sort((a: any, b: any) => {
-      // não-sandbox primeiro, com data primeiro, mais recente primeiro
-      const sb = Number(a.is_sandbox ?? false) - Number(b.is_sandbox ?? false);
-      if (sb !== 0) return sb;
-      const da = Number(!!b.data_agendamento) - Number(!!a.data_agendamento);
-      if (da !== 0) return da;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    })[0];
+  const ativos = (candidatos ?? []).filter(isRegistroAtivo);
+
+  if (ativos.length > 1) {
+    return json({ error: "ambiguo", request_id: rid, total_ativos: ativos.length }, 409);
+  }
+
+  const match = ativos[0] ?? null;
 
   if (!match) {
-    // UPSERT: cria um lead novo (SEM data/hora). Schema Zod já bloqueia data_agendamento/hora_agendamento.
+    // Cria novo lead — NUNCA atualiza histórico/cancelado.
     const insertLead: Record<string, unknown> = {
       nome_completo: body.nome_completo?.trim() || "Lead WhatsApp",
       telefone_whatsapp: body.telefone_whatsapp,
@@ -103,7 +144,7 @@ serve(async (req) => {
       .insert(insertLead)
       .select("id")
       .single();
-    if (insErr) return json({ error: insErr.message }, 500);
+    if (insErr) return json({ error: "agendamento_insert_failed", request_id: rid }, 500);
 
     await supabase.from("crm_audit_log").insert({
       agendamento_id: novoLead.id,
@@ -113,13 +154,14 @@ serve(async (req) => {
       acao: "criar_lead_por_telefone_n8n",
       status_anterior: null,
       status_novo: "novo",
-      detalhes: { telefone_input: body.telefone_whatsapp, campos: Object.keys(insertLead) },
+      detalhes: { telefone_mask: maskTelefone(body.telefone_whatsapp), campos: Object.keys(insertLead), request_id: rid },
     });
 
     return json({
       agendamento_id: novoLead.id,
       campos_atualizados: Object.keys(insertLead),
       lead_criado: true,
+      request_id: rid,
     });
   }
 
@@ -152,37 +194,30 @@ serve(async (req) => {
     camposAtualizados.push("observacoes_internas");
   }
 
-  // Promoção automática de status_funil (nunca rebaixa, nunca toca estados finais nem yag_laser)
-  const FINAIS = new Set(["agendado", "compareceu", "faltou", "cancelado", "yag_laser"]);
+  // Promoção automática de status_funil (nunca rebaixa, nunca toca terminais nem yag_laser)
   const statusAtual = ((match as any).status_funil as string) || "novo";
   let promocao: { de: string; para: string } | null = null;
 
-  // 0) YAG laser / limpeza de lente (Belém) — sobrescreve novo/em_conversa/aguardando_confirmacao
-  if (body.estado_atendimento === "yag_laser_belem" && statusAtual !== "yag_laser" && !["compareceu", "faltou", "cancelado"].includes(statusAtual)) {
+  if (body.estado_atendimento === "yag_laser_belem" && statusAtual !== "yag_laser" && !isFunilTerminal(statusAtual)) {
     updates.status_funil = "yag_laser";
     updates.status_crm = "YAG_LASER";
     camposAtualizados.push("status_funil", "status_crm");
     promocao = { de: statusAtual, para: "yag_laser" };
-  } else if (!FINAIS.has(statusAtual)) {
-    // 1) n8n sinalizou que está apresentando resumo para confirmação
+  } else if (!isFunilTerminal(statusAtual) && statusAtual !== "agendado") {
     if (body.estado_atendimento === "aguardando_confirmacao" && statusAtual !== "aguardando_confirmacao") {
       updates.status_funil = "aguardando_confirmacao";
       promocao = { de: statusAtual, para: "aguardando_confirmacao" };
-    }
-    // 2) data/hora já preenchidos (fallback de segurança)
-    else if ((match as any).data_agendamento && (match as any).hora_agendamento && statusAtual !== "aguardando_confirmacao") {
+    } else if ((match as any).data_agendamento && (match as any).hora_agendamento && statusAtual !== "aguardando_confirmacao") {
       updates.status_funil = "aguardando_confirmacao";
       promocao = { de: statusAtual, para: "aguardando_confirmacao" };
-    }
-    // 3) primeiro contato → em conversa
-    else if (statusAtual === "novo") {
+    } else if (statusAtual === "novo") {
       updates.status_funil = "em_conversa";
       promocao = { de: "novo", para: "em_conversa" };
     }
   }
 
   if (camposAtualizados.length === 0 && !promocao) {
-    return json({ agendamento_id: match.id, campos_atualizados: [] });
+    return json({ agendamento_id: match.id, campos_atualizados: [], request_id: rid });
   }
 
   updates.updated_at = new Date().toISOString();
@@ -192,9 +227,8 @@ serve(async (req) => {
     .update(updates)
     .eq("id", match.id);
 
-  if (updErr) return json({ error: updErr.message }, 500);
+  if (updErr) return json({ error: "agendamento_update_failed", request_id: rid }, 500);
 
-  // Audit log via RPC (SECURITY DEFINER exige role admin → usamos insert direto via service role)
   await supabase.from("crm_audit_log").insert({
     agendamento_id: match.id,
     user_id: null,
@@ -203,7 +237,7 @@ serve(async (req) => {
     acao: "atualizar_por_telefone_n8n",
     status_anterior: null,
     status_novo: null,
-    detalhes: { campos_atualizados: camposAtualizados, telefone_input: body.telefone_whatsapp },
+    detalhes: { campos_atualizados: camposAtualizados, telefone_mask: maskTelefone(body.telefone_whatsapp), request_id: rid },
   });
 
   if (promocao) {
@@ -215,7 +249,7 @@ serve(async (req) => {
       acao: "status_funil_promovido",
       status_anterior: promocao.de,
       status_novo: promocao.para,
-      detalhes: { motivo: "auto_n8n_update", telefone_input: body.telefone_whatsapp },
+      detalhes: { motivo: "auto_n8n_update", telefone_mask: maskTelefone(body.telefone_whatsapp), request_id: rid },
     });
   }
 
@@ -224,5 +258,6 @@ serve(async (req) => {
     campos_atualizados: camposAtualizados,
     status_funil: promocao?.para ?? statusAtual,
     promovido: !!promocao,
+    request_id: rid,
   });
 });
