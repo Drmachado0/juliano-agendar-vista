@@ -110,11 +110,12 @@ serve(async (req) => {
         }).eq("id", agendamentoId).then(() => {}, () => {});
         // registra em system_logs para alerta/monitoramento
         await supabase.from("system_logs").insert({
-          nivel: "error",
-          origem: "confirmar-agendamento-whatsapp",
-          mensagem: "confirmacao_bloqueada_nome_invalido",
-          contexto: {
-            agendamento_id: agendamentoId,
+          level: "error",
+          category: "whatsapp",
+          source: "confirmar-agendamento-whatsapp",
+          message: "confirmacao_bloqueada_nome_invalido",
+          agendamento_id: agendamentoId,
+          details: {
             motivo: nomeCheck.motivo,
             nome_raw: agendamentoData?.nome_completo ?? null,
           },
