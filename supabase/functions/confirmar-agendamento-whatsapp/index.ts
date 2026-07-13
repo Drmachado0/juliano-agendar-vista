@@ -90,6 +90,47 @@ serve(async (req) => {
       );
     }
 
+    // Guard nome inválido/placeholder: NUNCA gerar/disparar "Paciente: undefined".
+    // Escala para humano marcando o agendamento (se houver id) e devolve erro monitorável.
+    const nomeCheck = assertNomePacienteValido(agendamentoData?.nome_completo);
+    if (!nomeCheck.ok) {
+      console.error("[ConfirmarWhatsApp] BLOQUEADO nome_paciente_invalido", {
+        motivo: nomeCheck.motivo,
+        agendamento_id: agendamentoId,
+        raw: agendamentoData?.nome_completo,
+      });
+      if (agendamentoId) {
+        await supabase.from("agendamentos").update({
+          confirmation_status: "bloqueado_nome_invalido",
+          confirmation_sent_at: new Date().toISOString(),
+          precisa_humano: true,
+          motivo_humano: `nome_paciente_invalido:${nomeCheck.motivo}`,
+        }).eq("id", agendamentoId).then(() => {}, () => {});
+        // registra em system_logs para alerta/monitoramento
+        await supabase.from("system_logs").insert({
+          nivel: "error",
+          origem: "confirmar-agendamento-whatsapp",
+          mensagem: "confirmacao_bloqueada_nome_invalido",
+          contexto: {
+            agendamento_id: agendamentoId,
+            motivo: nomeCheck.motivo,
+            nome_raw: agendamentoData?.nome_completo ?? null,
+          },
+        }).then(() => {}, () => {});
+      }
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Nome do paciente inválido — confirmação não enviada. Escalado para humano.",
+          code: "nome_paciente_invalido",
+          motivo: nomeCheck.motivo,
+        }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    agendamentoData.nome_completo = nomeCheck.nome!;
+
+
     // ===== Guards (mantidos) =====
     const liberado = await envioAutomaticoLiberado(supabase);
     if (!liberado.liberado) {
