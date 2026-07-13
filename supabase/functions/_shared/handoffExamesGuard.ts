@@ -24,8 +24,23 @@ export type ExamesDetectResult = {
 };
 
 export interface MensagemHistoricoLike {
+  id?: string | null;
   direcao: "IN" | "OUT" | string;
   conteudo: string | null | undefined;
+  /** ISO string ou Date. Se ausente, a mensagem é ignorada quando `now` também vier. */
+  created_at?: string | Date | null;
+}
+
+/** Opções para restringir o exame de histórico. */
+export interface DetectarExamesOpts {
+  /** Instante da mensagem atual (default: Date.now()). */
+  now?: Date | number;
+  /** Id da mensagem atual — exclui do histórico. */
+  currentMessageId?: string | null;
+  /** created_at da mensagem atual — só olha mensagens ANTERIORES a este. */
+  currentCreatedAt?: string | Date | null;
+  /** Janela em minutos para considerar histórico "recente". Default: 45. */
+  janelaMinutos?: number;
 }
 
 /** Normaliza para minúsculas, sem acentos e com espaços colapsados. */
