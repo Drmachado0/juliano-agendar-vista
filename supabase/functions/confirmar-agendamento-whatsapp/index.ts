@@ -6,6 +6,7 @@ import { gerarMensagemDoTemplate, formatarData, formatarHora } from "../_shared/
 import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
 import { isBotPaused, isKnownInvalidWhatsapp } from "../_shared/whatsappGuards.ts";
 import { podeEnviarOutbound, LIMITES_PADRAO } from "../_shared/rateLimitOutbound.ts";
+import { assertNomePacienteValido } from "../_shared/sanitizeOptionalFields.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
