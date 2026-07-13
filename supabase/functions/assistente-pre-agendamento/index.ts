@@ -13,6 +13,11 @@ import {
   HANDOFF_NOTIFICATION_PHONE,
 } from "../_shared/handoffExamesGuard.ts";
 import { detectarValorConsulta } from "../_shared/respostasImediatasGuard.ts";
+import {
+  classificarExamePreco,
+  replyPrecoExameTabelado,
+  REPLY_EXAME_NAO_INFORMADO,
+} from "../_shared/examesPrecoGuard.ts";
 import { parseJanelaRelativa, podeOferecerHorarios } from "../_shared/disponibilidadeRelativa.ts";
 import { maskTelefone } from "../_shared/telefoneCanonico.ts";
 
