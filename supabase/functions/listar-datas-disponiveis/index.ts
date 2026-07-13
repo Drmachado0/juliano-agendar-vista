@@ -1,26 +1,99 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// ============================================================================
+// listar-datas-disponiveis
+// Lista datas com vagas para um mês/ano, filtrando por local_atendimento.
+//
+// Correções 2026-07-13:
+//   1) requireN8nSecret timing-safe + x-request-id (verify_jwt=false mantido).
+//   2) Data atual sempre em America/Belem (UTC-3, sem DST) — nunca depende
+//      do timezone do runtime (Deno = UTC).
+//   3) Se mes/ano solicitado terminar no passado (mês inteiro < mês atual de
+//      Belém), ajusta automaticamente para o mês atual e sinaliza
+//      ajustado_periodo_passado=true. Preserva periodo_solicitado.
+//   4) auto_avancar (default true): se o mês consultado não tiver datas,
+//      procura os próximos meses (até 6 no total, incluindo o solicitado)
+//      até achar o primeiro com agenda.
+//   5) Filtro de clínica por slug estrito — HGP não mistura com Clinicor
+//      nem com Belém e vice-versa. clinica_id NULL só entra quando
+//      local_atendimento não foi informado.
+//   6) Falha de query em clínicas/disponibilidades/bloqueios/agendamentos
+//      → 500 sanitizado (não trata como lista vazia).
+//   7) Agendamentos ocupados filtrados por clinica_id da unidade correta.
+//   8) Resposta inclui: periodo_solicitado, periodo_consultado,
+//      ajustado_periodo_passado, local_resolvido{slugs, ids},
+//      datas_disponiveis, total_datas, horizonte_meses.
+// ============================================================================
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { requireN8nSecret, unauthorizedResponse, requestId } from "../_shared/authGuards.ts";
 
-function getClinicaSlugsFromLocal(local: string): string[] {
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-n8n-secret, x-request-id",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const HORIZONTE_MESES_MAX = 6;
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+/** {ano, mes(1-12), dia} atual em America/Belem. */
+function hojeBelem(): { ano: number; mes: number; dia: number; iso: string } {
+  const belem = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  const ano = belem.getUTCFullYear();
+  const mes = belem.getUTCMonth() + 1;
+  const dia = belem.getUTCDate();
+  const iso = `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+  return { ano, mes, dia, iso };
+}
+
+function ymd(ano: number, mes: number, dia: number): string {
+  return `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+}
+
+function ultimoDiaDoMes(ano: number, mes: number): number {
+  // mes 1..12 — usa Date UTC do dia 0 do mês seguinte
+  return new Date(Date.UTC(ano, mes, 0)).getUTCDate();
+}
+
+function proximoMes(ano: number, mes: number): { ano: number; mes: number } {
+  return mes === 12 ? { ano: ano + 1, mes: 1 } : { ano, mes: mes + 1 };
+}
+
+function mesEhPassado(ano: number, mes: number, hoje: { ano: number; mes: number }): boolean {
+  return ano < hoje.ano || (ano === hoje.ano && mes < hoje.mes);
+}
+
+/** Resolve slugs de clínicas a partir de local_atendimento. Retorna null se
+ *  local não informado (sem filtro). Retorna array vazio se local não bater. */
+export function getClinicaSlugsFromLocal(local: string | null | undefined): string[] | null {
+  if (!local) return null;
   const l = local.toLowerCase().trim();
+  if (!l) return null;
   if (l.includes("clinicor")) return ["clinicor"];
   if (l.includes("hgp") || l.includes("hospital geral")) return ["hgp"];
-  if (l.includes("iob")) return ["iob"];
+  if (l.includes("iob") && !l.includes("belem") && !l.includes("belém")) return ["iob"];
   if (l.includes("vitria")) return ["vitria"];
   if (l.includes("belém") || l.includes("belem")) return ["iob", "vitria"];
   return [];
 }
 
-function gerarSlots(horaInicio: string, horaFim: string, intervaloMin: number): string[] {
+export function gerarSlots(horaInicio: string, horaFim: string, intervaloMin: number): string[] {
   const slots: string[] = [];
   const [hI, mI] = horaInicio.split(":").map(Number);
   const [hF, mF] = horaFim.split(":").map(Number);
   let min = hI * 60 + mI;
   const fim = hF * 60 + mF;
-  while (min + intervaloMin <= fim) {
+  const step = intervaloMin > 0 ? intervaloMin : 30;
+  while (min + step <= fim) {
     const h = String(Math.floor(min / 60)).padStart(2, "0");
     const m = String(min % 60).padStart(2, "0");
     slots.push(`${h}:${m}`);
-    min += intervaloMin;
+    min += step;
   }
   return slots;
 }
@@ -31,226 +104,316 @@ function horarioDentroBloqueio(slot: string, inicio: string | null, fim: string 
   return s >= inicio.substring(0, 5) && s < fim.substring(0, 5);
 }
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+interface CalcularMesInput {
+  ano: number;
+  mes: number;
+  clinicaIds: string[];
+  temFiltroLocal: boolean;
+  hoje: { ano: number; mes: number; dia: number; iso: string };
+  supabase: ReturnType<typeof createClient>;
+  rid: string;
+}
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+async function calcularDatasDoMes(input: CalcularMesInput): Promise<
+  | { ok: true; datas: { data: string; slots_disponiveis: number }[] }
+  | { ok: false; erro: string }
+> {
+  const { ano, mes, clinicaIds, temFiltroLocal, hoje, supabase, rid } = input;
+  const ultDia = ultimoDiaDoMes(ano, mes);
+
+  const dataInicio =
+    ano === hoje.ano && mes === hoje.mes ? hoje.iso : ymd(ano, mes, 1);
+  const dataFim = ymd(ano, mes, ultDia);
+
+  // Falhas de query NÃO viram lista vazia — sanitizamos 500.
+  const [bdRes, biRes, deRes, dsRes, agRes] = await Promise.all([
+    supabase
+      .from("bloqueios_agenda")
+      .select("*")
+      .gte("data", dataInicio)
+      .lte("data", dataFim)
+      .in("tipo_bloqueio", ["dia_inteiro", "feriado"]),
+    supabase
+      .from("bloqueios_agenda")
+      .select("*")
+      .gte("data", dataInicio)
+      .lte("data", dataFim)
+      .in("tipo_bloqueio", ["intervalo", "ausencia_profissional"]),
+    supabase.from("disponibilidade_especifica").select("*").gte("data", dataInicio).lte("data", dataFim),
+    supabase.from("disponibilidade_semanal").select("*").eq("ativo", true),
+    supabase
+      .from("agendamentos")
+      .select("data_agendamento, hora_agendamento, clinica_id, local_atendimento, is_sandbox")
+      .gte("data_agendamento", dataInicio)
+      .lte("data_agendamento", dataFim)
+      .neq("status_funil", "cancelado"),
+  ]);
+
+  for (const [nome, r] of [
+    ["bloqueios_dia", bdRes],
+    ["bloqueios_intervalo", biRes],
+    ["disponibilidade_especifica", deRes],
+    ["disponibilidade_semanal", dsRes],
+    ["agendamentos", agRes],
+  ] as const) {
+    if (r.error) {
+      console.error(`[listar-datas ${rid}] falha ${nome}:`, r.error.message);
+      return { ok: false, erro: `${nome}_lookup_failed` };
+    }
   }
 
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Método não permitido" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  // Filtro por clínica: quando local foi informado, aplica strict:
+  // aceita apenas registros das clínicas resolvidas OU (para disponibilidade/
+  // bloqueios) sem clínica (regra global). Agendamentos exigem clinica_id
+  // batendo para não bloquear a outra unidade.
+  const filtroDispBloqueio = (item: { clinica_id?: string | null }) => {
+    if (!temFiltroLocal) return true;
+    if (item.clinica_id === null || item.clinica_id === undefined) return true;
+    return clinicaIds.includes(item.clinica_id);
+  };
+  const filtroAgendamento = (item: {
+    clinica_id?: string | null;
+    local_atendimento?: string | null;
+    is_sandbox?: boolean | null;
+  }) => {
+    if (item.is_sandbox === true) return false;
+    if (!temFiltroLocal) return true;
+    if (item.clinica_id && clinicaIds.includes(item.clinica_id)) return true;
+    // Fallback textual: agendamentos legados sem clinica_id vinculado.
+    if (!item.clinica_id && item.local_atendimento) {
+      const slugsDoRegistro = getClinicaSlugsFromLocal(item.local_atendimento) ?? [];
+      return slugsDoRegistro.some((s) => clinicaIds.includes(s) || false);
+    }
+    return false;
+  };
+
+  const bloqueiosDiaMap = new Map<string, boolean>();
+  for (const b of (bdRes.data ?? []).filter(filtroDispBloqueio)) {
+    bloqueiosDiaMap.set(b.data, true);
   }
 
-  try {
-    const body = await req.json();
-    const { mes, ano, local_atendimento } = body;
+  const bloqueiosIntMap = new Map<string, Array<Record<string, unknown>>>();
+  for (const b of (biRes.data ?? []).filter(filtroDispBloqueio)) {
+    const arr = bloqueiosIntMap.get(b.data) ?? [];
+    arr.push(b);
+    bloqueiosIntMap.set(b.data, arr);
+  }
 
-    if (!mes || !ano || mes < 1 || mes > 12) {
-      return new Response(JSON.stringify({ error: 'Campos "mes" (1-12) e "ano" são obrigatórios' }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+  const dispEspecificaMap = new Map<string, Array<Record<string, unknown>>>();
+  for (const d of (deRes.data ?? []).filter(filtroDispBloqueio)) {
+    const arr = dispEspecificaMap.get(d.data) ?? [];
+    arr.push(d);
+    dispEspecificaMap.set(d.data, arr);
+  }
+
+  const modelosMap = new Map<string, Record<string, unknown>>();
+  for (const m of dsRes.data ?? []) modelosMap.set(m.id, m);
+
+  const agendamentosMap = new Map<string, Set<string>>();
+  for (const a of (agRes.data ?? []).filter(filtroAgendamento)) {
+    if (!a.data_agendamento || !a.hora_agendamento) continue;
+    const set = agendamentosMap.get(a.data_agendamento) ?? new Set();
+    set.add(String(a.hora_agendamento).substring(0, 5));
+    agendamentosMap.set(a.data_agendamento, set);
+  }
+
+  const datasDisponiveis: { data: string; slots_disponiveis: number }[] = [];
+  const belemAgoraMin = (() => {
+    const b = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    return b.getUTCHours() * 60 + b.getUTCMinutes() + 30;
+  })();
+
+  for (let dia = 1; dia <= ultDia; dia++) {
+    // Datas passadas (em Belém) são ignoradas.
+    if (ano === hoje.ano && mes === hoje.mes && dia < hoje.dia) continue;
+
+    const dataStr = ymd(ano, mes, dia);
+    if (bloqueiosDiaMap.has(dataStr)) continue;
+
+    const especifica = dispEspecificaMap.get(dataStr);
+    if (!especifica || especifica.length === 0) continue; // sem abertura = fechado
+
+    const indisponivel = especifica.find((d) => !(d as { disponivel: boolean }).disponivel);
+    if (indisponivel && !especifica.some((d) => (d as { disponivel: boolean }).disponivel)) continue;
+
+    let slots: string[] = [];
+    for (const d of especifica) {
+      const disp = d as {
+        disponivel: boolean;
+        hora_inicio: string | null;
+        hora_fim: string | null;
+        intervalo_minutos: number | null;
+        modelo_id: string | null;
+      };
+      if (!disp.disponivel) continue;
+      let horaIni = disp.hora_inicio;
+      let horaFim = disp.hora_fim;
+      let intervalo = disp.intervalo_minutos;
+      if ((!horaIni || !horaFim) && disp.modelo_id) {
+        const m = modelosMap.get(disp.modelo_id) as
+          | { hora_inicio: string; hora_fim: string; intervalo_minutos: number }
+          | undefined;
+        if (m) {
+          horaIni = horaIni ?? m.hora_inicio;
+          horaFim = horaFim ?? m.hora_fim;
+          intervalo = intervalo ?? m.intervalo_minutos;
+        }
+      }
+      if (!horaIni || !horaFim) continue;
+      slots.push(...gerarSlots(horaIni, horaFim, intervalo ?? 30));
+    }
+
+    slots = [...new Set(slots)].sort();
+
+    const bInt = bloqueiosIntMap.get(dataStr) ?? [];
+    if (bInt.length > 0) {
+      slots = slots.filter(
+        (s) =>
+          !bInt.some((b) =>
+            horarioDentroBloqueio(
+              s,
+              (b as { hora_inicio: string | null }).hora_inicio,
+              (b as { hora_fim: string | null }).hora_fim,
+            ),
+          ),
+      );
+    }
+
+    const ocupados = agendamentosMap.get(dataStr);
+    if (ocupados) slots = slots.filter((s) => !ocupados.has(s));
+
+    if (ano === hoje.ano && mes === hoje.mes && dia === hoje.dia) {
+      slots = slots.filter((s) => {
+        const [h, m] = s.split(":").map(Number);
+        return h * 60 + m > belemAgoraMin;
       });
     }
 
-    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    if (slots.length > 0) datasDisponiveis.push({ data: dataStr, slots_disponiveis: slots.length });
+  }
 
-    const localAtendimento = local_atendimento || "";
+  return { ok: true, datas: datasDisponiveis };
+}
 
-    console.log(`[listar-datas] Mês: ${mes}/${ano}, Local: ${localAtendimento || "todos"}`);
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
-    // 1. Resolve clinic IDs
-    const slugs = localAtendimento ? getClinicaSlugsFromLocal(localAtendimento) : [];
+  const guard = await requireN8nSecret(req);
+  if (!guard.ok) return unauthorizedResponse(guard.reason ?? "unauthorized", corsHeaders);
+  const rid = requestId(req);
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const mesReq = Number(body?.mes);
+    const anoReq = Number(body?.ano);
+    const localAtendimento: string = typeof body?.local_atendimento === "string" ? body.local_atendimento : "";
+    const autoAvancar: boolean = body?.auto_avancar !== false; // default true
+
+    if (!Number.isInteger(mesReq) || !Number.isInteger(anoReq) || mesReq < 1 || mesReq > 12 || anoReq < 2000) {
+      return json({ error: 'Campos "mes" (1-12) e "ano" são obrigatórios', request_id: rid }, 400);
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const hoje = hojeBelem();
+    console.log(`[listar-datas ${rid}] req=${anoReq}-${String(mesReq).padStart(2, "0")} local="${localAtendimento}" hojeBelem=${hoje.iso}`);
+
+    // 1) Ajuste de período passado
+    let anoBase = anoReq;
+    let mesBase = mesReq;
+    let ajustadoPeriodoPassado = false;
+    if (mesEhPassado(anoReq, mesReq, hoje)) {
+      anoBase = hoje.ano;
+      mesBase = hoje.mes;
+      ajustadoPeriodoPassado = true;
+    }
+
+    // 2) Filtro por clínica
+    const slugs = getClinicaSlugsFromLocal(localAtendimento);
+    const temFiltroLocal = slugs !== null;
     let clinicaIds: string[] = [];
-
-    if (slugs.length > 0) {
-      const { data: clinicas } = await supabase.from("clinicas").select("id").in("slug", slugs).eq("ativo", true);
-      clinicaIds = clinicas?.map((c: { id: string }) => c.id) || [];
-    }
-
-    // 2. Calculate date range
-    const primeiroDia = new Date(ano, mes - 1, 1);
-    const ultimoDia = new Date(ano, mes, 0);
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-
-    const dataInicio =
-      primeiroDia < hoje ? hoje.toISOString().split("T")[0] : `${ano}-${String(mes).padStart(2, "0")}-01`;
-    const dataFim = `${ano}-${String(mes).padStart(2, "0")}-${String(ultimoDia.getDate()).padStart(2, "0")}`;
-
-    // 3. Batch-fetch all data for the month
-    const [
-      { data: bloqueiosDia },
-      { data: bloqueiosIntervalo },
-      { data: dispEspecifica },
-      { data: dispSemanal },
-      { data: agendamentos },
-    ] = await Promise.all([
-      supabase
-        .from("bloqueios_agenda")
-        .select("*")
-        .gte("data", dataInicio)
-        .lte("data", dataFim)
-        .in("tipo_bloqueio", ["dia_inteiro", "feriado"]),
-      supabase
-        .from("bloqueios_agenda")
-        .select("*")
-        .gte("data", dataInicio)
-        .lte("data", dataFim)
-        .in("tipo_bloqueio", ["intervalo", "ausencia_profissional"]),
-      supabase.from("disponibilidade_especifica").select("*").gte("data", dataInicio).lte("data", dataFim),
-      supabase.from("disponibilidade_semanal").select("*").eq("ativo", true),
-      supabase
-        .from("agendamentos")
-        .select("data_agendamento, hora_agendamento")
-        .gte("data_agendamento", dataInicio)
-        .lte("data_agendamento", dataFim)
-        .neq("status_funil", "cancelado"),
-    ]);
-
-    // Filter by clinic
-    const filterClinica = (item: any) =>
-      clinicaIds.length === 0 || item.clinica_id === null || clinicaIds.includes(item.clinica_id);
-
-    const bloqueiosDiaMap = new Map<string, boolean>();
-    for (const b of (bloqueiosDia || []).filter(filterClinica)) {
-      bloqueiosDiaMap.set(b.data, true);
-    }
-
-    const bloqueiosIntMap = new Map<string, any[]>();
-    for (const b of (bloqueiosIntervalo || []).filter(filterClinica)) {
-      const arr = bloqueiosIntMap.get(b.data) || [];
-      arr.push(b);
-      bloqueiosIntMap.set(b.data, arr);
-    }
-
-    const dispEspecificaMap = new Map<string, any[]>();
-    for (const d of (dispEspecifica || []).filter(filterClinica)) {
-      const arr = dispEspecificaMap.get(d.data) || [];
-      arr.push(d);
-      dispEspecificaMap.set(d.data, arr);
-    }
-
-    const dispSemanalFiltrada = (dispSemanal || []).filter(filterClinica);
-
-    // [FIX] Indexa modelos (disponibilidade_semanal) por id para lookup quando
-    // disponibilidade_especifica foi cadastrada via aplicação de modelo
-    // (hora_inicio/hora_fim ficam null, só modelo_id é preenchido).
-    const modelosMap = new Map<string, any>();
-    for (const m of dispSemanal || []) {
-      modelosMap.set(m.id, m);
-    }
-
-    const agendamentosMap = new Map<string, Set<string>>();
-    for (const a of agendamentos || []) {
-      if (!a.data_agendamento || !a.hora_agendamento) continue;
-      const set = agendamentosMap.get(a.data_agendamento) || new Set();
-      set.add(a.hora_agendamento.substring(0, 5));
-      agendamentosMap.set(a.data_agendamento, set);
-    }
-
-    // 4. Iterate each day of the month
-    const datasDisponiveis: { data: string; slots_disponiveis: number }[] = [];
-    const agora = new Date();
-
-    for (let dia = 1; dia <= ultimoDia.getDate(); dia++) {
-      const dataObj = new Date(ano, mes - 1, dia);
-      if (dataObj < hoje) continue;
-
-      const dataStr = `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
-
-      // Skip full-day blocks
-      if (bloqueiosDiaMap.has(dataStr)) continue;
-
-      // Generate slots
-      let slots: string[] = [];
-      const especifica = dispEspecificaMap.get(dataStr);
-
-      if (especifica && especifica.length > 0) {
-        const indisponivel = especifica.find((d: any) => !d.disponivel);
-        if (indisponivel && !especifica.some((d: any) => d.disponivel)) continue;
-
-        for (const d of especifica) {
-          if (!d.disponivel) continue;
-
-          // [FIX] Se hora_inicio/hora_fim vieram null mas há modelo_id,
-          // resolve via disponibilidade_semanal (template aplicado).
-          let horaIni = d.hora_inicio;
-          let horaFim = d.hora_fim;
-          let intervalo = d.intervalo_minutos;
-          if ((!horaIni || !horaFim) && d.modelo_id) {
-            const modelo = modelosMap.get(d.modelo_id);
-            if (modelo) {
-              horaIni = horaIni || modelo.hora_inicio;
-              horaFim = horaFim || modelo.hora_fim;
-              intervalo = intervalo || modelo.intervalo_minutos;
-            }
-          }
-          if (!horaIni || !horaFim) continue; // ainda sem horários: pula
-
-          slots.push(...gerarSlots(horaIni, horaFim, intervalo || 30));
-        }
-      } else {
-        // Política: sem disponibilidade_especifica = dia fechado.
-        // Modelos semanais são apenas templates, não abrem agenda sozinhos.
-        continue;
+    if (slugs && slugs.length > 0) {
+      const { data: clinicas, error } = await supabase
+        .from("clinicas")
+        .select("id, slug")
+        .in("slug", slugs)
+        .eq("ativo", true);
+      if (error) {
+        console.error(`[listar-datas ${rid}] clinicas_lookup_failed:`, error.message);
+        return json({ error: "clinicas_lookup_failed", request_id: rid }, 500);
       }
-
-      // Deduplicate
-      slots = [...new Set(slots)].sort();
-
-      // Remove interval blocks
-      const bloqueiosInt = bloqueiosIntMap.get(dataStr) || [];
-      if (bloqueiosInt.length > 0) {
-        slots = slots.filter(
-          (s) => !bloqueiosInt.some((b: any) => horarioDentroBloqueio(s, b.hora_inicio, b.hora_fim)),
+      clinicaIds = (clinicas ?? []).map((c: { id: string }) => c.id);
+      if (clinicaIds.length === 0) {
+        // slug informado mas nenhuma clínica ativa achada → sem vagas explicitamente
+        return json(
+          {
+            periodo_solicitado: { ano: anoReq, mes: mesReq },
+            periodo_consultado: { ano: anoBase, mes: mesBase },
+            ajustado_periodo_passado: ajustadoPeriodoPassado,
+            local_atendimento: localAtendimento || null,
+            local_resolvido: { slugs, ids: [] },
+            datas_disponiveis: [],
+            total_datas: 0,
+            horizonte_meses: 0,
+            motivo: "clinicas_nao_encontradas",
+            request_id: rid,
+          },
+          200,
         );
       }
-
-      // Remove occupied
-      const ocupados = agendamentosMap.get(dataStr);
-      if (ocupados) {
-        slots = slots.filter((s) => !ocupados.has(s));
-      }
-
-      // Remove past slots for today
-      const isToday = dataStr === agora.toISOString().split("T")[0];
-      if (isToday) {
-        const minutosAgora = agora.getHours() * 60 + agora.getMinutes() + 30;
-        slots = slots.filter((s) => {
-          const [h, m] = s.split(":").map(Number);
-          return h * 60 + m > minutosAgora;
-        });
-      }
-
-      if (slots.length > 0) {
-        datasDisponiveis.push({ data: dataStr, slots_disponiveis: slots.length });
-      }
     }
 
-    console.log(`[listar-datas] ${datasDisponiveis.length} datas com vagas`);
+    // 3) Loop com auto_avancar (máx 6 meses a partir do mesBase)
+    let anoAtual = anoBase;
+    let mesAtual = mesBase;
+    let datasFinal: { data: string; slots_disponiveis: number }[] = [];
+    let periodoConsultado = { ano: anoBase, mes: mesBase };
+    let mesesTentados = 0;
 
-    return new Response(
-      JSON.stringify({
-        mes,
-        ano,
-        local_atendimento: localAtendimento || null,
-        datas_disponiveis: datasDisponiveis,
-        total_datas: datasDisponiveis.length,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
-  } catch (err) {
-    console.error(`[listar-datas] Erro:`, err);
-    return new Response(JSON.stringify({ error: "Erro interno ao listar datas disponíveis" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    for (let i = 0; i < HORIZONTE_MESES_MAX; i++) {
+      mesesTentados++;
+      const res = await calcularDatasDoMes({
+        ano: anoAtual,
+        mes: mesAtual,
+        clinicaIds,
+        temFiltroLocal,
+        hoje,
+        supabase,
+        rid,
+      });
+      if (!res.ok) return json({ error: res.erro, request_id: rid }, 500);
+      if (res.datas.length > 0) {
+        datasFinal = res.datas;
+        periodoConsultado = { ano: anoAtual, mes: mesAtual };
+        break;
+      }
+      if (!autoAvancar) break;
+      const nx = proximoMes(anoAtual, mesAtual);
+      anoAtual = nx.ano;
+      mesAtual = nx.mes;
+      periodoConsultado = { ano: anoAtual, mes: mesAtual };
+    }
+
+    console.log(`[listar-datas ${rid}] ${datasFinal.length} datas em ${periodoConsultado.ano}-${String(periodoConsultado.mes).padStart(2, "0")} (tentados=${mesesTentados})`);
+
+    return json({
+      periodo_solicitado: { ano: anoReq, mes: mesReq },
+      periodo_consultado: periodoConsultado,
+      ajustado_periodo_passado: ajustadoPeriodoPassado,
+      local_atendimento: localAtendimento || null,
+      local_resolvido: { slugs: slugs ?? null, ids: clinicaIds },
+      datas_disponiveis: datasFinal,
+      total_datas: datasFinal.length,
+      horizonte_meses: mesesTentados,
+      auto_avancar: autoAvancar,
+      request_id: rid,
     });
+  } catch (err) {
+    console.error(`[listar-datas ${rid}] erro:`, (err as Error)?.message);
+    return json({ error: "internal_error", request_id: rid }, 500);
   }
 });
