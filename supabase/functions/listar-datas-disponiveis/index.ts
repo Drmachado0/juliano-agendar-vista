@@ -307,32 +307,60 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const mesReq = Number(body?.mes);
-    const anoReq = Number(body?.ano);
+    const mesRaw = body?.mes;
+    const anoRaw = body?.ano;
     const localAtendimento: string = typeof body?.local_atendimento === "string" ? body.local_atendimento : "";
     const autoAvancar: boolean = body?.auto_avancar !== false; // default true
 
-    if (!Number.isInteger(mesReq) || !Number.isInteger(anoReq) || mesReq < 1 || mesReq > 12 || anoReq < 2000) {
-      return json({ error: 'Campos "mes" (1-12) e "ano" são obrigatórios', request_id: rid }, 400);
+    const hoje = hojeBelem();
+
+    // 1) Validação tolerante: ausente/inválido → default seguro (mês atual Belém)
+    const mesNum = Number(mesRaw);
+    const anoNum = Number(anoRaw);
+    const mesAusente = mesRaw === undefined || mesRaw === null || mesRaw === "";
+    const anoAusente = anoRaw === undefined || anoRaw === null || anoRaw === "";
+    const mesInvalido = !mesAusente && (!Number.isInteger(mesNum) || mesNum < 1 || mesNum > 12);
+    const anoInvalido = !anoAusente && (!Number.isInteger(anoNum) || anoNum < 2000 || anoNum > 2100);
+
+    let anoBase: number;
+    let mesBase: number;
+    let periodoAjustado = false;
+    let motivoAjuste: string | null = null;
+    let ajustadoPeriodoPassado = false;
+
+    if (mesAusente || anoAusente) {
+      anoBase = hoje.ano;
+      mesBase = hoje.mes;
+      periodoAjustado = true;
+      motivoAjuste = "periodo_ausente";
+    } else if (mesInvalido || anoInvalido) {
+      anoBase = hoje.ano;
+      mesBase = hoje.mes;
+      periodoAjustado = true;
+      motivoAjuste = "periodo_invalido";
+    } else if (mesEhPassado(anoNum, mesNum, hoje)) {
+      anoBase = hoje.ano;
+      mesBase = hoje.mes;
+      periodoAjustado = true;
+      ajustadoPeriodoPassado = true;
+      motivoAjuste = "periodo_passado";
+    } else {
+      anoBase = anoNum;
+      mesBase = mesNum;
     }
+
+    // periodo_solicitado preserva o que veio (null quando ausente/não numérico)
+    const periodoSolicitado = {
+      ano: Number.isInteger(anoNum) ? anoNum : null,
+      mes: Number.isInteger(mesNum) ? mesNum : null,
+    };
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const hoje = hojeBelem();
-    console.log(`[listar-datas ${rid}] req=${anoReq}-${String(mesReq).padStart(2, "0")} local="${localAtendimento}" hojeBelem=${hoje.iso}`);
-
-    // 1) Ajuste de período passado
-    let anoBase = anoReq;
-    let mesBase = mesReq;
-    let ajustadoPeriodoPassado = false;
-    if (mesEhPassado(anoReq, mesReq, hoje)) {
-      anoBase = hoje.ano;
-      mesBase = hoje.mes;
-      ajustadoPeriodoPassado = true;
-    }
+    console.log(`[listar-datas ${rid}] req=${anoRaw}-${mesRaw} base=${anoBase}-${String(mesBase).padStart(2, "0")} ajuste=${motivoAjuste ?? "nenhum"} local="${localAtendimento}" hojeBelem=${hoje.iso}`);
 
     // 2) Filtro por clínica
     const slugs = getClinicaSlugsFromLocal(localAtendimento);
@@ -350,12 +378,13 @@ Deno.serve(async (req) => {
       }
       clinicaIds = (clinicas ?? []).map((c: { id: string }) => c.id);
       if (clinicaIds.length === 0) {
-        // slug informado mas nenhuma clínica ativa achada → sem vagas explicitamente
         return json(
           {
-            periodo_solicitado: { ano: anoReq, mes: mesReq },
+            periodo_solicitado: periodoSolicitado,
             periodo_consultado: { ano: anoBase, mes: mesBase },
+            periodo_ajustado: periodoAjustado,
             ajustado_periodo_passado: ajustadoPeriodoPassado,
+            motivo_ajuste: motivoAjuste,
             local_atendimento: localAtendimento || null,
             local_resolvido: { slugs, ids: [] },
             datas_disponiveis: [],
@@ -375,9 +404,11 @@ Deno.serve(async (req) => {
     let datasFinal: { data: string; slots_disponiveis: number }[] = [];
     let periodoConsultado = { ano: anoBase, mes: mesBase };
     let mesesTentados = 0;
+    let encontrou = false;
 
     for (let i = 0; i < HORIZONTE_MESES_MAX; i++) {
       mesesTentados++;
+      periodoConsultado = { ano: anoAtual, mes: mesAtual };
       const res = await calcularDatasDoMes({
         ano: anoAtual,
         mes: mesAtual,
@@ -390,28 +421,37 @@ Deno.serve(async (req) => {
       if (!res.ok) return json({ error: res.erro, request_id: rid }, 500);
       if (res.datas.length > 0) {
         datasFinal = res.datas;
-        periodoConsultado = { ano: anoAtual, mes: mesAtual };
+        encontrou = true;
         break;
       }
       if (!autoAvancar) break;
+      // Não avança no último ciclo — periodo_consultado permanece no 6º mês.
+      if (i === HORIZONTE_MESES_MAX - 1) break;
       const nx = proximoMes(anoAtual, mesAtual);
       anoAtual = nx.ano;
       mesAtual = nx.mes;
-      periodoConsultado = { ano: anoAtual, mes: mesAtual };
     }
 
-    console.log(`[listar-datas ${rid}] ${datasFinal.length} datas em ${periodoConsultado.ano}-${String(periodoConsultado.mes).padStart(2, "0")} (tentados=${mesesTentados})`);
+    const motivo = encontrou
+      ? null
+      : (autoAvancar ? "sem_disponibilidade_no_horizonte" : "sem_disponibilidade_no_periodo");
+
+    console.log(`[listar-datas ${rid}] ${datasFinal.length} datas em ${periodoConsultado.ano}-${String(periodoConsultado.mes).padStart(2, "0")} (tentados=${mesesTentados}, motivo=${motivo ?? "ok"})`);
 
     return json({
-      periodo_solicitado: { ano: anoReq, mes: mesReq },
+      periodo_solicitado: periodoSolicitado,
       periodo_consultado: periodoConsultado,
+      periodo_ajustado: periodoAjustado,
       ajustado_periodo_passado: ajustadoPeriodoPassado,
+      motivo_ajuste: motivoAjuste,
       local_atendimento: localAtendimento || null,
       local_resolvido: { slugs: slugs ?? null, ids: clinicaIds },
       datas_disponiveis: datasFinal,
       total_datas: datasFinal.length,
       horizonte_meses: mesesTentados,
       auto_avancar: autoAvancar,
+      motivo,
+      timezone: "America/Belem",
       request_id: rid,
     });
   } catch (err) {
