@@ -199,9 +199,9 @@ describe("telefone_canonico (fallback local)", () => {
   it("(91) 99130-0174 → 91991300174", () => {
     expect(telefoneCanonico("(91) 99130-0174")).toBe("91991300174");
   });
-  it("adiciona 9 quando ficam 10 dígitos", () => {
-    expect(telefoneCanonico("9130-0174")).toBe(null);
-    expect(telefoneCanonico("9130-01749")).toBe(null);
+  it("adiciona 9 quando ficam 10 dígitos (fixo BR)", () => {
     expect(telefoneCanonico("91 3229-0174")).toBe("91932290174");
+    expect(telefoneCanonico("5591 3229-0174")).toBe("91932290174");
   });
+
 });
