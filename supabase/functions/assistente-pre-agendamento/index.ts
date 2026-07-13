@@ -6,6 +6,15 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sendWhatsappTextMessage } from "../_shared/evolutionApiClient.ts";
 import { requireN8nSecret, unauthorizedResponse, requestId } from "../_shared/authGuards.ts";
+import {
+  detectarAssuntoExames,
+  buildHandoffExamesSummary,
+  HANDOFF_EXAMES_REPLY,
+  HANDOFF_NOTIFICATION_PHONE,
+} from "../_shared/handoffExamesGuard.ts";
+import { detectarValorConsulta } from "../_shared/respostasImediatasGuard.ts";
+import { parseJanelaRelativa, podeOferecerHorarios } from "../_shared/disponibilidadeRelativa.ts";
+import { maskTelefone } from "../_shared/telefoneCanonico.ts";
 
 
 
@@ -19,6 +28,7 @@ const INTENCOES = [
   "remarcar",
   "cancelar",
   "confirmar_presenca",
+  "exames",
   "duvida_preco",
   "duvida_convenio",
   "duvida_endereco",
@@ -29,6 +39,7 @@ const INTENCOES = [
   "outros",
 ] as const;
 
+// Nunca inclua "exames" aqui — exames sempre viram handoff via guard determinístico.
 const INTENCOES_BOT = new Set(["agendar", "remarcar"]);
 const INTENCOES_SENSIVEIS = new Set(["cancelar", "urgencia"]);
 
@@ -73,7 +84,8 @@ async function classificarIntencao(
   const systemPrompt = `Você é um classificador de intenção para conversas de WhatsApp de uma clínica oftalmológica.
 Categorias possíveis: ${INTENCOES.join(", ")}.
 Regras:
-- "agendar": paciente quer marcar uma consulta/exame/cirurgia nova.
+- "agendar": paciente quer marcar uma CONSULTA nova (nunca exame; exames vão para "exames").
+- "exames": qualquer menção a exame(s) — pedido, guia, agendamento, local, autorização, cobertura, resultado, laudo, retorno com exames. NÃO tratar como agendar.
 - "remarcar": paciente já tem agendamento e quer trocar data/hora.
 - "cancelar": paciente quer desmarcar.
 - "confirmar_presenca": confirmando ou negando presença em consulta marcada.
@@ -397,6 +409,71 @@ serve(async (req) => {
       }));
     }
 
+    // =========================================================================
+    // GUARDS DETERMINÍSTICOS — rodam ANTES do classificador/LLM.
+    // Espelham a lógica de registrar-mensagem-in-n8n (defesa em profundidade,
+    // caso o n8n dispare o assistente diretamente).
+    // =========================================================================
+    const exames = detectarAssuntoExames(body.conteudo, historico);
+    if (exames.matched) {
+      const idEscalado = await escalarParaHumano(supabase, {
+        telefone: body.telefone,
+        agendamentoId: body.agendamento_id ?? null,
+        agendamento,
+        motivo: "assunto_exames",
+        intencao: "exames",
+        detalhes: {
+          request_id: rid,
+          hits: exames.hits,
+          matched_in_history: exames.matchedInHistory,
+        },
+      });
+      const notification_summary = buildHandoffExamesSummary({
+        nome: agendamento?.nome_completo ?? null,
+        telefoneMascarado: maskTelefone(body.telefone),
+        mensagemAtual: body.conteudo,
+        hits: exames.hits,
+        matchedInHistory: exames.matchedInHistory,
+        agendamentoId: idEscalado ?? agendamento?.id ?? null,
+        statusCrm: agendamento?.status_crm ?? null,
+        statusFunil: agendamento?.status_funil ?? null,
+        localAtendimento: agendamento?.local_atendimento ?? null,
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          agiu: false,
+          handoff_required: true,
+          handoff_reason: "assunto_exames",
+          notify_required: true,
+          notification_phone: HANDOFF_NOTIFICATION_PHONE,
+          patient_reply: HANDOFF_EXAMES_REPLY,
+          notification_summary,
+          agendamentoId: idEscalado,
+          request_id: rid,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
+      );
+    }
+
+    const valor = detectarValorConsulta(body.conteudo);
+    if (valor.matched) {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          agiu: false,
+          immediate_reply: true,
+          immediate_reason: valor.reason,
+          patient_reply: valor.reply,
+          resume_agent: false, // resposta fixa já retoma o próximo dado no n8n
+          request_id: rid,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
+      );
+    }
+
+
+
     // 1) Classificar — se falhar (item 8), escala para humano e retorna agiu=false.
     let intencao;
     try {
@@ -500,9 +577,25 @@ serve(async (req) => {
       );
     }
 
-    // 3) Buscar slots
+    // 3) Buscar slots (usado apenas para extrair DATAS disponíveis).
     const clinicaIds = agendamento?.clinica_id ? [agendamento.clinica_id] : [];
-    const slots = await buscarProximosSlots(supabase, clinicaIds, 21, 3);
+    const slots = await buscarProximosSlots(supabase, clinicaIds, 21, 12);
+
+    // Estado de funil (mínimo): considera data "escolhida" apenas se veio na
+    // mensagem atual uma data explícita reconhecível. Não usamos o
+    // data_agendamento salvo em DB para não tratar sugestão prévia como
+    // escolha do paciente.
+    const janela = parseJanelaRelativa(body.conteudo);
+    const dataExplicitaMatch = body.conteudo.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
+    const estadoFunil = {
+      fase: "aguardando_data" as const,
+      data_escolhida: dataExplicitaMatch ? `${dataExplicitaMatch[3] || new Date().getFullYear()}-${String(dataExplicitaMatch[2]).padStart(2, "0")}-${String(dataExplicitaMatch[1]).padStart(2, "0")}` : null,
+    };
+    // Guard-rail: nunca ofereça HORÁRIOS antes de o paciente escolher uma DATA.
+    const permitirHorarios = podeOferecerHorarios({
+      fase: estadoFunil.data_escolhida ? "data_escolhida" : "aguardando_data",
+      data_escolhida: estadoFunil.data_escolhida,
+    });
 
     if (slots.length === 0) {
       const fallback =
@@ -526,15 +619,33 @@ serve(async (req) => {
       );
     }
 
-    // 4) Montar e ENVIAR mensagem PRIMEIRO. Só avança status se envio OK. (item 9)
-    const linhas = slots.map((s, i) => `${i + 1}) ${fmtDataBR(s.data)} às ${s.hora}`);
+    // Extrai DATAS únicas (nunca mistura horários no mesmo passo).
+    const datasUnicas = Array.from(new Set(slots.map((s) => s.data))).slice(0, 3);
     const nome = agendamento?.nome_completo?.split(" ")[0] || "";
     const saudacao = nome ? `Olá, ${nome}!` : "Olá!";
-    const texto = `${saudacao} 👋\nAqui é da clínica do Dr. Juliano Machado. Vi que você gostaria de ${
-      intencao.intencao === "remarcar" ? "remarcar sua consulta" : "agendar uma consulta"
-    }.\n\nTenho estes horários disponíveis:\n${linhas.join(
-      "\n",
-    )}\n\nResponda com o número do horário (1, 2 ou 3) que prefere, ou me diga outra data que combina melhor 🙂`;
+    const acao = intencao.intencao === "remarcar" ? "remarcar sua consulta" : "agendar uma consulta";
+
+    let texto: string;
+    if (permitirHorarios && estadoFunil.data_escolhida) {
+      // Horários apenas depois de data escolhida explicitamente.
+      const slotsNaData = slots.filter((s) => s.data === estadoFunil.data_escolhida).slice(0, 3);
+      if (slotsNaData.length === 0) {
+        // Data pedida sem agenda — cai em oferecer datas (regra 3).
+        const linhasDatas = datasUnicas.map((d, i) => `${i + 1}) ${fmtDataBR(d)}`);
+        texto = `${saudacao} 👋\nNão localizei horários para a data que você pediu${janela.periodoDia ? ` (${janela.periodoDia})` : ""}. Estas são as próximas datas disponíveis:\n${linhasDatas.join("\n")}\n\nMe diga o número da data preferida que retomamos com os horários 🙂`;
+      } else {
+        const linhas = slotsNaData.map((s, i) => `${i + 1}) ${s.hora}`);
+        texto = `${saudacao} 👋\nPara ${fmtDataBR(estadoFunil.data_escolhida)} tenho estes horários:\n${linhas.join("\n")}\n\nResponda com o número do horário que prefere 🙂`;
+      }
+    } else {
+      // Estado padrão: oferecer apenas DATAS. Horários virão depois da escolha.
+      const linhasDatas = datasUnicas.map((d, i) => `${i + 1}) ${fmtDataBR(d)}`);
+      const prefixo =
+        janela.tipo !== "livre" || janela.periodoDia
+          ? `Não localizei agenda para ${janela.tipo === "amanha" ? "amanhã" : janela.tipo === "hoje" ? "hoje" : "o período pedido"}${janela.periodoDia ? ` (${janela.periodoDia})` : ""}. `
+          : "";
+      texto = `${saudacao} 👋\nAqui é da clínica do Dr. Juliano Machado. Vi que você gostaria de ${acao}.\n\n${prefixo}Estas são as próximas datas disponíveis:\n${linhasDatas.join("\n")}\n\nMe diga o número da data preferida que retomamos com os horários 🙂`;
+    }
 
     const envio = await sendWhatsappText(body.telefone, texto);
 
@@ -565,8 +676,8 @@ serve(async (req) => {
       );
     }
 
-    // 5) Envio OK — usa RPC para transicionar status (item 7) e preserva data/hora separados.
-    const primeiro = slots[0];
+    // 5) Envio OK — cria/atualiza lead SEM gravar data/hora sugerida
+    //    (não é escolha do paciente ainda). Fica AGUARDANDO escolha explícita.
     let agendamentoId = body.agendamento_id ?? null;
 
     if (!agendamentoId) {
@@ -589,23 +700,17 @@ serve(async (req) => {
     }
 
     if (agendamentoId) {
-      // Transição via RPC — a máquina de estados cuida de funil/estado/bot.
       await supabase.rpc("transicionar_estado_agendamento", {
         p_id: agendamentoId,
         p_novo_status_crm: "AGUARDANDO",
-        p_motivo: `bot sugeriu ${slots.length} horários`,
+        p_motivo: `bot ofereceu ${datasUnicas.length} datas`,
       });
-      // Data/hora/clinica escritos separadamente (não fazem parte da máquina de estados).
       await supabase
         .from("agendamentos")
-        .update({
-          data_agendamento: primeiro.data,
-          hora_agendamento: primeiro.hora,
-          clinica_id: primeiro.clinicaId ?? agendamento?.clinica_id ?? null,
-          bot_ultima_acao_at: new Date().toISOString(),
-        })
+        .update({ bot_ultima_acao_at: new Date().toISOString() })
         .eq("id", agendamentoId);
     }
+
 
     // Salva mensagem OUT
     await supabase.from("mensagens_whatsapp").insert({
