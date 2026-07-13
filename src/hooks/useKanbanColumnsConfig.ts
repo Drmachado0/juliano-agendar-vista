@@ -11,12 +11,13 @@ export type KanbanColumnConfigItem = {
   visible: boolean;
 };
 
-// v3: nova ordem — YAG Laser após Aguardando confirmação; Cancelado após Compareceu.
-const STORAGE_KEY = "crm:kanban-columns:v3";
+// v4: adiciona coluna EXAMES_HGP entre "Em conversa" e "Aguardando confirmação".
+const STORAGE_KEY = "crm:kanban-columns:v4";
 
 export const DEFAULT_COLUMNS: KanbanColumnDef[] = [
   { status: "novo", title: "🆕 Novo Lead", color: "bg-blue-500" },
   { status: "em_conversa", title: "💬 Em conversa", color: "bg-cyan-500" },
+  { status: "exames_hgp", title: "🧪 EXAMES — HGP", color: "bg-teal-500" },
   { status: "aguardando_confirmacao", title: "⏳ Aguardando confirmação", color: "bg-amber-500" },
   { status: "yag_laser", title: "🔆 YAG Laser — Belém", color: "bg-violet-500" },
   { status: "agendado", title: "✅ Agendado", color: "bg-emerald-500" },
