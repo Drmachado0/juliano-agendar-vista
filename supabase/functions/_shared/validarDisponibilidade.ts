@@ -67,6 +67,22 @@ export function getNomeDiaSemana(dia: number): string {
   return DIAS_SEMANA[dia] || "Desconhecido";
 }
 
+// ─────────────────────────────────────────────
+// Timezone America/Belem (UTC-3, sem DST)
+// ─────────────────────────────────────────────
+export function nowBelemDateStr(now: Date = new Date()): string {
+  // desloca -3h e usa componentes UTC
+  const t = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  const y = t.getUTCFullYear();
+  const m = String(t.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(t.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+export function nowBelemMs(now: Date = new Date()): number {
+  // instante atual em ms UTC; comparações abaixo usam data_hora com offset -03:00
+  return now.getTime();
+}
+
 /** Resolve nome do local para clinica_id */
 export function resolverClinica(local: string): { id: string; nome: string } | null {
   const key = local.toLowerCase().trim()
@@ -138,10 +154,9 @@ export async function listarHorariosDisponiveis(
   const diaSemana = dataObj.getUTCDay();
   const nomeDia = getNomeDiaSemana(diaSemana);
 
-  // Não permite datas passadas
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  if (new Date(data + "T00:00:00-03:00") < hoje) return [];
+  // "Hoje" em America/Belem (UTC-3, sem DST).
+  const hojeBelem = nowBelemDateStr();
+  if (data < hojeBelem) return [];
 
   // Resolver clinica_id se local foi informado
   let clinicaFilter: { id: string; nome: string } | null = null;
@@ -203,16 +218,27 @@ export async function listarHorariosDisponiveis(
     .select("clinica_id, hora_inicio, hora_fim")
     .eq("data", data);
 
-  // 3. Buscar agendamentos existentes nesta data (descontando o próprio, se for edição)
+  // 3. Buscar agendamentos existentes nesta data (descontando o próprio, se for edição).
+  //    Excluímos TODOS os status terminais reais (uppercase) e também a variante
+  //    'cancelado' minúscula legada — cancelados não ocupam slot.
   let agQuery = supabase
     .from("agendamentos")
-    .select("id, hora_agendamento, clinica_id")
-    .eq("data_agendamento", data)
-    .not("status_crm", "in", "(cancelado)");
+    .select("id, hora_agendamento, clinica_id, status_crm, status_funil, is_sandbox")
+    .eq("data_agendamento", data);
   if (excluirAgendamentoId) {
     agQuery = agQuery.neq("id", excluirAgendamentoId);
   }
-  const { data: agendamentos } = await agQuery;
+  const { data: agendamentosRaw } = await agQuery;
+  const TERMINAIS_UP = new Set(["CANCELADO", "ATENDIDO", "COMPARECEU", "FALTOU", "EXCLUIDO"]);
+  const TERMINAIS_LOW = new Set(["cancelado", "atendido", "compareceu", "faltou", "excluido"]);
+  const agendamentos = (agendamentosRaw || []).filter((a: any) => {
+    if (a.is_sandbox === true) return false;
+    const sc = String(a.status_crm ?? "").toUpperCase();
+    if (TERMINAIS_UP.has(sc)) return false;
+    const sf = String(a.status_funil ?? "").toLowerCase();
+    if (TERMINAIS_LOW.has(sf)) return false;
+    return true;
+  });
 
   const ocupados = new Set(
     (agendamentos || []).map((a: any) => {
@@ -262,11 +288,11 @@ export async function listarHorariosDisponiveis(
       });
       if (bloqueado) continue;
 
-      // Se for hoje, pular horários passados (margem de 1h)
-      if (data === new Date().toISOString().split("T")[0]) {
-        const agora = new Date();
+      // Se for hoje (em America/Belem), pular horários passados (margem de 1h).
+      if (data === hojeBelem) {
+        const agora = nowBelemMs();
         const slotDate = new Date(slot.data_hora);
-        if (slotDate.getTime() - agora.getTime() < 60 * 60 * 1000) continue;
+        if (slotDate.getTime() - agora < 60 * 60 * 1000) continue;
       }
 
       todosSlots.push(slot);
