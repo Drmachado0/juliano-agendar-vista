@@ -409,6 +409,71 @@ serve(async (req) => {
       }));
     }
 
+    // =========================================================================
+    // GUARDS DETERMINÍSTICOS — rodam ANTES do classificador/LLM.
+    // Espelham a lógica de registrar-mensagem-in-n8n (defesa em profundidade,
+    // caso o n8n dispare o assistente diretamente).
+    // =========================================================================
+    const exames = detectarAssuntoExames(body.conteudo, historico);
+    if (exames.matched) {
+      const idEscalado = await escalarParaHumano(supabase, {
+        telefone: body.telefone,
+        agendamentoId: body.agendamento_id ?? null,
+        agendamento,
+        motivo: "assunto_exames",
+        intencao: "exames",
+        detalhes: {
+          request_id: rid,
+          hits: exames.hits,
+          matched_in_history: exames.matchedInHistory,
+        },
+      });
+      const notification_summary = buildHandoffExamesSummary({
+        nome: agendamento?.nome_completo ?? null,
+        telefoneMascarado: maskTelefone(body.telefone),
+        mensagemAtual: body.conteudo,
+        hits: exames.hits,
+        matchedInHistory: exames.matchedInHistory,
+        agendamentoId: idEscalado ?? agendamento?.id ?? null,
+        statusCrm: agendamento?.status_crm ?? null,
+        statusFunil: agendamento?.status_funil ?? null,
+        localAtendimento: agendamento?.local_atendimento ?? null,
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          agiu: false,
+          handoff_required: true,
+          handoff_reason: "assunto_exames",
+          notify_required: true,
+          notification_phone: HANDOFF_NOTIFICATION_PHONE,
+          patient_reply: HANDOFF_EXAMES_REPLY,
+          notification_summary,
+          agendamentoId: idEscalado,
+          request_id: rid,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
+      );
+    }
+
+    const valor = detectarValorConsulta(body.conteudo);
+    if (valor.matched) {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          agiu: false,
+          immediate_reply: true,
+          immediate_reason: valor.reason,
+          patient_reply: valor.reply,
+          resume_agent: false, // resposta fixa já retoma o próximo dado no n8n
+          request_id: rid,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
+      );
+    }
+
+
+
     // 1) Classificar — se falhar (item 8), escala para humano e retorna agiu=false.
     let intencao;
     try {
