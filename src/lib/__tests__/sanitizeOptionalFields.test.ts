@@ -4,6 +4,7 @@ import {
   sanitizeNomeCompleto,
   sanitizeDataNascimento,
   sanitizeOptionalPayload,
+  assertNomePacienteValido,
 } from "../../../supabase/functions/_shared/sanitizeOptionalFields";
 
 describe("sanitizeOptionalText", () => {
