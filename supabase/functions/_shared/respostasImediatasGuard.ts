@@ -77,3 +77,49 @@ export function reforcarProximoDadoPendente(
   if (!p) return replyBase;
   return `${replyBase}\n\n${p}`;
 }
+
+// ---------------------------------------------------------------------------
+// Mapa determinístico estado_atendimento -> frase de retomada.
+// Usado pelo endpoint registrar-mensagem-in-n8n para compor a resposta ao
+// paciente após "valor da consulta", SEM chamar LLM neste turno.
+// ---------------------------------------------------------------------------
+
+export const PROXIMO_DADO_POR_ESTADO: Record<string, string> = {
+  coletando_nome:
+    "Para seguir com o agendamento, me confirma seu nome completo, por favor?",
+  coletando_data_nascimento:
+    "Para seguir, me informa sua data de nascimento (dd/mm/aaaa)?",
+  coletando_tipo_atendimento:
+    "O atendimento será particular ou por convênio?",
+  coletando_convenio:
+    "Qual é o nome do seu convênio?",
+  coletando_local:
+    "Você prefere ser atendido(a) no Clinicor ou no HGP?",
+  oferecendo_datas:
+    "Você tem alguma data de preferência para a consulta?",
+  oferecendo_horarios:
+    "Tem algum horário de preferência nesse dia?",
+  aguardando_confirmacao:
+    "Posso confirmar seu agendamento com esses dados?",
+};
+
+/**
+ * Compõe a resposta ao paciente para o caso valor_consulta.
+ * - Sempre começa com a frase fixa de valor.
+ * - Se o estado atual estiver no mapa, acrescenta a pergunta específica.
+ * - Se não estiver mapeado (ou for null/undefined), retorna apenas a frase fixa.
+ */
+export function composePatientReplyValor(
+  estadoAtendimento: string | null | undefined,
+): { reply: string; hasRetomada: boolean; estadoUsado: string | null } {
+  const chave = (estadoAtendimento || "").trim().toLowerCase();
+  const proximo = chave ? PROXIMO_DADO_POR_ESTADO[chave] ?? null : null;
+  if (!proximo) {
+    return { reply: VALOR_CONSULTA_REPLY, hasRetomada: false, estadoUsado: null };
+  }
+  return {
+    reply: `${VALOR_CONSULTA_REPLY}\n\n${proximo}`,
+    hasRetomada: true,
+    estadoUsado: chave,
+  };
+}
