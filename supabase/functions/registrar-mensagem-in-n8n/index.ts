@@ -262,13 +262,76 @@ async function computarEPersistirDecisao(params: {
     currentCreatedAt: mensagemCreatedAt ?? undefined,
     janelaMinutos: 45,
   });
+  const precoExame = classificarExamePreco(conteudo);
   const valor = detectarValorConsulta(conteudo);
 
   const decisao: GuardDecision = { ...EMPTY_DECISION, computed_at: new Date().toISOString() };
 
-  if (exames.matched) {
+  // ---- Precedência (rev-3) --------------------------------------------------
+  // 1) preço de exame tabelado / pergunta genérica sem nome
+  // 2) demais assuntos de exame -> handoff HGP
+  // 3) valor da consulta
+  // 4) agente normal
+  // (urgência é tratada em camadas superiores)
+  // ---------------------------------------------------------------------------
+
+  if (precoExame.kind === "preco_tabelado") {
+    const composed = composePatientReplyPrecoExame(
+      precoExame.label,
+      contextoAgendamento?.estado_atendimento ?? null,
+      PROXIMO_DADO_POR_ESTADO,
+    );
+    decisao.immediate_reply = true;
+    decisao.immediate_reason = "valor_exame_tabelado";
+    decisao.patient_reply = composed.reply;
+    decisao.resume_agent = false;
+    // NÃO altera bot_ativo/status: guard de preço tabelado é benigno.
+    if (logSideEffects) {
+      await supabase.from("system_logs").insert({
+        level: "info",
+        category: "whatsapp",
+        source: "registrar-mensagem-in-n8n",
+        message: "immediate_reply_valor_exame_tabelado",
+        details: {
+          request_id: rid,
+          mensagem_id: mensagemId,
+          provider_message_id: providerMessageId,
+          exame: precoExame.exame,
+          agendamento_id: contextoAgendamento?.id ?? null,
+          estado_atendimento: contextoAgendamento?.estado_atendimento ?? null,
+          retomada_aplicada: composed.hasRetomada,
+        },
+        agendamento_id: contextoAgendamento?.id ?? null,
+        request_id: rid,
+      });
+    }
+  } else if (precoExame.kind === "preco_generico_sem_exame") {
+    decisao.immediate_reply = true;
+    decisao.immediate_reason = "exame_nao_informado";
+    decisao.patient_reply = REPLY_EXAME_NAO_INFORMADO;
+    decisao.resume_agent = false;
+    if (logSideEffects) {
+      await supabase.from("system_logs").insert({
+        level: "info",
+        category: "whatsapp",
+        source: "registrar-mensagem-in-n8n",
+        message: "immediate_reply_exame_nao_informado",
+        details: {
+          request_id: rid,
+          mensagem_id: mensagemId,
+          provider_message_id: providerMessageId,
+          agendamento_id: contextoAgendamento?.id ?? null,
+        },
+        agendamento_id: contextoAgendamento?.id ?? null,
+        request_id: rid,
+      });
+    }
+  } else if (exames.matched || precoExame.kind === "handoff_exame_nao_tabelado") {
+    const exameMencionado =
+      precoExame.kind === "handoff_exame_nao_tabelado" ? precoExame.exameMencionado : null;
+    const hits = exames.matched ? exames.hits : ["exame_nao_tabelado"];
     decisao.handoff_required = true;
-    decisao.handoff_reason = "assunto_exames";
+    decisao.handoff_reason = "exame_avaliacao_hgp";
     decisao.notify_required = true;
     decisao.notification_phone = HANDOFF_NOTIFICATION_PHONE;
     decisao.patient_reply = HANDOFF_EXAMES_REPLY;
@@ -287,13 +350,13 @@ async function computarEPersistirDecisao(params: {
         await supabase.rpc("transicionar_estado_agendamento", {
           p_id: contextoAgendamento.id,
           p_novo_status_crm: "PRECISA_DE_HUMANO",
-          p_motivo: `[GUARD] assunto_exames · request_id=${rid}`,
+          p_motivo: `[GUARD] exame_avaliacao_hgp · request_id=${rid}`,
         });
         await supabase
           .from("agendamentos")
           .update({
             bot_ativo: false,
-            bot_pausa_motivo: "assunto_exames",
+            bot_pausa_motivo: "exame_avaliacao_hgp",
             bot_ultima_acao_at: new Date().toISOString(),
           })
           .eq("id", contextoAgendamento.id);
@@ -306,12 +369,13 @@ async function computarEPersistirDecisao(params: {
       nome: contextoAgendamento?.nome_completo ?? null,
       telefoneMascarado: maskTelefone(telefoneNormalizado),
       mensagemAtual: conteudo,
-      hits: exames.hits,
+      hits,
       matchedInHistory: exames.matchedInHistory,
       agendamentoId: contextoAgendamento?.id ?? null,
       statusCrm: contextoAgendamento?.status_crm ?? null,
       statusFunil: contextoAgendamento?.status_funil ?? null,
       localAtendimento: contextoAgendamento?.local_atendimento ?? null,
+      exameMencionado,
     });
 
     if (logSideEffects) {
@@ -324,10 +388,11 @@ async function computarEPersistirDecisao(params: {
           request_id: rid,
           mensagem_id: mensagemId,
           provider_message_id: providerMessageId,
-          hits: exames.hits,
+          hits,
           matched_in_history: exames.matchedInHistory,
           agendamento_id: contextoAgendamento?.id ?? null,
           pode_alterar_registro: podeAlterar,
+          handoff_reason: "exame_avaliacao_hgp",
         },
         agendamento_id: contextoAgendamento?.id ?? null,
         request_id: rid,
