@@ -146,6 +146,244 @@ async function tentarVinculo(
   return { ok: true, info: (data ?? {}) as Record<string, any> };
 }
 
+/**
+ * Lê a decisão persistida em mensagens_whatsapp.payload.guard_decision.
+ * Retorna null se ainda não foi computada ou se estrutura for inválida.
+ */
+async function carregarDecisaoPersistida(
+  supabase: ReturnType<typeof createClient>,
+  mensagemId: string,
+): Promise<GuardDecision | null> {
+  const { data } = await supabase
+    .from("mensagens_whatsapp")
+    .select("payload")
+    .eq("id", mensagemId)
+    .maybeSingle();
+  const p = (data?.payload ?? null) as Record<string, unknown> | null;
+  const g = p && typeof p === "object" ? (p as any).guard_decision : null;
+  if (!g || typeof g !== "object") return null;
+  return { ...EMPTY_DECISION, ...(g as Partial<GuardDecision>), version: 2 };
+}
+
+/** Merge payload.guard_decision idempotentemente. Nunca lança. */
+async function persistirDecisao(
+  supabase: ReturnType<typeof createClient>,
+  mensagemId: string,
+  decisao: GuardDecision,
+): Promise<void> {
+  try {
+    const { data } = await supabase
+      .from("mensagens_whatsapp")
+      .select("payload")
+      .eq("id", mensagemId)
+      .maybeSingle();
+    const atual = (data?.payload && typeof data.payload === "object")
+      ? (data.payload as Record<string, unknown>)
+      : {};
+    const novo = { ...atual, guard_decision: decisao };
+    await supabase.from("mensagens_whatsapp").update({ payload: novo }).eq("id", mensagemId);
+  } catch (e) {
+    console.warn("[registrar-mensagem-in-n8n] persistirDecisao falhou:", (e as Error).message);
+  }
+}
+
+/**
+ * Computa a decisão dos guards e persiste em payload.guard_decision.
+ * Executa side-effects (auditoria + pausa do bot) SOMENTE quando
+ * logSideEffects=true (fluxo primário). Duplicatas usam logSideEffects=false.
+ */
+async function computarEPersistirDecisao(params: {
+  supabase: ReturnType<typeof createClient>;
+  mensagemId: string;
+  mensagemCreatedAt: string | null;
+  conteudo: string;
+  telefoneNormalizado: string;
+  agendamentoId: string | null;
+  providerMessageId: string | null;
+  rid: string;
+  logSideEffects: boolean;
+}): Promise<GuardDecision> {
+  const { supabase, mensagemId, mensagemCreatedAt, conteudo, telefoneNormalizado,
+    agendamentoId, providerMessageId, rid, logSideEffects } = params;
+
+  let contextoAgendamento: {
+    id: string | null;
+    nome_completo: string | null;
+    status_crm: string | null;
+    status_funil: string | null;
+    estado_atendimento: string | null;
+    local_atendimento: string | null;
+    bot_ativo: boolean | null;
+    is_sandbox: boolean | null;
+  } | null = null;
+  if (agendamentoId) {
+    const { data: ag } = await supabase
+      .from("agendamentos")
+      .select("id, nome_completo, status_crm, status_funil, estado_atendimento, local_atendimento, bot_ativo, is_sandbox")
+      .eq("id", agendamentoId)
+      .maybeSingle();
+    if (ag) contextoAgendamento = ag as typeof contextoAgendamento;
+  }
+
+  // Histórico: EXCLUI a mensagem atual via .neq(id).
+  let historicoRecente: {
+    id: string; direcao: string; conteudo: string; created_at: string;
+  }[] = [];
+  if (telefoneNormalizado) {
+    const { data: msgs } = await supabase
+      .from("mensagens_whatsapp")
+      .select("id, direcao, conteudo, created_at")
+      .eq("telefone", telefoneNormalizado)
+      .neq("id", mensagemId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    historicoRecente = ((msgs as any[]) || [])
+      .reverse()
+      .filter((m) => m.direcao === "IN")
+      .map((m) => ({
+        id: m.id, direcao: m.direcao, conteudo: m.conteudo || "", created_at: m.created_at,
+      }));
+  }
+
+  const now = mensagemCreatedAt ? new Date(mensagemCreatedAt).getTime() : Date.now();
+  const exames = detectarAssuntoExames(conteudo, historicoRecente, {
+    now,
+    currentMessageId: mensagemId,
+    currentCreatedAt: mensagemCreatedAt ?? undefined,
+    janelaMinutos: 45,
+  });
+  const valor = detectarValorConsulta(conteudo);
+
+  const decisao: GuardDecision = { ...EMPTY_DECISION, computed_at: new Date().toISOString() };
+
+  if (exames.matched) {
+    decisao.handoff_required = true;
+    decisao.handoff_reason = "assunto_exames";
+    decisao.notify_required = true;
+    decisao.notification_phone = HANDOFF_NOTIFICATION_PHONE;
+    decisao.patient_reply = HANDOFF_EXAMES_REPLY;
+    decisao.resume_agent = false;
+
+    const podeAlterar =
+      !!contextoAgendamento &&
+      isRegistroAtivo({
+        is_sandbox: contextoAgendamento.is_sandbox,
+        status_crm: contextoAgendamento.status_crm,
+        status_funil: contextoAgendamento.status_funil,
+      });
+
+    if (logSideEffects && podeAlterar && contextoAgendamento) {
+      try {
+        await supabase.rpc("transicionar_estado_agendamento", {
+          p_id: contextoAgendamento.id,
+          p_novo_status_crm: "PRECISA_DE_HUMANO",
+          p_motivo: `[GUARD] assunto_exames · request_id=${rid}`,
+        });
+        await supabase
+          .from("agendamentos")
+          .update({
+            bot_ativo: false,
+            bot_pausa_motivo: "assunto_exames",
+            bot_ultima_acao_at: new Date().toISOString(),
+          })
+          .eq("id", contextoAgendamento.id);
+      } catch (e) {
+        console.warn("[registrar-mensagem-in-n8n] transicao_falhou", (e as Error).message);
+      }
+    }
+
+    decisao.notification_summary = buildHandoffExamesSummary({
+      nome: contextoAgendamento?.nome_completo ?? null,
+      telefoneMascarado: maskTelefone(telefoneNormalizado),
+      mensagemAtual: conteudo,
+      hits: exames.hits,
+      matchedInHistory: exames.matchedInHistory,
+      agendamentoId: contextoAgendamento?.id ?? null,
+      statusCrm: contextoAgendamento?.status_crm ?? null,
+      statusFunil: contextoAgendamento?.status_funil ?? null,
+      localAtendimento: contextoAgendamento?.local_atendimento ?? null,
+    });
+
+    if (logSideEffects) {
+      await supabase.from("system_logs").insert({
+        level: "warn",
+        category: "whatsapp",
+        source: "registrar-mensagem-in-n8n",
+        message: "handoff_exames",
+        details: {
+          request_id: rid,
+          mensagem_id: mensagemId,
+          provider_message_id: providerMessageId,
+          hits: exames.hits,
+          matched_in_history: exames.matchedInHistory,
+          agendamento_id: contextoAgendamento?.id ?? null,
+          pode_alterar_registro: podeAlterar,
+        },
+        agendamento_id: contextoAgendamento?.id ?? null,
+        request_id: rid,
+      });
+    }
+  } else if (valor.matched) {
+    const composed = composePatientReplyValor(contextoAgendamento?.estado_atendimento ?? null);
+    decisao.immediate_reply = true;
+    decisao.immediate_reason = valor.reason;
+    decisao.patient_reply = composed.reply;
+    // n8n envia UMA mensagem e NÃO chama LLM neste turno.
+    decisao.resume_agent = false;
+
+    if (logSideEffects) {
+      await supabase.from("system_logs").insert({
+        level: "info",
+        category: "whatsapp",
+        source: "registrar-mensagem-in-n8n",
+        message: "immediate_reply_valor_consulta",
+        details: {
+          request_id: rid,
+          mensagem_id: mensagemId,
+          provider_message_id: providerMessageId,
+          agendamento_id: contextoAgendamento?.id ?? null,
+          estado_atendimento: contextoAgendamento?.estado_atendimento ?? null,
+          retomada_aplicada: composed.hasRetomada,
+        },
+        agendamento_id: contextoAgendamento?.id ?? null,
+        request_id: rid,
+      });
+    }
+  }
+
+  await persistirDecisao(supabase, mensagemId, decisao);
+  return decisao;
+}
+
+/**
+ * Resolve a decisão de uma mensagem duplicada.
+ * - Se guard_decision já persistida: retorna sem side-effects.
+ * - Se legado sem decisão: reavalia UMA vez, sem log/transição, e persiste.
+ */
+async function resolverDecisaoDuplicata(params: {
+  supabase: ReturnType<typeof createClient>;
+  mensagemId: string;
+  conteudo: string;
+  telefoneNormalizado: string;
+  agendamentoId: string | null;
+  providerMessageId: string | null;
+  rid: string;
+}): Promise<GuardDecision> {
+  const existente = await carregarDecisaoPersistida(params.supabase, params.mensagemId);
+  if (existente) return existente;
+  const { data } = await params.supabase
+    .from("mensagens_whatsapp")
+    .select("created_at")
+    .eq("id", params.mensagemId)
+    .maybeSingle();
+  return computarEPersistirDecisao({
+    ...params,
+    mensagemCreatedAt: (data?.created_at as string | null) ?? null,
+    logSideEffects: false,
+  });
+}
+
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
