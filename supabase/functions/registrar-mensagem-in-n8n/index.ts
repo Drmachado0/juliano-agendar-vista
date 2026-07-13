@@ -39,6 +39,10 @@ import {
   LOCAL_HGP_CANONICO,
 } from "../_shared/examesPrecoGuard.ts";
 import { isRegistroAtivo } from "../_shared/statusTerminais.ts";
+import {
+  resolveNextEstadoAtendimento,
+  precisaRecomputar,
+} from "../_shared/estadoAtendimentoResolver.ts";
 
 // Estrutura persistida em mensagens_whatsapp.payload.guard_decision para
 // garantir idempotência: duplicatas retornam EXATAMENTE a mesma decisão.
@@ -220,6 +224,8 @@ async function computarEPersistirDecisao(params: {
   let contextoAgendamento: {
     id: string | null;
     nome_completo: string | null;
+    data_nascimento: string | null;
+    tipo_atendimento: string | null;
     status_crm: string | null;
     status_funil: string | null;
     estado_atendimento: string | null;
@@ -230,7 +236,7 @@ async function computarEPersistirDecisao(params: {
   if (agendamentoId) {
     const { data: ag } = await supabase
       .from("agendamentos")
-      .select("id, nome_completo, status_crm, status_funil, estado_atendimento, local_atendimento, bot_ativo, is_sandbox")
+      .select("id, nome_completo, data_nascimento, tipo_atendimento, status_crm, status_funil, estado_atendimento, local_atendimento, bot_ativo, is_sandbox")
       .eq("id", agendamentoId)
       .maybeSingle();
     if (ag) contextoAgendamento = ag as typeof contextoAgendamento;
@@ -308,6 +314,20 @@ async function computarEPersistirDecisao(params: {
         status_funil: contextoAgendamento.status_funil,
       });
     if (logSideEffects && podeAlterar && contextoAgendamento) {
+      // Rev-4.1: se o card veio de humano/aguardando_humano/coleta,
+      // recomputa determinísticamente o próximo estado do funil.
+      const estadoAtualCtx = contextoAgendamento.estado_atendimento ?? null;
+      const detalheCanonico = detalheCanonicoExame(precoExame.exame);
+      const proximoEstado = precisaRecomputar(estadoAtualCtx)
+        ? resolveNextEstadoAtendimento({
+            estado_atual: estadoAtualCtx,
+            nome_completo: contextoAgendamento.nome_completo,
+            data_nascimento: contextoAgendamento.data_nascimento,
+            tipo_atendimento: "Exame",
+            local_atendimento: LOCAL_HGP_CANONICO,
+          })
+        : estadoAtualCtx;
+
       try {
         await supabase
           .from("agendamentos")
@@ -315,12 +335,13 @@ async function computarEPersistirDecisao(params: {
             status_crm: "EXAMES_HGP",
             status_funil: "exames_hgp",
             tipo_atendimento: "Exame",
-            detalhe_exame_ou_cirurgia: detalheCanonicoExame(precoExame.exame),
+            detalhe_exame_ou_cirurgia: detalheCanonico,
             local_atendimento: LOCAL_HGP_CANONICO,
             bot_ativo: true,
             bot_pausado_ate: null,
             bot_pausa_motivo: null,
             motivo_status: "valor_exame_tabelado",
+            estado_atendimento: proximoEstado,
             bot_ultima_acao_at: new Date().toISOString(),
           })
           .eq("id", contextoAgendamento.id);
