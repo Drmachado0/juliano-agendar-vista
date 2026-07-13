@@ -1,89 +1,63 @@
 // ============================================================================
 // Fail-closed em listarHorariosDisponiveis: erro em bloqueios_agenda ou em
-// agendamentos NÃO pode virar lista vazia silenciosa e nem "todos os slots
-// livres". A função retorna [] e loga o código, sem PII.
+// agendamentos NÃO pode virar lista vazia silenciosa nem "todos os slots
+// livres". Verificação estrutural (o arquivo alvo importa de https://esm.sh
+// e roda em Deno, então testes comportamentais precisam ser em Deno).
 // ============================================================================
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { listarHorariosDisponiveis } from "../../../supabase/functions/_shared/validarDisponibilidade.ts";
+import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
-// Mock builder mínimo — só o subset usado pela função.
-type Row = Record<string, any>;
-function makeSupabase(handlers: {
-  disponibilidade_especifica?: () => Promise<{ data: Row[] | null; error: any }>;
-  disponibilidade_semanal?: () => Promise<{ data: Row[] | null; error: any }>;
-  bloqueios_agenda?: () => Promise<{ data: Row[] | null; error: any }>;
-  agendamentos?: () => Promise<{ data: Row[] | null; error: any }>;
-}) {
-  const build = (table: string) => {
-    const chain: any = {
-      _table: table,
-      select: () => chain,
-      eq: () => chain,
-      neq: () => chain,
-      in: () => chain,
-      then: (resolve: any, reject: any) => {
-        const h = (handlers as any)[table];
-        if (!h) return resolve({ data: [], error: null });
-        return h().then(resolve, reject);
-      },
-    };
-    return chain;
-  };
-  return { from: (t: string) => build(t) } as any;
-}
+const src = readFileSync(
+  resolve(__dirname, "../../..", "supabase/functions/_shared/validarDisponibilidade.ts"),
+  "utf8",
+);
 
-// disp_especifica com uma clínica válida e slots 09:00-10:00, intervalo 30.
-const DISP_OK = [
-  {
-    clinica_id: "657e4784-e292-45c6-a033-40f3d115f984",
-    hora_inicio: "09:00",
-    hora_fim: "10:00",
-    intervalo_minutos: 30,
-    clinicas: { id: "657e4784-e292-45c6-a033-40f3d115f984", nome: "Clinicor – Paragominas" },
-  },
-];
-
-let errSpy: ReturnType<typeof vi.spyOn>;
-beforeEach(() => { errSpy = vi.spyOn(console, "error").mockImplementation(() => {}); });
-afterEach(() => { errSpy.mockRestore(); });
-
-describe("listarHorariosDisponiveis — fail-closed", () => {
-  const dataFutura = "2099-01-15";
-
-  it("caso feliz: retorna os slots quando não há erros", async () => {
-    const supa = makeSupabase({
-      disponibilidade_especifica: async () => ({ data: DISP_OK, error: null }),
-      bloqueios_agenda: async () => ({ data: [], error: null }),
-      agendamentos: async () => ({ data: [], error: null }),
-    });
-    const slots = await listarHorariosDisponiveis(supa, dataFutura, "Clinicor");
-    expect(slots.length).toBeGreaterThan(0);
+describe("listarHorariosDisponiveis — fail-closed em erros de query", () => {
+  it("captura errB de bloqueios_agenda (não descarta com destructuring parcial)", () => {
+    expect(src).toMatch(/from\("bloqueios_agenda"\)[\s\S]{0,300}error:\s*errB/);
   });
 
-  it("erro em bloqueios_agenda → retorna [] e loga código sanitizado", async () => {
-    const supa = makeSupabase({
-      disponibilidade_especifica: async () => ({ data: DISP_OK, error: null }),
-      bloqueios_agenda: async () => ({ data: null, error: { code: "PGRST500", message: "boom PII" } }),
-      agendamentos: async () => ({ data: [], error: null }),
-    });
-    const slots = await listarHorariosDisponiveis(supa, dataFutura, "Clinicor");
-    expect(slots).toEqual([]);
-    expect(errSpy).toHaveBeenCalled();
-    const logged = errSpy.mock.calls.flat().map(String).join("|");
-    expect(logged).toMatch(/bloqueios_err/);
-    expect(logged).not.toMatch(/boom PII/);
+  it("em errB retorna [] e loga 'bloqueios_err' com apenas code (sem PII)", () => {
+    // Padrão obrigatório: if (errB) { console.error("... bloqueios_err ...", { code: ... }); return []; }
+    expect(src).toMatch(
+      /if\s*\(\s*errB\s*\)\s*\{[\s\S]{0,200}bloqueios_err[\s\S]{0,200}code:[\s\S]{0,80}return\s*\[\];\s*\}/,
+    );
+    // Não deve logar objeto inteiro do erro (que traria message/PII).
+    const errBBlock = src.split(/if\s*\(\s*errB\s*\)/)[1]?.split("return")[0] ?? "";
+    expect(errBBlock).not.toMatch(/errB\s*\)\s*$/m); // não passa o erro inteiro
+    expect(errBBlock).not.toMatch(/message/);
   });
 
-  it("erro em agendamentos → retorna [] e loga código sanitizado", async () => {
-    const supa = makeSupabase({
-      disponibilidade_especifica: async () => ({ data: DISP_OK, error: null }),
-      bloqueios_agenda: async () => ({ data: [], error: null }),
-      agendamentos: async () => ({ data: null, error: { code: "PGRST501", message: "leak 999" } }),
-    });
-    const slots = await listarHorariosDisponiveis(supa, dataFutura, "Clinicor");
-    expect(slots).toEqual([]);
-    const logged = errSpy.mock.calls.flat().map(String).join("|");
-    expect(logged).toMatch(/agendamentos_err/);
-    expect(logged).not.toMatch(/leak 999/);
+  it("captura errAg de agendamentos", () => {
+    expect(src).toMatch(/from\("agendamentos"\)[\s\S]{0,600}error:\s*errAg/);
+  });
+
+  it("em errAg retorna [] e loga 'agendamentos_err' com apenas code", () => {
+    expect(src).toMatch(
+      /if\s*\(\s*errAg\s*\)\s*\{[\s\S]{0,200}agendamentos_err[\s\S]{0,200}code:[\s\S]{0,80}return\s*\[\];\s*\}/,
+    );
+    const errAgBlock = src.split(/if\s*\(\s*errAg\s*\)/)[1]?.split("return")[0] ?? "";
+    expect(errAgBlock).not.toMatch(/message/);
+  });
+
+  it("não faz mais o pattern antigo 'const { data: bloqueios } = await' sem checar erro", () => {
+    // O antigo era: const { data: bloqueios } = await supabase.from("bloqueios_agenda")...
+    expect(src).not.toMatch(/const\s*\{\s*data:\s*bloqueios\s*\}\s*=\s*await\s+supabase\s*\.from\("bloqueios_agenda"\)/);
+    // idem para agendamentos: sem destructuring parcial escondendo o erro
+    expect(src).not.toMatch(/const\s*\{\s*data:\s*agendamentosRaw\s*\}\s*=\s*await\s+agQuery\s*;/);
+  });
+});
+
+describe("mcp-agendamento usa classifyNotificationResults (não fail-open)", () => {
+  const mcpSrc = readFileSync(
+    resolve(__dirname, "../../..", "supabase/functions/mcp-agendamento/index.ts"),
+    "utf8",
+  );
+  it("importa e chama classifyNotificationResults sobre allSettled", () => {
+    expect(mcpSrc).toMatch(/from ["']\.\.\/_shared\/classifyNotificationResults\.ts["']/);
+    expect(mcpSrc).toMatch(/classifyNotificationResults\(results\)/);
+    // Não deve mais confiar apenas em r.status === "fulfilled"
+    expect(mcpSrc).not.toMatch(/results\.every\([^)]*fulfilled/);
   });
 });
