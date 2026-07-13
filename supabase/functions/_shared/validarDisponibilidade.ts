@@ -179,7 +179,11 @@ export async function listarHorariosDisponiveis(
   }
 
   const { data: especificas, error: errE } = await especQuery;
-  if (errE || !especificas?.length) return [];
+  if (errE) {
+    console.error("[listarHorariosDisponiveis] especificas_err", { code: (errE as any).code });
+    return [];
+  }
+  if (!especificas?.length) return [];
 
   // Para cada disp_especifica sem hora_inicio/hora_fim explícito, resolve via modelo_id
   const modeloIds = (especificas as any[])
@@ -188,10 +192,14 @@ export async function listarHorariosDisponiveis(
 
   let modelosMap = new Map<string, any>();
   if (modeloIds.length) {
-    const { data: modelos } = await supabase
+    const { data: modelos, error: errM } = await supabase
       .from("disponibilidade_semanal")
       .select("*")
       .in("id", modeloIds);
+    if (errM) {
+      console.error("[listarHorariosDisponiveis] modelos_err", { code: (errM as any).code });
+      return [];
+    }
     for (const m of (modelos as any[]) || []) modelosMap.set(m.id, m);
   }
 
