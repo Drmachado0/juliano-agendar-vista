@@ -56,8 +56,10 @@ serve(async (req) => {
     telefone: raw.telefone,
     agendamento_id: raw.agendamento_id ?? null,
     conteudo: raw.conteudo,
-    // default legado sempre foi confirmacao_automatica; preserva se ausente
-    tipo_mensagem: raw.tipo_mensagem ?? "confirmacao_automatica",
+    // Default seguro: bot_agente. Nunca voltar a confirmacao_automatica —
+    // isso alteraria confirmation_* em payloads legados sem tipo explícito.
+    tipo_mensagem: raw.tipo_mensagem ?? "bot_agente",
+
     canal: raw.canal ?? "whatsapp_manychat",
     provider: (raw as any).provider,
     provider_message_id: raw.provider_message_id ?? null,
