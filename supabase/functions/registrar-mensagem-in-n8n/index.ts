@@ -648,152 +648,20 @@ serve(async (req) => {
   }
 
   // ==========================================================================
-  // 6) GUARDS DETERMINÍSTICOS (rodam antes de qualquer classificador/LLM).
-  //    - Handoff obrigatório para EXAMES.
-  //    - Resposta imediata para VALOR DA CONSULTA (R$ 300,00).
-  //    Estes campos são retornados ao n8n. O n8n é quem executa envio ao
-  //    paciente (via ManyChat) e notificação interna. Aqui só decidimos,
-  //    persistimos auditoria e — no caso de handoff — pausamos o bot se
-  //    possível.
+  // 6) GUARDS DETERMINÍSTICOS via helper (executa side-effects e persiste
+  //    guard_decision em mensagens_whatsapp.payload).
   // ==========================================================================
-
-  // Carrega contexto do agendamento (se houver) para decisões e resumo.
-  let contextoAgendamento: {
-    id: string | null;
-    nome_completo: string | null;
-    status_crm: string | null;
-    status_funil: string | null;
-    local_atendimento: string | null;
-    bot_ativo: boolean | null;
-    is_sandbox: boolean | null;
-  } | null = null;
-  if (agendamentoId) {
-    const { data: ag } = await supabase
-      .from("agendamentos")
-      .select("id, nome_completo, status_crm, status_funil, local_atendimento, bot_ativo, is_sandbox")
-      .eq("id", agendamentoId)
-      .maybeSingle();
-    if (ag) contextoAgendamento = ag as typeof contextoAgendamento;
-  }
-
-  // Histórico curto para detectar exames em mensagens concatenadas.
-  // Match EXATO por telefone canônico normalizado (nunca por slice/ilike).
-  let historicoRecente: { direcao: string; conteudo: string }[] = [];
-  if (telefoneNormalizado) {
-    const { data: msgs } = await supabase
-      .from("mensagens_whatsapp")
-      .select("direcao, conteudo, created_at")
-      .eq("telefone", telefoneNormalizado)
-      .order("created_at", { ascending: false })
-      .limit(10);
-    historicoRecente = ((msgs as any[]) || [])
-      .reverse()
-      .filter((m) => m.direcao === "IN")
-      .map((m) => ({ direcao: m.direcao, conteudo: m.conteudo || "" }));
-  }
-
-  const exames = detectarAssuntoExames(body.conteudo, historicoRecente);
-  const valor = detectarValorConsulta(body.conteudo);
-
-  let handoff_required = false;
-  let handoff_reason: string | null = null;
-  let notify_required = false;
-  let notification_phone: string | null = null;
-  let patient_reply: string | null = null;
-  let notification_summary: string | null = null;
-  let immediate_reply = false;
-  let immediate_reason: string | null = null;
-  let resume_agent = true;
-
-  if (exames.matched) {
-    handoff_required = true;
-    handoff_reason = "assunto_exames";
-    notify_required = true;
-    notification_phone = HANDOFF_NOTIFICATION_PHONE;
-    patient_reply = HANDOFF_EXAMES_REPLY;
-    resume_agent = false;
-
-    const podeAlterar =
-      !!contextoAgendamento &&
-      isRegistroAtivo({
-        is_sandbox: contextoAgendamento.is_sandbox,
-        status_crm: contextoAgendamento.status_crm,
-        status_funil: contextoAgendamento.status_funil,
-      });
-
-    if (podeAlterar && contextoAgendamento) {
-      try {
-        await supabase.rpc("transicionar_estado_agendamento", {
-          p_id: contextoAgendamento.id,
-          p_novo_status_crm: "PRECISA_DE_HUMANO",
-          p_motivo: `[GUARD] assunto_exames · request_id=${rid}`,
-        });
-        await supabase
-          .from("agendamentos")
-          .update({
-            bot_ativo: false,
-            bot_pausa_motivo: "assunto_exames",
-            bot_ultima_acao_at: new Date().toISOString(),
-          })
-          .eq("id", contextoAgendamento.id);
-      } catch (e) {
-        // Não bloqueia handoff se transição falhar (ex.: status terminal).
-        console.warn("[registrar-mensagem-in-n8n] transicao_falhou", (e as Error).message);
-      }
-    }
-
-    notification_summary = buildHandoffExamesSummary({
-      nome: contextoAgendamento?.nome_completo ?? null,
-      telefoneMascarado: maskTelefone(telefoneNormalizado),
-      mensagemAtual: body.conteudo,
-      hits: exames.hits,
-      matchedInHistory: exames.matchedInHistory,
-      agendamentoId: contextoAgendamento?.id ?? null,
-      statusCrm: contextoAgendamento?.status_crm ?? null,
-      statusFunil: contextoAgendamento?.status_funil ?? null,
-      localAtendimento: contextoAgendamento?.local_atendimento ?? null,
-    });
-
-    // Auditoria idempotente por request_id + mensagem
-    await supabase.from("system_logs").insert({
-      level: "warn",
-      category: "whatsapp",
-      source: "registrar-mensagem-in-n8n",
-      message: "handoff_exames",
-      details: {
-        request_id: rid,
-        mensagem_id: inserted.id,
-        provider_message_id: providerMessageId,
-        hits: exames.hits,
-        matched_in_history: exames.matchedInHistory,
-        agendamento_id: contextoAgendamento?.id ?? null,
-        pode_alterar_registro: podeAlterar,
-      },
-      agendamento_id: contextoAgendamento?.id ?? null,
-      request_id: rid,
-    });
-  } else if (valor.matched) {
-    immediate_reply = true;
-    immediate_reason = valor.reason;
-    patient_reply = valor.reply;
-    // Não desativamos o bot; ele DEVE retomar de onde parou.
-    resume_agent = true;
-
-    await supabase.from("system_logs").insert({
-      level: "info",
-      category: "whatsapp",
-      source: "registrar-mensagem-in-n8n",
-      message: "immediate_reply_valor_consulta",
-      details: {
-        request_id: rid,
-        mensagem_id: inserted.id,
-        provider_message_id: providerMessageId,
-        agendamento_id: contextoAgendamento?.id ?? null,
-      },
-      agendamento_id: contextoAgendamento?.id ?? null,
-      request_id: rid,
-    });
-  }
+  const decisao = await computarEPersistirDecisao({
+    supabase,
+    mensagemId: inserted.id,
+    mensagemCreatedAt: (inserted as any).created_at ?? null,
+    conteudo: body.conteudo,
+    telefoneNormalizado,
+    agendamentoId,
+    providerMessageId,
+    rid,
+    logSideEffects: true,
+  });
 
   return json(
     {
@@ -805,19 +673,19 @@ serve(async (req) => {
       ambiguo: !!info.ambiguo,
       total_matches: info.total_matches ?? null,
       duplicada: false,
-      // Guards determinísticos (n8n usa para decidir envio/notificação):
-      handoff_required,
-      handoff_reason,
-      notify_required,
-      notification_phone,
-      immediate_reply,
-      immediate_reason,
-      resume_agent,
-      patient_reply,
-      notification_summary,
+      handoff_required: decisao.handoff_required,
+      handoff_reason: decisao.handoff_reason,
+      notify_required: decisao.notify_required,
+      notification_phone: decisao.notification_phone,
+      notification_summary: decisao.notification_summary,
+      immediate_reply: decisao.immediate_reply,
+      immediate_reason: decisao.immediate_reason,
+      resume_agent: decisao.resume_agent,
+      patient_reply: decisao.patient_reply,
       request_id: rid,
     },
     200,
     headers,
   );
 });
+
