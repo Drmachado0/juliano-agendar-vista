@@ -169,11 +169,30 @@ async function executeTool(
     const data_agendamento = String(args.data_agendamento ?? "");
     const hora_agendamento = String(args.hora_agendamento ?? "");
     const local_atendimento = String(args.local_atendimento ?? "");
-    const nome_completo = String(args.nome_completo ?? "").trim();
+    const nomeRaw = args.nome_completo;
     const convenio = String(args.convenio ?? "Particular");
     const tipo_atendimento = String(args.tipo_atendimento ?? "Consulta");
 
-    if (!telefone || !data_agendamento || !hora_agendamento || !local_atendimento || !nome_completo) {
+    // Guard nome inválido/placeholder ANTES de qualquer upsert/notificação.
+    // Bug 2026-07-13: $fromAI enviou "undefined" e o card foi criado com
+    // "Paciente: undefined" na confirmação. Nunca aceitar placeholder aqui.
+    const nomeCheck = assertNomePacienteValido(nomeRaw);
+    if (!nomeCheck.ok) {
+      console.warn("[mcp criar_agendamento] nome_paciente_invalido", {
+        motivo: nomeCheck.motivo,
+        raw: nomeRaw,
+        telefone,
+      });
+      return {
+        sucesso: false,
+        motivo: "nome_paciente_invalido",
+        detalhe: nomeCheck.motivo,
+        acao_sugerida: "Pergunte o nome completo do paciente antes de confirmar o agendamento.",
+      };
+    }
+    const nome_completo = nomeCheck.nome!;
+
+    if (!telefone || !data_agendamento || !hora_agendamento || !local_atendimento) {
       return { sucesso: false, motivo: "dados_incompletos" };
     }
 
