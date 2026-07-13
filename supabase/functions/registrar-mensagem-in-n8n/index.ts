@@ -373,13 +373,13 @@ serve(async (req) => {
   }
 
   // Histórico curto para detectar exames em mensagens concatenadas.
-  const canon = (telefoneNormalizado || "").replace(/\D/g, "").slice(-11);
+  // Match EXATO por telefone canônico normalizado (nunca por slice/ilike).
   let historicoRecente: { direcao: string; conteudo: string }[] = [];
-  if (canon) {
+  if (telefoneNormalizado) {
     const { data: msgs } = await supabase
       .from("mensagens_whatsapp")
       .select("direcao, conteudo, created_at")
-      .ilike("telefone", `%${canon.slice(-8)}`)
+      .eq("telefone", telefoneNormalizado)
       .order("created_at", { ascending: false })
       .limit(10);
     historicoRecente = ((msgs as any[]) || [])
