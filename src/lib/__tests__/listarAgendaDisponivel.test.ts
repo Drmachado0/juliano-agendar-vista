@@ -23,9 +23,11 @@ function getClinicaSlugsFromLocal(local: string | null | undefined): string[] | 
   if (!l) return null;
   if (l.includes("clinicor")) return ["clinicor"];
   if (l.includes("hgp") || l.includes("hospital geral")) return ["hgp"];
-  if (l.includes("iob") && !l.includes("belem") && !l.includes("belém")) return ["iob"];
-  if (l.includes("vitria")) return ["vitria"];
+  // Belém deve ser checado ANTES de iob/vitria isolados, pois a string
+  // "Belém (IOB / Vitria)" contém ambos.
   if (l.includes("belém") || l.includes("belem")) return ["iob", "vitria"];
+  if (l.includes("iob")) return ["iob"];
+  if (l.includes("vitria")) return ["vitria"];
   return [];
 }
 
