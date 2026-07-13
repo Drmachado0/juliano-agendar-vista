@@ -41,17 +41,31 @@ ponta-a-ponta.
 ```
 
 - `auto_avancar` é opcional (default `true`).
+- `mes` e `ano` são **opcionais**. Ausentes, inválidos (não inteiro, `mes`
+  fora de 1-12, `ano` fora de 2000-2100) ou no passado disparam ajuste
+  automático para o mês atual em `America/Belem`.
 
 ### Comportamento
 
-1. Se `mes/ano` estiver **inteiramente no passado** (mês solicitado < mês
-   atual em Belém), a função **ajusta automaticamente** para o mês atual e
-   marca `ajustado_periodo_passado=true`. `periodo_solicitado` preserva a
-   entrada original.
+1. **Default seguro para mes/ano**: se `mes` ou `ano` estiverem ausentes,
+   inválidos ou apontarem para um mês inteiramente no passado, a função
+   usa o mês atual em `America/Belem`, define `periodo_ajustado=true` e
+   preenche `motivo_ajuste` com um dos rótulos:
+   - `periodo_ausente` — corpo sem `mes` e/ou `ano`.
+   - `periodo_invalido` — valor não inteiro, `mes` fora de 1-12 ou `ano`
+     fora de 2000-2100 (ex.: `mes=13`, `ano=1500`).
+   - `periodo_passado` — mês solicitado é anterior ao mês atual em Belém.
+   Para compatibilidade, `ajustado_periodo_passado=true` **apenas** no caso
+   `periodo_passado`. `periodo_solicitado` preserva os valores originais
+   (ou `null` quando não numéricos/ausentes).
 2. Se `auto_avancar=true` (default) e o mês consultado não tiver datas,
    avança **até 6 meses** (contando o base) buscando a primeira agenda.
-   Nunca devolve "sem datas" enquanto existir agenda no horizonte.
-3. Dias passados dentro do mês corrente são pulados.
+   No pior caso (todos vazios), `periodo_consultado` permanece no **sexto e
+   último** mês realmente consultado — nunca avança para um 7º mês — e a
+   resposta traz `motivo="sem_disponibilidade_no_horizonte"`.
+3. Se `auto_avancar=false` e o mês consultado for vazio, retorna
+   `motivo="sem_disponibilidade_no_periodo"`.
+4. Dias passados dentro do mês corrente são pulados.
 
 ### Response 200
 
@@ -59,7 +73,9 @@ ponta-a-ponta.
 {
   "periodo_solicitado": { "ano": 2026, "mes": 6 },
   "periodo_consultado": { "ano": 2026, "mes": 7 },
+  "periodo_ajustado": true,
   "ajustado_periodo_passado": true,
+  "motivo_ajuste": "periodo_passado",
   "local_atendimento": "Hospital Geral de Paragominas",
   "local_resolvido": { "slugs": ["hgp"], "ids": ["<uuid>"] },
   "datas_disponiveis": [
@@ -70,6 +86,8 @@ ponta-a-ponta.
   "total_datas": 3,
   "horizonte_meses": 1,
   "auto_avancar": true,
+  "motivo": null,
+  "timezone": "America/Belem",
   "request_id": "…"
 }
 ```
@@ -78,7 +96,6 @@ ponta-a-ponta.
 
 | Status | `error`                          | Quando                                        |
 | ------ | -------------------------------- | --------------------------------------------- |
-| 400    | `Campos ... obrigatórios`        | `mes`/`ano` ausentes ou inválidos             |
 | 401    | `Unauthorized`                   | Sem/`x-n8n-secret` inválido                   |
 | 500    | `clinicas_lookup_failed`         | Falha ao buscar `clinicas`                    |
 | 500    | `disponibilidade_especifica_lookup_failed` | Falha ao buscar disponibilidade      |
