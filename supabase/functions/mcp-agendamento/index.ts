@@ -310,7 +310,7 @@ async function executarCriarAgendamento(
     for (const o of outcomes) {
       if (!o.ok) {
         console.warn("[mcp criar_agendamento] notificacao_falhou", {
-          agendamento_id: agendamentoId,
+          evento: "notificacao_falhou",
           code: o.code,
         });
       }
