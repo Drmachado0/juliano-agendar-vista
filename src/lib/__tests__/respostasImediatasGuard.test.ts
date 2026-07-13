@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   detectarValorConsulta,
   reforcarProximoDadoPendente,
+  composePatientReplyValor,
+  PROXIMO_DADO_POR_ESTADO,
   VALOR_CONSULTA_REPLY,
   VALOR_CONSULTA_TEXTO,
 } from "../../../supabase/functions/_shared/respostasImediatasGuard";
