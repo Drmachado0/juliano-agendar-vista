@@ -28,6 +28,7 @@ const INTENCOES = [
   "remarcar",
   "cancelar",
   "confirmar_presenca",
+  "exames",
   "duvida_preco",
   "duvida_convenio",
   "duvida_endereco",
@@ -38,6 +39,7 @@ const INTENCOES = [
   "outros",
 ] as const;
 
+// Nunca inclua "exames" aqui — exames sempre viram handoff via guard determinístico.
 const INTENCOES_BOT = new Set(["agendar", "remarcar"]);
 const INTENCOES_SENSIVEIS = new Set(["cancelar", "urgencia"]);
 
