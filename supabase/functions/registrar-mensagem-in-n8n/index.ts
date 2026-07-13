@@ -532,7 +532,7 @@ serve(async (req) => {
   const { data: inserted, error: insErr } = await supabase
     .from("mensagens_whatsapp")
     .insert(insertRow)
-    .select("id, agendamento_id")
+    .select("id, agendamento_id, created_at")
     .single();
 
   if (insErr) {
