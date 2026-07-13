@@ -212,11 +212,15 @@ export async function listarHorariosDisponiveis(
   if (!disponibilidades.length) return [];
 
 
-  // 2. Buscar bloqueios para esta data
-  const { data: bloqueios } = await supabase
+  // 2. Buscar bloqueios para esta data — fail-closed em erro.
+  const { data: bloqueios, error: errB } = await supabase
     .from("bloqueios_agenda")
     .select("clinica_id, hora_inicio, hora_fim")
     .eq("data", data);
+  if (errB) {
+    console.error("[listarHorariosDisponiveis] bloqueios_err", { code: (errB as any).code });
+    return [];
+  }
 
   // 3. Buscar agendamentos existentes nesta data (descontando o próprio, se for edição).
   //    Excluímos TODOS os status terminais reais (uppercase) e também a variante
@@ -228,7 +232,11 @@ export async function listarHorariosDisponiveis(
   if (excluirAgendamentoId) {
     agQuery = agQuery.neq("id", excluirAgendamentoId);
   }
-  const { data: agendamentosRaw } = await agQuery;
+  const { data: agendamentosRaw, error: errAg } = await agQuery;
+  if (errAg) {
+    console.error("[listarHorariosDisponiveis] agendamentos_err", { code: (errAg as any).code });
+    return [];
+  }
   const TERMINAIS_UP = new Set(["CANCELADO", "ATENDIDO", "COMPARECEU", "FALTOU", "EXCLUIDO"]);
   const TERMINAIS_LOW = new Set(["cancelado", "atendido", "compareceu", "faltou", "excluido"]);
   const agendamentos = (agendamentosRaw || []).filter((a: any) => {
