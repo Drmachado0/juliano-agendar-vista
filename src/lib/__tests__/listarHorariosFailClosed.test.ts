@@ -41,11 +41,44 @@ describe("listarHorariosDisponiveis — fail-closed em erros de query", () => {
     expect(errAgBlock).not.toMatch(/message/);
   });
 
+  it("captura errM de disponibilidade_semanal (modelos) e faz fail-closed", () => {
+    // Deve destructurar error: errM ao consultar disponibilidade_semanal
+    expect(src).toMatch(/error:\s*errM\s*\}\s*=\s*await\s+supabase[\s\S]{0,220}from\("disponibilidade_semanal"\)/);
+    // Em errM: log 'modelos_err' com apenas code e return []
+    expect(src).toMatch(
+      /if\s*\(\s*errM\s*\)\s*\{[\s\S]{0,200}modelos_err[\s\S]{0,200}code:[\s\S]{0,80}return\s*\[\];\s*\}/,
+    );
+    const errMBlock = src.split(/if\s*\(\s*errM\s*\)/)[1]?.split("return")[0] ?? "";
+    expect(errMBlock).not.toMatch(/message/);
+  });
+
+  it("errE (especificas) também loga apenas code sanitizado, sem texto livre", () => {
+    const errEBlock = src.split(/error:\s*errE\s*\}/)[1]?.split("if (!especificas")[0] ?? "";
+    expect(errEBlock).not.toMatch(/message/);
+    expect(errEBlock).toMatch(/especificas_err[\s\S]{0,120}code:/);
+  });
+
   it("não faz mais o pattern antigo 'const { data: bloqueios } = await' sem checar erro", () => {
     // O antigo era: const { data: bloqueios } = await supabase.from("bloqueios_agenda")...
     expect(src).not.toMatch(/const\s*\{\s*data:\s*bloqueios\s*\}\s*=\s*await\s+supabase\s*\.from\("bloqueios_agenda"\)/);
     // idem para agendamentos: sem destructuring parcial escondendo o erro
     expect(src).not.toMatch(/const\s*\{\s*data:\s*agendamentosRaw\s*\}\s*=\s*await\s+agQuery\s*;/);
+    // idem para modelos
+    expect(src).not.toMatch(/const\s*\{\s*data:\s*modelos\s*\}\s*=\s*await\s+supabase\s*\.from\("disponibilidade_semanal"\)/);
+  });
+});
+
+describe("mcp-agendamento log de notificação não vaza agendamento_id", () => {
+  const mcpSrc = readFileSync(
+    resolve(__dirname, "../../..", "supabase/functions/mcp-agendamento/index.ts"),
+    "utf8",
+  );
+  it("bloco de log 'notificacao_falhou' contém code mas NÃO contém agendamento_id", () => {
+    const idx = mcpSrc.indexOf("notificacao_falhou");
+    expect(idx).toBeGreaterThan(-1);
+    const bloco = mcpSrc.slice(idx, idx + 180);
+    expect(bloco).toMatch(/code:\s*o\.code/);
+    expect(bloco).not.toMatch(/agendamento_id\s*:/);
   });
 });
 
