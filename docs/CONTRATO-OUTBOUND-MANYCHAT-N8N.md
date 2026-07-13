@@ -90,9 +90,16 @@ O endpoint `n8n-registrar-envio` foi transformado em **PROXY puro** para
 1. Encaminha `x-n8n-secret` e `x-request-id`.
 2. Mapeia `status_envio="falha_envio"` → `status="erro"` (semântica canônica).
 3. Preserva o status HTTP e o body do canônico.
+4. Aplica default seguro `tipo_mensagem='bot_agente'` quando o payload legado
+   omite o campo — assim payloads antigos **nunca** alteram `confirmation_*`
+   (só `confirmacao_automatica`/`confirmacao_consulta` explícitos com envio
+   bem-sucedido movem o funil).
+5. Em falha de rede ao canônico, responde `502 {error:'proxy_upstream_unreachable'}`
+   sem detalhe bruto do erro (log interno via `console.error` sem PII).
 
 Isso elimina drift de regras (idempotência, mismatch 409, guarda de
 `confirmation_status`, filtro de ativos não-sandbox case-insensitive).
+
 
 **Novos flows devem chamar `registrar-envio-out-n8n` diretamente** e enviar
 `provider_message_id`. O legado permanece disponível apenas para não quebrar
