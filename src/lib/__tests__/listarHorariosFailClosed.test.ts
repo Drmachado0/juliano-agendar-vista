@@ -30,7 +30,7 @@ describe("listarHorariosDisponiveis — fail-closed em erros de query", () => {
   });
 
   it("captura errAg de agendamentos", () => {
-    expect(src).toMatch(/from\("agendamentos"\)[\s\S]{0,600}error:\s*errAg/);
+    expect(src).toMatch(/error:\s*errAg\s*\}\s*=\s*await\s+agQuery/);
   });
 
   it("em errAg retorna [] e loga 'agendamentos_err' com apenas code", () => {
