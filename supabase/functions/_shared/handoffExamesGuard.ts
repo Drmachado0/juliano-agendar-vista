@@ -71,6 +71,8 @@ const EXAMES_OFTALMO = [
   /\bfundoscopia\b/,
   /\becobiometria\b/,
   /\btonometria\b/,
+  /\blaud[oa]\b/,          // laudo em contexto oftalmo indica exame
+
 ];
 
 // Termos que combinados com "exame(s)" indicam assunto de exames.
