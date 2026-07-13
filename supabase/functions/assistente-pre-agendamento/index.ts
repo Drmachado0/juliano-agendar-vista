@@ -6,6 +6,15 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sendWhatsappTextMessage } from "../_shared/evolutionApiClient.ts";
 import { requireN8nSecret, unauthorizedResponse, requestId } from "../_shared/authGuards.ts";
+import {
+  detectarAssuntoExames,
+  buildHandoffExamesSummary,
+  HANDOFF_EXAMES_REPLY,
+  HANDOFF_NOTIFICATION_PHONE,
+} from "../_shared/handoffExamesGuard.ts";
+import { detectarValorConsulta } from "../_shared/respostasImediatasGuard.ts";
+import { parseJanelaRelativa, podeOferecerHorarios } from "../_shared/disponibilidadeRelativa.ts";
+import { maskTelefone } from "../_shared/telefoneCanonico.ts";
 
 
 
