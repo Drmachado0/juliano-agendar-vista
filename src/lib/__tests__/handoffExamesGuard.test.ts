@@ -150,7 +150,8 @@ describe("buildHandoffExamesSummary", () => {
 
 describe("constantes canônicas", () => {
   it("resposta e telefone de notificação estão travados", () => {
-    expect(HANDOFF_EXAMES_REPLY).toMatch(/encaminhei o atendimento para nossa equipe/);
+    expect(HANDOFF_EXAMES_REPLY).toMatch(/secretaria do HGP/);
+    expect(HANDOFF_EXAMES_REPLY).toMatch(/Encaminhei seu atendimento/);
     expect(HANDOFF_NOTIFICATION_PHONE).toBe("5591991300174");
   });
 });
