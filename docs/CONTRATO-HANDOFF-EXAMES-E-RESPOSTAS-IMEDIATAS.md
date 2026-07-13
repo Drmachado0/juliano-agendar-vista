@@ -1,6 +1,6 @@
 # Contrato — Handoff automático de EXAMES e Respostas imediatas
 
-**Revisado:** 2026-07-13
+**Revisado:** 2026-07-13 (rev-2: janela de exames + idempotência da decisão + valor sem 2ª IA)
 
 ## Objetivo
 
