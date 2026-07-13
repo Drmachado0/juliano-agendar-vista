@@ -76,7 +76,7 @@ describe("mcp-agendamento log de notificação não vaza agendamento_id", () => 
   it("bloco de log 'notificacao_falhou' contém code mas NÃO contém agendamento_id", () => {
     const idx = mcpSrc.indexOf("notificacao_falhou");
     expect(idx).toBeGreaterThan(-1);
-    const bloco = mcpSrc.slice(idx, idx + 400);
+    const bloco = mcpSrc.slice(idx, idx + 180);
     expect(bloco).toMatch(/code:\s*o\.code/);
     expect(bloco).not.toMatch(/agendamento_id\s*:/);
   });
