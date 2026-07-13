@@ -5,7 +5,7 @@
 // import em testes unitários TS puros.
 // ============================================================================
 
-export const TERMINAIS_CRM = ["ATENDIDO", "CANCELADO", "COMPAREceu".toUpperCase()];
+export const TERMINAIS_CRM = ["ATENDIDO", "CANCELADO", "COMPARECEU"];
 export const TERMINAIS_FUNIL = ["cancelado", "compareceu", "faltou"];
 
 export function isCrmTerminal(status: string | null | undefined): boolean {
