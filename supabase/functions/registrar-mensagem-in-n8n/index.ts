@@ -169,7 +169,10 @@ async function carregarDecisaoPersistida(
   const p = (data?.payload ?? null) as Record<string, unknown> | null;
   const g = p && typeof p === "object" ? (p as any).guard_decision : null;
   if (!g || typeof g !== "object") return null;
-  return { ...EMPTY_DECISION, ...(g as Partial<GuardDecision>), version: 2 };
+  // Descarta decisões de versões antigas para forçar recomputo com os
+  // novos guards (rev-3: preço de exame tabelado).
+  if ((g as any).version !== 3) return null;
+  return { ...EMPTY_DECISION, ...(g as Partial<GuardDecision>), version: 3 };
 }
 
 /** Merge payload.guard_decision idempotentemente. Nunca lança. */
