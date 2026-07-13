@@ -29,7 +29,14 @@ import {
 import {
   detectarValorConsulta,
   composePatientReplyValor,
+  PROXIMO_DADO_POR_ESTADO,
 } from "../_shared/respostasImediatasGuard.ts";
+import {
+  classificarExamePreco,
+  composePatientReplyPrecoExame,
+  replyPrecoExameTabelado,
+  REPLY_EXAME_NAO_INFORMADO,
+} from "../_shared/examesPrecoGuard.ts";
 import { isRegistroAtivo } from "../_shared/statusTerminais.ts";
 
 // Estrutura persistida em mensagens_whatsapp.payload.guard_decision para
