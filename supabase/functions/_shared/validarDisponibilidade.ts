@@ -288,11 +288,11 @@ export async function listarHorariosDisponiveis(
       });
       if (bloqueado) continue;
 
-      // Se for hoje, pular horários passados (margem de 1h)
-      if (data === new Date().toISOString().split("T")[0]) {
-        const agora = new Date();
+      // Se for hoje (em America/Belem), pular horários passados (margem de 1h).
+      if (data === hojeBelem) {
+        const agora = nowBelemMs();
         const slotDate = new Date(slot.data_hora);
-        if (slotDate.getTime() - agora.getTime() < 60 * 60 * 1000) continue;
+        if (slotDate.getTime() - agora < 60 * 60 * 1000) continue;
       }
 
       todosSlots.push(slot);
