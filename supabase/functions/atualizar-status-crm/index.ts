@@ -55,8 +55,7 @@ function json(body: unknown, status = 200) {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
-  });
-}
+
 
 async function resolveTelefoneCanonico(
   supabase: ReturnType<typeof createClient>,
