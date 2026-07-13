@@ -109,3 +109,45 @@ describe("sanitizeOptionalPayload — cenário real bug 91991300174", () => {
     expect(ignorados).toEqual([]);
   });
 });
+
+describe("assertNomePacienteValido (guard criar/confirmar agendamento)", () => {
+  it.each([
+    ["undefined", "placeholder"],
+    ["UNDEFINED", "placeholder"],
+    ["null", "placeholder"],
+    ["n/a", "placeholder"],
+    ["-", "placeholder"],
+    ["", "ausente"],
+    ["   ", "ausente"],
+    ["A", "curto_demais"],
+    ["12", "sem_letras"],
+    ["Paciente", "generico"],
+    ["paciente", "generico"],
+    ["Lead WhatsApp", "generico"],
+    ["  lead   whatsapp  ", "generico"],
+    ["Novo Lead", "generico"],
+    ["Teste", "generico"],
+    ["Cliente", "generico"],
+  ])("rejeita %j (motivo=%s)", (input, motivo) => {
+    const r = assertNomePacienteValido(input);
+    expect(r.ok).toBe(false);
+    expect(r.motivo).toBe(motivo);
+  });
+
+  it.each([null, undefined, 42, {}, []])("rejeita não-string %j como ausente", (v) => {
+    const r = assertNomePacienteValido(v as unknown);
+    expect(r.ok).toBe(false);
+    expect(r.motivo).toBe("ausente");
+  });
+
+  it.each([
+    ["Juliano Machado", "Juliano Machado"],
+    ["  Maria  da   Silva ", "Maria da Silva"],
+    ["Ana", "Ana"],
+    ["José Álvaro", "José Álvaro"],
+  ])("aceita %j -> %j", (input, expected) => {
+    const r = assertNomePacienteValido(input);
+    expect(r.ok).toBe(true);
+    expect(r.nome).toBe(expected);
+  });
+});
