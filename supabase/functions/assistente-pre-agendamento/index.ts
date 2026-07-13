@@ -577,9 +577,25 @@ serve(async (req) => {
       );
     }
 
-    // 3) Buscar slots
+    // 3) Buscar slots (usado apenas para extrair DATAS disponíveis).
     const clinicaIds = agendamento?.clinica_id ? [agendamento.clinica_id] : [];
-    const slots = await buscarProximosSlots(supabase, clinicaIds, 21, 3);
+    const slots = await buscarProximosSlots(supabase, clinicaIds, 21, 12);
+
+    // Estado de funil (mínimo): considera data "escolhida" apenas se veio na
+    // mensagem atual uma data explícita reconhecível. Não usamos o
+    // data_agendamento salvo em DB para não tratar sugestão prévia como
+    // escolha do paciente.
+    const janela = parseJanelaRelativa(body.conteudo);
+    const dataExplicitaMatch = body.conteudo.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
+    const estadoFunil = {
+      fase: "aguardando_data" as const,
+      data_escolhida: dataExplicitaMatch ? `${dataExplicitaMatch[3] || new Date().getFullYear()}-${String(dataExplicitaMatch[2]).padStart(2, "0")}-${String(dataExplicitaMatch[1]).padStart(2, "0")}` : null,
+    };
+    // Guard-rail: nunca ofereça HORÁRIOS antes de o paciente escolher uma DATA.
+    const permitirHorarios = podeOferecerHorarios({
+      fase: estadoFunil.data_escolhida ? "data_escolhida" : "aguardando_data",
+      data_escolhida: estadoFunil.data_escolhida,
+    });
 
     if (slots.length === 0) {
       const fallback =
@@ -603,15 +619,33 @@ serve(async (req) => {
       );
     }
 
-    // 4) Montar e ENVIAR mensagem PRIMEIRO. Só avança status se envio OK. (item 9)
-    const linhas = slots.map((s, i) => `${i + 1}) ${fmtDataBR(s.data)} às ${s.hora}`);
+    // Extrai DATAS únicas (nunca mistura horários no mesmo passo).
+    const datasUnicas = Array.from(new Set(slots.map((s) => s.data))).slice(0, 3);
     const nome = agendamento?.nome_completo?.split(" ")[0] || "";
     const saudacao = nome ? `Olá, ${nome}!` : "Olá!";
-    const texto = `${saudacao} 👋\nAqui é da clínica do Dr. Juliano Machado. Vi que você gostaria de ${
-      intencao.intencao === "remarcar" ? "remarcar sua consulta" : "agendar uma consulta"
-    }.\n\nTenho estes horários disponíveis:\n${linhas.join(
-      "\n",
-    )}\n\nResponda com o número do horário (1, 2 ou 3) que prefere, ou me diga outra data que combina melhor 🙂`;
+    const acao = intencao.intencao === "remarcar" ? "remarcar sua consulta" : "agendar uma consulta";
+
+    let texto: string;
+    if (permitirHorarios && estadoFunil.data_escolhida) {
+      // Horários apenas depois de data escolhida explicitamente.
+      const slotsNaData = slots.filter((s) => s.data === estadoFunil.data_escolhida).slice(0, 3);
+      if (slotsNaData.length === 0) {
+        // Data pedida sem agenda — cai em oferecer datas (regra 3).
+        const linhasDatas = datasUnicas.map((d, i) => `${i + 1}) ${fmtDataBR(d)}`);
+        texto = `${saudacao} 👋\nNão localizei horários para a data que você pediu${janela.periodoDia ? ` (${janela.periodoDia})` : ""}. Estas são as próximas datas disponíveis:\n${linhasDatas.join("\n")}\n\nMe diga o número da data preferida que retomamos com os horários 🙂`;
+      } else {
+        const linhas = slotsNaData.map((s, i) => `${i + 1}) ${s.hora}`);
+        texto = `${saudacao} 👋\nPara ${fmtDataBR(estadoFunil.data_escolhida)} tenho estes horários:\n${linhas.join("\n")}\n\nResponda com o número do horário que prefere 🙂`;
+      }
+    } else {
+      // Estado padrão: oferecer apenas DATAS. Horários virão depois da escolha.
+      const linhasDatas = datasUnicas.map((d, i) => `${i + 1}) ${fmtDataBR(d)}`);
+      const prefixo =
+        janela.tipo !== "livre" || janela.periodoDia
+          ? `Não localizei agenda para ${janela.tipo === "amanha" ? "amanhã" : janela.tipo === "hoje" ? "hoje" : "o período pedido"}${janela.periodoDia ? ` (${janela.periodoDia})` : ""}. `
+          : "";
+      texto = `${saudacao} 👋\nAqui é da clínica do Dr. Juliano Machado. Vi que você gostaria de ${acao}.\n\n${prefixo}Estas são as próximas datas disponíveis:\n${linhasDatas.join("\n")}\n\nMe diga o número da data preferida que retomamos com os horários 🙂`;
+    }
 
     const envio = await sendWhatsappText(body.telefone, texto);
 
@@ -642,8 +676,8 @@ serve(async (req) => {
       );
     }
 
-    // 5) Envio OK — usa RPC para transicionar status (item 7) e preserva data/hora separados.
-    const primeiro = slots[0];
+    // 5) Envio OK — cria/atualiza lead SEM gravar data/hora sugerida
+    //    (não é escolha do paciente ainda). Fica AGUARDANDO escolha explícita.
     let agendamentoId = body.agendamento_id ?? null;
 
     if (!agendamentoId) {
@@ -666,23 +700,17 @@ serve(async (req) => {
     }
 
     if (agendamentoId) {
-      // Transição via RPC — a máquina de estados cuida de funil/estado/bot.
       await supabase.rpc("transicionar_estado_agendamento", {
         p_id: agendamentoId,
         p_novo_status_crm: "AGUARDANDO",
-        p_motivo: `bot sugeriu ${slots.length} horários`,
+        p_motivo: `bot ofereceu ${datasUnicas.length} datas`,
       });
-      // Data/hora/clinica escritos separadamente (não fazem parte da máquina de estados).
       await supabase
         .from("agendamentos")
-        .update({
-          data_agendamento: primeiro.data,
-          hora_agendamento: primeiro.hora,
-          clinica_id: primeiro.clinicaId ?? agendamento?.clinica_id ?? null,
-          bot_ultima_acao_at: new Date().toISOString(),
-        })
+        .update({ bot_ultima_acao_at: new Date().toISOString() })
         .eq("id", agendamentoId);
     }
+
 
     // Salva mensagem OUT
     await supabase.from("mensagens_whatsapp").insert({
