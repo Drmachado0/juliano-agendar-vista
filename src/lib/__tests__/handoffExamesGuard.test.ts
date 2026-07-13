@@ -59,7 +59,7 @@ describe("detectarAssuntoExames — via histórico (janela + continuação)", ()
     const r = detectarAssuntoExames("já fiz a consulta", hist, { now });
     expect(r.matched).toBe(true);
     expect(r.matchedInHistory).toBe(true);
-    expect(r.reason).toBe("assunto_exames");
+    expect(r.reason).toBe("exame_avaliacao_hgp");
   });
 
   it("exame 2h atrás + 'quero agendar consulta' => normal (fora da janela)", () => {
