@@ -314,6 +314,20 @@ async function computarEPersistirDecisao(params: {
         status_funil: contextoAgendamento.status_funil,
       });
     if (logSideEffects && podeAlterar && contextoAgendamento) {
+      // Rev-4.1: se o card veio de humano/aguardando_humano/coleta,
+      // recomputa determinísticamente o próximo estado do funil.
+      const estadoAtualCtx = contextoAgendamento.estado_atendimento ?? null;
+      const detalheCanonico = detalheCanonicoExame(precoExame.exame);
+      const proximoEstado = precisaRecomputar(estadoAtualCtx)
+        ? resolveNextEstadoAtendimento({
+            estado_atual: estadoAtualCtx,
+            nome_completo: contextoAgendamento.nome_completo,
+            data_nascimento: contextoAgendamento.data_nascimento,
+            tipo_atendimento: "Exame",
+            local_atendimento: LOCAL_HGP_CANONICO,
+          })
+        : estadoAtualCtx;
+
       try {
         await supabase
           .from("agendamentos")
@@ -321,12 +335,13 @@ async function computarEPersistirDecisao(params: {
             status_crm: "EXAMES_HGP",
             status_funil: "exames_hgp",
             tipo_atendimento: "Exame",
-            detalhe_exame_ou_cirurgia: detalheCanonicoExame(precoExame.exame),
+            detalhe_exame_ou_cirurgia: detalheCanonico,
             local_atendimento: LOCAL_HGP_CANONICO,
             bot_ativo: true,
             bot_pausado_ate: null,
             bot_pausa_motivo: null,
             motivo_status: "valor_exame_tabelado",
+            estado_atendimento: proximoEstado,
             bot_ultima_acao_at: new Date().toISOString(),
           })
           .eq("id", contextoAgendamento.id);
