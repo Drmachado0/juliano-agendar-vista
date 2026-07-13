@@ -138,10 +138,9 @@ export async function listarHorariosDisponiveis(
   const diaSemana = dataObj.getUTCDay();
   const nomeDia = getNomeDiaSemana(diaSemana);
 
-  // Não permite datas passadas
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  if (new Date(data + "T00:00:00-03:00") < hoje) return [];
+  // "Hoje" em America/Belem (UTC-3, sem DST).
+  const hojeBelem = nowBelemDateStr();
+  if (data < hojeBelem) return [];
 
   // Resolver clinica_id se local foi informado
   let clinicaFilter: { id: string; nome: string } | null = null;
