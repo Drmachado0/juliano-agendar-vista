@@ -451,7 +451,20 @@ serve(async (req) => {
     }
 
     const exames = detectarAssuntoExames(body.conteudo, historico);
-    if (exames.matched || precoExame.kind === "handoff_exame_nao_tabelado") {
+    // Rev-4: se o histórico contém preço tabelado (paciente já foi convertido para
+    // funil EXAMES_HGP com bot ativo), "sim/pode/quero" não deve gerar handoff.
+    const historicoContemPrecoTabelado = (() => {
+      const historicoTxt = (historico || [])
+        .slice(-5)
+        .map((m: any) => (m?.conteudo || "").toString())
+        .filter(Boolean)
+        .join(" \n ");
+      return classificarExamePreco(historicoTxt).kind === "preco_tabelado";
+    })();
+    if (
+      (exames.matched || precoExame.kind === "handoff_exame_nao_tabelado") &&
+      !(exames.matched && exames.matchedInHistory && historicoContemPrecoTabelado)
+    ) {
       const exameMencionado =
         precoExame.kind === "handoff_exame_nao_tabelado" ? precoExame.exameMencionado : null;
       const hits = exames.matched ? exames.hits : ["exame_nao_tabelado"];

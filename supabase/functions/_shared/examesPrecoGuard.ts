@@ -122,9 +122,12 @@ export function classificarExamePreco(textoRaw: string | null | undefined): Exam
   return { kind: "none" };
 }
 
-/** Frase base de preço para um exame tabelado. */
+/**
+ * Frase base de preço para um exame tabelado. Rev-4: informa preço,
+ * exclusividade HGP e oferece agendar.
+ */
 export function replyPrecoExameTabelado(label: string): string {
-  return `O exame de ${label} custa ${VALOR_EXAME_TABELADO_TEXTO}.`;
+  return `O valor da ${label} é ${VALOR_EXAME_TABELADO_TEXTO}. Esse exame é realizado somente no HGP. Posso te ajudar a agendar?`;
 }
 
 /** Frase pedindo o nome do exame quando o paciente não informou. */
@@ -132,18 +135,40 @@ export const REPLY_EXAME_NAO_INFORMADO =
   "Qual exame foi solicitado? Pode me informar o nome que aparece no pedido?";
 
 /**
- * Compõe patient_reply para preço de exame tabelado, acrescentando o
- * próximo dado pendente do funil quando o estado_atendimento é conhecido.
- * Reaproveita PROXIMO_DADO_POR_ESTADO do respostasImediatasGuard.
+ * Compõe patient_reply para preço de exame tabelado.
+ * Rev-4: NÃO acrescenta próximo dado pendente; a resposta já pivota o
+ * atendimento para agendamento do exame no HGP ("Posso te ajudar a agendar?").
+ * Mantém a assinatura por compatibilidade com o caller.
  */
 export function composePatientReplyPrecoExame(
   label: string,
-  estadoAtendimento: string | null | undefined,
-  mapaProximoDado: Record<string, string>,
+  _estadoAtendimento: string | null | undefined,
+  _mapaProximoDado: Record<string, string>,
 ): { reply: string; hasRetomada: boolean; estadoUsado: string | null } {
-  const base = replyPrecoExameTabelado(label);
-  const chave = (estadoAtendimento || "").trim().toLowerCase();
-  const proximo = chave ? mapaProximoDado[chave] ?? null : null;
-  if (!proximo) return { reply: base, hasRetomada: false, estadoUsado: null };
-  return { reply: `${base}\n\n${proximo}`, hasRetomada: true, estadoUsado: chave };
+  return { reply: replyPrecoExameTabelado(label), hasRetomada: false, estadoUsado: null };
 }
+
+/**
+ * Nome canônico do exame em Title Case pt-BR — usado ao preencher
+ * `agendamentos.detalhe_exame_ou_cirurgia`. Ex.: "Retinografia".
+ */
+export function detalheCanonicoExame(canonical: string): string {
+  return canonical
+    .split(" ")
+    .map((w) => (w.length > 2 ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
+/** Local canônico para agendamento de exame tabelado. */
+export const LOCAL_HGP_CANONICO = "Hospital Geral de Paragominas";
+
+/** Continuação positiva ("sim/pode/quero…") após oferta do exame tabelado. */
+const RE_CONTINUACAO_SIM =
+  /^(sim|pode|pode ser|quero|claro|ok|okay|okey|beleza|blz|isso|aceito|manda|vamos|bora|por favor|pfv|posso|pode agendar|quero agendar)[.!?]?$/;
+
+export function isAceiteAgendarExame(textoRaw: string | null | undefined): boolean {
+  const t = normalizarTexto(textoRaw);
+  if (!t) return false;
+  return RE_CONTINUACAO_SIM.test(t);
+}
+
