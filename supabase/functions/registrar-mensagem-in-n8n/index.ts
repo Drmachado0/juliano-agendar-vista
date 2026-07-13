@@ -363,25 +363,32 @@ async function computarEPersistirDecisao(params: {
 async function resolverDecisaoDuplicata(params: {
   supabase: ReturnType<typeof createClient>;
   mensagemId: string;
-  conteudo: string;
-  telefoneNormalizado: string;
-  agendamentoId: string | null;
+  conteudoAtual?: string | null;
   providerMessageId: string | null;
   rid: string;
 }): Promise<GuardDecision> {
   const existente = await carregarDecisaoPersistida(params.supabase, params.mensagemId);
   if (existente) return existente;
+
+  // Legado sem decisão persistida: reavaliação segura (sem log/transição).
   const { data } = await params.supabase
     .from("mensagens_whatsapp")
-    .select("created_at")
+    .select("created_at, telefone, conteudo, agendamento_id")
     .eq("id", params.mensagemId)
     .maybeSingle();
   return computarEPersistirDecisao({
-    ...params,
+    supabase: params.supabase,
+    mensagemId: params.mensagemId,
     mensagemCreatedAt: (data?.created_at as string | null) ?? null,
+    conteudo: (params.conteudoAtual ?? data?.conteudo ?? "") as string,
+    telefoneNormalizado: (data?.telefone as string | null) ?? "",
+    agendamentoId: (data?.agendamento_id as string | null) ?? null,
+    providerMessageId: params.providerMessageId,
+    rid: params.rid,
     logSideEffects: false,
   });
 }
+
 
 
 serve(async (req) => {
