@@ -85,7 +85,22 @@ serve(async (req) => {
   if (!parsed.success) {
     return json({ error: "invalid_body", request_id: rid }, 400);
   }
-  const body = parsed.data;
+  const rawBody = parsed.data as Record<string, unknown>;
+
+  // Higieniza opcionais: "undefined"/"null"/"n/a"/vazio => ausente.
+  const { clean, ignorados } = sanitizeOptionalPayload(rawBody);
+  // Aplica limites de tamanho após sanitização (trunca para o limite).
+  for (const [k, max] of Object.entries(LIMITES)) {
+    const v = (clean as Record<string, string | undefined>)[k];
+    if (typeof v === "string" && v.length > max) {
+      (clean as Record<string, string>)[k] = v.slice(0, max);
+    }
+  }
+  const body = {
+    telefone_whatsapp: rawBody.telefone_whatsapp as string,
+    ...clean,
+  };
+  const camposIgnorados = ignorados;
 
   const url = Deno.env.get("SUPABASE_URL");
   const svc = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
