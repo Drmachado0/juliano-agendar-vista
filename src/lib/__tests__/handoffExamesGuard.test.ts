@@ -47,21 +47,65 @@ describe("detectarAssuntoExamesTexto — falsos positivos", () => {
   });
 });
 
-describe("detectarAssuntoExames — via histórico", () => {
-  it("marca match_in_history quando mensagem atual é neutra mas histórico tem exames", () => {
+describe("detectarAssuntoExames — via histórico (janela + continuação)", () => {
+  const now = new Date("2026-07-13T15:00:00Z");
+  const ago = (min: number) => new Date(now.getTime() - min * 60_000).toISOString();
+
+  it("exame 10min atrás + 'já fiz a consulta' => handoff via histórico", () => {
     const hist = [
-      { direcao: "IN" as const, conteudo: "meu convênio cobre exame de OCT?" },
-      { direcao: "OUT" as const, conteudo: "vou verificar" },
+      { id: "m1", direcao: "IN" as const, conteudo: "meu convênio cobre exame de OCT?", created_at: ago(10) },
+      { id: "m2", direcao: "OUT" as const, conteudo: "vou verificar", created_at: ago(9) },
     ];
-    const r = detectarAssuntoExames("já fiz a consulta", hist);
+    const r = detectarAssuntoExames("já fiz a consulta", hist, { now });
     expect(r.matched).toBe(true);
     expect(r.matchedInHistory).toBe(true);
     expect(r.reason).toBe("assunto_exames");
   });
 
+  it("exame 2h atrás + 'quero agendar consulta' => normal (fora da janela)", () => {
+    const hist = [
+      { id: "m1", direcao: "IN" as const, conteudo: "preciso agendar exame de OCT", created_at: ago(120) },
+    ];
+    const r = detectarAssuntoExames("quero agendar uma consulta", hist, { now });
+    expect(r.matched).toBe(false);
+  });
+
+  it("exame 10min atrás + assunto independente => normal (não é continuação)", () => {
+    const hist = [
+      { id: "m1", direcao: "IN" as const, conteudo: "preciso agendar exame de OCT", created_at: ago(10) },
+    ];
+    const r = detectarAssuntoExames("quero marcar uma consulta particular", hist, { now });
+    expect(r.matched).toBe(false);
+  });
+
+  it("exclui a mensagem atual do histórico (por currentMessageId)", () => {
+    const hist = [
+      { id: "cur", direcao: "IN" as const, conteudo: "preciso agendar exame de OCT", created_at: ago(1) },
+    ];
+    const r = detectarAssuntoExames("sim", hist, { now, currentMessageId: "cur" });
+    expect(r.matched).toBe(false);
+  });
+
+  it("exclui mensagens no futuro (currentCreatedAt)", () => {
+    const cur = ago(5);
+    const hist = [
+      { id: "m2", direcao: "IN" as const, conteudo: "exame de OCT?", created_at: ago(2) }, // depois da atual
+    ];
+    const r = detectarAssuntoExames("sim", hist, { now, currentCreatedAt: cur });
+    expect(r.matched).toBe(false);
+  });
+
+  it("continuação curta 'sim' herda handoff dentro da janela", () => {
+    const hist = [
+      { id: "m1", direcao: "IN" as const, conteudo: "meu convênio cobre exame?", created_at: ago(5) },
+    ];
+    const r = detectarAssuntoExames("sim", hist, { now });
+    expect(r.matched).toBe(true);
+  });
+
   it("não marca quando nem atual nem histórico mencionam exames", () => {
-    const hist = [{ direcao: "IN" as const, conteudo: "quero remarcar" }];
-    expect(detectarAssuntoExames("obrigada!", hist).matched).toBe(false);
+    const hist = [{ id: "m1", direcao: "IN" as const, conteudo: "quero remarcar", created_at: ago(5) }];
+    expect(detectarAssuntoExames("obrigada!", hist, { now }).matched).toBe(false);
   });
 });
 
