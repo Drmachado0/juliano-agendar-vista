@@ -169,14 +169,68 @@ export function detectarAssuntoExamesTexto(textoRaw: string | null | undefined):
   return { matched: hits.length > 0, hits };
 }
 
+// ---------------------------------------------------------------------------
+// Continuação contextual: quando a mensagem ATUAL não menciona exames, só
+// deixamos o handoff herdar do histórico se a mensagem for uma continuação
+// curta/dependente do contexto anterior (ex.: "já fiz a consulta",
+// "é no HGP", "e pelo plano?", "sim", "onde faço?").
+// ---------------------------------------------------------------------------
+
+// Respostas ultra-curtas afirmativas/negativas ou reconhecimentos.
+const RE_CONTINUACAO_CURTA = /^(sim|nao|s|n|ok|okay|okey|certo|beleza|entendi|obrigad[oa]|valeu|claro|aham|uhum|isso|ta|tudo bem|blz)[.!?]?$/;
+
+// Frases dependentes de contexto anterior.
+const RE_CONTINUACAO_LONGA = [
+  /\bja fiz\b/,
+  /\bja tenho\b/,
+  /\bja est(a|ao)\b/,
+  /\bja marc(ou|ei|amos|aram|ado|ada)\b/,
+  /\bja agend(ei|ou|amos|aram|ado|ada)\b/,
+  /\b(no|na|pelo|pela) (hgp|clinicor|iob|vitria|hospital)\b/,
+  /\be (no|na|pelo|pela|do|da|em|com|pra|para) /,
+  /\be (agora|ai|entao|isso|sobre)\b/,
+  /\bpelo (plano|convenio)\b/,
+  /\b(prefiro|prefere)\b/,
+  /\b(como|onde|quando|quanto) (faco|faz|fica|sera|e|custa|posso|devo)\b/,
+  /\bpra (confirmar|marcar|agendar|saber)\b/,
+  /\bposso (ir|levar|marcar|agendar)\b/,
+  /\bfico no aguardo\b/,
+  /\bquando (estiver|ficar) pronto\b/,
+];
+
+/** Uma mensagem é "continuação" do contexto anterior? */
+export function isMensagemContinuacao(textoRaw: string | null | undefined): boolean {
+  const t = normalizarTexto(textoRaw);
+  if (!t) return false;
+  if (RE_CONTINUACAO_CURTA.test(t)) return true;
+  const nWords = t.split(" ").length;
+  if (nWords <= 6 && RE_CONTINUACAO_LONGA.some((r) => r.test(t))) return true;
+  return RE_CONTINUACAO_LONGA.some((r) => r.test(t)) && nWords <= 10;
+}
+
+function toMs(v: string | Date | number | null | undefined): number | null {
+  if (v == null) return null;
+  if (v instanceof Date) return v.getTime();
+  if (typeof v === "number") return v;
+  const t = Date.parse(v);
+  return Number.isFinite(t) ? t : null;
+}
+
 /**
  * Detecta assunto de exames considerando a última mensagem + histórico
- * recente de mensagens IN concatenadas (regra: "já fiz a consulta" depois
- * de mencionar exames ainda cai em exames).
+ * recente de mensagens IN.
+ *
+ * Regras (endurecidas em 2026-07-13):
+ * - Só olha mensagens IN diferentes da atual (por id ou created_at).
+ * - Só olha mensagens dentro de `janelaMinutos` (default 45) antes de `now`.
+ * - Só herda handoff via histórico quando a mensagem ATUAL é uma
+ *   "continuação" (ver isMensagemContinuacao). Uma mensagem nova e
+ *   independente como "quero agendar uma consulta" NÃO herda handoff antigo.
  */
 export function detectarAssuntoExames(
   mensagemAtual: string,
   historico: MensagemHistoricoLike[] = [],
+  opts: DetectarExamesOpts = {},
 ): ExamesDetectResult {
   const atual = detectarAssuntoExamesTexto(mensagemAtual);
   if (atual.matched) {
@@ -188,11 +242,30 @@ export function detectarAssuntoExames(
     };
   }
 
-  // Concatena até as 5 últimas mensagens IN recentes para pegar contexto.
-  const recentesIn = historico
-    .filter((m) => (m.direcao ?? "").toUpperCase() === "IN")
+  // Só considera histórico se a mensagem atual for continuação contextual.
+  if (!isMensagemContinuacao(mensagemAtual)) {
+    return { matched: false, reason: null, hits: [], matchedInHistory: false };
+  }
+
+  const nowMs = toMs(opts.now ?? Date.now()) ?? Date.now();
+  const currentMs = toMs(opts.currentCreatedAt ?? null);
+  const janelaMs = Math.max(1, opts.janelaMinutos ?? 45) * 60_000;
+  const currentId = opts.currentMessageId ?? null;
+
+  const filtradas = historico.filter((m) => {
+    if ((m.direcao ?? "").toUpperCase() !== "IN") return false;
+    if (currentId && m.id && m.id === currentId) return false;
+    const t = toMs(m.created_at ?? null);
+    if (t == null) return false;                       // sem timestamp = ignora
+    if (currentMs != null && t >= currentMs) return false;
+    if (nowMs - t > janelaMs) return false;            // fora da janela
+    return true;
+  });
+
+  const recentesIn = filtradas
     .slice(-5)
     .map((m) => m.conteudo || "")
+    .filter((c) => c.length > 0)
     .join(" \n ");
 
   if (recentesIn) {
