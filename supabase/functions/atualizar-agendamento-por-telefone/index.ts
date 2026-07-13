@@ -25,8 +25,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const TERMINAIS_CRM = ["ATENDIDO", "CANCELADO", "COMPARECEU"];
-const TERMINAIS_FUNIL = ["cancelado", "compareceu", "faltou"];
+
+
 
 const BodySchema = z.object({
   telefone_whatsapp: z.string().min(8),
@@ -47,18 +47,8 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function isCrmTerminal(s: string | null | undefined) {
-  return TERMINAIS_CRM.includes(String(s ?? "").toUpperCase());
-}
-function isFunilTerminal(s: string | null | undefined) {
-  return TERMINAIS_FUNIL.includes(String(s ?? "").toLowerCase());
-}
-function isRegistroAtivo(r: any): boolean {
-  if (r.is_sandbox === true) return false;
-  if (isCrmTerminal(r.status_crm)) return false;
-  if (isFunilTerminal(r.status_funil)) return false;
-  return true;
-}
+
+
 
 async function resolveTelefoneCanonico(
   supabase: ReturnType<typeof createClient>,
