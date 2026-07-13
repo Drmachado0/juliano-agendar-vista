@@ -17,7 +17,7 @@
 export type ExamesDetectResult = {
   matched: boolean;
   reason:
-    | "assunto_exames"
+    | "exame_avaliacao_hgp"
     | null;
   hits: string[];        // termos que casaram (para debug/log, sem PII)
   matchedInHistory: boolean;
