@@ -273,7 +273,7 @@ export function detectarAssuntoExames(
     if (contexto.matched) {
       return {
         matched: true,
-        reason: "assunto_exames",
+        reason: "exame_avaliacao_hgp",
         hits: contexto.hits,
         matchedInHistory: true,
       };
@@ -288,7 +288,7 @@ export function detectarAssuntoExames(
 // -----------------------------
 
 export const HANDOFF_EXAMES_REPLY =
-  "Entendi. Como sua mensagem envolve exames, encaminhei o atendimento para nossa equipe responsável. Eles vão analisar seu caso e continuar por aqui.";
+  "Para esse exame, a secretaria do HGP precisa avaliar o pedido. Encaminhei seu atendimento para a equipe responsável, que continuará por aqui.";
 
 export const HANDOFF_NOTIFICATION_PHONE = "5591991300174";
 
