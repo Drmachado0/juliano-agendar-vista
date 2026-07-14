@@ -2,19 +2,21 @@
 // buscar-contexto-paciente
 // Retorna contexto operacional do paciente para o agente (n8n/ManyChat).
 //
-// Regras críticas (correção 2026-07-13):
+// Regras críticas (correção 2026-07-14):
 //   1) requireN8nSecret timing-safe + x-request-id.
 //   2) Normalização por telefone_canonico (RPC + fallback local). SEM scan
 //      dos últimos 200 e SEM match por últimos 8 dígitos.
 //   3) Ignora is_sandbox=true em TODO contexto operacional.
-//   4) Lead ativo = status_crm NÃO terminal (case-insensitive), excluindo
-//      ATENDIDO/CANCELADO/COMPARECEU. 0 → sem paciente; 1 → contexto; >1 →
-//      ambiguo=true e agendamento_ativo/paciente = null.
+//   4) Lead ativo = NÃO sandbox E status_crm NÃO terminal E status_funil NÃO
+//      terminal — critério unificado via _shared/statusTerminais.isRegistroAtivo.
+//      Terminais CRM: ATENDIDO/CANCELADO/COMPARECEU/FALTOU/EXCLUIDO.
+//      Terminais funil: cancelado/compareceu/faltou/excluido.
+//      0 ativos → sem paciente; 1 → contexto; >1 → ambiguo=true.
 //   5) agendamento_ativo só existe quando data_agendamento >= hoje America/
 //      Belem E status não terminal. Data passada NUNCA retorna como ativa.
 //   6) Lead ativo sem data → paciente/status/estado, agendamento_ativo=null.
 //   7) Histórico separado: ultimo_atendimento_historico (nunca sandbox,
-//      nunca dentro de agendamento_ativo).
+//      inclui terminais por CRM OU por funil).
 //   8) Mensagens buscadas por telefone_canonico exato.
 //   9) Erros de RPC/query → 500 sanitizado (sem PII) para permitir retry.
 // ============================================================================
@@ -23,6 +25,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { requireN8nSecret, unauthorizedResponse, requestId } from "../_shared/authGuards.ts";
 import { telefoneCanonico as telefoneCanonicoLocal, maskTelefone } from "../_shared/telefoneCanonico.ts";
+import { isRegistroAtivo, isCrmTerminal, isFunilTerminal } from "../_shared/statusTerminais.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,7 +34,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const TERMINAIS = ["ATENDIDO", "CANCELADO", "COMPARECEU"];
+// Terminais centralizados em _shared/statusTerminais.ts
 
 const BodySchema = z.object({
   telefone_whatsapp: z.string().min(8),
@@ -86,9 +89,6 @@ function truncar(s: string | null | undefined, n: number): string {
   return s.length > n ? s.slice(0, n) + "…" : s;
 }
 
-function isTerminal(status: string | null | undefined): boolean {
-  return TERMINAIS.includes(String(status ?? "").toUpperCase());
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -168,7 +168,9 @@ serve(async (req) => {
   }
 
   const registros = (candidatos ?? []).filter((r: any) => r.is_sandbox !== true);
-  const ativos = registros.filter((r: any) => !isTerminal(r.status_crm));
+  // Critério unificado com _shared/statusTerminais.isRegistroAtivo:
+  // exclui sandbox + terminais por status_crm + terminais por status_funil.
+  const ativos = registros.filter((r: any) => isRegistroAtivo(r));
 
   const hojeISO = hojeBelemISO();
 
@@ -212,12 +214,15 @@ serve(async (req) => {
     };
   }
 
-  // 7) histórico: último atendimento terminal OU data passada (não sandbox)
+  // 7) histórico: último atendimento terminal (CRM ou funil) OU data passada,
+  //     sempre com data_agendamento presente e nunca sandbox.
   const historico =
     registros
       .filter(
         (r: any) =>
-          (isTerminal(r.status_crm) || (r.data_agendamento && r.data_agendamento < hojeISO)) &&
+          (isCrmTerminal(r.status_crm) ||
+            isFunilTerminal(r.status_funil) ||
+            (r.data_agendamento && r.data_agendamento < hojeISO)) &&
           r.data_agendamento,
       )
       .sort((a: any, b: any) => (a.data_agendamento < b.data_agendamento ? 1 : -1))[0] ?? null;
