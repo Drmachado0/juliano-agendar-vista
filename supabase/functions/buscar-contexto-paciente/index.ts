@@ -214,12 +214,15 @@ serve(async (req) => {
     };
   }
 
-  // 7) histórico: último atendimento terminal OU data passada (não sandbox)
+  // 7) histórico: último atendimento terminal (CRM ou funil) OU data passada,
+  //     sempre com data_agendamento presente e nunca sandbox.
   const historico =
     registros
       .filter(
         (r: any) =>
-          (isTerminal(r.status_crm) || (r.data_agendamento && r.data_agendamento < hojeISO)) &&
+          (isCrmTerminal(r.status_crm) ||
+            isFunilTerminal(r.status_funil) ||
+            (r.data_agendamento && r.data_agendamento < hojeISO)) &&
           r.data_agendamento,
       )
       .sort((a: any, b: any) => (a.data_agendamento < b.data_agendamento ? 1 : -1))[0] ?? null;
