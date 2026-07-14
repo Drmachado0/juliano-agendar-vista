@@ -34,7 +34,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const TERMINAIS = ["ATENDIDO", "CANCELADO", "COMPARECEU"];
+// Terminais centralizados em _shared/statusTerminais.ts
 
 const BodySchema = z.object({
   telefone_whatsapp: z.string().min(8),
