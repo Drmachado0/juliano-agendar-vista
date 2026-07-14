@@ -78,7 +78,7 @@ describe("buscar-contexto-paciente — regras de negócio", () => {
   });
   it("histórico separado (nunca sandbox, nunca dentro de agendamento_ativo)", () => {
     expect(SRC).toMatch(/ultimo_atendimento_historico/);
-    expect(SRC).toMatch(/isTerminal\(r\.status_crm\)[\s\S]{0,120}data_agendamento\s*<\s*hojeISO/);
+    expect(SRC).toMatch(/isCrmTerminal\(r\.status_crm\)[\s\S]{0,160}data_agendamento\s*<\s*hojeISO/);
   });
 });
 
