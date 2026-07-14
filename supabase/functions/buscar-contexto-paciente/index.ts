@@ -168,7 +168,9 @@ serve(async (req) => {
   }
 
   const registros = (candidatos ?? []).filter((r: any) => r.is_sandbox !== true);
-  const ativos = registros.filter((r: any) => !isTerminal(r.status_crm));
+  // Critério unificado com _shared/statusTerminais.isRegistroAtivo:
+  // exclui sandbox + terminais por status_crm + terminais por status_funil.
+  const ativos = registros.filter((r: any) => isRegistroAtivo(r));
 
   const hojeISO = hojeBelemISO();
 
