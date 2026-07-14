@@ -2,19 +2,21 @@
 // buscar-contexto-paciente
 // Retorna contexto operacional do paciente para o agente (n8n/ManyChat).
 //
-// Regras críticas (correção 2026-07-13):
+// Regras críticas (correção 2026-07-14):
 //   1) requireN8nSecret timing-safe + x-request-id.
 //   2) Normalização por telefone_canonico (RPC + fallback local). SEM scan
 //      dos últimos 200 e SEM match por últimos 8 dígitos.
 //   3) Ignora is_sandbox=true em TODO contexto operacional.
-//   4) Lead ativo = status_crm NÃO terminal (case-insensitive), excluindo
-//      ATENDIDO/CANCELADO/COMPARECEU. 0 → sem paciente; 1 → contexto; >1 →
-//      ambiguo=true e agendamento_ativo/paciente = null.
+//   4) Lead ativo = NÃO sandbox E status_crm NÃO terminal E status_funil NÃO
+//      terminal — critério unificado via _shared/statusTerminais.isRegistroAtivo.
+//      Terminais CRM: ATENDIDO/CANCELADO/COMPARECEU/FALTOU/EXCLUIDO.
+//      Terminais funil: cancelado/compareceu/faltou/excluido.
+//      0 ativos → sem paciente; 1 → contexto; >1 → ambiguo=true.
 //   5) agendamento_ativo só existe quando data_agendamento >= hoje America/
 //      Belem E status não terminal. Data passada NUNCA retorna como ativa.
 //   6) Lead ativo sem data → paciente/status/estado, agendamento_ativo=null.
 //   7) Histórico separado: ultimo_atendimento_historico (nunca sandbox,
-//      nunca dentro de agendamento_ativo).
+//      inclui terminais por CRM OU por funil).
 //   8) Mensagens buscadas por telefone_canonico exato.
 //   9) Erros de RPC/query → 500 sanitizado (sem PII) para permitir retry.
 // ============================================================================
@@ -23,6 +25,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { requireN8nSecret, unauthorizedResponse, requestId } from "../_shared/authGuards.ts";
 import { telefoneCanonico as telefoneCanonicoLocal, maskTelefone } from "../_shared/telefoneCanonico.ts";
+import { isRegistroAtivo, isCrmTerminal, isFunilTerminal } from "../_shared/statusTerminais.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
