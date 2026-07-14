@@ -1,81 +1,68 @@
+## Diagnóstico (somente leitura)
 
-# Auditoria read-only — commit `bf9f46d`
+### Sintoma
+Para `telefone_canonico=91991300174` existem dois registros não-sandbox:
 
-Escopo: CRM/ManyChat/n8n + Rev-4.1 EXAMES_HGP. Nenhum arquivo, SQL ou deploy alterado.
+| id | status_crm | status_funil |
+|---|---|---|
+| `ff5ee055…` | `HGP` | `cancelado` |
+| `24bd6d23…` | `PRECISA_DE_HUMANO` | `novo` |
 
-Resumo: **3 correções obrigatórias**, **3 melhorias recomendadas**, **2 investigações pendentes**. Nenhuma vulnerabilidade de PII em logs identificada nos caminhos revisados.
+`registrar-mensagem-in-n8n` criou o segundo corretamente (o primeiro já está `status_funil=cancelado`, portanto inativo). Mas `buscar-contexto-paciente` respondeu `ambiguo=true, total_ativos=2`.
 
----
+### Causa raiz (divergência de critério de "ativo")
 
-## Obrigatórias
+Existem **duas implementações concorrentes** do que é "registro ativo":
 
-### 1. Webhook legado `message.received` ainda ativo — risco de duplicidade
-- Severidade: **ALTA**
-- Evidência: `supabase/migrations/20260705163330_*.sql` cria trigger `trg_mw_emit_message_received` que dispara em toda IN nova via `crm_webhook_endpoints.event='message.received'`. O banco reporta 4 endpoints ativos, incluindo esse apontando para `crm-outbound` legado.
-- Impacto: com o caminho canônico ManyChat → n8n → `registrar-mensagem-in-n8n`, o trigger legado pode disparar processamento paralelo (dupla resposta, dupla auditoria, duplo handoff). Fere o contrato da seção "Arquitetura oficial 2026-07-12".
-- Ação (não executada agora): desativar (`active=false`) o endpoint `message.received` ou remover o trigger `trg_mw_emit_message_received`. Preferência por desativar apenas o endpoint para preservar histórico.
+1. `supabase/functions/_shared/statusTerminais.ts` → `isRegistroAtivo(r)`
+   - Retorna `false` quando `is_sandbox=true` **OU** `status_crm` terminal (`ATENDIDO/CANCELADO/COMPARECEU/FALTOU/EXCLUIDO`) **OU** `status_funil` terminal (`cancelado/compareceu/faltou/excluido`).
+   - É o que `registrar-mensagem-in-n8n` (linhas 311, 410) usa — por isso ele viu 1 ativo e criou um lead novo.
 
-### 2. Resolver pula `coletando_convenio` quando `tipo=Convênio`
-- Severidade: **ALTA**
-- Evidência: `supabase/functions/_shared/estadoAtendimentoResolver.ts` linhas 62-72. A verificação após `tipo_atendimento` vai direto para `local_atendimento`; não há ramo para tipo "Convênio"/"convenio" checando se `convenio` está preenchido.
-- Impacto: pacientes de convênio pulam a coleta do nome do convênio quando o resolver reconstrói o estado (pivô de exame tabelado, futuras reutilizações). Contradiz `PROXIMO_DADO_POR_ESTADO` do contrato (`coletando_convenio` mapeia para "Nome do convênio").
-- Ação: acrescentar campo `convenio` ao `EstadoResolverInput` e ramo `if (tipo == 'convenio' && !convenio) return "coletando_convenio"` antes do check de `local_atendimento`. Adicionar teste correspondente.
+2. `supabase/functions/buscar-contexto-paciente/index.ts` (linhas 34, 89–91, 170–171):
+   ```ts
+   const TERMINAIS = ["ATENDIDO", "CANCELADO", "COMPARECEU"];
+   const isTerminal = (s) => TERMINAIS.includes(String(s ?? "").toUpperCase());
+   ...
+   const ativos = registros.filter((r) => !isTerminal(r.status_crm));
+   ```
+   - **Só olha `status_crm`**. Não consulta `status_funil`.
+   - Também não inclui `FALTOU/EXCLUIDO` na lista terminal.
 
-### 3. Estado `'novo'` não reconhecido como válido pelo resolver
-- Severidade: **ALTA** (potencial regressão silenciosa)
-- Evidência: `estadoAtendimentoResolver.ts:12-22` `ESTADOS_VALIDOS` **não** inclui `"novo"`, mas `supabase/migrations/20260511212346_*.sql` define `estado_atendimento` DEFAULT `'novo'`. Portanto `precisaRecomputar('novo') === true`. O banco reporta 5 cards em `estado_atendimento='novo'` com `bot_ativo=true`.
-- Impacto atual: contido — o resolver só é chamado no side-effect de exame tabelado (`registrar-mensagem-in-n8n:321`). Mas qualquer futura chamada em NOVO LEAD comum recomputará silenciosamente e mudará o estado antes de o fluxo normal responder.
-- Ação: incluir `"novo"` em `ESTADOS_VALIDOS` (idempotente por design) e adicionar teste `preserva 'novo'`.
+O registro `ff5ee055` tem `status_crm='HGP'` (não terminal em CRM) e `status_funil='cancelado'` (terminal em funil). O shared o considera inativo; o buscar o considera ativo. Somando com o `24bd6d23` ativo → `ativos.length=2` → `ambiguo=true`.
 
----
+O comentário do próprio arquivo (linhas 10–12) declara a regra apenas sobre `status_crm`, mas a documentação `docs/CONTRATO-BUSCAR-CONTEXTO-PACIENTE.md` e o teste `atualizarStatusCrmSelecao.test.ts` já assumem o critério combinado do shared. A regra combinada é a correta — cancelamento por `status_funil` é o caminho canônico de baixa de agendamento no CRM.
 
-## Melhorias recomendadas
+### Efeito colateral
+Enquanto persistir a divergência, qualquer telefone que tenha um agendamento antigo cancelado via `status_funil` (sem que `status_crm` tenha sido normalizado para `CANCELADO`) + um lead novo faz o bot cair em ambíguo e escala humano indevidamente. É o mesmo padrão do bug histórico `91991300174`.
 
-### 4. `EXAMES_HGP` ausente do mapa da RPC `transicionar_estado`
-- Severidade: **MÉDIA**
-- Evidência: `supabase/migrations/20260712224127_*.sql` linhas 183-215. O `CASE v_novo` não trata `EXAMES_HGP`, caindo no `ELSE v_atual.status_funil` (não altera funil) e mantendo `bot_ativo` atual.
-- Impacto: se um admin acionar `transicionar_estado(..., 'EXAMES_HGP', ...)` pelo Kanban, o card não vai para a coluna `exames_hgp` do Kanban (que lê `status_funil`), e o `bot_ativo` não é normalizado. O side-effect de `registrar-mensagem-in-n8n` já faz UPDATE direto correto (linhas 335-345), então o caminho automático funciona; a divergência só afeta transição manual.
-- Ação: acrescentar `WHEN 'EXAMES_HGP' THEN 'exames_hgp'` em `v_novo_funil`, ajustar `v_novo_estado` para chamar resolver (ou preservar) e definir `v_bot_ativo=true` para esse status.
+### Menor correção segura (não aplicar agora)
 
-### 5. Divergência entre `TERMINAIS_CRM` (TS) e índice único ativo (SQL)
-- Severidade: **MÉDIA**
-- Evidência: `supabase/functions/_shared/statusTerminais.ts:8` lista `['ATENDIDO','CANCELADO','COMPARECEU','FALTOU','EXCLUIDO']`. Os índices/queries em `20260712235017_*.sql` e `20260713220147_*.sql` só excluem `('ATENDIDO','CANCELADO','COMPARECEU')`.
-- Impacto: um card com `status_crm='FALTOU'` ou `'EXCLUIDO'` é considerado terminal no TS mas continua "ativo" no filtro SQL, podendo bloquear criação de NOVO LEAD legítimo pelo mesmo telefone.
-- Ação: alinhar — expandir lista SQL para incluir `FALTOU` e `EXCLUIDO`, ou remover esses dois de `TERMINAIS_CRM`. Precisa ADR curto para escolher.
+1. **Unificar critério** em `buscar-contexto-paciente/index.ts`:
+   - Importar `isRegistroAtivo`, `isCrmTerminal`, `isFunilTerminal` de `../_shared/statusTerminais.ts`.
+   - Remover a constante local `TERMINAIS` e a função local `isTerminal`.
+   - Trocar `const ativos = registros.filter((r) => !isTerminal(r.status_crm))` por `const ativos = registros.filter(isRegistroAtivo)`.
+   - No cálculo do `historico` (linhas 216–223), trocar `isTerminal(r.status_crm)` por `isCrmTerminal(r.status_crm) || isFunilTerminal(r.status_funil)` para manter simetria (cancelados por funil aparecem no histórico, não somem).
+   - Atualizar cabeçalho de comentário (linhas 10–12) para citar `status_funil` além de `status_crm`.
 
-### 6. Migração histórica `20260713232801` grava estado inválido `'coleta'`
-- Severidade: **MÉDIA** (regressão em ambientes novos)
-- Evidência: linha 14 `estado_atendimento = COALESCE(NULLIF(estado_atendimento,'aguardando_humano'), 'coleta')`. O contrato Rev-4.1 proíbe `'coleta'` como estado. Reparo do card `ff5ee055…` já foi feito por UPDATE manual posterior, mas essa migração continua no repositório e reintroduziria o bug se reexecutada em novo ambiente.
-- Ação: substituir o COALESCE por `coletando_data_nascimento` (que é o caso real do card) ou por chamada equivalente ao resolver. Preservar idempotência restrita ao UUID atual.
+2. **Backend defensivo (opcional, mesma migração-menor)**: também restringir na própria query:
+   ```ts
+   .neq("is_sandbox", true)
+   .not("status_funil", "in", "(cancelado,compareceu,faltou,excluido)")
+   ```
+   Reduz payload e blinda contra futuras regressões do filtro em memória. Manter o filtro em memória como segunda linha.
 
----
+3. **Testes** a adicionar (sem tocar em nada além de tests):
+   - Reproduzir exatamente o par `HGP/cancelado + PRECISA_DE_HUMANO/novo` e afirmar `ambiguo=false`, `leadAtivo=24bd6d23`, e que `ff5ee055` aparece em `ultimo_atendimento_historico` (se tiver `data_agendamento`).
+   - Regressão simétrica para `ATENDIDO/novo` (terminal por CRM) e `HGP/faltou` (terminal por funil).
 
-## Investigar (sem evidência suficiente ainda)
+### O que NÃO precisa mudar
+- `registrar-mensagem-in-n8n` já está correto: usa `isRegistroAtivo` e por isso criou o segundo card legítimo.
+- A RPC `vincular_mensagem_por_telefone` e o shape de resposta do endpoint continuam iguais — só o filtro de contagem muda.
+- Nenhuma migração de dados é necessária: o registro `ff5ee055` já está no estado correto (`status_funil=cancelado`). O bug é 100% de leitura no `buscar-contexto-paciente`.
 
-### 7. `whatsapp-n8n send-text logical_error` (1 ocorrência 24h)
-- Não há função/arquivo com esse nome no repositório (só `enviar-whatsapp`). Provável label vindo de `system_logs`. Precisa `SELECT` em `system_logs` filtrando `source ilike '%whatsapp%'` para localizar payload real. Sem código-fonte visível, não é possível classificar.
+### Escopo do que NÃO fazer nesta correção
+- Não reescrever a lógica de histórico/mensagens.
+- Não alterar contratos externos (mesmos campos de resposta, mesmos códigos de erro).
+- Não mexer em `registrar-mensagem-in-n8n`, RPCs ou schema.
 
-### 8. Fail-open em `enviar-whatsapp`
-- `supabase/functions/enviar-whatsapp/index.ts` linhas 100 e 145: retorna HTTP 200 mesmo em erro de envio (`SEND_ERROR`, `INTERNAL_ERROR`), com `ok:false` no body. Intencional para não travar n8n (retry), mas mascara falha em monitores que só olham status HTTP. Não é bug funcional; recomendo alerta com base em `system_logs`/`ok:false`.
-
----
-
-## Verificações que passaram
-
-- **PII em logs (registrar-mensagem-in-n8n)**: `notification_summary` é composto por helper com telefone mascarado; `console.error/log` no arquivo não imprimem `conteudo` cru nem PII. Sem achado.
-- **Fail-open em `mcp-agendamento` / `criar-agendamento`**: já são fail-closed (exigem UUID e validação de slot). Sem regressão.
-- **Índice único `agendamento_ativo_por_telefone_uidx`**: previne slots duplicados e telefones ambíguos ativos (0/0 no banco confere).
-- **Kanban EXAMES_HGP**: `useKanbanColumnsConfig.ts` (v4) e `normalizeStatusFunil` reconhecem `exames_hgp`; sem conflito de índices/enums no client.
-
----
-
-## Ordem sugerida quando entrar em modo build
-
-1. Achado 1 (desativar endpoint legado) — mitigação imediata sem código.
-2. Achados 2 e 3 (resolver: convenio + novo) — 1 arquivo + testes.
-3. Achado 4 (RPC transicionar_estado) — 1 migração.
-4. Achado 5 (alinhar terminais) — decisão de produto, depois migração + edição TS.
-5. Achado 6 (reescrever migração histórica) — só após confirmar que não é reexecutada em produção.
-6. Achado 7 (query system_logs) — investigação; talvez vire task própria.
-
-Nada foi editado, deployado ou aplicado no banco.
+Aguardando aprovação para implementar apenas os itens 1 e 3 (e opcionalmente o 2) acima.
