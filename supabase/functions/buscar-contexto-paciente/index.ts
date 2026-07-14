@@ -89,9 +89,6 @@ function truncar(s: string | null | undefined, n: number): string {
   return s.length > n ? s.slice(0, n) + "…" : s;
 }
 
-function isTerminal(status: string | null | undefined): boolean {
-  return TERMINAIS.includes(String(status ?? "").toUpperCase());
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
