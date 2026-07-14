@@ -52,9 +52,15 @@ describe("buscar-contexto-paciente — regras de negócio", () => {
     expect(SRC).toMatch(/\.neq\("is_sandbox",\s*true\)/);
     expect(SRC).toMatch(/r\.is_sandbox\s*!==\s*true/);
   });
-  it("terminais case-insensitive ATENDIDO/CANCELADO/COMPARECEU", () => {
-    expect(SRC).toMatch(/TERMINAIS\s*=\s*\[\s*"ATENDIDO"\s*,\s*"CANCELADO"\s*,\s*"COMPARECEU"\s*\]/);
-    expect(SRC).toMatch(/toUpperCase\(\)/);
+  it("critério de ativo unificado via _shared/statusTerminais (CRM + funil)", () => {
+    expect(SRC).toMatch(/from\s+"\.\.\/_shared\/statusTerminais\.ts"/);
+    expect(SRC).toMatch(/registros\.filter\(\(r:\s*any\)\s*=>\s*isRegistroAtivo\(r\)\)/);
+    // não deve mais existir lista terminal local nem isTerminal local
+    expect(SRC).not.toMatch(/const\s+TERMINAIS\s*=\s*\[/);
+    expect(SRC).not.toMatch(/function\s+isTerminal\s*\(/);
+  });
+  it("histórico considera terminais por CRM OU funil", () => {
+    expect(SRC).toMatch(/isCrmTerminal\(r\.status_crm\)[\s\S]{0,80}isFunilTerminal\(r\.status_funil\)/);
   });
   it("ambíguo quando >1 ativos: paciente e agendamento_ativo = null", () => {
     expect(SRC).toMatch(/ambiguo\s*=\s*ativos\.length\s*>\s*1/);
