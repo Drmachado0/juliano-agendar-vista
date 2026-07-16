@@ -66,6 +66,9 @@ describe("resolveNextEstadoAtendimento — Rev-4.1", () => {
         local_atendimento: HGP,
       }),
     ).toBe("oferecendo_datas");
+  });
+
+
 
   it("com nome, nascimento, sem tipo → coletando_tipo_atendimento", () => {
     expect(
