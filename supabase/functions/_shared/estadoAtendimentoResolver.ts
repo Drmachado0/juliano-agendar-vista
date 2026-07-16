@@ -8,6 +8,7 @@
 //   - se falta nome_completo válido            → coletando_nome
 //   - se tem nome mas falta data_nascimento    → coletando_data_nascimento
 //   - se tem nome+nascimento e falta tipo      → coletando_tipo_atendimento
+//   - se tipo=Convênio e falta nome do convênio → coletando_convenio
 //   - se tem tudo acima e falta local          → coletando_local
 //   - caso contrário                           → oferecendo_datas
 //
