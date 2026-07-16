@@ -8,6 +8,7 @@
 //   - se falta nome_completo válido            → coletando_nome
 //   - se tem nome mas falta data_nascimento    → coletando_data_nascimento
 //   - se tem nome+nascimento e falta tipo      → coletando_tipo_atendimento
+//   - se tipo=Convênio e falta nome do convênio → coletando_convenio
 //   - se tem tudo acima e falta local          → coletando_local
 //   - caso contrário                           → oferecendo_datas
 //
@@ -32,6 +33,7 @@ export interface EstadoResolverInput {
   nome_completo: string | null | undefined;
   data_nascimento: string | null | undefined;
   tipo_atendimento?: string | null | undefined;
+  convenio?: string | null | undefined;
   local_atendimento?: string | null | undefined;
 }
 
@@ -40,6 +42,11 @@ function nomeValido(n: string | null | undefined): boolean {
   if (s.length < 2) return false;
   // pelo menos uma letra pt-BR
   return /[A-Za-zÀ-ÖØ-öø-ÿ]/.test(s);
+}
+
+function isTipoConvenio(t: string): boolean {
+  const s = t.toLowerCase();
+  return s.includes("convênio") || s.includes("convenio");
 }
 
 /** Retorna o próximo estado válido do funil quando o card sai de humano
@@ -59,6 +66,14 @@ export function resolveNextEstadoAtendimento(input: EstadoResolverInput): string
 
   const tipo = (input.tipo_atendimento || "").trim();
   if (!tipo) return "coletando_tipo_atendimento";
+
+  // Se o tipo escolhido é Convênio, garante que temos o nome do convênio
+  // antes de avançar para local/datas. Particular/Retorno/Exame/Cirurgia não
+  // exigem esse passo.
+  if (isTipoConvenio(tipo)) {
+    const conv = (input.convenio || "").trim();
+    if (!conv) return "coletando_convenio";
+  }
 
   const local = (input.local_atendimento || "").trim();
   if (!local) return "coletando_local";
