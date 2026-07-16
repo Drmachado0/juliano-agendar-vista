@@ -29,6 +29,44 @@ describe("resolveNextEstadoAtendimento — Rev-4.1", () => {
     ).toBe("coletando_data_nascimento");
   });
 
+  it("tipo=Convênio sem convenio informado → coletando_convenio", () => {
+    expect(
+      resolveNextEstadoAtendimento({
+        estado_atual: "humano",
+        nome_completo: "Maria da Silva",
+        data_nascimento: "1980-01-01",
+        tipo_atendimento: "Convênio",
+        convenio: "",
+        local_atendimento: HGP,
+      }),
+    ).toBe("coletando_convenio");
+  });
+
+  it("tipo=Convênio com convenio preenchido → segue para oferecendo_datas", () => {
+    expect(
+      resolveNextEstadoAtendimento({
+        estado_atual: "humano",
+        nome_completo: "Maria da Silva",
+        data_nascimento: "1980-01-01",
+        tipo_atendimento: "Convênio",
+        convenio: "Unimed",
+        local_atendimento: HGP,
+      }),
+    ).toBe("oferecendo_datas");
+  });
+
+  it("tipo=Particular sem convenio → NÃO pede convenio, avança normal", () => {
+    expect(
+      resolveNextEstadoAtendimento({
+        estado_atual: "humano",
+        nome_completo: "Maria da Silva",
+        data_nascimento: "1980-01-01",
+        tipo_atendimento: "Particular",
+        convenio: "",
+        local_atendimento: HGP,
+      }),
+    ).toBe("oferecendo_datas");
+
   it("com nome, nascimento, sem tipo → coletando_tipo_atendimento", () => {
     expect(
       resolveNextEstadoAtendimento({
