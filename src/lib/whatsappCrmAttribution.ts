@@ -190,8 +190,6 @@ export function installWhatsappCrmAttributionBridge() {
   (window as any).__whatsappCrmAttributionInstalled = true;
 
   const run = () => decorateWhatsappLinksWithCrmAttribution();
-  let lastPaidWaClickAt = 0;
-
 
   captureCrmAttribution();
 
@@ -204,43 +202,12 @@ export function installWhatsappCrmAttributionBridge() {
   window.addEventListener('popstate', run);
   window.addEventListener('hashchange', run);
 
-  document.addEventListener(
-    'click',
-    (event) => {
-      const target = event.target as HTMLElement | null;
-      const link = target?.closest?.('a') as HTMLAnchorElement | null;
-      if (!link) return;
+  // NOTA: O push de `paid_whatsapp_click_crm` (e `paid_phone_click_crm`) é
+  // feito por uma tag Custom HTML dentro do GTM (GTM-K3C2NNF6), que já instala
+  // seu próprio listener de clique. Manter um listener aqui duplicava o push.
+  // Mantemos apenas a decoração dos links (captureCrmAttribution + href) — o
+  // GTM lê os UTMs/gclid/fbclid diretamente do storage/URL.
 
-      const href = link.getAttribute('href') || '';
-      if (!isWhatsappHref(href)) return;
-
-      // Guard anti-duplo-disparo: o mesmo Event chega uma vez em capture, mas
-      // handlers ou re-emitters externos (React synthetic bridges, extensões,
-      // observers de mutação que reagem a clique) podem reentrar. Marcamos o
-      // Event nativo + janela de tempo para garantir 1 push por clique físico.
-      if ((event as any).__paidWaHandled) return;
-      (event as any).__paidWaHandled = true;
-      const now = Date.now();
-      if (now - lastPaidWaClickAt < 500) return;
-      lastPaidWaClickAt = now;
-
-
-      decorateWhatsappLinksWithCrmAttribution();
-      const data = captureCrmAttribution();
-      if (!data) return;
-
-      (window as any).dataLayer = (window as any).dataLayer || [];
-      (window as any).dataLayer.push({
-        event: 'paid_whatsapp_click_crm',
-        crm_tracking_code: data.crm_tracking_code,
-        utm_source: data.utm_source || '',
-        utm_campaign: data.utm_campaign || '',
-        gclid: data.gclid || '',
-        fbclid: data.fbclid || '',
-      });
-    },
-    true,
-  );
 
 
   let attempts = 0;
