@@ -71,6 +71,7 @@ export const useMetaPixel = () => {
       event: 'meta_schedule',
       meta_event_name: 'Schedule',
       meta_event_id: id,
+      event_id: id,
       content_name: 'Agendamento Confirmado',
       content_category: appointmentType,
       content_type: location,
@@ -82,8 +83,11 @@ export const useMetaPixel = () => {
       event: 'meta_appointment_booked',
       meta_event_name: 'AppointmentBooked',
       meta_event_id: id,
+      event_id: id,
       content_name: 'Agendamento Confirmado',
     });
+    // Chamada direta ao Pixel com o MESMO eventID (dedup com CAPI).
+    fbqTrack('Schedule', id);
   };
 
   const trackCompleteRegistration = (
@@ -96,6 +100,7 @@ export const useMetaPixel = () => {
       event: 'meta_complete_registration',
       meta_event_name: 'CompleteRegistration',
       meta_event_id: id,
+      event_id: id,
       content_name: 'Agendamento Finalizado',
       content_category: appointmentType,
       content_type: location,
@@ -107,18 +112,24 @@ export const useMetaPixel = () => {
       event: 'meta_appointment_confirmed',
       meta_event_name: 'AppointmentConfirmed',
       meta_event_id: id,
+      event_id: id,
       content_name: 'Agendamento Finalizado',
     });
+    fbqTrack('CompleteRegistration', id);
   };
 
   const trackContact = (method?: string, eventId?: string) => {
+    const id = eventId || generateEventId();
     pushToDataLayer({
       event: 'meta_contact',
       meta_event_name: 'Contact',
-      meta_event_id: eventId || generateEventId(),
+      meta_event_id: id,
+      event_id: id,
       content_name: method || 'WhatsApp',
     });
+    fbqTrack('Contact', id);
   };
+
 
   return {
     trackViewContent,
