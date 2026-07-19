@@ -5,6 +5,9 @@
 // Quando presente, o GTM deve passar `eventId` como `eventID` no fbq() para
 // que Meta deduplique com o evento server-side de mesmo ID.
 import { safeDataLayerPush } from '@/lib/trackingGuard';
+import { fbqTrack } from '@/lib/metaPixelClient';
+
+
 
 const pushToDataLayer = (data: Record<string, any>) => {
   safeDataLayerPush(data);
