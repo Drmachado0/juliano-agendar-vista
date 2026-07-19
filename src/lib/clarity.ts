@@ -7,7 +7,7 @@
  *
  * O ID definitivo será fornecido depois — não injete nada enquanto vazio.
  */
-export const CLARITY_PROJECT_ID = "";
+export const CLARITY_PROJECT_ID = "xoueyofk7d";
 
 let loaded = false;
 
