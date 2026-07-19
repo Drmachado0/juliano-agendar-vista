@@ -179,11 +179,15 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
 
       // Enhanced Conversions + Advanced Matching via GTM (PII apenas no dataLayer).
       if (typeof window !== "undefined") {
+        const leadEventId =
+          metaEventId ??
+          (window.crypto?.randomUUID ? window.crypto.randomUUID() : `lead_${Date.now()}`);
         (window as any).dataLayer = (window as any).dataLayer || [];
         (window as any).dataLayer.push({
           event: "lead_form_submit",
           page_type: "modal_home",
           lead_id: metaEventId ?? null,
+          event_id: leadEventId,
           user_data: buildLeadUserData({
             fullName: formData.fullName,
             phone: formData.phone,
@@ -191,6 +195,8 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
           }),
           ...collectAttribution(),
         });
+        // Pixel client-side com o MESMO eventID (dedup com CAPI).
+        fbqTrack("Lead", leadEventId);
       }
 
       setIsSubmitted(true);
