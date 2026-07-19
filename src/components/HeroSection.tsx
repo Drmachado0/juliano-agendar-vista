@@ -15,7 +15,8 @@ const HeroSection = () => {
   const { waLink } = useSiteWhatsApp();
   const reviews = useGoogleReviews();
   const heroWaUrl = waLink(
-    "Olá! Vi o site do Dr. Juliano Machado e gostaria de agendar uma consulta oftalmológica em Paragominas."
+    "Olá! Vi o site do Dr. Juliano Machado e gostaria de agendar uma consulta oftalmológica em Paragominas.",
+    "home_hero"
   );
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoPaused, setVideoPaused] = useState(false);

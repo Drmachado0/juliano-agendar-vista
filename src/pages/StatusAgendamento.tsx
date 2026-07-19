@@ -122,7 +122,7 @@ function formatarHora(h: string): string {
 
 export default function StatusAgendamentoPage() {
   const { id } = useParams<{ id: string }>();
-  const { waLinkBare } = useSiteWhatsApp();
+  const { waLink } = useSiteWhatsApp(); const waLinkBare = waLink(undefined, "status_agendamento");
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [dados, setDados] = useState<StatusAgendamento | null>(null);
@@ -216,7 +216,7 @@ export default function StatusAgendamentoPage() {
 }
 
 function StatusContent({ dados }: { dados: StatusAgendamento }) {
-  const { waLinkBare } = useSiteWhatsApp();
+  const { waLink } = useSiteWhatsApp(); const waLinkBare = waLink(undefined, "status_agendamento");
   const statusInfo = classificarStatus(dados);
   const { Icon } = statusInfo;
 

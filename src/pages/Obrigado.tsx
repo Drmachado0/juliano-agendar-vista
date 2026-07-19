@@ -208,11 +208,11 @@ const Obrigado = () => {
         </div>
 
         <a
-          href={waLink("Olá! Acabei de agendar minha consulta com o Dr. Juliano Machado.")}
+          href={waLink("Olá! Acabei de agendar minha consulta com o Dr. Juliano Machado.", "obrigado_confirmar")}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => {
-            const url = waLink("Olá! Acabei de agendar minha consulta com o Dr. Juliano Machado.");
+            const url = waLink("Olá! Acabei de agendar minha consulta com o Dr. Juliano Machado.", "obrigado_confirmar");
             trackWhatsAppClick(
               url,
               'Falar pelo WhatsApp',

@@ -10,7 +10,7 @@ import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 const ULTIMA_ATUALIZACAO = "02 de maio de 2026";
 
 export default function PoliticaPrivacidade() {
-  const { waLinkBare, display } = useSiteWhatsApp();
+  const { waLink, display } = useSiteWhatsApp(); const waLinkBare = waLink(undefined, "politica_privacidade");
   return (
     <>
       <Helmet>

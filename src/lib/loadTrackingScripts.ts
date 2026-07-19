@@ -3,6 +3,8 @@
  * via GTM (controlado pelo Consent Mode v2 — ad_storage).
  */
 
+import { loadClarity } from "./clarity";
+
 const GTM_ID = "GTM-K3C2NNF6";
 
 export function loadGTM(): void {
@@ -25,7 +27,10 @@ export function loadGTM(): void {
  * Aplica consent: GTM carrega quando analytics OU marketing for autorizado
  * (o GTM precisa estar presente para servir as tags de marketing também).
  * O Meta Pixel é uma tag dentro do GTM e respeita o Consent Mode automaticamente.
+ * Microsoft Clarity carrega apenas quando `analytics=true` E
+ * CLARITY_PROJECT_ID estiver preenchido (fica inerte enquanto o ID não for fornecido).
  */
 export function applyConsentToScripts(opts: { analytics: boolean; marketing: boolean }): void {
   if (opts.analytics || opts.marketing) loadGTM();
+  if (opts.analytics) loadClarity();
 }

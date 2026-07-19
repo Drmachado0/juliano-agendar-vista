@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
+import { buildLeadUserData, collectAttribution } from "@/lib/leadUserData";
 
 export interface FormData {
   fullName: string;
@@ -174,6 +175,22 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
       trackSchedule(formData.appointmentTypeName, formData.locationName, metaEventId);
       trackCompleteRegistration(formData.appointmentTypeName, formData.locationName, metaEventId);
       trackLeadMeta('Agendamento Confirmado - Modal', metaEventId);
+
+      // Enhanced Conversions + Advanced Matching via GTM (PII apenas no dataLayer).
+      if (typeof window !== "undefined") {
+        (window as any).dataLayer = (window as any).dataLayer || [];
+        (window as any).dataLayer.push({
+          event: "lead_form_submit",
+          page_type: "modal_home",
+          lead_id: metaEventId ?? null,
+          user_data: buildLeadUserData({
+            fullName: formData.fullName,
+            phone: formData.phone,
+            email: formData.email,
+          }),
+          ...collectAttribution(),
+        });
+      }
 
       setIsSubmitted(true);
     } catch (err) {

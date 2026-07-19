@@ -10,7 +10,9 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
   const { trackWhatsAppClick } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
-  const { waLinkBare, display } = useSiteWhatsApp();
+  const { waLink, display } = useSiteWhatsApp();
+  const footerContactUrl = waLink(undefined, "site_footer_contact");
+  const footerSocialUrl = waLink(undefined, "site_footer_social");
 
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -89,11 +91,11 @@ const Footer = () => {
             <h4 className="text-foreground font-semibold text-sm mb-4 font-sans border-b border-primary/20 pb-2 inline-block">Contato</h4>
             <div className="space-y-3">
               <a
-                href={waLinkBare}
+                href={footerContactUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
-                  trackWhatsAppClick(waLinkBare, display, 'whatsapp_footer_contact', 'footer_contact');
+                  trackWhatsAppClick(footerContactUrl, display, 'whatsapp_footer_contact', 'footer_contact');
                   trackMetaContact('WhatsApp');
                 }}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
@@ -172,11 +174,11 @@ const Footer = () => {
               <Instagram className="w-4 h-4" />
             </a>
             <a
-              href={waLinkBare}
+              href={footerSocialUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => {
-                trackWhatsAppClick(waLinkBare, 'WhatsApp Footer Social', 'whatsapp_footer_social', 'footer_social');
+                trackWhatsAppClick(footerSocialUrl, 'WhatsApp Footer Social', 'whatsapp_footer_social', 'footer_social');
                 trackMetaContact('WhatsApp');
               }}
               className="text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-300"

@@ -33,7 +33,7 @@ const AgendarSimplesSection = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
   const { trackCTAClick, trackWhatsAppClick } = useGoogleTag();
   const { waLink } = useSiteWhatsApp();
-  const waUrl = waLink("Olá! Vi no site que agendar é simples e gostaria de tirar uma dúvida antes de marcar. (origem: agendar_simples)");
+  const waUrl = waLink("Olá! Vi no site que agendar é simples e gostaria de tirar uma dúvida antes de marcar.", "home_agendar_simples");
 
   useEffect(() => {
     const observer = new IntersectionObserver(
