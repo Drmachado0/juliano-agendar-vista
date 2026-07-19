@@ -190,6 +190,8 @@ export function installWhatsappCrmAttributionBridge() {
   (window as any).__whatsappCrmAttributionInstalled = true;
 
   const run = () => decorateWhatsappLinksWithCrmAttribution();
+  let lastPaidWaClickAt = 0;
+
 
   captureCrmAttribution();
 
