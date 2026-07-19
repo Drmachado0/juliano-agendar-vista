@@ -217,9 +217,13 @@ export function installWhatsappCrmAttributionBridge() {
       // Guard anti-duplo-disparo: o mesmo Event chega uma vez em capture, mas
       // handlers ou re-emitters externos (React synthetic bridges, extensões,
       // observers de mutação que reagem a clique) podem reentrar. Marcamos o
-      // Event nativo para garantir 1 push por clique físico.
+      // Event nativo + janela de tempo para garantir 1 push por clique físico.
       if ((event as any).__paidWaHandled) return;
       (event as any).__paidWaHandled = true;
+      const now = Date.now();
+      if (now - lastPaidWaClickAt < 500) return;
+      lastPaidWaClickAt = now;
+
 
       decorateWhatsappLinksWithCrmAttribution();
       const data = captureCrmAttribution();
