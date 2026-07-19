@@ -29,6 +29,7 @@ import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import drJulianoHero from "@/assets/dr-juliano-hero.jpg";
 import { GOOGLE_REVIEWS } from "@/lib/constants";
 import { buildLeadUserData, collectAttribution } from "@/lib/leadUserData";
+import { fbqTrack } from "@/lib/metaPixelClient";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
 type Depoimento = {
@@ -380,10 +381,16 @@ const Agendamento = () => {
       // Enhanced Conversions (Google Ads) + Advanced Matching (Meta) via GTM.
       // Todos os PII são normalizados e ficam APENAS no dataLayer/GTM — nada
       // é enviado para outro lugar além do fluxo n8n já existente.
+      const leadEventId =
+        leadId ??
+        (typeof window !== "undefined" && window.crypto?.randomUUID
+          ? window.crypto.randomUUID()
+          : `lead_${Date.now()}`);
       pushDL({
         event: "lead_form_submit",
         page_type: "landing_agendamento",
         lead_id: leadId ?? null,
+        event_id: leadEventId,
         user_data: buildLeadUserData({
           fullName: formData.fullName,
           phone: formData.phone,
@@ -391,6 +398,8 @@ const Agendamento = () => {
         }),
         ...collectAttribution(),
       });
+      // Pixel client-side com o MESMO eventID (dedup com CAPI).
+      fbqTrack("Lead", leadEventId);
 
       pushDL({
         event: "lp_appointment_scheduled",
