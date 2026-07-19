@@ -13,7 +13,7 @@ const MobileStickyCTA = () => {
   const [show, setShow] = useState(false);
   const { waLink } = useSiteWhatsApp();
   const { trackCTAClick, trackWhatsAppClick } = useGoogleTag();
-  const waUrl = waLink("Olá! Gostaria de agendar uma consulta com o Dr. Juliano Machado.");
+  const waUrl = waLink("Olá! Gostaria de agendar uma consulta com o Dr. Juliano Machado.", "home_sticky_mobile");
 
   useEffect(() => {
     const onScroll = () => {

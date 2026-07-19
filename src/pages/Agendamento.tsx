@@ -28,6 +28,7 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import drJulianoHero from "@/assets/dr-juliano-hero.jpg";
 import { GOOGLE_REVIEWS } from "@/lib/constants";
+import { buildLeadUserData, collectAttribution } from "@/lib/leadUserData";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
 type Depoimento = {
@@ -116,7 +117,7 @@ const Agendamento = () => {
     trackAppointmentSuccess,
   } = useGoogleTag();
   const { waLink } = useSiteWhatsApp();
-  const WHATSAPP_URL = waLink(WHATSAPP_DEFAULT_MSG);
+  const WHATSAPP_URL = waLink(WHATSAPP_DEFAULT_MSG, "agendamento_secretaria");
   const formStartFiredRef = useRef(false);
   const successFiredRef = useRef(false);
   const viewFiredRef = useRef(false);
@@ -376,6 +377,21 @@ const Agendamento = () => {
         });
       }
 
+      // Enhanced Conversions (Google Ads) + Advanced Matching (Meta) via GTM.
+      // Todos os PII são normalizados e ficam APENAS no dataLayer/GTM — nada
+      // é enviado para outro lugar além do fluxo n8n já existente.
+      pushDL({
+        event: "lead_form_submit",
+        page_type: "landing_agendamento",
+        lead_id: leadId ?? null,
+        user_data: buildLeadUserData({
+          fullName: formData.fullName,
+          phone: formData.phone,
+          email: formData.email,
+        }),
+        ...collectAttribution(),
+      });
+
       pushDL({
         event: "lp_appointment_scheduled",
         page_type: "landing_agendamento",
@@ -457,6 +473,66 @@ const Agendamento = () => {
     </a>
   );
 
+  // JSON-LD — @type Physician (mesmos dados da Home) + MedicalWebPage
+  // apontando que /agendamento é a página oficial de agendamento online.
+  const physicianJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Physician",
+    name: "Dr. Juliano Machado",
+    description:
+      "Oftalmologista especializado em catarata, pterígio, exames de campo visual e OCT. Atendimento em Paragominas e Belém.",
+    medicalSpecialty: "Ophthalmology",
+    url: "https://drjulianomachado.com",
+    image: "https://drjulianomachado.com/og-image.jpg",
+    telephone: "+5591936180476",
+    priceRange: "$$",
+    address: [
+      {
+        "@type": "PostalAddress",
+        streetAddress: "Rua Eixo W1, R. Célio Miranda, N° 729",
+        addressLocality: "Paragominas",
+        addressRegion: "PA",
+        addressCountry: "BR",
+      },
+      {
+        "@type": "PostalAddress",
+        streetAddress: "Av. Generalíssimo Deodoro, 904 - Nazaré",
+        addressLocality: "Belém",
+        addressRegion: "PA",
+        addressCountry: "BR",
+      },
+    ],
+    identifier: {
+      "@type": "PropertyValue",
+      propertyID: "CRM-PA",
+      value: "15253",
+    },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: String(GOOGLE_REVIEWS.rating),
+      bestRating: "5",
+      ratingCount: String(GOOGLE_REVIEWS.count),
+    },
+    sameAs: ["https://www.instagram.com/drjulianomachado.oftalmo/"],
+  };
+  const medicalWebPageJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "MedicalWebPage",
+    name: "Agendar Consulta — Dr. Juliano Machado",
+    description:
+      "Página oficial de agendamento online de consultas oftalmológicas com o Dr. Juliano Machado em Paragominas e Belém.",
+    url: "https://drjulianomachado.com/agendamento",
+    inLanguage: "pt-BR",
+    isPartOf: {
+      "@type": "WebSite",
+      name: "Dr. Juliano Machado — Oftalmologista",
+      url: "https://drjulianomachado.com",
+    },
+    about: physicianJsonLd,
+    audience: { "@type": "MedicalAudience", audienceType: "Patient" },
+    mainEntity: physicianJsonLd,
+  };
+
   return (
     <>
       <Helmet>
@@ -472,6 +548,8 @@ const Agendamento = () => {
           content="Agende sua consulta com Dr. Juliano Machado: oftalmologista 5 estrelas em Paragominas e Belém. Agendamento online ou direto com nossa secretária pelo WhatsApp."
         />
         <link rel="canonical" href="https://drjulianomachado.com/agendamento" />
+        <script type="application/ld+json">{JSON.stringify(physicianJsonLd)}</script>
+        <script type="application/ld+json">{JSON.stringify(medicalWebPageJsonLd)}</script>
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">

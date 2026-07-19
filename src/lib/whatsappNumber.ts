@@ -50,10 +50,29 @@ export function formatWhatsAppDisplay(raw: string): string {
   return raw;
 }
 
-/** Monta link wa.me com mensagem opcional já encodada. */
-export function buildWaLink(raw: string, message?: string): string {
+/**
+ * Anexa um sufixo discreto "(origem: X)" ao texto pré-preenchido do WhatsApp
+ * para permitir atribuição de origem nas mensagens recebidas (CRM/n8n),
+ * sem alterar o tom natural das mensagens já existentes. Idempotente:
+ * se a origem já estiver presente, retorna o texto inalterado.
+ */
+export function withOrigem(message: string, origem?: string | null): string {
+  const base = (message ?? "").trim();
+  const tag = (origem ?? "").trim();
+  if (!tag) return base;
+  if (base.toLowerCase().includes(`(origem:`)) return base;
+  return `${base} (origem: ${tag})`;
+}
+
+/**
+ * Monta link wa.me com mensagem opcional já encodada.
+ * Passe `origem` como "{pagina}_{cta}" (ex: "home_hero", "catarata_footer")
+ * para padronizar a atribuição — todos os CTAs de WhatsApp do site devem
+ * usar esse helper para não haver divergência de origem.
+ */
+export function buildWaLink(raw: string, message?: string, origem?: string): string {
   const digits = normalizeWhatsApp(raw) || DEFAULT_WHATSAPP_RAW;
-  const text = encodeURIComponent(message ?? DEFAULT_TEXT);
+  const text = encodeURIComponent(withOrigem(message ?? DEFAULT_TEXT, origem));
   return `https://wa.me/${digits}?text=${text}`;
 }
 

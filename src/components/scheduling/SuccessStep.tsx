@@ -4,6 +4,7 @@ import { CheckCircle, Calendar, Sparkles, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Confetti from "./Confetti";
+import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 
 interface SuccessStepProps {
   onClose: () => void;
@@ -11,6 +12,11 @@ interface SuccessStepProps {
 }
 
 const SuccessStep = ({ onClose, formData }: SuccessStepProps) => {
+  const { waLink } = useSiteWhatsApp();
+  const successWaUrl = waLink(
+    "Olá! Acabei de agendar minha consulta no site e quero receber as confirmações por aqui.",
+    "modal_sucesso"
+  );
   const getLocationLabel = (value: string) => {
     const locations: Record<string, string> = {
       clinicor: "Clinicor – Paragominas",
@@ -98,7 +104,7 @@ const SuccessStep = ({ onClose, formData }: SuccessStepProps) => {
             Toque abaixo e envie a mensagem para receber a confirmação e lembretes da sua consulta no WhatsApp.
           </p>
           <a
-            href="https://wa.me/5591936180476?text=Ol%C3%A1!%20Acabei%20de%20agendar%20minha%20consulta%20no%20site%20e%20quero%20receber%20as%20confirma%C3%A7%C3%B5es%20por%20aqui."
+            href={successWaUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block"

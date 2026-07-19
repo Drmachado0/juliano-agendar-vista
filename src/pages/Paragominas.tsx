@@ -138,9 +138,11 @@ const Paragominas = () => {
   const ratingValue = reviews.hasRealAggregate ? reviews.rating : GOOGLE_REVIEWS.rating;
   const ratingCount = reviews.hasRealAggregate ? reviews.count : GOOGLE_REVIEWS.count;
 
-  const whatsappHelpUrl = waLink(
-    "Olá! Tenho uma dúvida sobre a consulta em Paragominas antes de agendar. (origem: landing_paragominas)"
-  );
+  // Mensagem base — origem discreta é anexada por CTA para atribuição fina.
+  const whatsappHelpMsg = "Olá! Tenho uma dúvida sobre a consulta em Paragominas antes de agendar.";
+  const whatsappHeroUrl  = waLink(whatsappHelpMsg, "paragominas_hero");
+  const whatsappStepsUrl = waLink(whatsappHelpMsg, "paragominas_steps");
+  const whatsappFinalUrl = waLink(whatsappHelpMsg, "paragominas_final");
 
   // Todos os CTAs internos da landing apontam para a nova rota premium
   // /paragominas/agendamento (mesma máquina de estados, shell editorial).
@@ -359,12 +361,12 @@ const Paragominas = () => {
                       <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
                     </Link>
                     <a
-                      href={whatsappHelpUrl}
+                      href={whatsappHeroUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() =>
                         trackWhatsAppClick(
-                          whatsappHelpUrl,
+                          whatsappHeroUrl,
                           "Prefere falar antes? WhatsApp",
                           "whatsapp_landing_paragominas_hero",
                           "landing_paragominas_hero"
@@ -887,11 +889,11 @@ const Paragominas = () => {
                   <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
                 </Link>
                 <a
-                  href={whatsappHelpUrl}
+                  href={whatsappStepsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() =>
-                    trackWhatsAppClick(whatsappHelpUrl, "Tirar dúvidas antes", "whatsapp_landing_paragominas_steps", "landing_paragominas_steps")
+                    trackWhatsAppClick(whatsappStepsUrl, "Tirar dúvidas antes", "whatsapp_landing_paragominas_steps", "landing_paragominas_steps")
                   }
                   className="inline-flex items-center justify-center gap-2 text-sm font-medium min-h-[44px]"
                   style={{ color: "var(--pgm-marfim)", opacity: 0.85 }}
@@ -1058,11 +1060,11 @@ const Paragominas = () => {
                   <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
                 </Link>
                 <a
-                  href={whatsappHelpUrl}
+                  href={whatsappFinalUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() =>
-                    trackWhatsAppClick(whatsappHelpUrl, "WhatsApp final Paragominas", "whatsapp_landing_paragominas_final", "landing_paragominas_final")
+                    trackWhatsAppClick(whatsappFinalUrl, "WhatsApp final Paragominas", "whatsapp_landing_paragominas_final", "landing_paragominas_final")
                   }
                   className="pgm-btn pgm-btn--ghost text-sm min-h-[44px]"
                 >

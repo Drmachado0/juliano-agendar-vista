@@ -14,7 +14,8 @@ const Header = () => {
   const [scrolled, setScrolled] = useState(false);
   const { trackWhatsAppClick, trackCTAClick } = useGoogleTag();
   const { trackContact: trackMetaContact } = useMetaPixel();
-  const { waLinkBare, display } = useSiteWhatsApp();
+  const { waLink, display } = useSiteWhatsApp();
+  const headerWaUrl = waLink(undefined, "site_header");
 
   const navItems = [
     { label: "Sobre", id: "sobre" },
@@ -155,11 +156,11 @@ const Header = () => {
               <div className="h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent my-2" />
 
               <a
-                href={waLinkBare}
+                href={headerWaUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
-                  trackWhatsAppClick(waLinkBare, display, 'whatsapp_header', 'header_menu_mobile');
+                  trackWhatsAppClick(headerWaUrl, display, 'whatsapp_header', 'header_menu_mobile');
                   trackMetaContact('WhatsApp');
                   setIsMenuOpen(false);
                 }}

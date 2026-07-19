@@ -49,7 +49,7 @@ const WhatsAppButton = () => {
   const [show, setShow] = useState(false);
   const [pulseReady, setPulseReady] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
-  const whatsappUrl = waLink("Olá! Gostaria de agendar uma consulta oftalmológica com o Dr. Juliano Machado.");
+  const whatsappUrl = waLink("Olá! Gostaria de agendar uma consulta oftalmológica com o Dr. Juliano Machado.", "site_floating");
 
   useEffect(() => {
     const showTimer = setTimeout(() => setShow(true), 3000);

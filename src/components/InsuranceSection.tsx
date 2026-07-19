@@ -120,11 +120,11 @@ const InsuranceSection = () => {
                   </Button>
                 </Link>
                 <a
-                  href={waLink("Olá! Gostaria de agendar uma consulta com o Dr. Juliano Machado.")}
+                  href={waLink("Olá! Gostaria de agendar uma consulta com o Dr. Juliano Machado.", "home_insurance")}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => {
-                    const url = waLink("Olá! Gostaria de agendar uma consulta com o Dr. Juliano Machado.");
+                    const url = waLink("Olá! Gostaria de agendar uma consulta com o Dr. Juliano Machado.", "home_insurance");
                     trackWhatsAppClick(
                       url,
                       'Falar no WhatsApp',

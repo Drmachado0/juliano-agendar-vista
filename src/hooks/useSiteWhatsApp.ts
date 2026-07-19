@@ -45,7 +45,11 @@ export interface SiteWhatsApp {
   raw: string; // só dígitos, ex "5591980690617"
   display: string; // "(91) 98069-0617"
   telLink: string; // "tel:+55..."
-  waLink: (message?: string) => string;
+  /**
+   * Monta link wa.me. Passe `origem` no formato "{pagina}_{cta}" para
+   * atribuição padronizada (ex: "home_hero", "catarata_footer").
+   */
+  waLink: (message?: string, origem?: string) => string;
   waLinkBare: string;
   loaded: boolean;
 }
@@ -74,7 +78,7 @@ export function useSiteWhatsApp(): SiteWhatsApp {
     raw,
     display: formatWhatsAppDisplay(raw),
     telLink: buildTelLink(raw),
-    waLink: (message?: string) => buildWaLink(raw, message),
+    waLink: (message?: string, origem?: string) => buildWaLink(raw, message, origem),
     waLinkBare: buildWaLinkBare(raw),
     loaded,
   };
