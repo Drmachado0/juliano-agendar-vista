@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { buildLeadUserData, collectAttribution } from "@/lib/leadUserData";
+import { fbqTrack } from "@/lib/metaPixelClient";
 
 export interface FormData {
   fullName: string;
