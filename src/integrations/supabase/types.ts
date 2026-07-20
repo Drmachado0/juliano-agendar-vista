@@ -2536,8 +2536,6 @@ export type Database = {
         Args: { p_backup_codes: string; p_secret: string; p_user_id: string }
         Returns: undefined
       }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
       telefone_canonico: { Args: { p_tel: string }; Returns: string }
       transicionar_estado_agendamento: {
         Args: { p_id: string; p_motivo?: string; p_novo_status_crm: string }
