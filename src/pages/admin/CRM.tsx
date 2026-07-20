@@ -362,17 +362,17 @@ const AdminCRM = () => {
     setDraggingAgendamento(null);
   };
 
-  const handleViewDetails = (agendamento: Agendamento) => {
+  const handleViewDetails = useCallback((agendamento: Agendamento) => {
     setSelectedAgendamento(agendamento);
     setDetailsModalOpen(true);
-  };
+  }, []);
 
-  const handleSendWhatsApp = (agendamento: Agendamento) => {
+  const handleSendWhatsApp = useCallback((agendamento: Agendamento) => {
     setSelectedAgendamento(agendamento);
     setWhatsappModalOpen(true);
-  };
+  }, []);
 
-  const handleTriggerAutomation = async (agendamento: Agendamento) => {
+  const handleTriggerAutomation = useCallback(async (agendamento: Agendamento) => {
     toast({
       title: "Enviando para automação...",
       description: "Disparando evento no n8n",
@@ -380,7 +380,6 @@ const AdminCRM = () => {
 
     const { success, error } = await notificarN8n('status_crm_atualizado', agendamento);
 
-    // Registrar auditoria (fire-and-forget)
     const { registrarAuditCrm } = await import('@/services/crmAudit');
     registrarAuditCrm({
       agendamentoId: agendamento.id,
@@ -400,7 +399,7 @@ const AdminCRM = () => {
         variant: "destructive",
       });
     }
-  };
+  }, []);
 
   const handleToggleSandbox = async (agendamento: Agendamento) => {
     const novoEstado = !agendamento.is_sandbox;
