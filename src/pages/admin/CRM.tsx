@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import KanbanColumn from "@/components/admin/KanbanColumn";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
@@ -203,7 +203,7 @@ const AdminCRM = () => {
     [agendamentosPorStatus, filters]
   );
 
-  const fetchAgendamentos = async (silent = false) => {
+  const fetchAgendamentos = useCallback(async (silent = false) => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     if (!silent) setLoading(true);
@@ -222,7 +222,6 @@ const AdminCRM = () => {
     } else {
       setAgendamentosPorStatus(data);
       setUltimaAtualizacao(new Date());
-      // SLA: busca em lote a última mensagem IN para todos os ids visíveis
       const allIds: string[] = [];
       for (const k of Object.keys(data)) for (const ag of data[k]) allIds.push(ag.id);
       if (allIds.length > 0) {
@@ -231,7 +230,7 @@ const AdminCRM = () => {
           .catch(() => { /* silent */ });
       }
     }
-  };
+  }, []);
 
   const liveStatus = useCrmKanbanLive();
 
@@ -242,31 +241,36 @@ const AdminCRM = () => {
   useEffect(() => {
     fetchAgendamentos();
 
-    // Realtime: invalida o estado local sempre que houver mudança em agendamentos,
-    // mensagens ou audit log. (O hook useCrmKanbanLive já cuida da view nova;
-    // aqui mantemos refetch direto do estado legado.)
+    // Realtime: debounce 400ms para consolidar rajadas (ManyChat pode disparar
+    // várias mensagens em sequência). Evita N refetches sequenciais.
+    let refetchTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefetch = () => {
+      if (refetchTimer) clearTimeout(refetchTimer);
+      refetchTimer = setTimeout(() => {
+        refetchTimer = null;
+        fetchAgendamentos(true);
+      }, 400);
+    };
+
     const channel = supabase
       .channel('crm-agendamentos-changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'agendamentos' },
-        () => {
-          fetchAgendamentos(true);
-        }
+        scheduleRefetch,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'mensagens_whatsapp' },
-        () => {
-          fetchAgendamentos(true);
-        }
+        scheduleRefetch,
       )
       .subscribe();
 
     return () => {
+      if (refetchTimer) clearTimeout(refetchTimer);
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchAgendamentos]);
 
   const handleReprocessarBoasVindas = async () => {
     setReprocessando(true);
@@ -293,23 +297,23 @@ const AdminCRM = () => {
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, agendamento: Agendamento) => {
+  const handleDragStart = useCallback((e: React.DragEvent, agendamento: Agendamento) => {
     setDraggingAgendamento(agendamento);
     e.dataTransfer.effectAllowed = "move";
-  };
+  }, []);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-  };
+  }, []);
 
-  const handleDragEnter = (status: string) => {
+  const handleDragEnter = useCallback((status: string) => {
     setDragOverColumn(status);
-  };
+  }, []);
 
-  const handleDragLeave = () => {
+  const handleDragLeave = useCallback(() => {
     setDragOverColumn(null);
-  };
+  }, []);
 
   const handleDrop = async (e: React.DragEvent, newStatus: string) => {
     e.preventDefault();
@@ -358,17 +362,17 @@ const AdminCRM = () => {
     setDraggingAgendamento(null);
   };
 
-  const handleViewDetails = (agendamento: Agendamento) => {
+  const handleViewDetails = useCallback((agendamento: Agendamento) => {
     setSelectedAgendamento(agendamento);
     setDetailsModalOpen(true);
-  };
+  }, []);
 
-  const handleSendWhatsApp = (agendamento: Agendamento) => {
+  const handleSendWhatsApp = useCallback((agendamento: Agendamento) => {
     setSelectedAgendamento(agendamento);
     setWhatsappModalOpen(true);
-  };
+  }, []);
 
-  const handleTriggerAutomation = async (agendamento: Agendamento) => {
+  const handleTriggerAutomation = useCallback(async (agendamento: Agendamento) => {
     toast({
       title: "Enviando para automação...",
       description: "Disparando evento no n8n",
@@ -376,7 +380,6 @@ const AdminCRM = () => {
 
     const { success, error } = await notificarN8n('status_crm_atualizado', agendamento);
 
-    // Registrar auditoria (fire-and-forget)
     const { registrarAuditCrm } = await import('@/services/crmAudit');
     registrarAuditCrm({
       agendamentoId: agendamento.id,
@@ -396,7 +399,7 @@ const AdminCRM = () => {
         variant: "destructive",
       });
     }
-  };
+  }, []);
 
   const handleToggleSandbox = async (agendamento: Agendamento) => {
     const novoEstado = !agendamento.is_sandbox;
