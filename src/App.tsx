@@ -36,6 +36,7 @@ const AdminLogs = lazy(() => import("./pages/admin/Logs"));
 const AdminLGPD = lazy(() => import("./pages/admin/LGPD"));
 const AdminRelatorios = lazy(() => import("./pages/admin/Relatorios"));
 const AdminSaudeIntegracoes = lazy(() => import("./pages/admin/SaudeIntegracoes"));
+const AdminMonitoramentoCrm = lazy(() => import("./pages/admin/MonitoramentoCrm"));
 const ProcCatarata = lazy(() => import("./pages/procedimentos/CirurgiaDeCatarata"));
 const ProcPterigio = lazy(() => import("./pages/procedimentos/CirurgiaDePterigio"));
 const ProcConsulta = lazy(() => import("./pages/procedimentos/ConsultaOftalmologica"));
@@ -96,6 +97,7 @@ const App = () => (
               <Route path="/admin/lgpd" element={<AdminLGPD />} />
               <Route path="/admin/relatorios" element={<AdminRelatorios />} />
               <Route path="/admin/saude-integracoes" element={<AdminSaudeIntegracoes />} />
+              <Route path="/admin/monitoramento-crm" element={<AdminMonitoramentoCrm />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

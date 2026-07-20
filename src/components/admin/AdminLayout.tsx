@@ -52,6 +52,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { href: "/admin/auditoria-tracking", label: "Auditoria Tracking", icon: ShieldCheck },
     { href: "/admin/logs", label: "Logs do Sistema", icon: ScrollText },
     { href: "/admin/saude-integracoes", label: "Saúde de integrações", icon: Activity },
+    { href: "/admin/monitoramento-crm", label: "Monitoramento CRM", icon: Activity },
     { href: "/admin/lgpd", label: "LGPD / Privacidade", icon: Shield },
   ];
 
