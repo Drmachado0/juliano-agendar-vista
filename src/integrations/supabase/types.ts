@@ -388,6 +388,13 @@ export type Database = {
             referencedColumns: ["agendamento_id"]
           },
           {
+            foreignKeyName: "bot_assistente_log_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_crm_leads_atencao"
+            referencedColumns: ["agendamento_id"]
+          },
+          {
             foreignKeyName: "bot_assistente_log_mensagem_id_fkey"
             columns: ["mensagem_id"]
             isOneToOne: false
@@ -604,6 +611,13 @@ export type Database = {
             referencedColumns: ["agendamento_id"]
           },
           {
+            foreignKeyName: "conversation_intents_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_crm_leads_atencao"
+            referencedColumns: ["agendamento_id"]
+          },
+          {
             foreignKeyName: "conversation_intents_mensagem_id_fkey"
             columns: ["mensagem_id"]
             isOneToOne: false
@@ -676,6 +690,13 @@ export type Database = {
             columns: ["agendamento_id"]
             isOneToOne: false
             referencedRelation: "vw_crm_kanban_all"
+            referencedColumns: ["agendamento_id"]
+          },
+          {
+            foreignKeyName: "crm_audit_log_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_crm_leads_atencao"
             referencedColumns: ["agendamento_id"]
           },
         ]
@@ -1464,6 +1485,13 @@ export type Database = {
             referencedRelation: "vw_crm_kanban_all"
             referencedColumns: ["agendamento_id"]
           },
+          {
+            foreignKeyName: "mensagens_whatsapp_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_crm_leads_atencao"
+            referencedColumns: ["agendamento_id"]
+          },
         ]
       }
       profiles: {
@@ -2058,6 +2086,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vw_crm_leads_atencao: {
+        Row: {
+          agendamento_id: string | null
+          bot_ativo: boolean | null
+          bot_pausado_ate: string | null
+          categoria: string | null
+          created_at: string | null
+          horas_desde_criacao: number | null
+          horas_desde_ultima_in: number | null
+          nome: string | null
+          origem: string | null
+          status_crm: string | null
+          status_funil: string | null
+          telefone: string | null
+          ultima_in_at: string | null
+          ultima_out_at: string | null
+        }
+        Relationships: []
       }
       vw_status_campanha_atual: {
         Row: {
