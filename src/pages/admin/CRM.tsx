@@ -203,7 +203,7 @@ const AdminCRM = () => {
     [agendamentosPorStatus, filters]
   );
 
-  const fetchAgendamentos = async (silent = false) => {
+  const fetchAgendamentos = useCallback(async (silent = false) => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     if (!silent) setLoading(true);
@@ -222,7 +222,6 @@ const AdminCRM = () => {
     } else {
       setAgendamentosPorStatus(data);
       setUltimaAtualizacao(new Date());
-      // SLA: busca em lote a última mensagem IN para todos os ids visíveis
       const allIds: string[] = [];
       for (const k of Object.keys(data)) for (const ag of data[k]) allIds.push(ag.id);
       if (allIds.length > 0) {
@@ -231,7 +230,7 @@ const AdminCRM = () => {
           .catch(() => { /* silent */ });
       }
     }
-  };
+  }, []);
 
   const liveStatus = useCrmKanbanLive();
 
