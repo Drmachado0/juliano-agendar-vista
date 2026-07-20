@@ -18,6 +18,9 @@ export type Database = {
         Row: {
           aceita_contato_whatsapp_email: boolean | null
           aceita_primeiro_horario: boolean | null
+          arquivado: boolean
+          arquivado_em: string | null
+          arquivado_motivo: string | null
           bot_ativo: boolean
           bot_pausa_motivo: string | null
           bot_pausado_ate: string | null
@@ -77,6 +80,9 @@ export type Database = {
         Insert: {
           aceita_contato_whatsapp_email?: boolean | null
           aceita_primeiro_horario?: boolean | null
+          arquivado?: boolean
+          arquivado_em?: string | null
+          arquivado_motivo?: string | null
           bot_ativo?: boolean
           bot_pausa_motivo?: string | null
           bot_pausado_ate?: string | null
@@ -136,6 +142,9 @@ export type Database = {
         Update: {
           aceita_contato_whatsapp_email?: boolean | null
           aceita_primeiro_horario?: boolean | null
+          arquivado?: boolean
+          arquivado_em?: string | null
+          arquivado_motivo?: string | null
           bot_ativo?: boolean
           bot_pausa_motivo?: string | null
           bot_pausado_ate?: string | null
@@ -1951,7 +1960,6 @@ export type Database = {
           utm_medium: string | null
           utm_source: string | null
           utm_term: string | null
-          valor_convenio: number | null
         }
         Relationships: [
           {
@@ -2114,6 +2122,7 @@ export type Database = {
         Returns: Json
       }
       aplicar_retencao_lgpd: { Args: never; Returns: Json }
+      arquivar_agendamentos_antigos: { Args: never; Returns: number }
       atualizar_evolution_config: {
         Args: { p_api_token?: string; p_base_url?: string; p_instance?: string }
         Returns: Json
