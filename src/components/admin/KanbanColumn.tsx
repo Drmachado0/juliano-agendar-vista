@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Agendamento } from "@/services/agendamentos";
 import KanbanCard from "./KanbanCard";
 import { cn } from "@/lib/utils";
@@ -140,4 +141,4 @@ const KanbanColumn = ({
   );
 };
 
-export default KanbanColumn;
+export default memo(KanbanColumn);

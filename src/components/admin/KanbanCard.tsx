@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Agendamento, reengajarLead } from "@/services/agendamentos";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -657,4 +657,4 @@ const KanbanCard = ({
   );
 };
 
-export default KanbanCard;
+export default memo(KanbanCard);
