@@ -406,6 +406,9 @@ export async function listarAgendamentosPorStatus(): Promise<{
   const grouped = emptyBuckets();
 
   (data || []).forEach((ag) => {
+    // Arquivados (compareceu/atendido +7d) saem do board, mas ficam no banco p/ relatórios.
+    // Filtro no client para degradar com segurança caso a coluna ainda não exista no banco.
+    if ((ag as any).arquivado) return;
     const col = normalizeStatusFunil((ag as any).status_funil);
     if (col === "__hidden__") return; // bloqueios não entram no funil
     if (grouped[col]) {

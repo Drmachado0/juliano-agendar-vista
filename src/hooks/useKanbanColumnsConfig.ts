@@ -4,6 +4,7 @@ export type KanbanColumnDef = {
   status: string;
   title: string;
   color: string;
+  defaultVisible?: boolean; // undefined/true = visível; false = oculta por padrão (colunas terminais)
 };
 
 export type KanbanColumnConfigItem = {
@@ -11,8 +12,9 @@ export type KanbanColumnConfigItem = {
   visible: boolean;
 };
 
-// v4: adiciona coluna EXAMES_HGP entre "Em conversa" e "Aguardando confirmação".
-const STORAGE_KEY = "crm:kanban-columns:v4";
+// v5: esconde por padrão as colunas terminais (Compareceu/Cancelado/Faltou) para um board
+// mais limpo. Compareceu é arquivado após 7d; as três seguem acessíveis no gerenciador de colunas.
+const STORAGE_KEY = "crm:kanban-columns:v5";
 
 export const DEFAULT_COLUMNS: KanbanColumnDef[] = [
   { status: "novo", title: "🆕 Novo Lead", color: "bg-blue-500" },
@@ -21,24 +23,29 @@ export const DEFAULT_COLUMNS: KanbanColumnDef[] = [
   { status: "aguardando_confirmacao", title: "⏳ Aguardando confirmação", color: "bg-amber-500" },
   { status: "yag_laser", title: "🔆 YAG Laser — Belém", color: "bg-violet-500" },
   { status: "agendado", title: "✅ Agendado", color: "bg-emerald-500" },
-  { status: "compareceu", title: "🟢 Compareceu", color: "bg-green-600" },
-  { status: "cancelado", title: "❌ Cancelado", color: "bg-gray-500" },
-  { status: "faltou", title: "🔴 Faltou", color: "bg-rose-500" },
+  { status: "compareceu", title: "🟢 Compareceu", color: "bg-green-600", defaultVisible: false },
+  { status: "cancelado", title: "❌ Cancelado", color: "bg-gray-500", defaultVisible: false },
+  { status: "faltou", title: "🔴 Faltou", color: "bg-rose-500", defaultVisible: false },
 ];
+
+// Visibilidade padrão de cada coluna (terminais começam ocultas via defaultVisible: false).
+function defaultConfig(): KanbanColumnConfigItem[] {
+  return DEFAULT_COLUMNS.map((c) => ({ status: c.status, visible: c.defaultVisible !== false }));
+}
 
 function loadConfig(): KanbanColumnConfigItem[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_COLUMNS.map((c) => ({ status: c.status, visible: true }));
+    if (!raw) return defaultConfig();
     const parsed = JSON.parse(raw) as KanbanColumnConfigItem[];
     const known = new Set(parsed.map((p) => p.status));
     const merged = parsed.filter((p) => DEFAULT_COLUMNS.some((d) => d.status === p.status));
     for (const d of DEFAULT_COLUMNS) {
-      if (!known.has(d.status)) merged.push({ status: d.status, visible: true });
+      if (!known.has(d.status)) merged.push({ status: d.status, visible: d.defaultVisible !== false });
     }
     return merged;
   } catch {
-    return DEFAULT_COLUMNS.map((c) => ({ status: c.status, visible: true }));
+    return defaultConfig();
   }
 }
 
@@ -68,7 +75,7 @@ export function useKanbanColumnsConfig() {
   }, []);
 
   const reset = useCallback(() => {
-    setConfig(DEFAULT_COLUMNS.map((c) => ({ status: c.status, visible: true })));
+    setConfig(defaultConfig());
   }, []);
 
   const orderedVisibleColumns: KanbanColumnDef[] = config
