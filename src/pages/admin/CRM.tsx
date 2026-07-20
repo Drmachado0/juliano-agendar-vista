@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import KanbanColumn from "@/components/admin/KanbanColumn";
 import AgendamentoDetailsModal from "@/components/admin/AgendamentoDetailsModal";
@@ -242,31 +242,36 @@ const AdminCRM = () => {
   useEffect(() => {
     fetchAgendamentos();
 
-    // Realtime: invalida o estado local sempre que houver mudança em agendamentos,
-    // mensagens ou audit log. (O hook useCrmKanbanLive já cuida da view nova;
-    // aqui mantemos refetch direto do estado legado.)
+    // Realtime: debounce 400ms para consolidar rajadas (ManyChat pode disparar
+    // várias mensagens em sequência). Evita N refetches sequenciais.
+    let refetchTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefetch = () => {
+      if (refetchTimer) clearTimeout(refetchTimer);
+      refetchTimer = setTimeout(() => {
+        refetchTimer = null;
+        fetchAgendamentos(true);
+      }, 400);
+    };
+
     const channel = supabase
       .channel('crm-agendamentos-changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'agendamentos' },
-        () => {
-          fetchAgendamentos(true);
-        }
+        scheduleRefetch,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'mensagens_whatsapp' },
-        () => {
-          fetchAgendamentos(true);
-        }
+        scheduleRefetch,
       )
       .subscribe();
 
     return () => {
+      if (refetchTimer) clearTimeout(refetchTimer);
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchAgendamentos]);
 
   const handleReprocessarBoasVindas = async () => {
     setReprocessando(true);
