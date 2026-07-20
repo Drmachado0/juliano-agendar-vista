@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Agendamento, listarAgendamentosPorStatus, atualizarStatusFunil, reprocessarBoasVindas, buscarAgendamento, marcarSandbox, listarUltimasMensagensIn } from "@/services/agendamentos";
 import { notificarN8n } from "@/services/integracoes";
 import { toast } from "@/hooks/use-toast";
-import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, History, Copy, Contact } from "lucide-react";
+import { LayoutGrid, RefreshCw, Users, CalendarCheck, AlertTriangle, TrendingUp, CheckCircle2, ArrowRight, Send, History, Copy, Inbox, Contact } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useCrmKanbanLive } from "@/hooks/useCrmKanbanLive";
@@ -16,6 +16,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import AuditLogDrawer from "@/components/admin/AuditLogDrawer";
 import DuplicadosDrawer from "@/components/admin/DuplicadosDrawer";
+import LeadsAtencaoDrawer from "@/components/admin/LeadsAtencaoDrawer";
+import { useCrmLeadsAtencao } from "@/hooks/useCrmLeadsAtencao";
 import { useBoasVindasStatus } from "@/hooks/useBoasVindasStatus";
 import CRMFilters, { CrmFilters, DEFAULT_CRM_FILTERS } from "@/components/admin/CRMFilters";
 import CRMLegenda from "@/components/admin/CRMLegenda";
@@ -159,6 +161,7 @@ const AdminCRM = () => {
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   const [duplicadosOpen, setDuplicadosOpen] = useState(false);
+  const [atencaoOpen, setAtencaoOpen] = useState(false);
   const isFetchingRef = useRef(false);
   const columnsManager = useKanbanColumnsConfig();
   const visibleColumns = columnsManager.orderedVisibleColumns;
@@ -231,6 +234,10 @@ const AdminCRM = () => {
   };
 
   const liveStatus = useCrmKanbanLive();
+
+  // Leads que precisam de atenção humana (view vw_crm_leads_atencao; [] se ainda não aplicada)
+  const { data: leadsAtencao = [] } = useCrmLeadsAtencao();
+  const atencaoCount = leadsAtencao.length;
 
   useEffect(() => {
     fetchAgendamentos();
@@ -422,6 +429,49 @@ const AdminCRM = () => {
     }
   };
 
+  // Abre a ficha / o WhatsApp de um agendamento por id (reaproveitado por drawers).
+  const openAgendamentoById = async (id: string) => {
+    const todos = Object.values(agendamentosPorStatus).flat();
+    const found = todos.find((a) => a.id === id);
+    if (found) {
+      setSelectedAgendamento(found);
+      setDetailsModalOpen(true);
+      return;
+    }
+    const { data, error } = await buscarAgendamento(id);
+    if (data) {
+      setSelectedAgendamento(data);
+      setDetailsModalOpen(true);
+    } else {
+      toast({
+        title: "Agendamento não encontrado",
+        description: error?.message || "O registro pode ter sido excluído ou unificado.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openWhatsAppById = async (id: string) => {
+    const todos = Object.values(agendamentosPorStatus).flat();
+    const found = todos.find((a) => a.id === id);
+    if (found) {
+      setSelectedAgendamento(found);
+      setWhatsappModalOpen(true);
+      return;
+    }
+    const { data, error } = await buscarAgendamento(id);
+    if (data) {
+      setSelectedAgendamento(data);
+      setWhatsappModalOpen(true);
+    } else {
+      toast({
+        title: "Paciente não encontrado",
+        description: error?.message || "O registro pode ter sido excluído ou unificado.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Calcula estatísticas com base no resultado FILTRADO (header + taxas reagem aos filtros)
   const allItems = Object.values(agendamentosFiltrados).flat();
   const totalItems = allItems.length;
@@ -518,6 +568,16 @@ const AdminCRM = () => {
             >
               <Send className={`h-4 w-4 mr-2 ${reprocessando ? 'animate-pulse' : ''}`} />
               {reprocessando ? "Enviando..." : "Boas-vindas"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAtencaoOpen(true)}
+              title="Leads sem boas-vindas ou com mensagem do paciente sem resposta"
+              className={cn(atencaoCount > 0 && "border-amber-500/40 text-amber-700 dark:text-amber-400")}
+            >
+              <Inbox className="h-4 w-4 mr-2" />
+              Atenção{atencaoCount > 0 ? ` (${atencaoCount})` : ""}
             </Button>
             <Button variant="outline" size="sm" onClick={() => setDuplicadosOpen(true)} title="Detectar e unificar leads duplicados por telefone">
               <Copy className="h-4 w-4 mr-2" />
@@ -680,53 +740,19 @@ const AdminCRM = () => {
       <AuditLogDrawer
         open={auditOpen}
         onOpenChange={setAuditOpen}
-        onOpenAgendamento={async (id) => {
-          // Procura primeiro nos agendamentos em memória
-          const todos = Object.values(agendamentosPorStatus).flat();
-          const found = todos.find((a) => a.id === id);
-          if (found) {
-            setSelectedAgendamento(found);
-            setDetailsModalOpen(true);
-            return;
-          }
-          // Fallback: busca no banco
-          const { data, error } = await buscarAgendamento(id);
-          if (data) {
-            setSelectedAgendamento(data);
-            setDetailsModalOpen(true);
-          } else {
-            toast({
-              title: "Agendamento não encontrado",
-              description: error?.message || "O registro pode ter sido excluído ou unificado.",
-              variant: "destructive",
-            });
-          }
-        }}
-        onOpenWhatsApp={async (id) => {
-          const todos = Object.values(agendamentosPorStatus).flat();
-          const found = todos.find((a) => a.id === id);
-          if (found) {
-            setSelectedAgendamento(found);
-            setWhatsappModalOpen(true);
-            return;
-          }
-          const { data, error } = await buscarAgendamento(id);
-          if (data) {
-            setSelectedAgendamento(data);
-            setWhatsappModalOpen(true);
-          } else {
-            toast({
-              title: "Paciente não encontrado",
-              description: error?.message || "O registro pode ter sido excluído ou unificado.",
-              variant: "destructive",
-            });
-          }
-        }}
+        onOpenAgendamento={openAgendamentoById}
+        onOpenWhatsApp={openWhatsAppById}
       />
       <DuplicadosDrawer
         open={duplicadosOpen}
         onOpenChange={setDuplicadosOpen}
         onMerged={() => fetchAgendamentos(true)}
+      />
+      <LeadsAtencaoDrawer
+        open={atencaoOpen}
+        onOpenChange={setAtencaoOpen}
+        onOpenAgendamento={openAgendamentoById}
+        onOpenWhatsApp={openWhatsAppById}
       />
       </DensityProvider>
     </AdminLayout>
