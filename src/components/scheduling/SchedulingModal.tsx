@@ -78,13 +78,19 @@ const SchedulingModal = ({ isOpen, onClose }: SchedulingModalProps) => {
 
   const totalSteps = 4;
 
-  // Track schedule start when modal opens
+  // Track schedule start only once por abertura do modal (evita duplo disparo
+  // em re-renders quando trackScheduleStart/trackViewContent trocam de referência).
+  const scheduleStartFiredRef = useRef(false);
   useEffect(() => {
-    if (isOpen && currentStep === 1) {
+    if (isOpen && currentStep === 1 && !scheduleStartFiredRef.current) {
+      scheduleStartFiredRef.current = true;
       trackScheduleStart();
       trackViewContent("Agendamento Modal", "Consulta Oftalmológica");
     }
-  }, [isOpen]);
+    if (!isOpen) {
+      scheduleStartFiredRef.current = false;
+    }
+  }, [isOpen, currentStep, trackScheduleStart, trackViewContent]);
 
   const updateFormData = (data: Partial<FormData>) => {
     if (!formStartFiredRef.current) {

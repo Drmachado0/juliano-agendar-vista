@@ -297,23 +297,23 @@ const AdminCRM = () => {
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, agendamento: Agendamento) => {
+  const handleDragStart = useCallback((e: React.DragEvent, agendamento: Agendamento) => {
     setDraggingAgendamento(agendamento);
     e.dataTransfer.effectAllowed = "move";
-  };
+  }, []);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-  };
+  }, []);
 
-  const handleDragEnter = (status: string) => {
+  const handleDragEnter = useCallback((status: string) => {
     setDragOverColumn(status);
-  };
+  }, []);
 
-  const handleDragLeave = () => {
+  const handleDragLeave = useCallback(() => {
     setDragOverColumn(null);
-  };
+  }, []);
 
   const handleDrop = async (e: React.DragEvent, newStatus: string) => {
     e.preventDefault();
