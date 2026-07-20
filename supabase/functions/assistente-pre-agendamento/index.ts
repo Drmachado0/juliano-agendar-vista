@@ -603,16 +603,65 @@ serve(async (req) => {
     }
 
     if (botAtivo && (intencao.intencao === "outros" || intencao.confianca < 0.6)) {
+      // Handoff = ÚLTIMO RECURSO. Em vez de escalar já na 1ª ambiguidade, o bot faz
+      // UMA pergunta de esclarecimento. Só escala se a mensagem ANTERIOR já tinha sido
+      // um pedido de esclarecimento (2ª mensagem seguida sem o bot entender), checado
+      // no bot_assistente_log por telefone (desfecho != "classificou" nas últimas 4h).
+      const { data: ultimoDesfecho } = await supabase
+        .from("bot_assistente_log")
+        .select("acao")
+        .eq("telefone", body.telefone)
+        .neq("acao", "classificou")
+        .gte("created_at", new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const jaPediuEsclarecimento = (ultimoDesfecho as any)?.[0]?.acao === "pediu_esclarecimento";
+
+      if (!jaPediuEsclarecimento) {
+        // 1ª ambiguidade → pergunta de esclarecimento (NÃO escala)
+        const primeiroNome = agendamento?.nome_completo?.split(" ")[0] || "";
+        const saud = primeiroNome ? `Oi, ${primeiroNome}! ` : "Oi! ";
+        const pergunta = `${saud}Pra eu te ajudar certinho 🙂 — você quer *agendar* uma consulta, *remarcar/cancelar*, ou tirar uma *dúvida* (preço, convênio, endereço)? É só me dizer.`;
+        const envioEsc = await sendWhatsappText(body.telefone, pergunta);
+        await supabase.rpc("registrar_bot_log", {
+          p_telefone: body.telefone,
+          p_acao: envioEsc.success ? "pediu_esclarecimento" : "erro",
+          p_agendamento_id: body.agendamento_id ?? null,
+          p_intencao: intencao.intencao,
+          p_detalhes: { confianca: intencao.confianca, resumo: intencao.resumo, envio: envioEsc },
+        });
+        if (!envioEsc.success) {
+          // Falha REAL de envio → aí sim escala
+          await escalarParaHumano(supabase, {
+            telefone: body.telefone,
+            agendamentoId: body.agendamento_id ?? null,
+            agendamento,
+            motivo: "envio_esclarecimento_falhou",
+            intencao: intencao.intencao,
+            detalhes: { confianca: intencao.confianca, envio: envioEsc },
+          });
+          return new Response(
+            JSON.stringify({ ok: true, intencao, agiu: false, escalado: "envio_esclarecimento_falhou", request_id: rid }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
+          );
+        }
+        return new Response(
+          JSON.stringify({ ok: true, intencao, agiu: true, esclarecimento: true, request_id: rid }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
+        );
+      }
+
+      // 2ª ambiguidade seguida → escala (agora sim, último recurso)
       await escalarParaHumano(supabase, {
         telefone: body.telefone,
         agendamentoId: body.agendamento_id ?? null,
         agendamento,
-        motivo: "bot_nao_entendeu",
+        motivo: "bot_nao_entendeu_apos_esclarecimento",
         intencao: intencao.intencao,
         detalhes: { confianca: intencao.confianca, resumo: intencao.resumo },
       });
       return new Response(
-        JSON.stringify({ ok: true, intencao, agiu: false, escalado: "bot_nao_entendeu", request_id: rid }),
+        JSON.stringify({ ok: true, intencao, agiu: false, escalado: "bot_nao_entendeu_apos_esclarecimento", request_id: rid }),
         { headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": rid } },
       );
     }
