@@ -369,9 +369,26 @@ export async function listarAgendamentosPorStatus(): Promise<{
       return acc;
     }, {});
 
+  // Payload enxuto: seleciona apenas as colunas realmente consumidas pelo
+  // Kanban/KanbanCard/CRM.tsx. `agendamentos` tem ~60 colunas; enviar "*"
+  // aumenta latência e memória (view antiga era a query mais pesada em bytes).
+  // Se um campo novo precisar aparecer no Kanban, adicione aqui.
+  const KANBAN_COLS =
+    "id, created_at, updated_at, nome_completo, telefone_whatsapp, telefone_canonico, " +
+    "email, data_nascimento, data_agendamento, hora_agendamento, local_atendimento, " +
+    "tipo_atendimento, detalhe_exame_ou_cirurgia, convenio, convenio_outro, origem, " +
+    "observacoes_internas, motivo_status, status_crm, status_funil, " +
+    "aceita_primeiro_horario, aceita_contato_whatsapp_email, " +
+    "is_sandbox, sandbox_reason, arquivado, " +
+    "bot_ativo, bot_pausado_ate, bot_pausa_motivo, bot_pausado_por, " +
+    "confirmation_status, confirmation_sent_at, confirmation_response_at, " +
+    "confirmacao_enviada, google_calendar_event_id, " +
+    "clinica_id, profissional_id, servico_id, estado_atendimento, " +
+    "utm_source, utm_medium, utm_campaign, utm_content, utm_term, gclid, fbclid";
+
   const { data, error } = await supabase
     .from("agendamentos")
-    .select("*")
+    .select(KANBAN_COLS)
     .order("created_at", { ascending: false });
 
   if (error) {
