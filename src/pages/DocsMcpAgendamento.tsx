@@ -18,8 +18,60 @@ const AUTH_SNIPPET = `POST ${ENDPOINT}
 Content-Type: application/json
 x-n8n-secret: <N8N_SHARED_SECRET>
 
-# Aliases aceitos para o mesmo segredo:
-#   x-mcp-secret | x-api-key | apikey | Authorization: Bearer <segredo>`;
+# Aliases aceitos para o MESMO segredo (envie apenas UM deles):
+#   x-mcp-secret: <segredo>
+#   x-api-key: <segredo>
+#   apikey: <segredo>
+#   Authorization: Bearer <segredo>
+#
+# Observação: NÃO use a anon key nem o JWT do Supabase aqui.
+# A função roda com verify_jwt = false e valida somente o segredo compartilhado.`;
+
+const N8N_HTTP_SNIPPET = `Nó: HTTP Request
+  Method:        POST
+  URL:           ${ENDPOINT}
+  Authentication: Generic Credential Type → Header Auth
+      Name:  x-n8n-secret
+      Value: <N8N_SHARED_SECRET>
+  Send Headers:  ON
+      Content-Type: application/json
+  Send Body:     ON  → Body Content Type: JSON
+      Specify Body: Using JSON
+      JSON: {{ $json.payload }}   // ou cole o corpo JSON-RPC direto
+
+Nó: MCP Client (n8n AI Agent)
+  Endpoint:   ${ENDPOINT}
+  Transport:  HTTP (Streamable) / JSON-RPC
+  Headers:    x-n8n-secret = <N8N_SHARED_SECRET>`;
+
+const CURL_SNIPPET = `curl -X POST "${ENDPOINT}" \\
+  -H "Content-Type: application/json" \\
+  -H "x-n8n-secret: $N8N_SHARED_SECRET" \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+
+# Esperado: HTTP 200 com a lista de tools.
+# HTTP 400/401 com { "error": { "code": -32001, "message": "Unauthorized" } }
+#   → header ausente, nome do header errado, ou segredo divergente.`;
+
+const AUTH_TROUBLESHOOTING: Array<[string, string]> = [
+  [
+    "Unauthorized (-32001)",
+    "O header não chegou ou o valor não confere. Confirme o nome exato do header e que o valor não tem espaços/quebras de linha coladas.",
+  ],
+  [
+    "Enviou Authorization com JWT",
+    "O header Authorization só é lido no formato Bearer <segredo compartilhado>. Um JWT de usuário ou a anon key não autenticam esta função.",
+  ],
+  [
+    "Funciona no Postman e falha no n8n",
+    "No n8n use Header Auth (credencial) em vez de digitar o header em Options → Headers; assim o valor não vaza no log de execução.",
+  ],
+  [
+    "GET retorna 200 mas tools não aparecem",
+    "GET é apenas health check e não exige segredo. As tools só respondem em POST autenticado.",
+  ],
+];
+
 
 const SNIPPETS: Snippet[] = [
   {
@@ -257,22 +309,70 @@ export default function DocsMcpAgendamento() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="text-lg">Endpoint e autenticação</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Toda chamada de tool é <strong>POST</strong> com corpo JSON-RPC 2.0
+              e um <strong>header de segredo compartilhado</strong>. Sem esse
+              header a resposta é <code className="rounded bg-muted px-1 py-0.5 text-xs">Unauthorized</code>.
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Todas as chamadas são <strong>POST</strong> com corpo JSON-RPC 2.0.
-              O segredo compartilhado nunca deve ser exposto no navegador — use-o
-              apenas em credenciais do n8n.
-            </p>
+            <ol className="list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
+              <li>
+                Pegue o valor de{" "}
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">N8N_SHARED_SECRET</code>{" "}
+                em <strong>Admin → Configurações → Integrações</strong> (card de
+                rotação de segredo).
+              </li>
+              <li>
+                Envie-o em <strong>um</strong> header:{" "}
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">x-n8n-secret</code>{" "}
+                (recomendado) ou um dos aliases abaixo.
+              </li>
+              <li>
+                Adicione também{" "}
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">Content-Type: application/json</code>.
+              </li>
+              <li>
+                O segredo nunca deve ir para o navegador — use-o apenas em
+                credenciais do n8n / variáveis de ambiente.
+              </li>
+            </ol>
             <CodeBlock code={AUTH_SNIPPET} />
+
+            <div>
+              <h3 className="mb-2 text-sm font-semibold">Configuração no n8n</h3>
+              <CodeBlock code={N8N_HTTP_SNIPPET} />
+            </div>
+
+            <div>
+              <h3 className="mb-2 text-sm font-semibold">Teste rápido (curl)</h3>
+              <CodeBlock code={CURL_SNIPPET} />
+            </div>
+
+            <div>
+              <h3 className="mb-2 text-sm font-semibold">
+                Erros comuns de autenticação
+              </h3>
+              <ul className="space-y-2">
+                {AUTH_TROUBLESHOOTING.map(([titulo, texto]) => (
+                  <li key={titulo} className="text-sm">
+                    <span className="font-medium">{titulo}</span>
+                    <span className="ml-2 text-muted-foreground">{texto}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             <p className="text-sm text-muted-foreground">
-              <strong>GET</strong> retorna apenas um health check mínimo:{" "}
+              <strong>GET</strong> não exige segredo e retorna apenas um health
+              check mínimo:{" "}
               <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
                 {`{ "success": true, "service": "mcp-agendamento" }`}
               </code>
             </p>
           </CardContent>
         </Card>
+
 
         <section className="space-y-6">
           {SNIPPETS.map((snippet) => (
