@@ -180,6 +180,15 @@ const RESPONSE_SHAPE = `// Sucesso (o payload da tool vem serializado em content
 // Erro de protocolo / autenticação (HTTP 400)
 { "jsonrpc": "2.0", "id": null, "error": { "code": -32001, "message": "Unauthorized" } }`;
 
+const POSTMAN_FILE = "/mcp-agendamento.postman_collection.json";
+
+const POSTMAN_IMPORT_STEPS = `1. Baixe o arquivo mcp-agendamento.postman_collection.json
+2. No Postman: File → Import → selecione o arquivo (ou cole o JSON em "Raw text")
+3. Abra a coleção → aba Variables e preencha:
+     baseUrl   = ${ENDPOINT}
+     n8nSecret = <N8N_SHARED_SECRET>   (use Current value, nunca Initial value)
+4. Envie qualquer request — o header x-n8n-secret já vem configurado.`;
+
 const MOTIVOS: Array<[string, string]> = [
   ["agendamento_id_obrigatorio", "UUID ausente ou inválido — a tool nunca cria card novo."],
   ["agendamento_nao_encontrado", "Nenhum card com esse UUID."],
