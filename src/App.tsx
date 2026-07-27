@@ -37,6 +37,7 @@ const AdminLGPD = lazy(() => import("./pages/admin/LGPD"));
 const AdminRelatorios = lazy(() => import("./pages/admin/Relatorios"));
 const AdminSaudeIntegracoes = lazy(() => import("./pages/admin/SaudeIntegracoes"));
 const AdminMonitoramentoCrm = lazy(() => import("./pages/admin/MonitoramentoCrm"));
+const DocsMcpAgendamento = lazy(() => import("./pages/DocsMcpAgendamento"));
 const ProcCatarata = lazy(() => import("./pages/procedimentos/CirurgiaDeCatarata"));
 const ProcPterigio = lazy(() => import("./pages/procedimentos/CirurgiaDePterigio"));
 const ProcConsulta = lazy(() => import("./pages/procedimentos/ConsultaOftalmologica"));
@@ -77,6 +78,7 @@ const App = () => (
               <Route path="/procedimentos/cirurgia-de-pterigio" element={<ProcPterigio />} />
               <Route path="/procedimentos/consulta-oftalmologica" element={<ProcConsulta />} />
               <Route path="/procedimentos/capsulotomia-yag-laser" element={<ProcYagLaser />} />
+              <Route path="/docs/mcp-agendamento" element={<DocsMcpAgendamento />} />
               <Route path="/obrigado" element={<Obrigado />} />
               <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
               <Route path="/auth" element={<Auth />} />
