@@ -1,0 +1,132 @@
+{
+  "info": {
+    "name": "mcp-agendamento (JSON-RPC 2.0)",
+    "description": "Coleção de exemplos JSON-RPC 2.0 para o servidor MCP de agendamento. Defina as variáveis baseUrl e n8nSecret antes de usar.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://<seu-projeto>.functions.supabase.co/mcp-agendamento"
+    },
+    {
+      "key": "n8nSecret",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "health check (GET)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+      }
+    },
+    {
+      "name": "initialize",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-n8n-secret", "value": "{{n8nSecret}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {}\n}"
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+      }
+    },
+    {
+      "name": "tools/list",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-n8n-secret", "value": "{{n8nSecret}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/list\",\n  \"params\": {}\n}"
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+      }
+    },
+    {
+      "name": "tools/call - listar_datas_disponiveis",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-n8n-secret", "value": "{{n8nSecret}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"listar_datas_disponiveis\",\n    \"arguments\": {\n      \"mes\": 8,\n      \"ano\": 2026,\n      \"local\": \"Clinicor\"\n    }\n  }\n}"
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+      }
+    },
+    {
+      "name": "tools/call - listar_horarios_disponiveis",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-n8n-secret", "value": "{{n8nSecret}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"listar_horarios_disponiveis\",\n    \"arguments\": {\n      \"data\": \"2026-08-12\",\n      \"local\": \"HGP\"\n    }\n  }\n}"
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+      }
+    },
+    {
+      "name": "tools/call - validar_horario",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-n8n-secret", "value": "{{n8nSecret}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 5,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"validar_horario\",\n    \"arguments\": {\n      \"data_agendamento\": \"2026-08-12\",\n      \"hora_agendamento\": \"14:30\",\n      \"local_atendimento\": \"HGP\"\n    }\n  }\n}"
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+      }
+    },
+    {
+      "name": "tools/call - criar_agendamento",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-n8n-secret", "value": "{{n8nSecret}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 6,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"criar_agendamento\",\n    \"arguments\": {\n      \"agendamento_id\": \"c08f1c2e-4a1b-4f77-9f0a-2b7d5f3a9e10\",\n      \"nome_completo\": \"Maria de Souza\",\n      \"telefone_whatsapp\": \"91991150174\",\n      \"tipo_atendimento\": \"Consulta\",\n      \"local_atendimento\": \"Clinicor\",\n      \"convenio\": \"Particular\",\n      \"data_agendamento\": \"2026-08-12\",\n      \"hora_agendamento\": \"14:30\"\n    }\n  }\n}"
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+      }
+    },
+    {
+      "name": "tools/call - cancelar_agendamento",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-n8n-secret", "value": "{{n8nSecret}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 7,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"cancelar_agendamento\",\n    \"arguments\": {\n      \"telefone\": \"91991150174\",\n      \"motivo\": \"Paciente pediu remarcação\"\n    }\n  }\n}"
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+      }
+    }
+  ]
+}
