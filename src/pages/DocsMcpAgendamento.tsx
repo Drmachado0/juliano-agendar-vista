@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { Check, Copy, Terminal } from "lucide-react";
+import { Check, Copy, Download, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -180,6 +180,15 @@ const RESPONSE_SHAPE = `// Sucesso (o payload da tool vem serializado em content
 // Erro de protocolo / autenticação (HTTP 400)
 { "jsonrpc": "2.0", "id": null, "error": { "code": -32001, "message": "Unauthorized" } }`;
 
+const POSTMAN_FILE = "/mcp-agendamento.postman_collection.json";
+
+const POSTMAN_IMPORT_STEPS = `1. Baixe o arquivo mcp-agendamento.postman_collection.json
+2. No Postman: File → Import → selecione o arquivo (ou cole o JSON em "Raw text")
+3. Abra a coleção → aba Variables e preencha:
+     baseUrl   = ${ENDPOINT}
+     n8nSecret = <N8N_SHARED_SECRET>   (use Current value, nunca Initial value)
+4. Envie qualquer request — o header x-n8n-secret já vem configurado.`;
+
 const MOTIVOS: Array<[string, string]> = [
   ["agendamento_id_obrigatorio", "UUID ausente ou inválido — a tool nunca cria card novo."],
   ["agendamento_nao_encontrado", "Nenhum card com esse UUID."],
@@ -281,12 +290,40 @@ export default function DocsMcpAgendamento() {
 
         <Card className="mt-8">
           <CardHeader>
+            <CardTitle className="text-lg">Coleção Postman</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Importe todos os exemplos acima de uma vez. Após importar, defina
+              as variáveis da coleção <code className="rounded bg-muted px-1 py-0.5 text-xs">baseUrl</code>{" "}
+              e <code className="rounded bg-muted px-1 py-0.5 text-xs">n8nSecret</code>.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm" className="gap-1.5">
+                <a href={POSTMAN_FILE} download="mcp-agendamento.postman_collection.json">
+                  <Download className="h-3.5 w-3.5" />
+                  Baixar coleção (.json)
+                </a>
+              </Button>
+              <Button asChild size="sm" variant="secondary">
+                <a href={POSTMAN_FILE} target="_blank" rel="noreferrer">
+                  Abrir JSON para copiar
+                </a>
+              </Button>
+            </div>
+            <CodeBlock code={POSTMAN_IMPORT_STEPS} />
+          </CardContent>
+        </Card>
+
+        <Card className="mt-8">
+          <CardHeader>
             <CardTitle className="text-lg">Formato das respostas</CardTitle>
           </CardHeader>
           <CardContent>
             <CodeBlock code={RESPONSE_SHAPE} />
           </CardContent>
         </Card>
+
 
         <Card className="mt-8">
           <CardHeader>
