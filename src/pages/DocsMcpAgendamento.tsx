@@ -309,22 +309,70 @@ export default function DocsMcpAgendamento() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="text-lg">Endpoint e autenticação</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Toda chamada de tool é <strong>POST</strong> com corpo JSON-RPC 2.0
+              e um <strong>header de segredo compartilhado</strong>. Sem esse
+              header a resposta é <code className="rounded bg-muted px-1 py-0.5 text-xs">Unauthorized</code>.
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Todas as chamadas são <strong>POST</strong> com corpo JSON-RPC 2.0.
-              O segredo compartilhado nunca deve ser exposto no navegador — use-o
-              apenas em credenciais do n8n.
-            </p>
+            <ol className="list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
+              <li>
+                Pegue o valor de{" "}
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">N8N_SHARED_SECRET</code>{" "}
+                em <strong>Admin → Configurações → Integrações</strong> (card de
+                rotação de segredo).
+              </li>
+              <li>
+                Envie-o em <strong>um</strong> header:{" "}
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">x-n8n-secret</code>{" "}
+                (recomendado) ou um dos aliases abaixo.
+              </li>
+              <li>
+                Adicione também{" "}
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">Content-Type: application/json</code>.
+              </li>
+              <li>
+                O segredo nunca deve ir para o navegador — use-o apenas em
+                credenciais do n8n / variáveis de ambiente.
+              </li>
+            </ol>
             <CodeBlock code={AUTH_SNIPPET} />
+
+            <div>
+              <h3 className="mb-2 text-sm font-semibold">Configuração no n8n</h3>
+              <CodeBlock code={N8N_HTTP_SNIPPET} />
+            </div>
+
+            <div>
+              <h3 className="mb-2 text-sm font-semibold">Teste rápido (curl)</h3>
+              <CodeBlock code={CURL_SNIPPET} />
+            </div>
+
+            <div>
+              <h3 className="mb-2 text-sm font-semibold">
+                Erros comuns de autenticação
+              </h3>
+              <ul className="space-y-2">
+                {AUTH_TROUBLESHOOTING.map(([titulo, texto]) => (
+                  <li key={titulo} className="text-sm">
+                    <span className="font-medium">{titulo}</span>
+                    <span className="ml-2 text-muted-foreground">{texto}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             <p className="text-sm text-muted-foreground">
-              <strong>GET</strong> retorna apenas um health check mínimo:{" "}
+              <strong>GET</strong> não exige segredo e retorna apenas um health
+              check mínimo:{" "}
               <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
                 {`{ "success": true, "service": "mcp-agendamento" }`}
               </code>
             </p>
           </CardContent>
         </Card>
+
 
         <section className="space-y-6">
           {SNIPPETS.map((snippet) => (
