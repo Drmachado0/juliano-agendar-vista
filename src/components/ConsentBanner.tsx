@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ import {
 } from "@/lib/consent";
 import { applyConsentToScripts } from "@/lib/loadTrackingScripts";
 import { isPrivateRoute } from "@/lib/trackingGuard";
+import { cn } from "@/lib/utils";
 
 export default function ConsentBanner() {
   const location = useLocation();
@@ -28,6 +29,7 @@ export default function ConsentBanner() {
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [analytics, setAnalytics] = useState(true);
   const [marketing, setMarketing] = useState(true);
+  const bannerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isPrivateRoute(location.pathname)) {
@@ -38,11 +40,34 @@ export default function ConsentBanner() {
     if (!decided) {
       setVisible(true);
     } else {
-      // Re-aplica scripts se já consentido (caso usuário recarregue)
       const c = getConsent();
       if (c) applyConsentToScripts({ analytics: c.analytics, marketing: c.marketing });
     }
   }, [location.pathname]);
+
+  // Reserva espaço para o banner no body para não sobrepor conteúdo
+  useEffect(() => {
+    if (!visible || !bannerRef.current) {
+      document.body.style.paddingBottom = "0px";
+      return;
+    }
+
+    const updatePadding = () => {
+      if (bannerRef.current) {
+        const height = bannerRef.current.offsetHeight;
+        document.body.style.paddingBottom = `${height}px`;
+      }
+    };
+
+    const resizeObserver = new ResizeObserver(updatePadding);
+    resizeObserver.observe(bannerRef.current);
+    updatePadding();
+
+    return () => {
+      resizeObserver.disconnect();
+      document.body.style.paddingBottom = "0px";
+    };
+  }, [visible]);
 
   useEffect(() => {
     const open = () => {
@@ -83,55 +108,60 @@ export default function ConsentBanner() {
     <>
       {visible && (
         <div
+          ref={bannerRef}
           role="dialog"
           aria-label="Aviso de cookies"
-          className="fixed bottom-0 inset-x-0 z-[60] p-3 sm:p-4 animate-in slide-in-from-bottom duration-500"
+          className={cn(
+            "fixed bottom-0 inset-x-0 z-[60] animate-in slide-in-from-bottom duration-500",
+            "bg-card/98 backdrop-blur-xl border-t border-primary/20 shadow-2xl shadow-background/50",
+            "pb-[env(safe-area-inset-bottom)]"
+          )}
         >
-          <div className="max-w-5xl mx-auto rounded-2xl border border-primary/20 bg-card/95 backdrop-blur-xl shadow-2xl shadow-background/50 p-4 sm:p-5">
-            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
-              <div className="flex items-start gap-3 flex-1">
-                <div className="hidden sm:flex w-10 h-10 rounded-lg bg-primary/15 border border-primary/25 items-center justify-center shrink-0">
-                  <Cookie className="w-5 h-5 text-primary" />
-                </div>
-                <div className="text-sm text-muted-foreground leading-relaxed">
-                  <strong className="text-foreground">Privacidade & cookies.</strong>{" "}
-                  Usamos cookies para melhorar sua experiência, medir desempenho do site
-                  e personalizar comunicações. Você pode aceitar todos, rejeitar ou personalizar suas escolhas.{" "}
-                  <Link
-                    to="/politica-de-privacidade"
-                    className="text-primary hover:underline font-medium"
-                  >
-                    Política de Privacidade
-                  </Link>
-                  .
-                </div>
+          <div className="max-w-5xl mx-auto p-4 sm:p-5 flex flex-col sm:flex-row gap-4 items-center text-center sm:text-left">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 flex-1 overflow-hidden">
+              <div className="hidden sm:flex w-10 h-10 rounded-lg bg-primary/15 border border-primary/25 items-center justify-center shrink-0">
+                <Cookie className="w-5 h-5 text-primary" />
               </div>
-              <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPrefsOpen(true)}
-                  className="flex-1 lg:flex-none"
+              <div className="text-sm text-muted-foreground leading-relaxed overflow-y-auto max-h-[15vh] sm:max-h-none px-2 sm:px-0">
+                <strong className="text-foreground">Privacidade & cookies.</strong>{" "}
+                Usamos cookies para melhorar sua experiência e medir o desempenho do site.{" "}
+                <Link
+                  to="/politica-de-privacidade"
+                  className="text-primary hover:underline font-medium inline-flex items-center gap-1"
                 >
-                  Personalizar
-                </Button>
+                  Política de Privacidade
+                </Link>
+                .
+              </div>
+            </div>
+            
+            <div className="flex flex-col gap-3 w-full sm:w-auto shrink-0">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="default"
                   onClick={handleRejectAll}
-                  className="flex-1 lg:flex-none"
+                  className="w-full sm:w-auto min-h-[44px] px-6 text-sm font-semibold"
                 >
                   Rejeitar
                 </Button>
                 <Button
                   variant="default"
-                  size="sm"
+                  size="default"
                   onClick={handleAcceptAll}
-                  className="flex-1 lg:flex-none"
+                  className="w-full sm:w-auto min-h-[44px] px-6 text-sm font-semibold"
                 >
                   Aceitar todos
                 </Button>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPrefsOpen(true)}
+                className="w-full sm:w-auto h-8 text-xs text-muted-foreground hover:text-foreground"
+              >
+                Personalizar escolhas
+              </Button>
             </div>
           </div>
         </div>
