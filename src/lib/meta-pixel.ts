@@ -43,7 +43,8 @@ export function trackMeta(
 export function trackMetaOnce(
   event: string,
   key: string,
-  params?: Record<string, unknown>
+  params?: Record<string, unknown>,
+  eventID?: string
 ): string | null {
   const compositeKey = `${event}:${key}`;
   
@@ -52,6 +53,6 @@ export function trackMetaOnce(
   }
 
   firedEvents.add(compositeKey);
-  return trackMeta(event, params);
+  return trackMeta(event, params, eventID);
 }
 
