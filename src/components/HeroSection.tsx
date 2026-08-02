@@ -6,6 +6,7 @@ import drJulianoHeroWebp from "@/assets/dr-juliano-hero.webp";
 import drJulianoHeroVideo from "@/assets/dr-juliano-hero.mp4";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
+import { trackMeta } from "@/lib/meta-pixel";
 import { useGoogleReviews } from "@/hooks/useGoogleReviews";
 import { DOCTOR } from "@/lib/constants";
 import { formatReviewCount } from "@/lib/utils";
@@ -104,7 +105,10 @@ const HeroSection = () => {
                 href={heroWaUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => trackWhatsAppClick(heroWaUrl, "Falar no WhatsApp", "whatsapp_hero", "hero")}
+                onClick={() => {
+                  trackWhatsAppClick(heroWaUrl, "Falar no WhatsApp", "whatsapp_hero", "hero");
+                  trackMeta('Contact', { content_name: 'WhatsApp' });
+                }}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-[52px] rounded-full px-8 text-base font-semibold glass-panel text-foreground hover:bg-white/10 transition-all duration-300"
               >
                 <MessageCircle className="w-5 h-5 text-[#25D366]" />

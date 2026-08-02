@@ -6,6 +6,7 @@ import {
   ShieldCheck,
   Star,
   MessageCircle,
+  trackMeta,
   MapPin,
   Navigation,
   Menu,

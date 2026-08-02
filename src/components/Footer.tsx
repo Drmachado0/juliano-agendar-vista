@@ -4,6 +4,7 @@ import logoImage from "@/assets/dr-juliano-logo.svg";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
+import { trackMeta } from "@/lib/meta-pixel";
 import { openPreferences } from "@/lib/consent";
 
 const Footer = () => {
@@ -97,6 +98,7 @@ const Footer = () => {
                 onClick={() => {
                   trackWhatsAppClick(footerContactUrl, display, 'whatsapp_footer_contact', 'footer_contact');
                   trackMetaContact('WhatsApp');
+                  trackMeta('Contact', { content_name: 'WhatsApp' });
                 }}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
@@ -180,6 +182,7 @@ const Footer = () => {
               onClick={() => {
                 trackWhatsAppClick(footerSocialUrl, 'WhatsApp Footer Social', 'whatsapp_footer_social', 'footer_social');
                 trackMetaContact('WhatsApp');
+                trackMeta('Contact', { content_name: 'WhatsApp' });
               }}
               className="text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-300"
               aria-label="WhatsApp"
