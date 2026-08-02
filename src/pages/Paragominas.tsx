@@ -6,7 +6,6 @@ import {
   ShieldCheck,
   Star,
   MessageCircle,
-  trackMeta,
   MapPin,
   Navigation,
   Menu,
@@ -40,6 +39,7 @@ import { buildAgendamentoLink } from "@/lib/agendamentoLink";
 import { buscarAvaliacoesGoogle } from "@/services/avaliacoesGoogle";
 import { buildTestimonialPool } from "@/lib/testimonialsPool";
 import RefractionClarityExperience from "@/components/paragominas/RefractionClarityExperience";
+import { trackMeta } from "@/lib/meta-pixel";
 
 const CANONICAL = "https://drjulianomachado.com/paragominas";
 const SERIF: React.CSSProperties = { fontFamily: "Fraunces, 'Playfair Display', Georgia, serif" };
