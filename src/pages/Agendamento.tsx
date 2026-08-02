@@ -359,6 +359,7 @@ const Agendamento = () => {
       trackScheduleComplete(formData.appointmentTypeName, formData.locationName);
       trackSchedule(formData.appointmentTypeName, formData.locationName, leadId);
       trackCompleteRegistration(formData.appointmentTypeName, formData.locationName, leadId);
+      trackMeta('Schedule', { content_name: 'Agendamento Confirmado' }, leadId);
       trackMetaOnce('Schedule', leadId, { content_name: 'Agendamento online' });
       trackFormSubmitConversion();
 
