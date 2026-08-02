@@ -15,6 +15,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { trackMeta, trackMetaOnce, sendMetaCapi } from "@/lib/meta-pixel";
 import StepIndicator from "@/components/scheduling/StepIndicator";
 import PersonalDataStep from "@/components/scheduling/PersonalDataStep";
 import ConsultationDetailsStep from "@/components/scheduling/ConsultationDetailsStep";
@@ -30,7 +31,6 @@ import drJulianoHero from "@/assets/dr-juliano-hero.jpg";
 import { GOOGLE_REVIEWS } from "@/lib/constants";
 import { buildLeadUserData, collectAttribution } from "@/lib/leadUserData";
 import { fbqTrack } from "@/lib/metaPixelClient";
-import { trackMeta, trackMetaOnce } from "@/lib/meta-pixel";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
 type Depoimento = {
@@ -360,6 +360,19 @@ const Agendamento = () => {
       trackSchedule(formData.appointmentTypeName, formData.locationName, leadId);
       trackCompleteRegistration(formData.appointmentTypeName, formData.locationName, leadId);
       trackMeta('Schedule', { content_name: 'Agendamento Confirmado' }, leadId);
+      
+      // Envio para Conversions API (CAPI) com o MESMO leadId para deduplicação.
+      // Disparamos Schedule (padrao pixel) e os eventos legados que o CRM espera (Lead/CompleteRegistration).
+      if (leadId) {
+        void sendMetaCapi("Schedule", leadId, { 
+          content_name: 'Agendamento Confirmado',
+          appointment_type: formData.appointmentTypeName,
+          location: formData.locationName
+        });
+        void sendMetaCapi("Lead", leadId);
+        void sendMetaCapi("CompleteRegistration", leadId);
+      }
+
       trackFormSubmitConversion();
 
       // Evento de sucesso real do agendamento (GA4 + Google Ads conversion).
