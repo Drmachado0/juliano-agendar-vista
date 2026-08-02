@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { safeDataLayerPush } from '@/lib/trackingGuard';
-import { trackMeta } from '@/lib/meta-pixel';
+import { trackMeta, trackMetaOnce } from '@/lib/meta-pixel';
 
 // Chaves de tracking que devem sobreviver à navegação interna SPA.
 // Persistidas em sessionStorage assim que aparecem na URL — depois lidas no
@@ -20,7 +20,7 @@ const RouteChangeTracker = () => {
 
     // Dispara PageView a cada navegação, exceto no primeiro carregamento (já disparado no index.html)
     if (!isFirstRender.current) {
-      trackMeta('PageView');
+      trackMetaOnce('PageView', location.pathname);
     }
     isFirstRender.current = false;
 
