@@ -365,14 +365,15 @@ const Paragominas = () => {
                       href={whatsappHeroUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={() =>
+                      onClick={() => {
                         trackWhatsAppClick(
                           whatsappHeroUrl,
                           "Prefere falar antes? WhatsApp",
                           "whatsapp_landing_paragominas_hero",
                           "landing_paragominas_hero"
-                        )
-                      }
+                        );
+                        trackMeta('Contact', { content_name: 'WhatsApp' });
+                      }}
                       className="inline-flex items-center justify-center gap-2 text-sm font-medium min-h-[44px] py-3 px-2"
                       style={{ color: "var(--pgm-petroleo)" }}
                     >
