@@ -4,6 +4,7 @@ import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
+import { trackMeta } from "@/lib/meta-pixel";
 
 const WhatsAppButton = () => {
   const { trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
@@ -85,6 +86,7 @@ const WhatsAppButton = () => {
           trackWhatsAppClick(whatsappUrl, 'Fale conosco', 'whatsapp_floating', 'floating_bottom_right');
           trackWhatsAppGoogleAdsConversion();
           trackMetaContact('WhatsApp_Floating', eventId);
+          trackMeta('Contact', { content_name: 'WhatsApp' });
           // fire-and-forget: não bloqueia a navegação para o WhatsApp
           fireMetaCapiContact(eventId);
         }}

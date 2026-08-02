@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { safeDataLayerPush } from '@/lib/trackingGuard';
+import { trackMeta } from '@/lib/meta-pixel';
 
 // Chaves de tracking que devem sobreviver à navegação interna SPA.
 // Persistidas em sessionStorage assim que aparecem na URL — depois lidas no
@@ -12,9 +13,16 @@ const TRACKING_KEYS = [
 
 const RouteChangeTracker = () => {
   const location = useLocation();
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    // Dispara PageView a cada navegação, exceto no primeiro carregamento (já disparado no index.html)
+    if (!isFirstRender.current) {
+      trackMeta('PageView');
+    }
+    isFirstRender.current = false;
 
     safeDataLayerPush({
       event: 'virtualPageview',

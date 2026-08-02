@@ -7,6 +7,7 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import { supabase } from "@/integrations/supabase/client";
+import { trackMeta } from "@/lib/meta-pixel";
 
 const DEDUP_STORAGE_KEY = "obrigado_tracking_fired_v1";
 
@@ -221,6 +222,7 @@ const Obrigado = () => {
             );
             trackWhatsAppGoogleAdsConversion();
             trackMetaContact('WhatsApp');
+            trackMeta('Contact', { content_name: 'WhatsApp' });
           }}
           className="w-full max-w-md"
         >
