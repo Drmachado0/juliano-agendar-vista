@@ -76,10 +76,19 @@ export const sendMetaCapi = async (
       },
     };
 
-    const { error } = await supabase.functions.invoke("meta-capi", { body: payload });
-    if (error) console.warn(`[meta-capi] ${eventName} falhou:`, error);
+    const { data, error } = await supabase.functions.invoke("meta-capi", { body: payload });
+    
+    if (error) {
+      console.warn(`[meta-capi] ${eventName} falhou (Edge Function Error):`, error);
+    } else if (data?.success !== true || data?.events_received !== 1) {
+      console.warn(`[meta-capi] ${eventName} anomalia na resposta:`, {
+        success: data?.success,
+        received: data?.events_received,
+        fbtrace_id: data?.fbtrace_id
+      });
+    }
   } catch (err) {
-    console.warn(`[meta-capi] ${eventName} erro:`, err);
+    console.warn(`[meta-capi] ${eventName} erro inesperado no envio:`, err);
   }
 };
 
