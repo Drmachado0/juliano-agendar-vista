@@ -39,6 +39,7 @@ import { buildAgendamentoLink } from "@/lib/agendamentoLink";
 import { buscarAvaliacoesGoogle } from "@/services/avaliacoesGoogle";
 import { buildTestimonialPool } from "@/lib/testimonialsPool";
 import RefractionClarityExperience from "@/components/paragominas/RefractionClarityExperience";
+import { trackMeta } from "@/lib/meta-pixel";
 
 const CANONICAL = "https://drjulianomachado.com/paragominas";
 const SERIF: React.CSSProperties = { fontFamily: "Fraunces, 'Playfair Display', Georgia, serif" };
@@ -364,14 +365,15 @@ const Paragominas = () => {
                       href={whatsappHeroUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={() =>
+                      onClick={() => {
                         trackWhatsAppClick(
                           whatsappHeroUrl,
                           "Prefere falar antes? WhatsApp",
                           "whatsapp_landing_paragominas_hero",
                           "landing_paragominas_hero"
-                        )
-                      }
+                        );
+                        trackMeta('Contact', { content_name: 'WhatsApp' });
+                      }}
                       className="inline-flex items-center justify-center gap-2 text-sm font-medium min-h-[44px] py-3 px-2"
                       style={{ color: "var(--pgm-petroleo)" }}
                     >
@@ -892,9 +894,10 @@ const Paragominas = () => {
                   href={whatsappStepsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() =>
-                    trackWhatsAppClick(whatsappStepsUrl, "Tirar dúvidas antes", "whatsapp_landing_paragominas_steps", "landing_paragominas_steps")
-                  }
+                  onClick={() => {
+                    trackWhatsAppClick(whatsappStepsUrl, "Tirar dúvidas antes", "whatsapp_landing_paragominas_steps", "landing_paragominas_steps");
+                    trackMeta('Contact', { content_name: 'WhatsApp' });
+                  }}
                   className="inline-flex items-center justify-center gap-2 text-sm font-medium min-h-[44px]"
                   style={{ color: "var(--pgm-marfim)", opacity: 0.85 }}
                 >
@@ -1063,9 +1066,10 @@ const Paragominas = () => {
                   href={whatsappFinalUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() =>
-                    trackWhatsAppClick(whatsappFinalUrl, "WhatsApp final Paragominas", "whatsapp_landing_paragominas_final", "landing_paragominas_final")
-                  }
+                  onClick={() => {
+                    trackWhatsAppClick(whatsappFinalUrl, "WhatsApp final Paragominas", "whatsapp_landing_paragominas_final", "landing_paragominas_final");
+                    trackMeta('Contact', { content_name: 'WhatsApp' });
+                  }}
                   className="pgm-btn pgm-btn--ghost text-sm min-h-[44px]"
                 >
                   <MessageCircle className="w-4 h-4" aria-hidden="true" />

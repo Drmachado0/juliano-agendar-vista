@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { CalendarCheck, MessageCircle } from "lucide-react";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
+import { trackMeta } from "@/lib/meta-pixel";
 
 /**
  * Sticky CTA bar fixed at the bottom on mobile only.
@@ -45,7 +46,10 @@ const MobileStickyCTA = () => {
           href={waUrl}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => trackWhatsAppClick(waUrl, "Falar no WhatsApp", "whatsapp_sticky_mobile", "sticky_mobile")}
+          onClick={() => {
+            trackWhatsAppClick(waUrl, "Falar no WhatsApp", "whatsapp_sticky_mobile", "sticky_mobile");
+            trackMeta('Contact', { content_name: 'WhatsApp' });
+          }}
           aria-label="Falar no WhatsApp"
           className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-[#25D366] text-white shadow-lg shadow-[#25D366]/30 active:scale-[0.98] transition-transform"
         >
