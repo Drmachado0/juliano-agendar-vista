@@ -30,7 +30,7 @@ import drJulianoHero from "@/assets/dr-juliano-hero.jpg";
 import { GOOGLE_REVIEWS } from "@/lib/constants";
 import { buildLeadUserData, collectAttribution } from "@/lib/leadUserData";
 import { fbqTrack } from "@/lib/metaPixelClient";
-import { trackMeta } from "@/lib/meta-pixel";
+import { trackMeta, trackMetaOnce } from "@/lib/meta-pixel";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
 type Depoimento = {
@@ -136,7 +136,8 @@ const Agendamento = () => {
     viewFiredRef.current = true;
 
     trackViewContent("Landing Agendamento", "Consulta Oftalmológica");
-    trackMeta('ViewContent', { content_name: 'Pagina de agendamento' });
+    trackMetaOnce('ViewContent', window.location.pathname, { content_name: 'Pagina de agendamento' });
+    
     // Evento legado — mantido pra compatibilidade com tags GTM já publicadas.
     pushDL({
       event: "view_scheduling_page",
@@ -358,7 +359,7 @@ const Agendamento = () => {
       trackScheduleComplete(formData.appointmentTypeName, formData.locationName);
       trackSchedule(formData.appointmentTypeName, formData.locationName, leadId);
       trackCompleteRegistration(formData.appointmentTypeName, formData.locationName, leadId);
-      trackMeta('Schedule', { content_name: 'Agendamento online' });
+      trackMetaOnce('Schedule', leadId, { content_name: 'Agendamento online' });
       trackFormSubmitConversion();
 
       // Evento de sucesso real do agendamento (GA4 + Google Ads conversion).

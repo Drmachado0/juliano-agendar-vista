@@ -10,6 +10,9 @@ declare global {
   }
 }
 
+// Armazena chaves de eventos já disparados para evitar duplicação em re-renders ou StrictMode.
+const firedEvents = new Set<string>();
+
 /**
  * Helper de eventos Meta Pixel com suporte a eventID para deduplicação server-side.
  */
@@ -31,3 +34,23 @@ export function trackMeta(
     return null;
   }
 }
+
+/**
+ * Dispara um evento Meta Pixel apenas uma vez por chave fornecida.
+ * A chave deve ser única para o contexto (ex: pathname para visualização de página).
+ */
+export function trackMetaOnce(
+  event: string,
+  key: string,
+  params?: Record<string, unknown>
+): string | null {
+  const compositeKey = `${event}:${key}`;
+  
+  if (firedEvents.has(compositeKey)) {
+    return null;
+  }
+
+  firedEvents.add(compositeKey);
+  return trackMeta(event, params);
+}
+
