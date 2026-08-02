@@ -31,7 +31,6 @@ import drJulianoHero from "@/assets/dr-juliano-hero.jpg";
 import { GOOGLE_REVIEWS } from "@/lib/constants";
 import { buildLeadUserData, collectAttribution } from "@/lib/leadUserData";
 import { fbqTrack } from "@/lib/metaPixelClient";
-import { trackMeta, trackMetaOnce, sendMetaCapi } from "@/lib/meta-pixel";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
 type Depoimento = {
