@@ -18,17 +18,18 @@ const firedEvents = new Set<string>();
  */
 export function trackMeta(
   event: string,
-  params?: Record<string, unknown>
+  params?: Record<string, unknown>,
+  eventID?: string
 ): string | null {
   if (typeof window === 'undefined' || !window.fbq) {
     return null;
   }
 
-  const eventID = crypto.randomUUID();
+  const finalEventID = eventID || crypto.randomUUID();
 
   try {
-    window.fbq('track', event, params, { eventID });
-    return eventID;
+    window.fbq('track', event, params, { eventID: finalEventID });
+    return finalEventID;
   } catch (err) {
     console.warn('[Meta Pixel] Error tracking event:', event, err);
     return null;
