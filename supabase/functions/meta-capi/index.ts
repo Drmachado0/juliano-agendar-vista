@@ -1,12 +1,12 @@
 // Meta Conversions API (CAPI) — Server-side event forwarder
-// Pixel: 1003792428067622 (Pixel site Dr Juliano)
+// Pixel: 1368847001883653 (Dr Juliano Machado - Site)
 // BM:    493850516412413 (DrJulianomachado)
 //
 // Recebe payload de evento, hashea PII (SHA-256), captura IP real e User Agent,
 // e envia para Meta CAPI com event_id que faz dedup com o pixel browser (GTM).
 //
 // Secrets necessários (Supabase Dashboard → Edge Functions → Manage Secrets):
-//   META_PIXEL_ID            = 1003792428067622
+//   META_PIXEL_ID            = 1368847001883653
 //   META_CAPI_ACCESS_TOKEN   = (Events Manager → Settings → Conversions API → Generate Token)
 //   META_TEST_EVENT_CODE     = (opcional — só durante testes; remover em prod)
 
@@ -435,7 +435,6 @@ Deno.serve(async (req) => {
         event_name,
         events_received: metaJson.events_received,
         fbtrace_id: metaJson.fbtrace_id,
-        pixel_id_em_uso: PIXEL_ID, // Diagnostic
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
