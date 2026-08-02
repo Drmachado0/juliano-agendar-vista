@@ -167,6 +167,7 @@ const ALLOWED_ORIGIN_SUFFIXES = [
   "drjulianomachado.com",
   "lovable.app",
   "lovable.dev",
+  "lovableproject.com",
   "localhost",
 ];
 
@@ -434,6 +435,7 @@ Deno.serve(async (req) => {
         event_name,
         events_received: metaJson.events_received,
         fbtrace_id: metaJson.fbtrace_id,
+        pixel_id_em_uso: PIXEL_ID, // Diagnostic
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
