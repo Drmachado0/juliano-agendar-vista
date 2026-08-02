@@ -434,7 +434,6 @@ Deno.serve(async (req) => {
         event_name,
         events_received: metaJson.events_received,
         fbtrace_id: metaJson.fbtrace_id,
-        pixel_id_em_uso: PIXEL_ID, // Temp diagnostic
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
