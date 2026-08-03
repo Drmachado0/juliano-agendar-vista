@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# O lockfile versionado do projeto é o bun.lock (padrão Lovable).
+# Rodar `npm install` localmente gera este arquivo — não deve ir pro repo.
+package-lock.json
+
 # Environment / secrets
 # .env é local-only (overrides + secrets que NUNCA vão pro repo).
 # .env.production tem só valores PÚBLICOS (Supabase anon key, URL) que o Vite
