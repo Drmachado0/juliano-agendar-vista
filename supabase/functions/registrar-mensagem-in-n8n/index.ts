@@ -440,6 +440,7 @@ async function computarEPersistirDecisao(params: {
     decisao.notification_summary = buildHandoffExamesSummary({
       nome: contextoAgendamento?.nome_completo ?? null,
       telefoneMascarado: maskTelefone(telefoneNormalizado),
+      telefoneContato: telefoneNormalizado,
       mensagemAtual: conteudo,
       hits,
       matchedInHistory: exames.matchedInHistory,
