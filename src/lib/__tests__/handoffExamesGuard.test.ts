@@ -118,10 +118,11 @@ describe("idempotência semântica", () => {
 });
 
 describe("buildHandoffExamesSummary", () => {
-  it("inclui telefone mascarado, sinais e contexto do agendamento", () => {
+  it("usa telefone completo, nome e assunto humano com exame mencionado", () => {
     const s = buildHandoffExamesSummary({
       nome: "Maria",
       telefoneMascarado: "****0174",
+      telefoneContato: "5591991150174",
       mensagemAtual: "preciso agendar exame de OCT",
       hits: ["oct"],
       matchedInHistory: false,
@@ -129,22 +130,45 @@ describe("buildHandoffExamesSummary", () => {
       statusCrm: "NOVO LEAD",
       statusFunil: "novo",
       localAtendimento: "HGP",
+      exameMencionado: "OCT",
     });
-    expect(s).toContain("Maria");
-    expect(s).toContain("****0174");
-    expect(s).toContain("Sinais: oct");
-    expect(s).toContain("status_crm=NOVO LEAD");
+    expect(s).toContain("🔔 *Atendimento aguardando contato — Exames (HGP)*");
+    expect(s).toContain("👤 Paciente: Maria");
+    expect(s).toContain("📞 Contato: 5591991150174");
+    expect(s).toContain("📋 Assunto:");
+    expect(s).toContain("exame OCT");
+    expect(s).toContain('💬 Última mensagem: "preciso agendar exame de OCT"');
+    // não vaza dados técnicos
+    expect(s).not.toContain("Sinais");
+    expect(s).not.toContain("oct,");
+    expect(s).not.toContain("abc");
+    expect(s).not.toContain("status_crm");
+    expect(s).not.toContain("status_funil");
   });
 
-  it("sem nome/agendamento gera resumo defensivo", () => {
+  it("cai no telefone mascarado e assunto genérico, com sufixo de histórico", () => {
     const s = buildHandoffExamesSummary({
       telefoneMascarado: "****9999",
       mensagemAtual: "exame",
       hits: [],
+      matchedInHistory: true,
+    });
+    expect(s).toContain("👤 Paciente: Não identificado");
+    expect(s).toContain("📞 Contato: ****9999");
+    expect(s).toContain("assunto de exames que precisa de avaliação da secretaria");
+    expect(s).toContain("(assunto identificado nas mensagens recentes)");
+    expect(s).toContain('💬 Última mensagem: "exame"');
+  });
+
+  it("trunca a última mensagem em 200 caracteres", () => {
+    const longa = "a".repeat(250);
+    const s = buildHandoffExamesSummary({
+      telefoneMascarado: "****9999",
+      mensagemAtual: longa,
+      hits: [],
       matchedInHistory: false,
     });
-    expect(s).toContain("Paciente sem nome cadastrado");
-    expect(s).toContain("(sem agendamento vinculado)");
+    expect(s).toContain(`💬 Última mensagem: "${"a".repeat(200)}"`);
   });
 });
 
