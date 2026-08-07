@@ -55,6 +55,12 @@ const RE_PRECO = /\b(valor|preco|custa|custo|quanto|quanto\s+e|quanto\s+fica|qua
 // Palavra "exame(s)" (para reconhecer "qual valor do exame?" sem exame nomeado).
 const RE_PALAVRA_EXAME = /\b(exame|exames)\b/;
 
+// Pergunta de preço que menciona CONSULTA sem nomear exame: não é preço de
+// exame — deixa o guard de valor de consulta (ou o agente) responder.
+// Bug real: concat do debounce trazia "…consultas, exames, valores…" e a
+// pergunta "quanto custa a consulta" caía em preco_generico_sem_exame.
+const RE_CONSULTA_CTX = /\b(consulta|avaliacao|primeira consulta|primeira vez)\b/;
+
 // Contexto que NÃO é preço e indica handoff HGP quando aparece com exame:
 // resultado, laudo, autorização, cobertura, agendar, marcar, remarcar, local,
 // preparo, retorno, fazer/realizar, guia, pedido, cobre, plano, convênio, onde.
@@ -102,6 +108,9 @@ export function classificarExamePreco(textoRaw: string | null | undefined): Exam
     }
     if (naoTabelado) {
       return { kind: "handoff_exame_nao_tabelado", exameMencionado: naoTabelado };
+    }
+    if (!tabelado && !naoTabelado && RE_CONSULTA_CTX.test(texto)) {
+      return { kind: "none" };
     }
     if (temPalavraExame) {
       return { kind: "preco_generico_sem_exame" };
