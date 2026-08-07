@@ -295,6 +295,8 @@ export const HANDOFF_NOTIFICATION_PHONE = "5591991300174";
 export interface HandoffSummaryInput {
   nome?: string | null;
   telefoneMascarado: string;
+  /** Telefone completo (E.164) para contato direto da secretaria. */
+  telefoneContato?: string | null;
   mensagemAtual: string;
   hits: string[];
   matchedInHistory: boolean;
@@ -306,33 +308,22 @@ export interface HandoffSummaryInput {
 }
 
 export function buildHandoffExamesSummary(input: HandoffSummaryInput): string {
-  const nome = (input.nome || "").trim();
-  const nomeTxt = nome ? nome : "Paciente sem nome cadastrado";
-  const trecho = (input.mensagemAtual || "").trim().slice(0, 240);
-  const linhas: string[] = [
-    `Handoff automático — EXAMES (avaliação HGP)`,
-    `Paciente: ${nomeTxt} (${input.telefoneMascarado})`,
-    `Última mensagem: "${trecho}"`,
-  ];
-  if (input.exameMencionado) {
-    linhas.push(`Exame mencionado: ${input.exameMencionado}`);
-  }
+  const nome = (input.nome || "").trim() || "Não identificado";
+  const contato = (input.telefoneContato || "").trim() || input.telefoneMascarado;
+  const trecho = (input.mensagemAtual || "").trim().slice(0, 200);
+
+  let assunto = input.exameMencionado
+    ? `Paciente gostaria de tratar do exame ${input.exameMencionado} (agendamento/avaliação do pedido). Por favor, entre em contato para dar sequência.`
+    : `Paciente trouxe um assunto de exames que precisa de avaliação da secretaria. Por favor, entre em contato.`;
   if (input.matchedInHistory) {
-    linhas.push(`Detecção via histórico recente (mensagens IN anteriores).`);
+    assunto += ` (assunto identificado nas mensagens recentes)`;
   }
-  if (input.hits.length > 0) {
-    linhas.push(`Sinais: ${input.hits.join(", ")}`);
-  }
-  if (input.agendamentoId) {
-    const ctx = [
-      `id=${input.agendamentoId}`,
-      input.statusCrm ? `status_crm=${input.statusCrm}` : null,
-      input.statusFunil ? `status_funil=${input.statusFunil}` : null,
-      input.localAtendimento ? `local=${input.localAtendimento}` : null,
-    ].filter(Boolean).join(" · ");
-    linhas.push(`Contexto agendamento: ${ctx}`);
-  } else {
-    linhas.push(`Contexto agendamento: (sem agendamento vinculado)`);
-  }
-  return linhas.join("\n");
+
+  return [
+    `🔔 *Atendimento aguardando contato — Exames (HGP)*`,
+    `👤 Paciente: ${nome}`,
+    `📞 Contato: ${contato}`,
+    `📋 Assunto: ${assunto}`,
+    `💬 Última mensagem: "${trecho}"`,
+  ].join("\n");
 }
