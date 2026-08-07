@@ -307,23 +307,35 @@ export interface HandoffSummaryInput {
   exameMencionado?: string | null;
 }
 
+/** Siglas curtas de exames (oct, mmc) são exibidas em maiúsculas. */
+function formatarExame(nome: string): string {
+  const t = nome.trim();
+  return /^[a-zA-ZÀ-ÿ]{2,4}$/.test(t) ? t.toUpperCase() : t;
+}
+
 export function buildHandoffExamesSummary(input: HandoffSummaryInput): string {
   const nome = (input.nome || "").trim() || "Não identificado";
-  const contato = (input.telefoneContato || "").trim() || input.telefoneMascarado;
+  const tel = (input.telefoneContato || "").trim();
+  const contato = tel ? `wa.me/${tel.replace(/^\+/, "")}` : input.telefoneMascarado;
   const trecho = (input.mensagemAtual || "").trim().slice(0, 200);
 
   let assunto = input.exameMencionado
-    ? `Paciente gostaria de tratar do exame ${input.exameMencionado} (agendamento/avaliação do pedido). Por favor, entre em contato para dar sequência.`
-    : `Paciente trouxe um assunto de exames que precisa de avaliação da secretaria. Por favor, entre em contato.`;
+    ? `Paciente gostaria de tratar do exame ${formatarExame(input.exameMencionado)}: agendamento/avaliação do pedido. Entre em contato para dar sequência.`
+    : `Assunto de exames que precisa de avaliação da secretaria. Entre em contato com o paciente.`;
   if (input.matchedInHistory) {
-    assunto += ` (assunto identificado nas mensagens recentes)`;
+    assunto += ` (identificado nas mensagens recentes)`;
   }
 
   return [
-    `🔔 *Atendimento aguardando contato — Exames (HGP)*`,
-    `👤 Paciente: ${nome}`,
-    `📞 Contato: ${contato}`,
-    `📋 Assunto: ${assunto}`,
-    `💬 Última mensagem: "${trecho}"`,
+    `🔔 *NOVO ATENDIMENTO — EXAMES (HGP)*`,
+    `━━━━━━━━━━━━━━━━━━`,
+    `👤 *Paciente:* ${nome}`,
+    `📞 *Contato:* ${contato} `,
+    `📋 *Assunto:* ${assunto}`,
+    ``,
+    `💬 *Última mensagem do paciente:*`,
+    `"${trecho}"`,
+    `━━━━━━━━━━━━━━━━━━`,
+    `🤖 Encaminhado pela secretária virtual`,
   ].join("\n");
 }

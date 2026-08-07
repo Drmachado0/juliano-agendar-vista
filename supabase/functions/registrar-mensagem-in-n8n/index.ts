@@ -396,7 +396,9 @@ async function computarEPersistirDecisao(params: {
     !(exames.matched && exames.matchedInHistory && historicoContemPrecoTabelado)
   ) {
     const exameMencionado =
-      precoExame.kind === "handoff_exame_nao_tabelado" ? precoExame.exameMencionado : null;
+      precoExame.kind === "handoff_exame_nao_tabelado"
+        ? precoExame.exameMencionado
+        : (exames.hits.find((h) => !h.startsWith("exame")) ?? null);
     const hits = exames.matched ? exames.hits : ["exame_nao_tabelado"];
     decisao.handoff_required = true;
     decisao.handoff_reason = "exame_avaliacao_hgp";
