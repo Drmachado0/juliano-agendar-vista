@@ -85,10 +85,10 @@ export default function ConsentBanner() {
         <div
           role="dialog"
           aria-label="Aviso de cookies"
-          className="fixed bottom-0 inset-x-0 z-[60] p-3 sm:p-4 animate-in slide-in-from-bottom duration-500"
+          className="fixed bottom-0 inset-x-0 z-[60] p-3 sm:p-4 animate-in slide-in-from-bottom duration-500 max-h-[30vh]"
         >
-          <div className="max-w-5xl mx-auto rounded-2xl border border-primary/20 bg-card/95 backdrop-blur-xl shadow-2xl shadow-background/50 p-4 sm:p-5">
-            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+          <div className="max-w-5xl mx-auto rounded-2xl border border-primary/20 bg-card/95 backdrop-blur-xl shadow-2xl shadow-background/50 p-3 sm:p-5 overflow-y-auto">
+            <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
               <div className="flex items-start gap-3 flex-1">
                 <div className="hidden sm:flex w-10 h-10 rounded-lg bg-primary/15 border border-primary/25 items-center justify-center shrink-0">
                   <Cookie className="w-5 h-5 text-primary" />
@@ -108,28 +108,28 @@ export default function ConsentBanner() {
               </div>
               <div className="flex flex-wrap gap-2 w-full lg:w-auto">
                 <Button
-                  variant="ghost"
+                  variant="default"
                   size="sm"
-                  onClick={() => setPrefsOpen(true)}
-                  className="flex-1 lg:flex-none"
+                  onClick={handleAcceptAll}
+                  className="flex-1 lg:flex-none min-h-[44px]"
                 >
-                  Personalizar
+                  Aceitar todos
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleRejectAll}
-                  className="flex-1 lg:flex-none"
+                  className="flex-1 lg:flex-none min-h-[44px]"
                 >
                   Rejeitar
                 </Button>
                 <Button
-                  variant="default"
+                  variant="ghost"
                   size="sm"
-                  onClick={handleAcceptAll}
-                  className="flex-1 lg:flex-none"
+                  onClick={() => setPrefsOpen(true)}
+                  className="flex-1 lg:flex-none min-h-[44px]"
                 >
-                  Aceitar todos
+                  Personalizar
                 </Button>
               </div>
             </div>

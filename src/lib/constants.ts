@@ -19,7 +19,6 @@ export const DOCTOR = {
   yearsExperience: 15,
   yearsExperienceLabel: "Mais de 15 anos",
   yearsExperienceLong: "Mais de 15 anos de experiência",
-  patientsServed: 6000,
   cities: "Paragominas e Belém",
   memberships: [
     "Sociedade Brasileira de Oftalmologia",

@@ -182,7 +182,7 @@ const Agendamento = () => {
     if (!formStartFiredRef.current) {
       formStartFiredRef.current = true;
       trackFormStart("landing_agendamento");
-      pushDL({ event: "booking_start", page_type: "landing_agendamento" });
+      pushDL({ event: "begin_booking", page_type: "landing_agendamento" });
     }
     setFormData((prev) => ({ ...prev, ...data }));
   };
@@ -208,7 +208,7 @@ const Agendamento = () => {
       if (!stepsCompletedRef.current.has(currentStep)) {
         stepsCompletedRef.current.add(currentStep);
         pushDL({
-          event: "booking_step_completed",
+          event: `booking_step_${currentStep}_complete`,
           page_type: "landing_agendamento",
           step: currentStep,
           step_name: STEP_NAMES[currentStep] ?? `step_${currentStep}`,
@@ -368,7 +368,7 @@ const Agendamento = () => {
           location: formData.locationName,
         });
         pushDL({
-          event: "booking_submit",
+          event: "book_appointment",
           page_type: "landing_agendamento",
           appointment_id: leadId ?? null,
           appointment_type: formData.appointmentTypeName,
