@@ -245,7 +245,7 @@ const Agendamento = () => {
             event_id: `lead_${lead_id}`,
             content_name: "Agendamento Formulario - Site",
             content_category: "Consulta Oftalmológica",
-            value: 300,
+            value: 0,
             currency: "BRL",
             tipo_atendimento: leadData.tipo_atendimento,
           });
@@ -373,7 +373,7 @@ const Agendamento = () => {
           appointment_id: leadId ?? null,
           appointment_type: formData.appointmentTypeName,
           location: formData.locationName,
-          value: 300,
+          value: 0,
           currency: "BRL",
         });
       }
@@ -406,7 +406,7 @@ const Agendamento = () => {
         page_type: "landing_agendamento",
         tipo_atendimento: formData.appointmentTypeName,
         local: formData.locationName,
-        value: 300,
+        value: 0,
         currency: "BRL",
       });
 

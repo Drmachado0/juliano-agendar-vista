@@ -26,10 +26,10 @@ vi.mock("@/services/avaliacoesGoogle", () => ({
 }));
 vi.mock("@/hooks/useSiteWhatsApp", () => ({
   useSiteWhatsApp: () => ({
-    waLink: (msg: string) => `https://wa.me/5591991150174?text=${encodeURIComponent(msg)}`,
-    waLinkBare: "https://wa.me/5591991150174",
+    waLink: (msg: string) => `https://wa.me/5591936180476?text=${encodeURIComponent(msg)}`,
+    waLinkBare: "https://wa.me/5591936180476",
     display: "(91) 99115-0174",
-    raw: "5591991150174",
+    raw: "5591936180476",
   }),
 }));
 

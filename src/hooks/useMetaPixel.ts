@@ -47,7 +47,7 @@ export const useMetaPixel = () => {
       form_name: 'agendamento',
       content_name: name,
       content_category: 'Consulta Oftalmológica',
-      value: 300,
+      value: 0,
       currency: 'BRL',
     });
     // Custom event paralelo (escapa parcialmente da blocklist, cria audiences)
@@ -75,7 +75,7 @@ export const useMetaPixel = () => {
       content_name: 'Agendamento Confirmado',
       content_category: appointmentType,
       content_type: location,
-      value: 300,
+      value: 0,
       currency: 'BRL',
     });
     // Custom event paralelo
@@ -104,7 +104,7 @@ export const useMetaPixel = () => {
       content_name: 'Agendamento Finalizado',
       content_category: appointmentType,
       content_type: location,
-      value: 300,
+      value: 0,
       currency: 'BRL',
     });
     // Custom event paralelo

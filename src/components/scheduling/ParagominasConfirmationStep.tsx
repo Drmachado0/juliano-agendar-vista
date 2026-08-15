@@ -54,7 +54,7 @@ const formatBirthDate = (value?: string) => {
   return value;
 };
 
-// Telefone BR (apenas render). Ex.: 5591991150174 / 91991150174 / 91 99115-0174
+// Telefone BR (apenas render). Ex.: 5591936180476 / 91991150174 / 91 99115-0174
 const formatPhoneBR = (value?: string) => {
   if (!value) return "Não informado";
   const digits = value.replace(/\D/g, "").replace(/^55/, "");

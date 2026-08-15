@@ -49,7 +49,7 @@ export const useGoogleTag = () => {
     pushToDataLayer({
       event: 'google_ads_conversion',
       send_to: 'AW-436492720/R5yuCJjn7ZwcELCzkdAB',
-      value: 300,
+      value: 0,
       currency: 'BRL',
     });
   };
@@ -58,7 +58,7 @@ export const useGoogleTag = () => {
     pushToDataLayer({
       event: 'form_submitted',
       form_name: 'agendamento',
-      value: 300,
+      value: 0,
       currency: 'BRL',
     });
   };
@@ -111,7 +111,7 @@ export const useGoogleTag = () => {
     pushToDataLayer({
       event: 'google_ads_conversion',
       send_to: 'AW-436492720/-h8XCK3z6JwcELCzkdAB',
-      value: 300,
+      value: 0,
       currency: 'BRL',
     });
   };
@@ -165,7 +165,7 @@ export const useGoogleTag = () => {
       appointment_id: data?.id ?? null,
       appointment_type: data?.appointmentType,
       location: data?.location,
-      appointment_value: value,
+      appointment_value: 0,
       value,
       currency: 'BRL',
     });

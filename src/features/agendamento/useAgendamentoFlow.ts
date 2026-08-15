@@ -211,7 +211,7 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
           event_id: `lead_${lead_id}`,
           content_name: "Agendamento Formulario - Site",
           content_category: "Consulta Oftalmológica",
-          value: 300,
+          value: 0,
           currency: "BRL",
           tipo_atendimento: leadData.tipo_atendimento,
         });
@@ -352,7 +352,7 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
             appointment_id: leadId ?? null,
             appointment_type: formData.appointmentTypeName,
             location: formData.locationName,
-            value: 300,
+            value: 0,
             currency: "BRL",
           }),
         );
@@ -363,7 +363,7 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
         page_type: pageType,
         tipo_atendimento: formData.appointmentTypeName,
         local: formData.locationName,
-        value: 300,
+        value: 0,
         currency: "BRL",
       });
 

@@ -98,7 +98,7 @@ const ProcedimentosIndex = () => {
                   </button>
                 </Link>
                 <a
-                  href={`https://wa.me/5591991150174`}
+                  href={`https://wa.me/5591936180476`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full sm:w-auto px-8 py-4 glass-panel text-foreground font-bold rounded-full hover:bg-white/10 transition-all flex items-center justify-center gap-2"
