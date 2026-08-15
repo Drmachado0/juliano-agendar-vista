@@ -27,7 +27,7 @@ import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import drJulianoHero from "@/assets/dr-juliano-hero.jpg";
-import { GOOGLE_REVIEWS } from "@/lib/constants";
+import { GOOGLE_REVIEWS, DOCTOR } from "@/lib/constants";
 import { buildLeadUserData, collectAttribution } from "@/lib/leadUserData";
 import { fbqTrack } from "@/lib/metaPixelClient";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
@@ -142,7 +142,7 @@ const Agendamento = () => {
       page_type: "landing_agendamento",
     });
     // Evento novo padronizado do funil.
-    pushDL({ event: "booking_view", page_type: "landing_agendamento" });
+    pushDL({ event: "view_booking_page", page_type: "landing_agendamento" });
 
     try {
       const params = new URLSearchParams(window.location.search);
@@ -182,7 +182,7 @@ const Agendamento = () => {
     if (!formStartFiredRef.current) {
       formStartFiredRef.current = true;
       trackFormStart("landing_agendamento");
-      pushDL({ event: "booking_start", page_type: "landing_agendamento" });
+      pushDL({ event: "begin_booking", page_type: "landing_agendamento" });
     }
     setFormData((prev) => ({ ...prev, ...data }));
   };
@@ -208,7 +208,7 @@ const Agendamento = () => {
       if (!stepsCompletedRef.current.has(currentStep)) {
         stepsCompletedRef.current.add(currentStep);
         pushDL({
-          event: "booking_step_completed",
+          event: `booking_step_${currentStep}_complete`,
           page_type: "landing_agendamento",
           step: currentStep,
           step_name: STEP_NAMES[currentStep] ?? `step_${currentStep}`,
@@ -368,7 +368,7 @@ const Agendamento = () => {
           location: formData.locationName,
         });
         pushDL({
-          event: "booking_submit",
+          event: "book_appointment",
           page_type: "landing_agendamento",
           appointment_id: leadId ?? null,
           appointment_type: formData.appointmentTypeName,
@@ -587,15 +587,11 @@ const Agendamento = () => {
           <div className="mb-5 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground lg:hidden">
             <span className="flex items-center gap-1">
               <Star className="h-3.5 w-3.5 fill-accent text-accent" />
-              <strong className="text-foreground">5.0</strong> · 200+ avaliações
-            </span>
-            <span className="flex items-center gap-1">
-              <Users className="h-3.5 w-3.5 text-accent" />
-              <strong className="text-foreground">6.000+</strong> pacientes
+              <strong className="text-foreground">{GOOGLE_REVIEWS.rating.toFixed(1)}</strong> · {GOOGLE_REVIEWS.count} avaliações
             </span>
             <span className="flex items-center gap-1">
               <Award className="h-3.5 w-3.5 text-accent" />
-              <strong className="text-foreground">Mais de 15 anos</strong>
+              <strong className="text-foreground">{DOCTOR.yearsExperienceLabel}</strong>
             </span>
           </div>
 
@@ -607,10 +603,21 @@ const Agendamento = () => {
           <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_minmax(320px,400px)] lg:gap-12">
             {/* COLUNA ESQUERDA: Form */}
             <div>
-              <div className="mb-6 text-center lg:text-left">
+              <div className="mb-8 text-center lg:text-left">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-panel mb-4 lg:hidden">
+                  <ShieldCheck className="w-4 h-4 text-primary" />
+                  <span className="text-[11px] font-bold text-foreground/90 uppercase tracking-widest">
+                    Ambiente Seguro
+                  </span>
+                </div>
                 <h2 className="mb-2 font-serif text-2xl font-bold text-foreground md:text-3xl lg:text-4xl">
-                  {isSubmitted ? "Agendamento enviado!" : "Agende sua consulta oftalmológica"}
+                  {isSubmitted ? "Agendamento enviado!" : "Agende sua consulta"}
                 </h2>
+                <div className="flex items-center justify-center lg:justify-start gap-2 text-xs text-muted-foreground font-medium mb-4 lg:hidden">
+                  <span>{DOCTOR.name}</span>
+                  <span className="w-1 h-1 rounded-full bg-primary/40" />
+                  <span>{DOCTOR.crm}</span>
+                </div>
                 {!isSubmitted && (
                   <p className="text-sm text-muted-foreground md:text-base">
                     Preencha os dados abaixo e nossa equipe confirma seu horário pelo WhatsApp —

@@ -14,8 +14,8 @@ export function cn(...inputs: ClassValue[]) {
  * Para o dado estruturado de SEO use o número EXATO, não esta string.
  */
 export function formatReviewCount(n: number): string {
-  if (!Number.isFinite(n) || n < 20) return String(Math.max(0, Math.floor(n || 0)));
-  return `+${Math.floor(n / 10) * 10}`;
+  // Retorna apenas o número sem prefixo inventado.
+  return String(Math.max(0, Math.floor(n || 0)));
 }
 
 /**

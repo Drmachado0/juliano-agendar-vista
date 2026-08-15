@@ -92,7 +92,7 @@ const HeroSection = () => {
                 <Button
                   variant="obsidian"
                   size="lg"
-                  onClick={() => trackCTAClick("ver_horarios", "hero", "Ver horários disponíveis")}
+                  onClick={() => trackCTAClick("begin_booking", "hero", "Ver horários disponíveis")}
                   className="w-full sm:w-auto text-base group min-h-[52px]"
                 >
                   <CalendarCheck className="w-5 h-5" />

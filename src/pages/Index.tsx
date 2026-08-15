@@ -62,7 +62,7 @@ const Index = () => {
         <title>Dr. Juliano Machado – Oftalmologista em Paragominas e Belém</title>
         <meta
           name="description"
-          content="Oftalmologista em Paragominas e Belém. Dr. Juliano Machado, mais de 15 anos, nota 5.0. Catarata, pterígio, glaucoma. Agende sua consulta online."
+          content="Oftalmologista em Paragominas e Belém. Dr. Juliano Machado, CRM-PA 15253. Catarata, pterígio, glaucoma. Agende sua consulta online."
         />
         <meta
           name="keywords"
@@ -84,8 +84,8 @@ const Index = () => {
         
         <main>
           <HeroSection />
-          <AgendarSimplesSection />
           <AboutSection />
+          <AgendarSimplesSection />
           <ProceduresSection />
           <TestimonialsSection />
           <LocationsSection />
