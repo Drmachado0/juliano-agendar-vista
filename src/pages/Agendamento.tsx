@@ -438,36 +438,46 @@ const Agendamento = () => {
     setIsSubmitted(false);
   };
 
-  const WhatsAppHighlight = ({ location }: { location: string }) => (
+  const WhatsAppHighlight = ({ location, compact = false }: { location: string, compact?: boolean }) => (
     <a
       href={WHATSAPP_URL}
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => handleWhatsAppClick(location)}
-      className="group relative block overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-card/90 via-card/70 to-card/90 p-7 backdrop-blur-xl transition-all duration-500 hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_30px_70px_-20px_hsl(var(--primary)/0.45)]"
+      className={`group relative block overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-card/90 via-card/70 to-card/90 ${compact ? 'p-4' : 'p-7'} backdrop-blur-xl transition-all duration-500 hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_30px_70px_-20px_hsl(var(--primary)/0.45)]`}
     >
       {/* Glow ornaments */}
-      <div className="pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full bg-primary/15 blur-3xl transition-all duration-700 group-hover:scale-110 group-hover:opacity-90" />
-      <div className="pointer-events-none absolute -bottom-24 -left-12 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
+      {!compact && (
+        <>
+          <div className="pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full bg-primary/15 blur-3xl transition-all duration-700 group-hover:scale-110 group-hover:opacity-90" />
+          <div className="pointer-events-none absolute -bottom-24 -left-12 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
+        </>
+      )}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
 
-      <div className="relative flex items-start gap-5">
-        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/20 via-primary/10 to-accent/10 shadow-[inset_0_1px_0_0_hsl(var(--primary)/0.3)]">
-          <MessageCircle className="h-6 w-6 text-primary" strokeWidth={1.75} />
-          <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3">
+      <div className={`relative flex items-center ${compact ? 'gap-3' : 'gap-5'}`}>
+        <div className={`relative flex ${compact ? 'h-10 w-10' : 'h-14 w-14'} shrink-0 items-center justify-center rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/20 via-primary/10 to-accent/10 shadow-[inset_0_1px_0_0_hsl(var(--primary)/0.3)]`}>
+          <MessageCircle className={`${compact ? 'h-5 w-5' : 'h-6 w-6'} text-primary`} strokeWidth={1.75} />
+          <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60" />
-            <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
           </span>
         </div>
         <div className="flex-1">
-          <p className="font-serif text-lg font-medium leading-snug text-foreground md:text-xl">
+          <p className={`font-serif ${compact ? 'text-base' : 'text-lg md:text-xl'} font-medium leading-snug text-foreground`}>
             Prefere atendimento humano?
           </p>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-            Fale diretamente com nossa equipe pelo WhatsApp e agende com tranquilidade.
-          </p>
+          {!compact && (
+            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+              Fale diretamente com nossa equipe pelo WhatsApp e agende com tranquilidade.
+            </p>
+          )}
         </div>
+        {compact && <ArrowRight className="w-4 h-4 text-primary opacity-70" />}
       </div>
+    </a>
+  );
+
 
       <div className="relative mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-5">
         <span className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
