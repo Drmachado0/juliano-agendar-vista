@@ -142,7 +142,7 @@ const Agendamento = () => {
       page_type: "landing_agendamento",
     });
     // Evento novo padronizado do funil.
-    pushDL({ event: "booking_view", page_type: "landing_agendamento" });
+    pushDL({ event: "view_booking_page", page_type: "landing_agendamento" });
 
     try {
       const params = new URLSearchParams(window.location.search);
