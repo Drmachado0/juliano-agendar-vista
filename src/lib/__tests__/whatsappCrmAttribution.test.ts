@@ -18,7 +18,7 @@ describe("decorateWhatsappLinksWithCrmAttribution — sem marcador visível", ()
     );
 
     document.body.innerHTML = `
-      <a id="wa" href="https://wa.me/5591991150174?text=${encodeURIComponent(
+      <a id="wa" href="https://wa.me/5591936180476?text=${encodeURIComponent(
         "Olá! Gostaria de agendar uma consulta oftalmológica com o Dr. Juliano Machado.",
       )}">WhatsApp</a>
     `;
@@ -35,7 +35,7 @@ describe("decorateWhatsappLinksWithCrmAttribution — sem marcador visível", ()
 
   it("higieniza marcador legado existente no href", () => {
     document.body.innerHTML = `
-      <a id="wa" href="https://wa.me/5591991150174?text=${encodeURIComponent(
+      <a id="wa" href="https://wa.me/5591936180476?text=${encodeURIComponent(
         "Oi\n\n[Origem Ads/CRM: origem=ADS-9HN6C | gclid=xyz]",
       )}">WhatsApp</a>
     `;
@@ -43,6 +43,6 @@ describe("decorateWhatsappLinksWithCrmAttribution — sem marcador visível", ()
     decorateWhatsappLinksWithCrmAttribution();
 
     const href = (document.getElementById("wa") as HTMLAnchorElement).getAttribute("href")!;
-    expect(decodeURIComponent(href)).toBe("https://wa.me/5591991150174?text=Oi");
+    expect(decodeURIComponent(href)).toBe("https://wa.me/5591936180476?text=Oi");
   });
 });
