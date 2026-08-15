@@ -6,7 +6,7 @@ const data: ProcedurePageData = {
   procedureName: "Cirurgia de Catarata",
   pageTitle: "Cirurgia de Catarata em Paragominas e Belém | Dr. Juliano Machado",
   metaDescription:
-    "Cirurgia de catarata em Paragominas e Belém com o Dr. Juliano Machado. Avaliação, planejamento e procedimento com lente intraocular. Agende sua consulta.",
+    "Cirurgia de catarata em Paragominas e Belém com o Dr. Juliano Machado. Especialista com mais de 15 anos de atuação. Avaliação, lente intraocular e agendamento.",
   h1: "Cirurgia de Catarata em Paragominas e Belém",
   intro:
     "A cirurgia de catarata é o tratamento que substitui o cristalino opaco do olho por uma lente intraocular transparente. O Dr. Juliano Machado realiza a avaliação, o planejamento e o procedimento em Paragominas e em Belém, com acompanhamento pré e pós-operatório.",

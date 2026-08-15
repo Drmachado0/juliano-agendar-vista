@@ -21,7 +21,7 @@ const EXPECTED_META_LEAD = {
   form_name: 'agendamento',
   content_name: 'Formulário Agendamento Iniciado',
   content_category: 'Consulta Oftalmológica',
-  value: 300,
+  value: 0,
   currency: 'BRL',
 };
 

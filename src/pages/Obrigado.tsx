@@ -50,7 +50,7 @@ const sendMetaCapi = async (eventName: "Lead" | "CompleteRegistration", eventId:
       custom_data: {
         content_name: "Agendamento Confirmado",
         content_category: "Consulta Oftalmológica",
-        value: 300,
+        value: 0,
         currency: "BRL",
         ...(utm_source && { utm_source }),
         ...(utm_medium && { utm_medium }),
@@ -106,7 +106,7 @@ const Obrigado = () => {
         event: "thank_you_page_view",
         page_path: "/obrigado",
         page_type: "agendamento_confirmado",
-        conversion_value: 300,
+        conversion_value: 0,
         currency: "BRL",
         event_id: eventId,
         meta_event_id: eventId,
@@ -115,7 +115,7 @@ const Obrigado = () => {
       (window as any).dataLayer.push({
         event: "google_ads_conversion",
         send_to: "AW-436492720/tUOICNX06JwcELCzkdAB",
-        value: 300,
+        value: 0,
         currency: "BRL",
         page_path: "/obrigado",
         page_type: "agendamento_confirmado",

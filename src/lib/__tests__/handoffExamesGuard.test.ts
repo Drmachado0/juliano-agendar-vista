@@ -122,7 +122,7 @@ describe("buildHandoffExamesSummary", () => {
     const s = buildHandoffExamesSummary({
       nome: "Maria",
       telefoneMascarado: "****0174",
-      telefoneContato: "+5591991150174",
+      telefoneContato: "+5591936180476",
       mensagemAtual: "preciso agendar exame de OCT",
       hits: ["oct"],
       matchedInHistory: false,
@@ -135,7 +135,7 @@ describe("buildHandoffExamesSummary", () => {
     expect(s).toContain("🔔 *NOVO ATENDIMENTO — EXAMES (HGP)*");
     expect(s).toContain("━━━━━━━━━━━━━━━━━━");
     expect(s).toContain("👤 *Paciente:* Maria");
-    expect(s).toContain("📞 *Contato:* wa.me/5591991150174");
+    expect(s).toContain("📞 *Contato:* wa.me/5591936180476");
     expect(s).toContain("📋 *Assunto:*");
     expect(s).toContain("exame OCT: agendamento/avaliação do pedido");
     expect(s).toContain("💬 *Última mensagem do paciente:*");
@@ -152,7 +152,7 @@ describe("buildHandoffExamesSummary", () => {
   it("mantém nome do exame por extenso quando não é sigla", () => {
     const s = buildHandoffExamesSummary({
       telefoneMascarado: "****9999",
-      telefoneContato: "5591991150174",
+      telefoneContato: "5591936180476",
       mensagemAtual: "quero o campo visual",
       hits: ["campo visual"],
       matchedInHistory: false,

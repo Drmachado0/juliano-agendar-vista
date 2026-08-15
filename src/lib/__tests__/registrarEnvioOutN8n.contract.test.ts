@@ -33,7 +33,7 @@ const CONFIRMATION_TYPES = new Set([
 
 describe("registrar-envio-out-n8n — body schema", () => {
   it("aceita payload mínimo com defaults corretos", () => {
-    const p = BodySchema.parse({ telefone: "5591991150174" });
+    const p = BodySchema.parse({ telefone: "5591936180476" });
     expect(p.tipo_mensagem).toBe("bot_agente");
     expect(p.status).toBe("enviado");
   });
@@ -44,7 +44,7 @@ describe("registrar-envio-out-n8n — body schema", () => {
 
   it("aceita status erro e provider_message_id", () => {
     const p = BodySchema.parse({
-      telefone: "5591991150174",
+      telefone: "5591936180476",
       status: "erro",
       provider_message_id: "mc-abc-1",
       erro: "flow failed",
@@ -55,7 +55,7 @@ describe("registrar-envio-out-n8n — body schema", () => {
 
   it("rejeita agendamento_id não-uuid", () => {
     expect(() =>
-      BodySchema.parse({ telefone: "5591991150174", agendamento_id: "abc" }),
+      BodySchema.parse({ telefone: "5591936180476", agendamento_id: "abc" }),
     ).toThrow();
   });
 });
