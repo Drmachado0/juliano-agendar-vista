@@ -479,19 +479,6 @@ const Agendamento = () => {
   );
 
 
-      <div className="relative mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-5">
-        <span className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-          <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary))]" />
-          Disponível 24 horas
-        </span>
-        <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-primary/85 px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_8px_24px_-8px_hsl(var(--primary)/0.7)] transition-all duration-300 group-hover:shadow-[0_12px_32px_-8px_hsl(var(--primary)/0.85)]">
-          Chamar agora
-          <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-        </span>
-      </div>
-    </a>
-  );
-
   // JSON-LD — @type Physician (mesmos dados da Home) + MedicalWebPage
   // apontando que /agendamento é a página oficial de agendamento online.
   const physicianJsonLd = {
