@@ -1,3 +1,5 @@
+import { sha256 } from 'js-sha256';
+
 /**
  * Normaliza dados de usuário para Enhanced Conversions (Google Ads) e
  * Advanced Matching (Meta), no formato esperado pelas tags do GTM.
@@ -7,9 +9,11 @@
  * - phone: dígitos + prefixo E.164 "+55..." (assume BR se vier sem DDI)
  * - first_name / last_name: lower, sem acentos, sem pontuação
  *
- * NUNCA envie esses campos para outros lugares além do dataLayer/GTM
- * e do fluxo n8n já existente.
+ * PII PROTEÇÃO:
+ * Todos os dados são submetidos a SHA-256 antes de serem enviados ao dataLayer,
+ * garantindo que nenhum dado sensível em texto legível fique exposto no navegador.
  */
+
 function stripDiacritics(s: string): string {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
@@ -39,30 +43,39 @@ export interface LeadUserData {
   last_name?: string;
 }
 
+/**
+ * Constrói o objeto de dados do usuário, aplicando SHA-256 em todos os campos.
+ */
 export function buildLeadUserData(input: {
   fullName?: string | null;
   phone?: string | null;
   email?: string | null;
 }): LeadUserData {
   const out: LeadUserData = {};
+
   const email = (input.email || "").trim().toLowerCase();
-  if (email && email.includes("@")) out.email = email;
+  if (email && email.includes("@")) {
+    out.email = sha256(email);
+  }
 
   const phone = toE164BR(input.phone || "");
-  if (phone && phone.length >= 13) out.phone_number = phone;
+  if (phone && phone.length >= 13) {
+    // Para Meta/Google, deve-se aplicar o hash no número E.164 SEM o símbolo '+'
+    out.phone_number = sha256(phone.replace(/\+/g, ""));
+  }
 
   const full = normName(input.fullName || "");
   if (full) {
     const parts = full.split(/\s+/).filter(Boolean);
-    if (parts.length > 0) out.first_name = parts[0];
-    if (parts.length > 1) out.last_name = parts.slice(1).join(" ");
+    if (parts.length > 0) out.first_name = sha256(parts[0]);
+    if (parts.length > 1) out.last_name = sha256(parts.slice(1).join(" "));
   }
+  
   return out;
 }
 
 /**
- * Coleta UTMs/click-ids da URL atual e do sessionStorage (que já é
- * populado por captureAttribution/useAgendamentoFlow).
+ * Coleta UTMs/click-ids da URL atual e do sessionStorage.
  */
 export function collectAttribution(): Record<string, string> {
   if (typeof window === "undefined") return {};
