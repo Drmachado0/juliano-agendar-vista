@@ -594,7 +594,7 @@ const Agendamento = () => {
 
           {/* CTA WhatsApp em destaque (mobile, acima do form) */}
           <div className="mb-6 lg:hidden">
-            <WhatsAppHighlight location="agendamento_destaque_secretaria_mobile" />
+            <WhatsAppHighlight location="agendamento_destaque_secretaria_mobile" compact />
           </div>
 
           <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_minmax(320px,400px)] lg:gap-12">
