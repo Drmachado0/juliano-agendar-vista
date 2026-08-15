@@ -27,7 +27,7 @@ import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import drJulianoHero from "@/assets/dr-juliano-hero.jpg";
-import { GOOGLE_REVIEWS } from "@/lib/constants";
+import { GOOGLE_REVIEWS, DOCTOR } from "@/lib/constants";
 import { buildLeadUserData, collectAttribution } from "@/lib/leadUserData";
 import { fbqTrack } from "@/lib/metaPixelClient";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
