@@ -5,7 +5,7 @@ const data: ProcedurePageData = {
   procedureName: "Consulta Oftalmológica",
   pageTitle: "Consulta Oftalmológica em Paragominas e Belém | Dr. Juliano Machado",
   metaDescription:
-    "Consulta oftalmológica em Paragominas e Belém com o Dr. Juliano Machado. Avaliação completa da visão, exames de rotina e plano de cuidado. Agende online.",
+    "Consulta oftalmológica em Paragominas e Belém com o Dr. Juliano Machado. Mais de 15 anos de experiência clínica. Avaliação completa da visão e agendamento online.",
   h1: "Consulta Oftalmológica em Paragominas e Belém",
   intro:
     "A consulta oftalmológica é a porta de entrada para cuidar da saúde dos olhos: avaliação da visão, dos olhos por dentro e por fora e definição do plano de cuidado. O Dr. Juliano Machado realiza consultas em Paragominas e Belém, com agendamento online.",
