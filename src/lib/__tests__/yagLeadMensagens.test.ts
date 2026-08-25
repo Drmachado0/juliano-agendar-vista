@@ -8,6 +8,7 @@ import {
   TELEFONE_NOTIFICACAO_INTERNA,
   ehLeadYag,
   extrairOlho,
+  formatarTelefoneBr,
   formatarNascimento,
   montarResumoLeadYag,
 } from "../../../supabase/functions/_shared/yagLeadMensagens";
@@ -58,6 +59,19 @@ describe("Extração dos dados do paciente", () => {
     expect(extrairOlho(null)).toBe("");
   });
 
+  it("mostra o telefone como numero, nunca como link", () => {
+    // O aviso interno e para leitura da secretaria: ela quer ver e copiar o
+    // numero, nao abrir uma conversa. O WhatsApp ja torna o numero tocavel.
+    expect(formatarTelefoneBr("(91) 99999-8888")).toBe("(91) 99999-8888");
+    expect(formatarTelefoneBr("5591999998888")).toBe("(91) 99999-8888");
+    expect(formatarTelefoneBr("9130001234")).toBe("(91) 3000-1234");
+    expect(formatarTelefoneBr(null)).toBe("");
+
+    const msg = montarResumoLeadYag({ nome: "Ana Souza", telefone: "5591999998888" });
+    expect(msg).not.toMatch(/wa\.me|https?:\/\//i);
+    expect(msg).toContain("(91) 99999-8888");
+  });
+
   it("converte o nascimento para o formato brasileiro", () => {
     expect(formatarNascimento("1948-03-07")).toBe("07/03/1948");
     expect(formatarNascimento(null)).toBe("");
@@ -82,7 +96,7 @@ describe("Aviso interno com os dados do paciente", () => {
   it("traz todos os dados que a secretaria precisa", () => {
     const msg = montarResumoLeadYag(base);
     expect(msg).toContain("Maria Oliveira");
-    expect(msg).toContain("wa.me/91999998888");
+    expect(msg).toContain("(91) 99999-8888");
     expect(msg).toContain("07/03/1948");
     expect(msg).toContain("Direito");
     expect(msg).toContain("Particular (YAG)");

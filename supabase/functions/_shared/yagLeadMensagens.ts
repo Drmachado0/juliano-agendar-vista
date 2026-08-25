@@ -56,6 +56,26 @@ export function extrairOlho(detalhe?: string | null): string {
   return m ? m[1].trim() : "";
 }
 
+/**
+ * Formata o telefone para leitura: (91) 99130-0174.
+ *
+ * O aviso interno mostra o NÚMERO, não um link wa.me — quem lê quer ver e
+ * copiar o telefone, não abrir uma conversa. O WhatsApp reconhece o número
+ * sozinho e o deixa tocável de qualquer forma.
+ *
+ * Remove o DDI 55 quando presente. Se não reconhecer o formato, devolve os
+ * dígitos como estão, em vez de esconder a informação.
+ */
+export function formatarTelefoneBr(input?: string | null): string {
+  let d = (input ?? "").replace(/\D/g, "");
+  if (d.length >= 12 && d.startsWith("55")) d = d.slice(2);
+  const m11 = d.match(/^(\d{2})(\d{5})(\d{4})$/);
+  if (m11) return `(${m11[1]}) ${m11[2]}-${m11[3]}`;
+  const m10 = d.match(/^(\d{2})(\d{4})(\d{4})$/);
+  if (m10) return `(${m10[1]}) ${m10[2]}-${m10[3]}`;
+  return d;
+}
+
 /** AAAA-MM-DD → DD/MM/AAAA. Devolve a original se não bater o formato. */
 export function formatarNascimento(iso?: string | null): string {
   const m = (iso ?? "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -67,7 +87,7 @@ export function formatarNascimento(iso?: string | null): string {
  * Linhas sem valor são omitidas para o aviso não ficar poluído.
  */
 export function montarResumoLeadYag(input: ResumoLeadYag): string {
-  const telefone = (input.telefone ?? "").replace(/\D/g, "");
+  const telefone = formatarTelefoneBr(input.telefone);
   const nascimento = formatarNascimento(input.dataNascimento);
   const olho = extrairOlho(input.detalhe);
 
@@ -75,7 +95,7 @@ export function montarResumoLeadYag(input: ResumoLeadYag): string {
     `🔔 *NOVO LEAD — YAG LASER*`,
     ``,
     `👤 *Nome:* ${(input.nome ?? "").trim() || "Não informado"}`,
-    telefone ? `📱 *WhatsApp:* wa.me/${telefone}` : null,
+    telefone ? `📱 *WhatsApp:* ${telefone}` : null,
     nascimento ? `🎂 *Nascimento:* ${nascimento}` : null,
     olho ? `👁️ *Olho operado:* ${olho}` : null,
     input.convenio ? `💳 *Convênio:* ${input.convenio}` : null,
