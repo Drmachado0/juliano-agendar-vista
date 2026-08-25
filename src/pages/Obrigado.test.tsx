@@ -76,7 +76,11 @@ describe("Obrigado page tracking", () => {
 
     const ads = dl.find((p) => p.event === "google_ads_conversion")!;
     expect(ads.send_to).toBe("AW-436492720/tUOICNX06JwcELCzkdAB");
-    expect(ads.value).toBe(300);
+    // O commit 81f796f zerou o valor de conversão em toda a camada de tracking
+    // (useGoogleTag, useMetaPixel, useAgendamentoFlow, Obrigado, Agendamento).
+    // Paragominas.test.tsx foi atualizado junto; este teste ficou para trás e
+    // seguia exigindo 300. O valor correto hoje é 0 — o mesmo que a página envia.
+    expect(ads.value).toBe(0);
     expect(ads.currency).toBe("BRL");
 
     // Meta CAPI recebe Lead e CompleteRegistration com o mesmo event_id (dedup)

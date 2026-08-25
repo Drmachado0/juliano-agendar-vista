@@ -8,8 +8,24 @@ import { describe, it, expect } from "vitest";
 import { telefoneCanonico, maskTelefone } from "../../../supabase/functions/_shared/telefoneCanonico.ts";
 
 describe("telefoneCanonico — normalização BR", () => {
-  it("E.164 '5591936180476' → canônico '91991150476'", () => {
-    expect(telefoneCanonico("5591936180476")).toBe("91991150476");
+  // Regressão: este caso antes esperava '91991150476' — o número ANTIGO da
+  // clínica — usando como entrada o número ATUAL ('5591936180476'). Os dígitos
+  // do assinante não batem (9361-8047 vs 9911-5047), então a expectativa era
+  // impossível: nenhuma normalização troca dígitos, ela só remove o DDI.
+  it("E.164 '5591936180476' → canônico '91936180476' (remove o DDI, preserva os dígitos)", () => {
+    expect(telefoneCanonico("5591936180476")).toBe("91936180476");
+  });
+
+  it("remover o DDI nunca altera DDD nem número do assinante", () => {
+    for (const [entrada, esperado] of [
+      ["5591936180476", "91936180476"],
+      ["5591991150476", "91991150476"],
+      ["+55 11 98888-7777", "11988887777"],
+    ] as const) {
+      expect(telefoneCanonico(entrada)).toBe(esperado);
+      // o canônico é sempre um sufixo da entrada só-dígitos
+      expect(entrada.replace(/\D/g, "").endsWith(esperado)).toBe(true);
+    }
   });
 
   it("com '+' e espaços: '+55 (91) 99115-0476' → '91991150476'", () => {
