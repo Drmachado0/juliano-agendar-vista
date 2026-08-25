@@ -7,10 +7,8 @@ import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
 import { requireCronSecret } from "../_shared/authGuards.ts";
 import {
   BOAS_VINDAS_YAG_FALLBACK,
-  TELEFONE_NOTIFICACAO_INTERNA,
   TEMPLATE_YAG,
   ehLeadYag,
-  montarResumoLeadYag,
 } from "../_shared/yagLeadMensagens.ts";
 
 
@@ -283,73 +281,6 @@ Deno.serve(async (req) => {
 
         if (updateMsgError) {
           console.error(`[boas-vindas] Falha ao atualizar mensagem do lead ${lead.id}:`, updateMsgError.message);
-        }
-
-        // Aviso interno para a clínica, só em leads de YAG.
-        // Roda uma vez por lead (a dedup por `mensagens_whatsapp` garante que
-        // o lead não é reprocessado) e nunca derruba o fluxo do paciente.
-        if (isYag) {
-          try {
-            // A RPC não devolve nascimento nem detalhe — busca pontual só aqui.
-            const { data: extra } = await supabase
-              .from('agendamentos')
-              .select('data_nascimento, detalhe_exame_ou_cirurgia')
-              .eq('id', lead.id)
-              .maybeSingle();
-
-            const resumo = montarResumoLeadYag({
-              nome: lead.nome_completo,
-              telefone: phoneClean,
-              dataNascimento: extra?.data_nascimento ?? null,
-              detalhe: extra?.detalhe_exame_ou_cirurgia ?? null,
-              convenio: lead.convenio,
-              local: lead.local_atendimento,
-              pacienteAvisado: resultado.success,
-            });
-
-            const aviso = await sendWhatsappTextMessage(
-              TELEFONE_NOTIFICACAO_INTERNA,
-              resumo,
-            );
-
-            // agendamento_id fica NULO de propósito: o inbox do admin carrega
-            // a conversa por agendamento_id (src/services/mensagens.ts), e um
-            // aviso interno dentro do thread pareceria mensagem ao paciente.
-            // A rastreabilidade vai para system_logs, logo abaixo.
-            await supabase.from('mensagens_whatsapp').insert({
-              agendamento_id: null,
-              telefone: TELEFONE_NOTIFICACAO_INTERNA,
-              direcao: 'OUT',
-              conteudo: resumo,
-              tipo_mensagem: 'notificacao_interna_yag',
-              status_envio: aviso.success ? 'enviado' : 'erro',
-              mensagem_externa_id: aviso.messageId || null,
-              error_message: aviso.errorMessage || null,
-            });
-
-            await supabase.from('system_logs').insert({
-              level: aviso.success ? 'info' : 'warn',
-              category: 'whatsapp',
-              source: 'enviar-boas-vindas-lead',
-              message: aviso.success
-                ? 'Aviso interno de lead YAG enviado'
-                : 'Falha ao enviar aviso interno de lead YAG',
-              details: {
-                event: 'notificacao_interna_yag',
-                agendamento_id: lead.id,
-                mensagem_externa_id: aviso.messageId ?? null,
-                error: aviso.errorMessage ?? null,
-              },
-              agendamento_id: lead.id,
-            });
-
-            console.log(
-              `[boas-vindas] Aviso interno YAG lead ${lead.id}: ${aviso.success ? 'ok' : 'falhou'}`,
-            );
-          } catch (avisoErr) {
-            // Nunca propaga: o paciente já foi atendido acima.
-            console.error(`[boas-vindas] Aviso interno YAG falhou (lead ${lead.id}):`, avisoErr);
-          }
         }
 
         if (confirmadoEntrega) {

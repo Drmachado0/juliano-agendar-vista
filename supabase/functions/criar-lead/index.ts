@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendWhatsappTextMessage } from "../_shared/evolutionApiClient.ts";
+import { ehLeadYag, montarResumoLeadYag, TELEFONE_NOTIFICACAO_INTERNA } from "../_shared/yagLeadMensagens.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -200,6 +202,60 @@ Deno.serve(async (req) => {
     })
       .then(() => console.log(`[criar-lead] n8n notificado lead_id=${lead.id}`))
       .catch((e) => console.error('[criar-lead] notificar-n8n falhou:', e));
+
+    // Aviso interno para a clínica em leads de YAG Laser.
+    //
+    // Fica AQUI, e não no cron de boas-vindas, de propósito: lá o aviso vinha
+    // depois da trava de rate limit do paciente (1 boas-vindas por telefone a
+    // cada 24h) e era engolido junto com ela. Aquela trava protege o paciente
+    // de spam; ela nunca deve calar a notificação da clínica. Aqui o aviso sai
+    // no instante da criação, uma vez por lead, sem esperar os 5 min do cron.
+    //
+    // Fire-and-forget: falha aqui não pode impedir a criação do lead.
+    if (ehLeadYag(data.tipo_atendimento)) {
+      const resumo = montarResumoLeadYag({
+        nome: data.nome_completo,
+        telefone: phoneClean,
+        dataNascimento: data.data_nascimento ?? null,
+        detalhe: data.detalhe_exame_ou_cirurgia ?? null,
+        convenio: data.convenio,
+        local: data.local_atendimento,
+      });
+
+      sendWhatsappTextMessage(TELEFONE_NOTIFICACAO_INTERNA, resumo)
+        .then(async (aviso) => {
+          console.log(`[criar-lead] aviso interno YAG lead_id=${lead.id} ok=${aviso.success}`);
+          // agendamento_id NULO de proposito: o inbox do admin carrega a
+          // conversa por agendamento_id e este aviso e para a clinica, nao
+          // para o paciente. A rastreabilidade vai para system_logs.
+          await supabase.from('mensagens_whatsapp').insert({
+            agendamento_id: null,
+            telefone: TELEFONE_NOTIFICACAO_INTERNA,
+            direcao: 'OUT',
+            conteudo: resumo,
+            tipo_mensagem: 'notificacao_interna_yag',
+            status_envio: aviso.success ? 'enviado' : 'erro',
+            mensagem_externa_id: aviso.messageId || null,
+            error_message: aviso.errorMessage || null,
+          });
+          await supabase.from('system_logs').insert({
+            level: aviso.success ? 'info' : 'warn',
+            category: 'whatsapp',
+            source: 'criar-lead',
+            message: aviso.success
+              ? 'Aviso interno de lead YAG enviado'
+              : 'Falha ao enviar aviso interno de lead YAG',
+            details: {
+              event: 'notificacao_interna_yag',
+              agendamento_id: lead.id,
+              mensagem_externa_id: aviso.messageId ?? null,
+              error: aviso.errorMessage ?? null,
+            },
+            agendamento_id: lead.id,
+          });
+        })
+        .catch((e) => console.error('[criar-lead] aviso interno YAG falhou:', e));
+    }
 
 
 
