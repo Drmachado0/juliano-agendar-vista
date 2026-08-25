@@ -3,7 +3,6 @@ import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import AboutSection from "@/components/AboutSection";
 import ProceduresSection from "@/components/ProceduresSection";
-import YagLaserSection from "@/components/YagLaserSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import AgendarSimplesSection from "@/components/AgendarSimplesSection";
 import AgendarFAQSection from "@/components/AgendarFAQSection";
@@ -88,7 +87,6 @@ const Index = () => {
           <AboutSection />
           <AgendarSimplesSection />
           <ProceduresSection />
-          <YagLaserSection />
           <TestimonialsSection />
           <LocationsSection />
           <InsuranceSection />
