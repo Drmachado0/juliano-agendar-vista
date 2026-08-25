@@ -21,6 +21,8 @@ import {
   LOCAL_ATENDIMENTO,
   SECTIONS,
   TIPO_ATENDIMENTO,
+  VALOR_YAG,
+  VALOR_YAG_COMPLETO,
   WHATSAPP_MENSAGEM,
 } from "@/components/procedimentos/yag/yagContent";
 
@@ -228,7 +230,7 @@ describe("Validação do formulário", () => {
   });
 });
 
-describe("A página nunca informa valores", () => {
+describe("Valores exibidos na página", () => {
   it("remove o preço embutido no nome do convênio", () => {
     expect(limparRotuloConvenio("Particular - R$: 300,00")).toBe("Particular");
     expect(limparRotuloConvenio("Particular – R$ 300")).toBe("Particular");
@@ -256,7 +258,26 @@ describe("A página nunca informa valores", () => {
     }
   });
 
-  it("nenhum texto fixo da página contém cifrão ou preço", () => {
+  it("publica o valor do particular como R$ 850,00 por olho", () => {
+    expect(VALOR_YAG).toBe("R$ 850,00");
+    expect(VALOR_YAG_COMPLETO).toBe("R$ 850,00 por olho");
+    expect(AVISO_POR_OLHO).toContain(VALOR_YAG);
+    expect(AVISO_POR_OLHO).toMatch(/por olho/i);
+  });
+
+  it("deixa claro que a cobranca e por olho, nao por sessao", () => {
+    // Quem trata os dois olhos paga duas vezes. Se essa frase sumir, o
+    // paciente que marca "Ambos" e surpreendido depois.
+    expect(AVISO_AMBOS_OLHOS).toContain(VALOR_YAG);
+    expect(AVISO_AMBOS_OLHOS).toMatch(/cada um|separadamente/i);
+    const faqValor = FAQS.map((f) => f.answer).join(" ");
+    expect(faqValor).toContain(VALOR_YAG);
+    expect(faqValor).toMatch(/por olho/i);
+  });
+
+  it("nunca expoe o valor da CONSULTA (R$ 300) na pagina do YAG", () => {
+    // O R$ 300 vive embutido no nome do convenio "Particular - R$: 300,00" e
+    // e o preco da consulta, nao do YAG. Nao pode vazar para esta pagina.
     const textos = [
       YAG_SEO.pageTitle,
       YAG_SEO.metaDescription,
@@ -264,18 +285,18 @@ describe("A página nunca informa valores", () => {
       YAG_SEO.intro,
       AVISO_POR_OLHO,
       AVISO_AMBOS_OLHOS,
+      limparRotuloConvenio("Particular - R$: 300,00"),
       ...FAQS.map((f) => `${f.question} ${f.answer}`),
       ...SECTIONS.flatMap((s) => [s.title, ...s.paragraphs, ...(s.bullets ?? [])]),
     ];
     for (const t of textos) {
-      expect(t).not.toMatch(/R\$|\bRS\s*\d/i);
+      expect(t).not.toMatch(/300/);
     }
   });
 
-  it("avisa que a cobrança é por olho, sem citar valor", () => {
+  it("mostra o valor junto ao campo de olho operado", () => {
     renderForm();
     expect(screen.getByText(AVISO_POR_OLHO)).toBeInTheDocument();
-    expect(AVISO_POR_OLHO).toMatch(/por olho/i);
   });
 
   it("reforça o aviso quando o paciente marca Ambos", () => {
@@ -339,7 +360,7 @@ describe("Formulário de agendamento do YAG", () => {
       ).toBeInTheDocument(),
     );
     expect(
-      screen.getByText(/datas dispon[ií]veis e informar os valores/i),
+      screen.getByText(/datas dispon[ií]veis e a cobertura do seu conv[eê]nio/i),
     ).toBeInTheDocument();
   });
 

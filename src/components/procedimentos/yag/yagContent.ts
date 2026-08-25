@@ -25,20 +25,29 @@ export const LOCAL_ATENDIMENTO = "Hospital Geral de Paragominas";
 export const TIPO_ATENDIMENTO = "Capsulotomia YAG Laser";
 
 export const AVISO_CONTATO =
-  "Nossa equipe entra em contato pelo WhatsApp para verificar as datas disponíveis e informar os valores.";
+  "Nossa equipe entra em contato pelo WhatsApp para confirmar as datas disponíveis e a cobertura do seu convênio.";
 
 /**
- * Estrutura de cobrança, sem valor.
+ * Valor do procedimento particular, por olho tratado.
  *
- * A página NUNCA informa preço — ele é passado pela equipe no contato. Esta
- * frase existe só para que quem seleciona "Ambos" não seja surpreendido
- * depois. Se um dia entrar valor aqui, o teste da página quebra de propósito.
+ * Fonte única: qualquer lugar que exiba preço deve importar daqui, para a
+ * página nunca divergir de si mesma. Cobrança é POR OLHO — quem trata os dois
+ * paga duas vezes, e isso precisa estar explícito onde o valor aparece.
+ *
+ * Atenção ao editar: informar o valor de forma factual é uma coisa; usar preço
+ * como chamariz (promoção, desconto, comparação com outros profissionais) é
+ * vedado pelo Manual de Publicidade Médica do CFM. Mantenha o tom informativo.
  */
-export const AVISO_POR_OLHO = "O valor é definido por olho tratado.";
+export const VALOR_YAG = "R$ 850,00";
+export const VALOR_YAG_UNIDADE = "por olho";
+export const VALOR_YAG_COMPLETO = `${VALOR_YAG} ${VALOR_YAG_UNIDADE}`;
 
-/** Reforço exibido quando o paciente marca os dois olhos. */
+/** Exibido junto ao campo de olho operado. */
+export const AVISO_POR_OLHO = `Particular: ${VALOR_YAG_COMPLETO} tratado.`;
+
+/** Reforço quando o paciente marca os dois olhos — evita a surpresa do dobro. */
 export const AVISO_AMBOS_OLHOS =
-  "Você marcou os dois olhos. Como a cobrança é por olho tratado, a equipe explica isso no contato.";
+  `Você marcou os dois olhos. O valor particular é ${VALOR_YAG_COMPLETO} tratado, cobrado separadamente para cada um.`;
 
 export const WHATSAPP_MENSAGEM =
   "Olá! Vi a página do YAG Laser e quero agendar no HGP em Paragominas.";
@@ -140,9 +149,9 @@ export const FAQS: YagFAQ[] = [
       "Na grande maioria dos casos, não. A capsulotomia YAG abre uma janela permanente na cápsula e o efeito costuma ser duradouro. Caso haja alguma alteração posterior, o oftalmologista avaliará em consulta.",
   },
   {
-    question: "É coberto por convênio?",
+    question: "Quanto custa e é coberto por convênio?",
     answer:
-      "A cobertura depende do plano de saúde e das regras da operadora. O Dr. Juliano atende particular e diversos convênios. O valor é definido por olho tratado. Ao preencher o formulário, nossa equipe verifica a cobertura e informa os valores antes de confirmar a data.",
+      "No particular, o valor é de R$ 850,00 por olho tratado — quem precisa tratar os dois olhos paga o valor de cada um separadamente. Por convênio, a cobertura depende do plano e das regras da operadora: ao preencher o formulário, nossa equipe verifica a sua cobertura antes de confirmar a data.",
   },
   {
     question: "Onde o procedimento é realizado?",

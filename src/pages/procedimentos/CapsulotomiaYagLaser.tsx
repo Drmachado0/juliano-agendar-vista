@@ -9,6 +9,7 @@ import {
   MapPin,
   MessageCircle,
   ShieldCheck,
+  Wallet,
 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -32,6 +33,7 @@ import {
   HGP_FALLBACK,
   SECTIONS,
   SINAIS_ALERTA,
+  VALOR_YAG_COMPLETO,
   WHATSAPP_MENSAGEM,
   WHATSAPP_ORIGEM,
 } from "@/components/procedimentos/yag/yagContent";
@@ -236,6 +238,10 @@ const CapsulotomiaYagLaser = () => {
                   <span className="inline-flex items-center gap-2">
                     <Clock className="w-5 h-5 text-primary" aria-hidden="true" />
                     Poucos minutos, sem internação
+                  </span>
+                  <span className="inline-flex items-center gap-2">
+                    <Wallet className="w-5 h-5 text-primary" aria-hidden="true" />
+                    Particular: {VALOR_YAG_COMPLETO}
                   </span>
                   <span className="inline-flex items-center gap-2">
                     <ShieldCheck
