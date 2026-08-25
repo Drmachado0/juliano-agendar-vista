@@ -583,7 +583,11 @@ export async function criarAgendamentoValidado(
       detalhe_exame_ou_cirurgia: card.detalhe_exame_ou_cirurgia ?? null,
       local_atendimento: clinica.nome,
       clinica_id: clinica.id,
-      convenio: convenio ?? null,
+      // notificar-n8n valida convenio como z.string().optional() — SEM
+      // .nullable(). Mandar null reprova o schema e mata a notificação do
+      // CRM justamente nos cards sem convênio. undefined some no
+      // JSON.stringify e satisfaz o .optional().
+      convenio: convenio || undefined,
       data_agendamento: dataAg,
       hora_agendamento: horaAg,
       status_crm,
