@@ -20,6 +20,7 @@ const Header = () => {
   const navItems = [
     { label: "Sobre", id: "sobre" },
     { label: "Procedimentos", id: "procedimentos" },
+    { label: "YAG Laser", id: "yag-laser" },
     { label: "Depoimentos", id: "depoimentos" },
     { label: "Locais", id: "locais" },
     { label: "Convênios", id: "convenios" },

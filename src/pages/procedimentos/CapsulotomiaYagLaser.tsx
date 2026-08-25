@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/accordion";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import YagVisionSlider from "@/components/procedimentos/yag/YagVisionSlider";
+import YagAntesDepois from "@/components/procedimentos/yag/YagAntesDepois";
 import YagTimeline from "@/components/procedimentos/yag/YagTimeline";
 import YagTriage from "@/components/procedimentos/yag/YagTriage";
 import YagLocation from "@/components/procedimentos/yag/YagLocation";
@@ -262,6 +263,9 @@ const CapsulotomiaYagLaser = () => {
 
                 {/* Como a opacificação afeta a visão */}
                 <YagVisionSlider />
+
+                {/* Antes e depois na cápsula (ilustração própria) */}
+                <YagAntesDepois />
 
                 {/* Conteúdo médico */}
                 {SECTIONS.map((section) => (

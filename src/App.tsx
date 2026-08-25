@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import ConsentBanner from "./components/ConsentBanner";
 import Auth from "./pages/Auth";
 import RouteChangeTracker from "./components/RouteChangeTracker";
+import ScrollToTop from "./components/ScrollToTop";
 
 // Code-splitting: a página pública /agendamento e toda a área /admin
 // vivem em chunks separados — não pesam no bundle inicial da home.
@@ -65,6 +66,7 @@ const App = () => (
           <Sonner closeButton richColors position="top-right" />
           <BrowserRouter>
           <RouteChangeTracker />
+          <ScrollToTop />
           <ConsentBanner />
           <Suspense fallback={<RouteFallback />}>
             <Routes>
