@@ -141,3 +141,8 @@ verify_jwt = false
 
 [functions.revelar-n8n-secret]
 verify_jwt = true
+
+# Server-to-server (n8n). Auth pelo header x-n8n-secret, igual a
+# buscar-contexto-paciente e atualizar-status-crm. Nunca publica.
+[functions.confirmar-agendamento]
+verify_jwt = false
