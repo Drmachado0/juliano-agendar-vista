@@ -34,14 +34,21 @@ function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (char) => htmlEntities[char] || char);
 }
 
+const SEM_DATA = 'A definir';
+
 function formatarData(dataString: string): string {
+  // Leads sem horário marcado (ex.: formulário do YAG Laser) chegam sem data.
+  // Sem esta guarda o e-mail sairia com "Invalid Date" no corpo e no assunto,
+  // porque toLocaleDateString não lança — devolve a string "Invalid Date".
+  if (!dataString || !/^\d{4}-\d{2}-\d{2}$/.test(dataString)) return SEM_DATA;
   try {
     const data = new Date(dataString + 'T00:00:00');
-    return data.toLocaleDateString('pt-BR', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    if (Number.isNaN(data.getTime())) return SEM_DATA;
+    return data.toLocaleDateString('pt-BR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   } catch {
     return escapeHtml(dataString);
@@ -87,6 +94,16 @@ const handler = async (req: Request): Promise<Response> => {
       : '';
 
     const dataFormatada = formatarData(dados.data_agendamento);
+    // Lead sem data marcada: o e-mail deve dizer isso claramente, em vez de
+    // fingir que existe um agendamento confirmado.
+    const semDataMarcada = dataFormatada === SEM_DATA;
+    const tituloEmail = semDataMarcada ? '🆕 Novo Lead' : '🗓️ Novo Agendamento';
+    const linhaQuando = semDataMarcada
+      ? '<strong>📅 Data e horário a definir — entrar em contato</strong>'
+      : `<strong>📅 ${dataFormatada} às ${horaAgendamento}</strong>`;
+    const assunto = semDataMarcada
+      ? `Novo Lead: ${nomeCompleto} - ${tipoAtendimento}`
+      : `Novo Agendamento: ${nomeCompleto} - ${dataFormatada} ${horaAgendamento}`;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -107,13 +124,13 @@ const handler = async (req: Request): Promise<Response> => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>🗓️ Novo Agendamento</h1>
+            <h1>${tituloEmail}</h1>
             <p>Dr. Juliano Machado - Oftalmologia</p>
           </div>
           
           <div class="content">
             <div class="highlight">
-              <strong>📅 ${dataFormatada} às ${horaAgendamento}</strong><br>
+              ${linhaQuando}<br>
               <strong>📍 ${localAtendimento}</strong>
             </div>
             
@@ -152,7 +169,7 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         from: "Dr. Juliano Machado <contato@send.drjulianomachado.com>",
         to: ["julianosmachado@gmail.com"],
-        subject: `Novo Agendamento: ${nomeCompleto} - ${dataFormatada} ${horaAgendamento}`,
+        subject: assunto,
         html: htmlContent,
       }),
     });
