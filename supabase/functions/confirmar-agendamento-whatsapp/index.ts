@@ -7,6 +7,7 @@ import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
 import { isBotPaused, isKnownInvalidWhatsapp } from "../_shared/whatsappGuards.ts";
 import { podeEnviarOutbound, LIMITES_PADRAO } from "../_shared/rateLimitOutbound.ts";
 import { assertNomePacienteValido } from "../_shared/sanitizeOptionalFields.ts";
+import { montarEventIdConfirmacao } from "../_shared/eventIdConfirmacao.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -219,7 +220,7 @@ serve(async (req) => {
       : '';
 
     const payload = {
-      event_id: `${agendamentoId ?? 'sem_id'}:confirmacao_imediata`,
+      event_id: montarEventIdConfirmacao(agendamentoId),
       agendamento_id: agendamentoId,
       telefone: telefoneFormatado,
       nome: agendamentoData.nome_completo,
