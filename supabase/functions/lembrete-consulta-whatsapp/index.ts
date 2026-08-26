@@ -7,6 +7,7 @@ import { podeEnviarOutbound, LIMITES_PADRAO, logarBloqueioRateLimit } from "../_
 import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
 import { isRegistroAtivo } from "../_shared/statusTerminais.ts";
 import { dataAmanhaBelem } from "../_shared/dataBelem.ts";
+import { pacienteJaRespondeu } from "../_shared/confirmationStatus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -112,9 +113,17 @@ serve(async (req) => {
           continue;
         }
 
-        // GUARD #6: já confirmou presença
-        if (agendamento.confirmation_status === "confirmado") {
-          console.log(`[lembrete-consulta] ⏭️  ${agendamento.id} já confirmado`);
+        // GUARD #6: o paciente já respondeu — confirmando ou cancelando.
+        //
+        // Antes só olhava o literal "confirmado", valor que nunca era
+        // gravado (o writer usava um nome que a CHECK constraint recusava),
+        // e nao havia caso para cancelado: quem tinha cancelado pelo
+        // WhatsApp recebia o lembrete assim mesmo.
+        if (pacienteJaRespondeu(agendamento.confirmation_status)) {
+          console.log(
+            `[lembrete-consulta] ⏭️  ${agendamento.id} já respondeu` +
+              ` (${agendamento.confirmation_status})`,
+          );
           pulados++;
           continue;
         }

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { CONFIRMATION_STATUS } from "../_shared/confirmationStatus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -71,7 +72,13 @@ serve(async (req) => {
     agendamentoId = match?.id ?? null;
   }
 
-  const novoStatus = body.resposta === "confirmar" ? "confirmado_paciente" : "cancelado_paciente";
+  // Os dois valores anteriores ("confirmado_paciente"/"cancelado_paciente")
+  // nao passavam na CHECK constraint da coluna: o UPDATE falhava, o erro so
+  // era logado e a resposta do paciente sumia.
+  const novoStatus =
+    body.resposta === "confirmar"
+      ? CONFIRMATION_STATUS.CONFIRMADO
+      : CONFIRMATION_STATUS.CANCELADO_PELO_PACIENTE;
 
   if (agendamentoId) {
     const { error: updErr } = await supabase
@@ -81,7 +88,15 @@ serve(async (req) => {
         confirmation_response_at: new Date().toISOString(),
       })
       .eq("id", agendamentoId);
-    if (updErr) console.error("[n8n-resposta-confirmacao] update:", updErr.message);
+    if (updErr) {
+      // Falha aqui significa resposta do paciente perdida — nao pode sair
+      // como ok:true, senao o n8n considera entregue e ninguem percebe.
+      console.error("[n8n-resposta-confirmacao] update:", updErr.message);
+      return json(
+        { ok: false, motivo: "falha_ao_gravar_resposta", erro: updErr.message },
+        500,
+      );
+    }
   } else {
     console.warn("[n8n-resposta-confirmacao] agendamento não encontrado para", telefoneNormalizado);
   }

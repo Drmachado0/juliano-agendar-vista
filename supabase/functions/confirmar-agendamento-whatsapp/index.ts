@@ -9,6 +9,7 @@ import { podeEnviarOutbound, LIMITES_PADRAO } from "../_shared/rateLimitOutbound
 import { assertNomePacienteValido } from "../_shared/sanitizeOptionalFields.ts";
 import { montarEventIdConfirmacao } from "../_shared/eventIdConfirmacao.ts";
 import { isRegistroAtivo } from "../_shared/statusTerminais.ts";
+import { CONFIRMATION_STATUS } from "../_shared/confirmationStatus.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -120,7 +121,9 @@ serve(async (req) => {
         // Escala para humano: pausa bot por 24h e marca status de confirmação
         const pausaAte = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
         await supabase.from("agendamentos").update({
-          confirmation_status: "bloqueado_nome_invalido",
+          // Era "bloqueado_nome_invalido", que a CHECK constraint recusa:
+          // o UPDATE falhava e o agendamento ficava sem marca nenhuma.
+          confirmation_status: CONFIRMATION_STATUS.FALHA_ENVIO,
           confirmation_sent_at: new Date().toISOString(),
           bot_pausado_ate: pausaAte,
           bot_pausa_motivo: `nome_paciente_invalido:${nomeCheck.motivo}`,
