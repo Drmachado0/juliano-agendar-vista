@@ -319,7 +319,7 @@ describe("filtro de unidade é do servidor — HGP não vaza para Clinicor", () 
       agoraMinutos: 0,
     });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.motivo).toBe("data_nao_aberta_para_agendamento");
+    if (r.ok === false) expect(r.motivo).toBe("data_nao_aberta_para_agendamento");
   });
 
   it("agendamento cheio na Clinicor não bloqueia o mesmo horário no HGP", () => {
@@ -418,7 +418,7 @@ describe("bloqueios", () => {
       agoraMinutos: 0,
     });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.motivo).toBe("Feriado municipal");
+    if (r.ok === false) expect(r.motivo).toBe("Feriado municipal");
   });
 
   it("bloqueio de intervalo remove só a faixa", () => {
