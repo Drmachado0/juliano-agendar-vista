@@ -1,4 +1,5 @@
 import { useLocation, Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useEffect } from "react";
 import { Home, CalendarCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,14 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
+    <>
+      {/* O hosting serve a SPA com HTTP 200 para qualquer rota, entao nao ha 404
+          real. Sem noindex, qualquer URL inexistente vira pagina indexavel. */}
+      <Helmet>
+        <title>Página não encontrada | Dr. Juliano Machado</title>
+        <meta name="robots" content="noindex, follow" />
+      </Helmet>
+
     <div className="flex min-h-screen items-center justify-center bg-background hero-gradient noise-overlay px-4">
       <div className="text-center max-w-md">
         <h1 className="mb-3 text-7xl font-extrabold gradient-text tracking-tight">404</h1>
@@ -34,6 +43,7 @@ const NotFound = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

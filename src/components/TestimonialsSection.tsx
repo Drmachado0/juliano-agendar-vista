@@ -13,7 +13,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { buscarAvaliacoesGoogle } from "@/services/avaliacoesGoogle";
 import { useGoogleReviews } from "@/hooks/useGoogleReviews";
-import { GOOGLE_REVIEW_URL } from "@/lib/constants";
+import { GOOGLE_REVIEW_URL, GOOGLE_REVIEWS } from "@/lib/constants";
 import { formatReviewCount } from "@/lib/utils";
 import { buildTestimonialPool, MAX_TESTIMONIALS } from "@/lib/testimonialsPool";
 import {
@@ -188,12 +188,14 @@ const TestimonialsSection = ({
     ? reviews.rating
     : pool.length > 0
     ? pool.reduce((acc, t) => acc + t.rating, 0) / pool.length
-    : 5.0;
+    : GOOGLE_REVIEWS.rating;
   const ratingLabel = displayRating.toFixed(1);
   const title = displayRating >= 4.95 ? "Nota máxima no Google" : "Avaliação dos pacientes no Google";
 
-  // Contagem exibida: apenas real; sem valor fixo se o agregado ainda não veio.
-  const displayCount = reviews.hasRealAggregate ? reviews.count : pool.length;
+  // useGoogleReviews já resolve o fallback (realCount ?? GOOGLE_REVIEWS.count),
+  // então reviews.count nunca é inválido. Antes isto caía para pool.length, que
+  // exibia "0 avaliações" sempre que a sincronização do Google não trazia nada.
+  const displayCount = reviews.count;
 
   // Layout responsivo + auto-rotate controls.
   const itemsPerPageRaw = useItemsPerPage();

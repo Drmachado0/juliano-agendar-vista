@@ -1,5 +1,6 @@
 import { MapPin, Phone, Clock, ExternalLink, Hospital, Heart, Eye, Glasses, Navigation } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 
 const LocationsSection = () => {
@@ -103,6 +104,13 @@ const LocationsSection = () => {
           <p className="text-muted-foreground max-w-2xl mx-auto">
             4 endereços entre Paragominas e Belém para consultas, exames e cirurgias.
           </p>
+          <Link
+            to="/paragominas"
+            className="inline-flex items-center gap-2 mt-5 text-primary font-semibold text-sm hover:underline underline-offset-4"
+          >
+            <MapPin className="w-4 h-4" />
+            Atendimento oftalmológico em Paragominas
+          </Link>
 
         </div>
 
