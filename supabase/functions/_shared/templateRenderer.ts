@@ -1,99 +1,21 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  DadosTemplate,
+  renderizarTemplate,
+  templatesPadrao,
+  formatarData,
+  formatarHora,
+} from "./templateTexto.ts";
 
-interface DadosTemplate {
-  nome?: string;
-  data?: string;
-  hora?: string;
-  local?: string;
-  profissional?: string;
-  tipo_atendimento?: string;
-  convenio?: string;
-  link_status?: string;
-}
-
-// Templates padrão (fallback caso não exista no banco)
-const templatesPadrao: Record<string, string> = {
-  confirmacao_agendamento: `Olá, {{nome}}! 👋
-
-Recebemos seu pedido de agendamento na clínica do *Dr. Juliano Machado - Oftalmologista*.
-
-📅 *Data:* {{data}}
-⏰ *Horário:* {{hora}}
-📍 *Local:* {{local}}
-
-⚠️ *Importante:* O atendimento será realizado por *ordem de chegada*. Recomendamos chegar com antecedência.
-
-🔗 Acompanhe seu agendamento: {{link_status}}
-
-Caso precise reagendar ou cancelar, entre em contato conosco.
-
-Agradecemos a preferência! 🙏`,
-  
-  lembrete_24h: `Olá, {{nome}}! 👋
-
-Este é um lembrete do seu agendamento na clínica do *Dr. Juliano Machado - Oftalmologista*.
-
-📅 *Data:* {{data}}
-⏰ *Horário:* {{hora}}
-📍 *Local:* {{local}}
-
-⚠️ *Lembre-se:* O atendimento será por *ordem de chegada*.
-
-🔗 Detalhes do agendamento: {{link_status}}
-
-Caso não possa comparecer, por favor nos avise.
-
-Até amanhã! 🙏`,
-  
-  resposta_confirmacao: `Sua presença foi *confirmada* com sucesso! ✅
-
-Aguardamos você na data e horário agendados.
-
-Qualquer dúvida, estamos à disposição. 🙏`,
-  
-  resposta_cancelamento: `Seu agendamento foi *cancelado* conforme solicitado. ❌
-
-Caso deseje reagendar, acesse nosso site ou entre em contato.
-
-Obrigado! 🙏`,
-  
-  reagendamento: `Olá, {{nome}}! 👋
-
-Sua consulta foi *reagendada* para:
-
-📅 *Nova Data:* {{data}}
-⏰ *Novo Horário:* {{hora}}
-📍 *Local:* {{local}}
-
-⚠️ *Lembre-se:* O atendimento será por *ordem de chegada*.
-
-🔗 Acompanhe seu agendamento: {{link_status}}
-
-Qualquer dúvida, estamos à disposição! 🙏`,
-
-  boas_vindas_lead: `Olá, {{nome}}! Aqui é da clínica *Dr. Juliano Machado - Oftalmologista*. 👋
-
-Vimos seu interesse em agendar uma {{tipo_atendimento}} no local *{{local}}*.
-
-Qual data e horário seriam melhores para você? 📅
-
-Aguardamos seu retorno! 🙏`,
-
-  lembrete_anual: `Olá, {{nome}}! 👋
-
-Já faz 1 ano desde sua última consulta oftalmológica conosco.
-
-Manter seus exames em dia é fundamental para a saúde dos seus olhos. 👀
-
-Gostaria de agendar seu retorno? Podemos encontrar o melhor horário para você.
-
-📱 Agende pelo WhatsApp ou pelo nosso site:
-👉 https://drjulianomachado.com/agendamento
-
-Atenciosamente,
-Dr. Juliano Machado
-Oftalmologia`,
+// As peças puras vivem em `templateTexto.ts` para poderem ser testadas sem
+// Deno nem rede. Reexportadas aqui para não quebrar quem já importa daqui.
+export {
+  renderizarTemplate,
+  templatesPadrao,
+  formatarData,
+  formatarHora,
 };
+export type { DadosTemplate };
 
 // Busca template do banco de dados
 export async function buscarTemplate(tipo: string): Promise<string> {
@@ -122,54 +44,9 @@ export async function buscarTemplate(tipo: string): Promise<string> {
   }
 }
 
-// Renderiza um template substituindo variáveis pelos valores
-export function renderizarTemplate(template: string, dados: DadosTemplate): string {
-  let mensagem = template;
-
-  const variaveis: Record<string, string | undefined> = {
-    '{{nome}}': dados.nome,
-    '{{data}}': dados.data,
-    '{{hora}}': dados.hora,
-    '{{local}}': dados.local,
-    '{{profissional}}': dados.profissional,
-    '{{tipo_atendimento}}': dados.tipo_atendimento,
-    '{{convenio}}': dados.convenio,
-    '{{link_status}}': dados.link_status,
-  };
-
-  for (const [variavel, valor] of Object.entries(variaveis)) {
-    if (valor) {
-      mensagem = mensagem.replace(new RegExp(variavel.replace(/[{}]/g, '\\$&'), 'g'), valor);
-    }
-  }
-
-  // Remove linhas com variáveis não preenchidas
-  mensagem = mensagem
-    .split('\n')
-    .filter(linha => !linha.includes('{{'))
-    .join('\n');
-
-  return mensagem;
-}
-
-// Formata data de YYYY-MM-DD para DD/MM/YYYY
-export function formatarData(dataStr: string): string {
-  try {
-    const [ano, mes, dia] = dataStr.split('-');
-    return `${dia}/${mes}/${ano}`;
-  } catch {
-    return dataStr;
-  }
-}
-
-// Formata hora para HH:MM
-export function formatarHora(horaStr: string): string {
-  return horaStr.slice(0, 5);
-}
-
 // Busca e renderiza template em uma única chamada
 export async function gerarMensagemDoTemplate(
-  tipo: string, 
+  tipo: string,
   dados: DadosTemplate
 ): Promise<string> {
   const template = await buscarTemplate(tipo);

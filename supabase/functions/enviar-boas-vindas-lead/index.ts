@@ -9,7 +9,7 @@ import {
   BOAS_VINDAS_YAG_FALLBACK,
   TEMPLATE_YAG,
   ehLeadYag,
-  ehNumeroNotificacaoInterna,
+  ehTelefoneInternoClinica,
 } from "../_shared/yagLeadMensagens.ts";
 
 
@@ -107,6 +107,8 @@ Deno.serve(async (req) => {
         .select('id, nome_completo, telefone_whatsapp, tipo_atendimento, local_atendimento, convenio')
         .eq('status_funil', 'lead')
         .eq('status_crm', 'NOVO LEAD')
+        // Registro de teste nao dispara WhatsApp para numero real.
+        .not('is_sandbox', 'is', true)
         .lt('created_at', cutoffISO)
         .order('created_at', { ascending: true })
         .limit(fetchLimit);
@@ -186,14 +188,15 @@ Deno.serve(async (req) => {
         const normalizedPhone = normalizePhoneNumber(phoneClean);
 
         // GUARD #0: o número interno da clínica não é paciente.
-        // Quando um lead entra com o mesmo aparelho que recebe os avisos, a
-        // clínica passa a receber "Olá, <nome>! Recebemos o seu formulário",
-        // endereçada a si mesma, e o aviso com os dados de quem preencheu se
-        // perde no meio. Aqui o envio automático para e o lead vai para um
-        // humano decidir — provavelmente é cadastro de teste ou telefone
-        // digitado errado no formulário.
-        if (ehNumeroNotificacaoInterna(phoneClean)) {
-          console.warn(`[boas-vindas] ☎️ ${normalizedPhone} é o número interno da clínica — lead ${lead.id} → PRECISA_DE_HUMANO`);
+        //
+        // Esse número está cadastrado em `agendamentos` como um lead comum, e o
+        // cron o tratava como qualquer outro: a clínica recebia a mensagem
+        // escrita PARA o paciente ("Recebemos o seu formulário...") no lugar do
+        // aviso interno com os dados de quem preencheu. Marca para revisão
+        // humana em vez de só pular — pular deixaria o lead voltando a cada
+        // rodada do cron.
+        if (ehTelefoneInternoClinica(phoneClean)) {
+          console.warn(`[boas-vindas] 🏥 ${normalizedPhone} é o número interno da clínica — lead ${lead.id} → PRECISA_DE_HUMANO`);
           await supabase
             .from('agendamentos')
             .update({
@@ -211,8 +214,21 @@ Deno.serve(async (req) => {
             conteudo: mensagem,
             tipo_mensagem: 'boas_vindas',
             status_envio: 'erro',
-            error_message: 'Telefone do lead e o numero interno de avisos da clinica',
+            error_message: 'Telefone e o numero interno da clinica — boas-vindas de paciente nao enviada',
           });
+
+          await supabase.from('system_logs').insert({
+            level: 'warn',
+            category: 'whatsapp',
+            source: 'enviar-boas-vindas-lead',
+            message: 'Lead com o número interno da clínica — boas-vindas bloqueada',
+            details: {
+              event: 'boas_vindas_numero_interno',
+              agendamento_id: lead.id,
+            },
+            agendamento_id: lead.id,
+          }).then(() => {}, () => {});
+
           falhas++;
           continue;
         }

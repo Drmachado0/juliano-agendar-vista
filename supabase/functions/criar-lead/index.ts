@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendWhatsappTextMessage } from "../_shared/evolutionApiClient.ts";
-import { ehLeadYag, montarResumoLeadYag, getTelefoneNotificacaoInterna } from "../_shared/yagLeadMensagens.ts";
+import { ehLeadYag, montarResumoLeadYag, TELEFONE_NOTIFICACAO_INTERNA } from "../_shared/yagLeadMensagens.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -222,9 +222,7 @@ Deno.serve(async (req) => {
         local: data.local_atendimento,
       });
 
-      const telefoneInterno = getTelefoneNotificacaoInterna();
-
-      sendWhatsappTextMessage(telefoneInterno, resumo)
+      sendWhatsappTextMessage(TELEFONE_NOTIFICACAO_INTERNA, resumo)
         .then(async (aviso) => {
           console.log(`[criar-lead] aviso interno YAG lead_id=${lead.id} ok=${aviso.success}`);
           // agendamento_id NULO de proposito: o inbox do admin carrega a
@@ -232,7 +230,7 @@ Deno.serve(async (req) => {
           // para o paciente. A rastreabilidade vai para system_logs.
           await supabase.from('mensagens_whatsapp').insert({
             agendamento_id: null,
-            telefone: telefoneInterno,
+            telefone: TELEFONE_NOTIFICACAO_INTERNA,
             direcao: 'OUT',
             conteudo: resumo,
             tipo_mensagem: 'notificacao_interna_yag',

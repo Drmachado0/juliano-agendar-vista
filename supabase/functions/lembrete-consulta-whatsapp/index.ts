@@ -5,6 +5,9 @@ import { sendWhatsappTextMessage, normalizePhoneNumber, sanitizePayload } from "
 import { isBotPaused, isKnownInvalidWhatsapp } from "../_shared/whatsappGuards.ts";
 import { podeEnviarOutbound, LIMITES_PADRAO, logarBloqueioRateLimit } from "../_shared/rateLimitOutbound.ts";
 import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
+import { isRegistroAtivo } from "../_shared/statusTerminais.ts";
+import { dataAmanhaBelem } from "../_shared/dataBelem.ts";
+import { pacienteJaRespondeu } from "../_shared/confirmationStatus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -48,10 +51,12 @@ serve(async (req) => {
       });
     }
 
-    // Buscar consultas de amanhã
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+    // Buscar consultas de amanhã, pelo calendário de Belém.
+    //
+    // `new Date()` aqui é UTC: depois das 21:00 de Belém o dia UTC já virou,
+    // e somar 1 dia daria depois de amanhã — o paciente de amanhã ficaria sem
+    // lembrete e outro receberia com dois dias de antecedência.
+    const tomorrowStr = dataAmanhaBelem();
 
     console.log(`[lembrete-consulta] Buscando consultas para: ${tomorrowStr}`);
 
@@ -93,9 +98,32 @@ serve(async (req) => {
           continue;
         }
 
-        // GUARD #6: já confirmou presença
-        if (agendamento.confirmation_status === "confirmado") {
-          console.log(`[lembrete-consulta] ⏭️  ${agendamento.id} já confirmado`);
+        // GUARD #0: registro terminal ou de teste não recebe lembrete.
+        //
+        // Sem isto, quem cancelou, faltou ou já foi atendido recebia
+        // "Este é um lembrete do seu agendamento... Até amanhã!", e
+        // registros is_sandbox mandavam mensagem para número real.
+        if (!isRegistroAtivo(agendamento)) {
+          console.log(
+            `[lembrete-consulta] ⏭️  ${agendamento.id} inativo` +
+              ` (crm=${agendamento.status_crm} funil=${agendamento.status_funil}` +
+              ` sandbox=${agendamento.is_sandbox})`,
+          );
+          pulados++;
+          continue;
+        }
+
+        // GUARD #6: o paciente já respondeu — confirmando ou cancelando.
+        //
+        // Antes só olhava o literal "confirmado", valor que nunca era
+        // gravado (o writer usava um nome que a CHECK constraint recusava),
+        // e nao havia caso para cancelado: quem tinha cancelado pelo
+        // WhatsApp recebia o lembrete assim mesmo.
+        if (pacienteJaRespondeu(agendamento.confirmation_status)) {
+          console.log(
+            `[lembrete-consulta] ⏭️  ${agendamento.id} já respondeu` +
+              ` (${agendamento.confirmation_status})`,
+          );
           pulados++;
           continue;
         }

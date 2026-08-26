@@ -4,6 +4,7 @@
 // no path e (2) rate limit por IP. Retorna apenas campos não sensíveis.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { CONFIRMATION_STATUS } from "../_shared/confirmationStatus.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
@@ -95,9 +96,16 @@ serve(async (req) => {
 
     // Determina o status exibido (mesma lógica do frontend)
     let statusExibido = "recebido";
-    if (data.confirmation_status === "confirmado" || data.status_crm === "ATENDIDO") {
+    if (
+      data.confirmation_status === CONFIRMATION_STATUS.CONFIRMADO ||
+      data.status_crm === "ATENDIDO"
+    ) {
       statusExibido = "confirmado";
-    } else if (data.confirmation_status === "cancelado") {
+      // Era comparado com "cancelado", valor que nao existe no vocabulario:
+      // quem cancelava continuava vendo a pagina como se estivesse de pe.
+    } else if (
+      data.confirmation_status === CONFIRMATION_STATUS.CANCELADO_PELO_PACIENTE
+    ) {
       statusExibido = "cancelado";
     } else if (data.status_funil === "lead") {
       statusExibido = "aguardando";

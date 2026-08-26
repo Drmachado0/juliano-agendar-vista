@@ -7,9 +7,7 @@ import {
   BOAS_VINDAS_YAG_FALLBACK,
   TELEFONE_NOTIFICACAO_INTERNA,
   ehLeadYag,
-  ehNumeroNotificacaoInterna,
-  getTelefoneNotificacaoInterna,
-  normalizarTelefoneInterno,
+  ehTelefoneInternoClinica,
   extrairOlho,
   formatarTelefoneBr,
   formatarNascimento,
@@ -131,39 +129,38 @@ describe("Aviso interno com os dados do paciente", () => {
   });
 });
 
-describe("Número interno da clínica", () => {
-  it("usa o padrão quando não há secret configurado", () => {
-    expect(getTelefoneNotificacaoInterna()).toBe(TELEFONE_NOTIFICACAO_INTERNA);
-  });
-
-  it("normaliza para 55 + DDD + número", () => {
-    expect(normalizarTelefoneInterno("(91) 99130-0174")).toBe("5591991300174");
-    expect(normalizarTelefoneInterno("91991300174")).toBe("5591991300174");
-    expect(normalizarTelefoneInterno("5591991300174")).toBe("5591991300174");
-    expect(normalizarTelefoneInterno("")).toBe("");
-    expect(normalizarTelefoneInterno(null)).toBe("");
-  });
-
-  it("reconhece o número interno em qualquer formatação", () => {
+describe("Numero interno da clinica x telefone de paciente", () => {
+  // A clinica recebia a mensagem de boas-vindas escrita PARA o paciente
+  // porque o proprio numero de avisos esta cadastrado como lead em
+  // `agendamentos`. O guard separa os dois papeis.
+  it("reconhece o numero interno em qualquer formato de entrada", () => {
     for (const t of [
       "5591991300174",
       "+55 (91) 99130-0174",
       "91991300174",
-      "991300174",
+      "(91) 99130-0174",
+      "9191300174", // cadastro antigo, sem o nono digito
     ]) {
-      expect(ehNumeroNotificacaoInterna(t)).toBe(true);
+      expect(ehTelefoneInternoClinica(t)).toBe(true);
     }
   });
 
-  it("não confunde com o telefone de um paciente", () => {
-    for (const t of ["5591993937966", "5562984719356", "5592991662007"]) {
-      expect(ehNumeroNotificacaoInterna(t)).toBe(false);
+  it("nao bloqueia telefone de paciente", () => {
+    for (const t of [
+      "5591999998888",
+      "(91) 98888-7777",
+      "5511991300174", // mesmo numero, outro DDD
+      "",
+      null,
+      undefined,
+    ]) {
+      expect(ehTelefoneInternoClinica(t)).toBe(false);
     }
   });
 
-  it("não trata ausência de telefone como número interno", () => {
-    for (const t of ["", null, undefined, "   ", "123"]) {
-      expect(ehNumeroNotificacaoInterna(t)).toBe(false);
+  it("nao trata lixo curto como numero interno", () => {
+    for (const t of ["0174", "991300174", "55", "abc"]) {
+      expect(ehTelefoneInternoClinica(t)).toBe(false);
     }
   });
 });

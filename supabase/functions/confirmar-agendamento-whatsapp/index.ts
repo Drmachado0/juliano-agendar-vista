@@ -7,6 +7,9 @@ import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
 import { isBotPaused, isKnownInvalidWhatsapp } from "../_shared/whatsappGuards.ts";
 import { podeEnviarOutbound, LIMITES_PADRAO } from "../_shared/rateLimitOutbound.ts";
 import { assertNomePacienteValido } from "../_shared/sanitizeOptionalFields.ts";
+import { montarEventIdConfirmacao } from "../_shared/eventIdConfirmacao.ts";
+import { isRegistroAtivo } from "../_shared/statusTerminais.ts";
+import { CONFIRMATION_STATUS } from "../_shared/confirmationStatus.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -83,6 +86,21 @@ serve(async (req) => {
       agendamentoData = agendamento;
     }
 
+    // Registro terminal ou de teste não recebe confirmação: reenviar a
+    // confirmação de um agendamento já cancelado dá ao paciente a impressão
+    // de que ele voltou a existir.
+    if (agendamentoId && !isRegistroAtivo(agendamentoData)) {
+      console.warn(
+        `[ConfirmarWhatsApp] ⏭️  ${agendamentoId} inativo` +
+          ` (crm=${agendamentoData.status_crm} funil=${agendamentoData.status_funil}` +
+          ` sandbox=${agendamentoData.is_sandbox})`,
+      );
+      return new Response(
+        JSON.stringify({ success: true, message: 'Agendamento nao esta ativo', skipped: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (agendamentoId && agendamentoData.aceita_contato_whatsapp_email === false) {
       return new Response(
         JSON.stringify({ success: true, message: 'Paciente não aceita contato por WhatsApp', skipped: true }),
@@ -103,7 +121,9 @@ serve(async (req) => {
         // Escala para humano: pausa bot por 24h e marca status de confirmação
         const pausaAte = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
         await supabase.from("agendamentos").update({
-          confirmation_status: "bloqueado_nome_invalido",
+          // Era "bloqueado_nome_invalido", que a CHECK constraint recusa:
+          // o UPDATE falhava e o agendamento ficava sem marca nenhuma.
+          confirmation_status: CONFIRMATION_STATUS.FALHA_ENVIO,
           confirmation_sent_at: new Date().toISOString(),
           bot_pausado_ate: pausaAte,
           bot_pausa_motivo: `nome_paciente_invalido:${nomeCheck.motivo}`,
@@ -218,23 +238,8 @@ serve(async (req) => {
       ? formatarData(agendamentoData.data_nascimento)
       : '';
 
-    // Chave de idempotência consumida pelo n8n (n8n_eventos_processados, com
-    // ON CONFLICT DO NOTHING). Precisa ser única por confirmação: com o literal
-    // `sem_id`, toda confirmação sem agendamento_id gerava a MESMA chave, e
-    // pacientes distintos na mesma rodada colidiam entre si — o dedup passava a
-    // tratar o segundo como repetição do primeiro. Sem id, o evento é
-    // identificado pelo trio telefone+data+hora: continua determinístico (uma
-    // retentativa do mesmo envio ainda deduplica) sem colidir entre pacientes.
-    const chaveEvento =
-      agendamentoId ||
-      [telefoneFormatado, dataFmt, horaFmt]
-        .map((parte) => (parte ?? '').trim())
-        .filter(Boolean)
-        .join('|') ||
-      'sem_id';
-
     const payload = {
-      event_id: `${chaveEvento}:confirmacao_imediata`,
+      event_id: montarEventIdConfirmacao(agendamentoId),
       agendamento_id: agendamentoId,
       telefone: telefoneFormatado,
       nome: agendamentoData.nome_completo,

@@ -137,10 +137,12 @@ Deno.serve(async (req) => {
     // 2) Carrega leads correspondentes ainda em NOVO LEAD / status_funil='lead'
     const { data: leads } = await supabase
       .from("agendamentos")
-      .select("id, nome_completo, telefone_whatsapp, status_crm, status_funil")
+      .select("id, nome_completo, telefone_whatsapp, status_crm, status_funil, is_sandbox")
       .in("id", agendamentoIds)
       .eq("status_funil", "lead")
-      .eq("status_crm", "NOVO LEAD");
+      .eq("status_crm", "NOVO LEAD")
+      // Registro de teste nao dispara WhatsApp para numero real.
+      .not("is_sandbox", "is", true);
 
     const leadsMap = new Map((leads || []).map((l: any) => [l.id, l]));
 
