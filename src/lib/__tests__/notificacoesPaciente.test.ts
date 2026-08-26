@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 // Módulos das edge functions: vivem em supabase/functions/_shared para rodar no
 // Deno, mas são TypeScript puro e sem imports externos.
 import { renderizarTemplate } from "../../../supabase/functions/_shared/templateTexto";
-import { dataCivilBelem, dataAmanhaBelem } from "../../../supabase/functions/_shared/dataBelem";
+import { dataCivilBelem, dataAmanhaBelem, instanteBelem } from "../../../supabase/functions/_shared/dataBelem";
 import { isRegistroAtivo } from "../../../supabase/functions/_shared/statusTerminais";
 
 const LF = String.fromCharCode(10);
@@ -107,5 +107,33 @@ describe("Quem nao pode receber mensagem automatica", () => {
   it("deixa passar paciente ativo", () => {
     expect(isRegistroAtivo({ status_crm: "AGUARDANDO", status_funil: "agendado" })).toBe(true);
     expect(isRegistroAtivo({ status_crm: "NOVO LEAD", status_funil: "lead" })).toBe(true);
+  });
+});
+
+describe("Horario do agendamento e de Belem, nao de UTC", () => {
+  it("converte para o instante real", () => {
+    // 09:00 em Belem = 12:00 UTC.
+    expect(instanteBelem("2026-08-26", "09:00").toISOString()).toBe(
+      "2026-08-26T12:00:00.000Z",
+    );
+    expect(instanteBelem("2026-08-26", "09:00:00").toISOString()).toBe(
+      "2026-08-26T12:00:00.000Z",
+    );
+  });
+
+  it("acerta a conta de quantas horas faltam", () => {
+    // Cron das 12:00 UTC (09:00 em Belem), consulta hoje as 12:30 de Belem.
+    // Faltam 3h30 de verdade; a leitura antiga como UTC dava 30min e a
+    // funcao pulava o paciente pelo corte de `< 1h`.
+    const agora = new Date("2026-08-26T12:00:00.000Z");
+    const consulta = instanteBelem("2026-08-26", "12:30");
+    const horas = (consulta.getTime() - agora.getTime()) / 3600000;
+    expect(horas).toBeCloseTo(3.5, 5);
+  });
+
+  it("nao quebra com hora vazia", () => {
+    expect(instanteBelem("2026-08-26", "").toISOString()).toBe(
+      "2026-08-26T03:00:00.000Z",
+    );
   });
 });

@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendWhatsappTextMessage } from "../_shared/evolutionApiClient.ts";
 import { requireAdmin } from "../_shared/adminAuth.ts";
 import { getN8nSharedSecret, timingSafeEqual } from "../_shared/n8nSecret.ts";
+import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
 
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -100,6 +101,18 @@ serve(async (req: Request): Promise<Response> => {
   if (!authorized) {
     return new Response(JSON.stringify({ success: false, error: "UNAUTHORIZED" }),
       { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } });
+  }
+
+  // KILL SWITCH: esta rota nao tinha guard nenhum. As campanhas do n8n
+  // (lembrete anual, avaliacao) entram por aqui, entao "Parar tudo agora"
+  // nao as alcancava.
+  const killSwitch = await envioAutomaticoLiberado(supabaseAdmin);
+  if (!killSwitch.liberado) {
+    console.warn(`[enviar-whatsapp-queue] 🛑 Bloqueado pelo kill switch: ${killSwitch.motivo}`);
+    return new Response(
+      JSON.stringify({ success: false, blocked: true, reason: killSwitch.motivo }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
+    );
   }
 
   const startTime = Date.now();

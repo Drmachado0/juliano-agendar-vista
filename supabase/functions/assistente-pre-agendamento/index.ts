@@ -5,6 +5,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sendWhatsappTextMessage } from "../_shared/evolutionApiClient.ts";
+import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
 import { requireN8nSecret, unauthorizedResponse, requestId } from "../_shared/authGuards.ts";
 import {
   detectarAssuntoExames,
@@ -354,6 +355,17 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+
+    // KILL SWITCH: o assistente respondia o paciente mesmo com "Parar tudo
+    // agora" acionado. Devolve 200 para o n8n nao ficar retentando.
+    const killSwitch = await envioAutomaticoLiberado(supabase);
+    if (!killSwitch.liberado) {
+      console.warn(`[assistente] 🛑 Bloqueado pelo kill switch: ${killSwitch.motivo}`);
+      return new Response(
+        JSON.stringify({ ok: true, blocked: true, reason: killSwitch.motivo }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     // 0) IDEMPOTÊNCIA por mensagem_id (item 10)
     // Se essa mensagem já produziu uma intent, retorna o registro sem reprocessar.

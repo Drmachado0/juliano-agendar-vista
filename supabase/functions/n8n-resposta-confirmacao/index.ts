@@ -51,25 +51,21 @@ serve(async (req) => {
   const telefoneNormalizado = (telNorm as string) ?? body.telefone.replace(/\D/g, "");
   const last8 = telefoneNormalizado.slice(-8);
 
-  // Localiza agendamento ativo mais próximo (mesma lógica de buscar_agendamento_por_telefone,
-  // executada com service role).
+  // Busca no banco inteiro, via RPC. Antes carregava os 200 agendamentos
+  // mais recentes e filtrava em JS: paciente com agendamento fora dessa
+  // janela nunca era encontrado e a resposta dele era descartada.
+  // A RPC mantem o mesmo criterio de desempate: real antes de sandbox, com
+  // data antes de sem data, mais recente antes de mais antigo.
   let agendamentoId: string | null = null;
   if (last8.length >= 8) {
-    const { data: candidatos } = await supabase
-      .from("agendamentos")
-      .select("id, telefone_whatsapp, created_at, is_sandbox, data_agendamento")
-      .order("created_at", { ascending: false })
-      .limit(200);
-    const match = (candidatos ?? [])
-      .filter((a: any) => (a.telefone_whatsapp ?? "").replace(/\D/g, "").endsWith(last8))
-      .sort((a: any, b: any) => {
-        const sb = Number(a.is_sandbox ?? false) - Number(b.is_sandbox ?? false);
-        if (sb !== 0) return sb;
-        const da = Number(!!b.data_agendamento) - Number(!!a.data_agendamento);
-        if (da !== 0) return da;
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      })[0];
-    agendamentoId = match?.id ?? null;
+    const { data: achado, error: errBusca } = await supabase.rpc(
+      "buscar_agendamento_por_telefone_norm",
+      { p_telefone_normalizado: telefoneNormalizado },
+    );
+    if (errBusca) {
+      console.error("[n8n-resposta-confirmacao] busca:", errBusca.message);
+    }
+    agendamentoId = (achado as string | null) ?? null;
   }
 
   // Os dois valores anteriores ("confirmado_paciente"/"cancelado_paciente")
@@ -88,6 +84,20 @@ serve(async (req) => {
         confirmation_response_at: new Date().toISOString(),
       })
       .eq("id", agendamentoId);
+    // Cancelou de verdade: o card tem que sair da coluna ativa. Sem isto o
+    // confirmation_status virava 'cancelado_pelo_paciente' e o status_funil
+    // seguia 'agendado' — secretaria continuava achando que o paciente vem.
+    if (!updErr && body.resposta === "cancelar") {
+      const { error: errTransicao } = await supabase.rpc("transicionar_estado_agendamento", {
+        p_id: agendamentoId,
+        p_novo_status_crm: "CANCELADO",
+        p_motivo: "[PACIENTE] cancelou pelo WhatsApp",
+      });
+      if (errTransicao) {
+        console.error("[n8n-resposta-confirmacao] transicao:", errTransicao.message);
+      }
+    }
+
     if (updErr) {
       // Falha aqui significa resposta do paciente perdida — nao pode sair
       // como ok:true, senao o n8n considera entregue e ninguem percebe.

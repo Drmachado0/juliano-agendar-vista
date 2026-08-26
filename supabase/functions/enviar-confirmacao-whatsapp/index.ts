@@ -14,7 +14,7 @@ import { podeEnviarOutbound, LIMITES_PADRAO, logarBloqueioRateLimit } from '../_
 import { envioAutomaticoLiberado } from '../_shared/envioStatusGlobal.ts';
 import { requireCronSecret, unauthorizedResponse } from '../_shared/authGuards.ts';
 import { isRegistroAtivo } from '../_shared/statusTerminais.ts';
-import { dataCivilBelem } from '../_shared/dataBelem.ts';
+import { dataCivilBelem, instanteBelem } from '../_shared/dataBelem.ts';
 
 
 const corsHeaders = {
@@ -118,8 +118,13 @@ serve(async (req) => {
         }
 
         // Verificar se o agendamento está dentro da janela de tempo
-        const agendamentoDateTime = new Date(
-          `${agendamento.data_agendamento}T${agendamento.hora_agendamento}`
+        // O horário do agendamento é de Belém. Sem isto ele era lido como
+        // UTC e a conta de "quantas horas faltam" errava por três: consulta
+        // daqui a 3h30 aparecia como daqui a 30min e era pulada pelo
+        // `hoursUntilAppointment < 1` abaixo — paciente ficava sem confirmação.
+        const agendamentoDateTime = instanteBelem(
+          agendamento.data_agendamento,
+          agendamento.hora_agendamento,
         );
         
         // Só enviar se faltar até 24h (e mais de 1h para não enviar muito em cima)
