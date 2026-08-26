@@ -4,6 +4,7 @@ import "./index.css";
 import { installDataLayerDebug } from "./lib/dataLayerDebug";
 import { captureAttribution } from "./lib/tracking";
 import { installWhatsappCrmAttributionBridge } from "./lib/whatsappCrmAttribution";
+import { installWebVitals } from "./lib/webVitals";
 
 installDataLayerDebug();
 // Captura UTMs/click-ids/landing_page/referrer/event_id na entrada do site,
@@ -12,5 +13,9 @@ captureAttribution();
 // Decora links de WhatsApp com origem/UTMs mesmo antes do consentimento de cookies,
 // para não perder atribuição de leads pagos que clicam sem aceitar o banner LGPD.
 installWhatsappCrmAttributionBridge();
+// Core Web Vitals reais (inclui INP, que o Lighthouse nao mede). O CrUX nao
+// cobre este dominio por volume de trafego, entao esta e a unica fonte de
+// dado de campo disponivel.
+installWebVitals();
 
 createRoot(document.getElementById("root")!).render(<App />);

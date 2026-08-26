@@ -9,6 +9,14 @@ const data: ProcedurePageData = {
   h1: "Cirurgia de Pterígio em Paragominas e Belém",
   intro:
     "O pterígio é um crescimento de tecido sobre a córnea que pode causar vermelhidão, irritação e, em alguns casos, alteração da visão. O Dr. Juliano Machado avalia a indicação cirúrgica e realiza o procedimento em Paragominas e Belém.",
+  sidebarCta: {
+    title: "O pterígio está crescendo?",
+    text: "Vermelhidão que não passa e sensação de areia merecem avaliação. O tamanho da lesão e o impacto na visão definem a conduta.",
+  },
+  finalCta: {
+    title: "Avalie seu pterígio antes que avance",
+    text: "Quanto mais cedo a lesão é avaliada, menor a chance de ela alcançar o eixo visual. Agende online.",
+  },
   medicalProcedureType: "https://schema.org/SurgicalProcedure",
   bodyLocation: "Córnea e conjuntiva",
   sections: [

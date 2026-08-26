@@ -10,6 +10,14 @@ const data: ProcedurePageData = {
   h1: "Cirurgia de Catarata em Paragominas e Belém",
   intro:
     "A cirurgia de catarata é o tratamento que substitui o cristalino opaco do olho por uma lente intraocular transparente. O Dr. Juliano Machado realiza a avaliação, o planejamento e o procedimento em Paragominas e em Belém, com acompanhamento pré e pós-operatório.",
+  sidebarCta: {
+    title: "Sua catarata já incomoda?",
+    text: "A decisão de operar depende de quanto a catarata atrapalha o seu dia a dia, não só do que aparece no exame. A avaliação define isso.",
+  },
+  finalCta: {
+    title: "Voltar a enxergar com nitidez",
+    text: "A avaliação mede o grau da catarata, calcula a lente e define o momento certo de operar. Agende online.",
+  },
   medicalProcedureType: "https://schema.org/SurgicalProcedure",
   bodyLocation: "Cristalino",
   sections: [

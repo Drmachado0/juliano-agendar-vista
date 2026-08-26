@@ -29,6 +29,12 @@ export interface ProcedurePageData {
   intro: string;
   sections: ProcedureSection[];
   faqs: ProcedureFAQ[];
+  /** Titulo e texto do CTA lateral. Sem override, cai no generico — o que
+   *  fazia Consulta, Catarata e Pterigio servirem o MESMO bloco palavra por
+   *  palavra, padrao que a auditoria de SEO apontou como conteudo duplicado. */
+  sidebarCta?: { title: string; text: string };
+  /** Idem para o CTA de fechamento da pagina. */
+  finalCta?: { title: string; text: string };
   medicalProcedureType?: string; // schema.org procedureType
   bodyLocation?: string;
   /** Override opcional dos locais exibidos (chip, sidebar e CTA final).
@@ -237,10 +243,11 @@ const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
               <aside className="lg:col-span-1">
                 <div className="sticky top-28 card-glass rounded-2xl p-6 md:p-7 border border-primary/15">
                   <h3 className="text-xl font-bold text-foreground mb-2">
-                    Agende sua avaliação
+                    {data.sidebarCta?.title ?? "Agende sua avaliação"}
                   </h3>
                   <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
-                    A indicação e o planejamento do procedimento dependem de avaliação presencial. Marque sua consulta com o Dr. Juliano.
+                    {data.sidebarCta?.text ??
+                      "A indicação e o planejamento do procedimento dependem de avaliação presencial. Marque sua consulta com o Dr. Juliano."}
                   </p>
                   <Link to="/agendamento" className="block">
                     <Button variant="hero" size="lg" className="w-full gap-2">
@@ -268,10 +275,11 @@ const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
           <section className="py-16 md:py-20 bg-secondary/20">
             <div className="container mx-auto px-4 text-center max-w-2xl">
               <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
-                Pronto para cuidar da sua visão?
+                {data.finalCta?.title ?? "Pronto para cuidar da sua visão?"}
               </h2>
               <p className="text-muted-foreground mb-8">
-                Agende sua consulta online em poucos minutos. Atendimento em {locations.ctaSuffix}.
+                {data.finalCta?.text ??
+                  `Agende sua consulta online em poucos minutos. Atendimento em ${locations.ctaSuffix}.`}
               </p>
               <Link to="/agendamento">
                 <Button variant="hero" size="lg" className="gap-2">

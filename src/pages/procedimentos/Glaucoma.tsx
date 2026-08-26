@@ -21,6 +21,14 @@ const data: ProcedurePageData = {
   h1: "Glaucoma em Paragominas e Belém",
   intro:
     "O glaucoma é a principal causa de cegueira irreversível no mundo — e costuma avançar sem dor e sem sintoma até estágios avançados. O Dr. Juliano Machado tem fellowship em Glaucoma pela Unidade Paulista de Oftalmologia e realiza a investigação completa, do exame de pressão ao campo visual, em Paragominas e Belém.",
+  sidebarCta: {
+    title: "Tem histórico de glaucoma na família?",
+    text: "Esse é o fator de risco mais forte da doença — e o glaucoma não dói nem embaça no início. A investigação é o único jeito de saber.",
+  },
+  finalCta: {
+    title: "A visão perdida para o glaucoma não volta",
+    text: "O que o tratamento faz é interromper a progressão. Por isso o exame precoce muda o resultado. Agende online.",
+  },
   medicalProcedureType: "https://schema.org/TherapeuticProcedure",
   bodyLocation: "Nervo óptico",
   sections: [

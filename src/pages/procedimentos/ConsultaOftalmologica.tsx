@@ -9,6 +9,14 @@ const data: ProcedurePageData = {
   h1: "Consulta Oftalmológica em Paragominas e Belém",
   intro:
     "A consulta oftalmológica é a porta de entrada para cuidar da saúde dos olhos: avaliação da visão, dos olhos por dentro e por fora e definição do plano de cuidado. O Dr. Juliano Machado realiza consultas em Paragominas e Belém, com agendamento online.",
+  sidebarCta: {
+    title: "Faz quanto tempo do seu último exame?",
+    text: "Boa parte das doenças oculares não dá sintoma no início. A consulta de rotina é o que as encontra a tempo.",
+  },
+  finalCta: {
+    title: "Uma consulta responde o que o sintoma não conta",
+    text: "Avaliação completa da saúde ocular, com exames complementares conforme a indicação. Agende online.",
+  },
   medicalProcedureType: "https://schema.org/MedicalProcedure",
   bodyLocation: "Olho",
   sections: [
