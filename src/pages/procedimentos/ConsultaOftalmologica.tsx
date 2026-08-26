@@ -68,7 +68,7 @@ const data: ProcedurePageData = {
     {
       question: "Atende convênios?",
       answer:
-        "Sim. O Dr. Juliano atende particular e diversos convênios. Entre em contato para confirmar se o seu plano cobre a consulta antes de agendar.",
+        "Sim, o atendimento é particular e por convênio. Antes de agendar, confirme com a sua operadora se a consulta oftalmológica está coberta e se ela exige guia ou encaminhamento — essa exigência varia bastante de um plano para outro.",
     },
     {
       question: "Como agendar?",

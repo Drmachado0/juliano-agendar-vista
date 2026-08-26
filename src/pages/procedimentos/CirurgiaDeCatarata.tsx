@@ -80,7 +80,7 @@ const data: ProcedurePageData = {
     {
       question: "A cirurgia de catarata é coberta por convênios?",
       answer:
-        "A cobertura depende do plano de saúde. O Dr. Juliano atende particular e diversos convênios. Entre em contato para confirmar se o seu convênio cobre a consulta e o procedimento.",
+        "Depende da operadora. Cirurgia costuma exigir autorização prévia, e o pedido é analisado junto com o laudo e os exames — por isso a avaliação vem primeiro: é ela que produz a documentação que instrui o pedido. Confirme a cobertura com o seu plano antes de agendar.",
     },
   ],
 };

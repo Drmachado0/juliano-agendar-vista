@@ -44,12 +44,36 @@ const ProcedimentosIndex = () => {
   return (
     <>
       <Helmet>
-        <title>Procedimentos Oftalmológicos em Paragominas e Belém | {DOCTOR.name}</title>
+        <title>Procedimentos Oftalmológicos em Paragominas e Belém</title>
         <meta
           name="description"
           content="Conheça os procedimentos realizados pelo Dr. Juliano Machado: Cirurgia de Catarata, Pterígio, YAG Laser e consultas. Atendimento em Paragominas e Belém."
         />
         <link rel="canonical" href="https://drjulianomachado.com/procedimentos" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Início", item: "https://drjulianomachado.com/" },
+              { "@type": "ListItem", position: 2, name: "Procedimentos", item: "https://drjulianomachado.com/procedimentos" },
+            ],
+          })}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            name: "Procedimentos oftalmológicos",
+            itemListElement: procedimentos.map((p, i) => ({
+              "@type": "ListItem",
+              position: i + 1,
+              name: p.title,
+              description: p.description,
+              url: `https://drjulianomachado.com${p.link}`,
+            })),
+          })}
+        </script>
       </Helmet>
 
       <div className="theme-obsidian min-h-screen bg-background">

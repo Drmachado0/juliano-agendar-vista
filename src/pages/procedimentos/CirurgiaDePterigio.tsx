@@ -78,7 +78,7 @@ const data: ProcedurePageData = {
     {
       question: "Posso fazer pelo convênio?",
       answer:
-        "A cobertura varia conforme o plano. O Dr. Juliano atende particular e diversos convênios — entre em contato para confirmar a cobertura da consulta e do procedimento no seu plano.",
+        "Varia conforme a operadora. Como o pterígio às vezes é removido por motivo estético, a cobertura costuma depender da indicação clínica registrada — sintomas, tamanho da lesão e impacto na visão. Esses dados ficam documentados na avaliação.",
     },
   ],
 };
