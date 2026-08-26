@@ -25,3 +25,53 @@ export const DOCTOR = {
     "Sociedade Brasileira de Glaucoma",
   ],
 } as const;
+
+// Formacao academica e trajetoria. Fonte: Curriculo Lattes (CNPq), id K4525719A1.
+// Ordem cronologica inversa — o mais recente e o mais relevante para o paciente.
+export interface ItemFormacao {
+  periodo: string;
+  titulo: string;
+  instituicao: string;
+  /** Carga horaria ou observacao curta, quando houver. */
+  detalhe?: string;
+}
+
+export const FORMACAO: readonly ItemFormacao[] = [
+  {
+    periodo: "2017 – 2019",
+    titulo: "Fellowship em Glaucoma",
+    instituicao: "Unidade Paulista de Oftalmologia (UPO)",
+    detalhe: "1.980 horas",
+  },
+  {
+    periodo: "2016 – 2017",
+    titulo: "Glaucoma Clínico e Cirúrgico",
+    instituicao: "Universidade Federal de São Paulo (UNIFESP)",
+    detalhe: "360 horas",
+  },
+  {
+    periodo: "2013 – 2016",
+    titulo: "Residência Médica em Oftalmologia",
+    instituicao: "Hospital Federal de Bonsucesso (HFB)",
+  },
+  {
+    periodo: "2013 – 2016",
+    titulo: "Pós-Graduação Lato Sensu",
+    instituicao: "Universidade Estácio de Sá (UNESA)",
+    detalhe: "2.090 horas",
+  },
+  {
+    periodo: "2006 – 2012",
+    titulo: "Graduação em Medicina",
+    instituicao: "Centro Universitário do Estado do Pará (CESUPA)",
+  },
+] as const;
+
+/** Instituicoes de formacao, para alumniOf no JSON-LD. Sem repetir. */
+export const INSTITUICOES_FORMACAO = [
+  "Unidade Paulista de Oftalmologia (UPO)",
+  "Universidade Federal de São Paulo (UNIFESP)",
+  "Hospital Federal de Bonsucesso (HFB)",
+  "Universidade Estácio de Sá (UNESA)",
+  "Centro Universitário do Estado do Pará (CESUPA)",
+] as const;

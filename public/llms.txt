@@ -5,5 +5,18 @@
 ## Pages
 
 - [Início](/): Apresentação do Dr. Juliano Machado, procedimentos, locais de atendimento, convênios e depoimentos.
+- [Sobre](/sobre): Formação, residência médica em Oftalmologia, fellowship em Glaucoma e afiliações.
 - [Agendar Consulta](/agendamento): Formulário online para agendar consulta, retorno, exame ou cirurgia.
+- [Oftalmologista em Paragominas](/paragominas): Atendimento em Paragominas — Clinicor e Hospital Geral de Paragominas.
+
+## Procedimentos
+
+- [Todos os procedimentos](/procedimentos): Índice das cirurgias e consultas realizadas.
+- [Consulta Oftalmológica](/procedimentos/consulta-oftalmologica): Avaliação completa da saúde ocular, prescrição de óculos e acompanhamento de doenças.
+- [Cirurgia de Catarata](/procedimentos/cirurgia-de-catarata): Substituição do cristalino opaco por lente intraocular.
+- [Cirurgia de Pterígio](/procedimentos/cirurgia-de-pterigio): Remoção do tecido que cresce sobre a córnea.
+- [Capsulotomia YAG Laser](/procedimentos/capsulotomia-yag-laser): Tratamento da opacificação da cápsula após cirurgia de catarata.
+
+## Outros
+
 - [Política de Privacidade](/politica-de-privacidade): Como o site coleta e protege dados pessoais (LGPD).

@@ -20,6 +20,7 @@ import ScrollToTop from "./components/ScrollToTop";
 // vivem em chunks separados — não pesam no bundle inicial da home.
 const Agendamento = lazy(() => import("./pages/Agendamento"));
 const Paragominas = lazy(() => import("./pages/Paragominas"));
+const Sobre = lazy(() => import("./pages/Sobre"));
 const ParagominasAgendamento = lazy(() => import("./pages/ParagominasAgendamento"));
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
 const AdminAgendamentos = lazy(() => import("./pages/admin/Agendamentos"));
@@ -82,6 +83,7 @@ const App = () => (
               <Route path="/procedimentos/consulta-oftalmologica" element={<ProcConsulta />} />
               <Route path="/procedimentos/capsulotomia-yag-laser" element={<ProcYagLaser />} />
               <Route path="/obrigado" element={<Obrigado />} />
+              <Route path="/sobre" element={<Sobre />} />
               <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/admin" element={<AdminDashboard />} />

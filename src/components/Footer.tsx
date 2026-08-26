@@ -45,21 +45,35 @@ const Footer = () => {
             <h4 className="text-foreground font-semibold text-sm mb-4 font-sans border-b border-primary/20 pb-2 inline-block">Navegação</h4>
             <nav className="flex flex-col gap-2.5">
               {[
-                { label: "Sobre", id: "sobre" },
+                // "Sobre" virou pagina propria: o scroll para o id "sobre" so
+                // funcionava na home e quebrava em silencio nas demais rotas.
+                { label: "Sobre", id: "sobre", href: "/sobre" },
                 { label: "Procedimentos", id: "procedimentos" },
                 { label: "Depoimentos", id: "depoimentos" },
                 { label: "Locais de Atendimento", id: "locais" },
                 { label: "Convênios", id: "convenios" },
-              ].map(link => (
-                <button
-                  key={link.id}
-                  onClick={() => scrollToSection(link.id)}
-                  className="group relative text-sm text-muted-foreground hover:text-primary transition-colors text-left w-fit"
-                >
-                  {link.label}
+              ].map(link => {
+                const classes =
+                  "group relative text-sm text-muted-foreground hover:text-primary transition-colors text-left w-fit";
+                const underline = (
                   <span className="absolute -bottom-0.5 left-0 h-px bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left w-full" />
-                </button>
-              ))}
+                );
+                return "href" in link && link.href ? (
+                  <Link key={link.id} to={link.href} className={classes}>
+                    {link.label}
+                    {underline}
+                  </Link>
+                ) : (
+                  <button
+                    key={link.id}
+                    onClick={() => scrollToSection(link.id)}
+                    className={classes}
+                  >
+                    {link.label}
+                    {underline}
+                  </button>
+                );
+              })}
             </nav>
           </div>
 
