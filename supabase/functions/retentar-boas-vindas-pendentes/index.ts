@@ -1,12 +1,16 @@
 // Re-tenta automaticamente o envio de boas-vindas que ficaram em status
-// 'pendente' (PENDING / SERVER_ACK sem confirmação de entrega).
+// nao confirmado (PENDING / SERVER_ACK sem ack de entrega) ou que falhou.
 //
 // Regras:
-// - Considera "pendente" toda mensagem boas_vindas com status_envio='pendente'
-//   há pelo menos PENDING_GRACE_MIN minutos (tempo para ack natural chegar).
+// - Retenta toda mensagem boas_vindas nao confirmada: status_envio 'pendente'
+//   OU 'erro', ha pelo menos PENDING_GRACE_MIN minutos.
+// - 'erro' entra aqui porque NADA mais reprocessa uma falha: a RPC
+//   get_leads_sem_boas_vindas exclui o lead por EXISTIR registro OUT,
+//   independente do status. Sem isto, um 404 do webhook n8n deixa o paciente
+//   permanentemente sem boas-vindas.
 // - Tenta no máximo MAX_TENTATIVAS vezes por lead (contadas via mensagens OUT
 //   tipo_mensagem='boas_vindas' do mesmo agendamento).
-// - Backoff: respeita intervalo mínimo BACKOFF_MIN_MIN minutos entre tentativas.
+// - Backoff: respeita intervalo minimo BACKOFF_MIN_MIN minutos entre tentativas.
 // - Se confirmar entrega → promove card para AGUARDANDO.
 // - Se atingir MAX_TENTATIVAS sem confirmação → marca PRECISA_DE_HUMANO.
 // - Card permanece em NOVO LEAD enquanto não houver confirmação confiável.
@@ -97,14 +101,14 @@ Deno.serve(async (req) => {
   ).toISOString();
 
   try {
-    // 1) Localiza últimas tentativas pendentes por agendamento (status_envio='pendente'
-    //    e que ainda estão em NOVO LEAD).
+    // 1) Localiza ultimas tentativas nao confirmadas por agendamento
+    //    (status_envio em {pendente, erro}) e que ainda estao em NOVO LEAD.
     const { data: pendentes, error: errPend } = await supabase
       .from("mensagens_whatsapp")
       .select("id, agendamento_id, telefone, conteudo, created_at, status_envio")
       .eq("tipo_mensagem", "boas_vindas")
       .eq("direcao", "OUT")
-      .eq("status_envio", "pendente")
+      .in("status_envio", ["pendente", "erro"])
       .lt("created_at", cutoffPendingIso)
       .order("created_at", { ascending: false })
       .limit(200);
