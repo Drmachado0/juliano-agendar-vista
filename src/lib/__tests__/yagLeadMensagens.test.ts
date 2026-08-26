@@ -7,6 +7,7 @@ import {
   BOAS_VINDAS_YAG_FALLBACK,
   TELEFONE_NOTIFICACAO_INTERNA,
   ehLeadYag,
+  ehTelefoneInternoClinica,
   extrairOlho,
   formatarTelefoneBr,
   formatarNascimento,
@@ -125,5 +126,41 @@ describe("Aviso interno com os dados do paciente", () => {
   it("não polui o aviso quando o paciente foi avisado", () => {
     const msg = montarResumoLeadYag({ ...base, pacienteAvisado: true });
     expect(msg).not.toMatch(/NÃO chegou/i);
+  });
+});
+
+describe("Numero interno da clinica x telefone de paciente", () => {
+  // A clinica recebia a mensagem de boas-vindas escrita PARA o paciente
+  // porque o proprio numero de avisos esta cadastrado como lead em
+  // `agendamentos`. O guard separa os dois papeis.
+  it("reconhece o numero interno em qualquer formato de entrada", () => {
+    for (const t of [
+      "5591991300174",
+      "+55 (91) 99130-0174",
+      "91991300174",
+      "(91) 99130-0174",
+      "9191300174", // cadastro antigo, sem o nono digito
+    ]) {
+      expect(ehTelefoneInternoClinica(t)).toBe(true);
+    }
+  });
+
+  it("nao bloqueia telefone de paciente", () => {
+    for (const t of [
+      "5591999998888",
+      "(91) 98888-7777",
+      "5511991300174", // mesmo numero, outro DDD
+      "",
+      null,
+      undefined,
+    ]) {
+      expect(ehTelefoneInternoClinica(t)).toBe(false);
+    }
+  });
+
+  it("nao trata lixo curto como numero interno", () => {
+    for (const t of ["0174", "991300174", "55", "abc"]) {
+      expect(ehTelefoneInternoClinica(t)).toBe(false);
+    }
   });
 });

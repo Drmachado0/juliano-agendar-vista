@@ -16,6 +16,32 @@
  */
 export const TELEFONE_NOTIFICACAO_INTERNA = "5591991300174";
 
+/**
+ * Reduz o telefone a dígitos comparáveis: sem DDI 55 e sempre com o nono
+ * dígito do celular. O mesmo número chega ora como "5591991300174", ora como
+ * "(91) 99130-0174", ora sem o 9 — comparar string crua daria falso negativo.
+ */
+function digitosComparaveis(telefone?: string | null): string {
+  let d = (telefone ?? "").replace(/[^0-9]/g, "");
+  if (d.length > 11 && d.startsWith("55")) d = d.slice(2);
+  if (d.length === 10) d = `${d.slice(0, 2)}9${d.slice(2)}`;
+  return d;
+}
+
+/**
+ * True quando o telefone é o número interno da clínica.
+ *
+ * Existe porque esse número está cadastrado em `agendamentos` como um lead
+ * comum, e o cron de boas-vindas o tratava como paciente: a clínica recebia a
+ * mensagem escrita PARA o paciente ("Recebemos o seu formulário...") em vez do
+ * aviso interno com os dados de quem preencheu.
+ */
+export function ehTelefoneInternoClinica(telefone?: string | null): boolean {
+  const alvo = digitosComparaveis(TELEFONE_NOTIFICACAO_INTERNA);
+  const d = digitosComparaveis(telefone);
+  return d.length >= 11 && d === alvo;
+}
+
 /** Tipo de template no banco (`templates_whatsapp.tipo`). */
 export const TEMPLATE_YAG = "boas_vindas_lead_yag";
 

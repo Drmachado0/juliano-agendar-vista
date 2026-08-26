@@ -9,6 +9,7 @@ import {
   BOAS_VINDAS_YAG_FALLBACK,
   TEMPLATE_YAG,
   ehLeadYag,
+  ehTelefoneInternoClinica,
 } from "../_shared/yagLeadMensagens.ts";
 
 
@@ -184,7 +185,53 @@ Deno.serve(async (req) => {
         const phoneClean = lead.telefone_whatsapp.replace(/\D/g, '');
         const normalizedPhone = normalizePhoneNumber(phoneClean);
 
-        // GUARD #0: rate-limit anti-loop (telefone)
+        // GUARD #0: o número interno da clínica não é paciente.
+        //
+        // Esse número está cadastrado em `agendamentos` como um lead comum, e o
+        // cron o tratava como qualquer outro: a clínica recebia a mensagem
+        // escrita PARA o paciente ("Recebemos o seu formulário...") no lugar do
+        // aviso interno com os dados de quem preencheu. Marca para revisão
+        // humana em vez de só pular — pular deixaria o lead voltando a cada
+        // rodada do cron.
+        if (ehTelefoneInternoClinica(phoneClean)) {
+          console.warn(`[boas-vindas] 🏥 ${normalizedPhone} é o número interno da clínica — lead ${lead.id} → PRECISA_DE_HUMANO`);
+          await supabase
+            .from('agendamentos')
+            .update({
+              status_crm: 'PRECISA_DE_HUMANO',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', lead.id)
+            .eq('status_funil', 'lead')
+            .eq('status_crm', 'NOVO LEAD');
+
+          await supabase.from('mensagens_whatsapp').insert({
+            agendamento_id: lead.id,
+            telefone: normalizedPhone,
+            direcao: 'OUT',
+            conteudo: mensagem,
+            tipo_mensagem: 'boas_vindas',
+            status_envio: 'erro',
+            error_message: 'Telefone e o numero interno da clinica — boas-vindas de paciente nao enviada',
+          });
+
+          await supabase.from('system_logs').insert({
+            level: 'warn',
+            category: 'whatsapp',
+            source: 'enviar-boas-vindas-lead',
+            message: 'Lead com o número interno da clínica — boas-vindas bloqueada',
+            details: {
+              event: 'boas_vindas_numero_interno',
+              agendamento_id: lead.id,
+            },
+            agendamento_id: lead.id,
+          }).then(() => {}, () => {});
+
+          falhas++;
+          continue;
+        }
+
+        // GUARD #1: rate-limit anti-loop (telefone)
         const rl = await podeEnviarOutbound(supabase, phoneClean, [LIMITES_PADRAO.boas_vindas]);
         if (!rl.ok) {
           console.warn(`[boas-vindas] 🚫 Rate limit ${normalizedPhone} lead ${lead.id}: ${rl.motivo}`);
@@ -193,7 +240,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // GUARD #1: cache de verificações WhatsApp — se sabemos que o número
+        // GUARD #2: cache de verificações WhatsApp — se sabemos que o número
         // não tem WhatsApp, não tenta enviar (evita HTTP 400 da Evolution).
         const numeroInvalido = await isKnownInvalidWhatsapp(supabase, phoneClean);
         if (numeroInvalido) {
