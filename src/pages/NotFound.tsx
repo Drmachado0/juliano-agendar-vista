@@ -1,4 +1,5 @@
 import { useLocation, Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useEffect } from "react";
 import { Home, CalendarCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,23 +11,15 @@ const NotFound = () => {
     console.error("404 Error: User attempted to access non-existent route:", location.pathname);
   }, [location.pathname]);
 
-  // O hosting serve a SPA com HTTP 200 para qualquer rota, entao nao existe 404
-  // real e qualquer URL inexistente vira pagina indexavel.
-  //
-  // A tag e inserida na mao, e NAO via <Helmet>: com react-helmet-async 2.0.5,
-  // declarar mais um <Helmet> neste componente zerava title, canonical,
-  // description e JSON-LD de TODAS as rotas — inclusive as que nunca renderizam
-  // este arquivo. Verificado em build de producao, comparando o head renderizado
-  // com e sem o <Helmet> aqui.
-  useEffect(() => {
-    const meta = document.createElement("meta");
-    meta.name = "robots";
-    meta.content = "noindex, follow";
-    document.head.appendChild(meta);
-    return () => meta.remove();
-  }, []);
-
   return (
+    <>
+      {/* O hosting serve a SPA com HTTP 200 para qualquer rota, entao nao ha 404
+          real. Sem noindex, qualquer URL inexistente vira pagina indexavel. */}
+      <Helmet>
+        <title>Página não encontrada | Dr. Juliano Machado</title>
+        <meta name="robots" content="noindex, follow" />
+      </Helmet>
+
     <div className="flex min-h-screen items-center justify-center bg-background hero-gradient noise-overlay px-4">
       <div className="text-center max-w-md">
         <h1 className="mb-3 text-7xl font-extrabold gradient-text tracking-tight">404</h1>
@@ -50,6 +43,7 @@ const NotFound = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
