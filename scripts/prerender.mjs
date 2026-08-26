@@ -28,7 +28,14 @@ import { join, extname, dirname } from "node:path";
 
 const DIST = "dist";
 const PORTA = 4321;
-const ESPERA_APOS_LOAD = 2500; // margem para o JSON-LD do helmet entrar no head
+/** Rotas renderizadas ao mesmo tempo. Acima disso a maquina do build sofre. */
+const PARALELAS = 4;
+/**
+ * Prazo total. Estourou, o que ja foi gravado fica e o resto segue como shell.
+ * Existe para o script nunca pendurar um deploy: sem isso, um Chromium travado
+ * segura o build indefinidamente.
+ */
+const PRAZO_MS = 120000;
 
 const TIPOS = {
   ".html": "text/html; charset=utf-8",
@@ -112,42 +119,73 @@ async function main() {
     return;
   }
 
-  for (const rota of rotas) {
+  const inicio = Date.now();
+  const fila = [...rotas];
+
+  // Imagens, video e fonte nao mudam o HTML capturado, so o tempo de carga.
+  // Bloquear derruba o tempo por rota sem alterar o resultado.
+  const PESADOS = new Set(["image", "media", "font"]);
+
+  const trabalhador = async () => {
     const pagina = await browser.newPage();
-    try {
-      await pagina.goto(`http://127.0.0.1:${PORTA}${rota}`, {
-        waitUntil: "networkidle",
-        timeout: 45000,
-      });
-      await pagina.waitForTimeout(ESPERA_APOS_LOAD);
+    await pagina.route("**/*", (rota) =>
+      PESADOS.has(rota.request().resourceType()) ? rota.abort() : rota.continue()
+    );
 
-      const html = await pagina.content();
+    while (fila.length) {
+      if (Date.now() - inicio > PRAZO_MS) {
+        console.warn("[prerender] prazo estourado; rotas restantes ficam como shell.");
+        fila.length = 0;
+        break;
+      }
+      const rota = fila.shift();
+      try {
+        await pagina.goto(`http://127.0.0.1:${PORTA}${rota}`, {
+          waitUntil: "domcontentloaded",
+          timeout: 20000,
+        });
+        // Espera o sinal real de que o app montou, em vez de um atraso fixo.
+        await pagina.waitForSelector("h1", { timeout: 15000 });
+        await pagina.waitForFunction(
+          () => !!document.querySelector('link[rel="canonical"]'),
+          { timeout: 10000 }
+        );
+        // h1 + canonical provam que o app montou, mas nao que os dados
+        // chegaram: sem esta espera, o bloco de depoimentos era congelado
+        // vazio, sem nenhum card do Google. Limitada para nao virar o gargalo
+        // que a versao sequencial era.
+        await pagina
+          .waitForLoadState("networkidle", { timeout: 8000 })
+          .catch(() => {});
 
-      // Sanidade: se o conteudo nao renderizou, gravar seria pior que nao fazer
-      // nada — congelaria uma pagina vazia no lugar do shell que ao menos monta
-      // no cliente.
-      const temH1 = /<h1[\s>]/i.test(html);
-      const temCanonical = /rel="canonical"/i.test(html);
-      if (!temH1 || !temCanonical) {
-        console.warn(`[prerender] ${rota}: sem h1 ou canonical apos render. Mantido o shell.`);
-        falhas++;
-      } else {
+        const html = await pagina.content();
+        if (!/<h1[\s>]/i.test(html) || !/rel="canonical"/i.test(html)) {
+          console.warn(`[prerender] ${rota}: sem h1 ou canonical. Mantido o shell.`);
+          falhas++;
+          continue;
+        }
         const destino =
           rota === "/" ? join(DIST, "index.html") : join(DIST, rota, "index.html");
         await mkdir(dirname(destino), { recursive: true });
         await writeFile(destino, html, "utf-8");
         ok++;
+      } catch (e) {
+        console.warn(`[prerender] ${rota}: ${String(e).slice(0, 70)}`);
+        falhas++;
       }
-    } catch (e) {
-      console.warn(`[prerender] ${rota}: ${String(e).slice(0, 90)}`);
-      falhas++;
     }
     await pagina.close();
-  }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(PARALELAS, rotas.length) }, trabalhador)
+  );
 
   await browser.close();
   servidor.close();
-  console.log(`[prerender] ${ok} rota(s) prerenderizada(s), ${falhas} mantida(s) como shell.`);
+  console.log(
+    `[prerender] ${ok} rota(s) em ${Math.round((Date.now() - inicio) / 1000)}s, ${falhas} mantida(s) como shell.`
+  );
 }
 
 main().catch((e) => {
