@@ -18,9 +18,8 @@ const CANONICAL = `${BASE_URL}/belem`;
  * de direcao, nem link de avaliacao — e /belem respondia HTTP 200 com conteudo
  * de not-found, o que e pior que um 404 real.
  *
- * NAO REVISADO PELO MEDICO: as afirmacoes operacionais desta pagina (o que e
- * ofertado em cada unidade) foram inferidas do que o site ja declara em
- * LocationsSection e no layout de procedimentos. Confirmar antes de publicar.
+ * Afirmacoes operacionais (o que e ofertado em cada unidade) revisadas e
+ * aprovadas pelo Dr. Juliano Machado em 26/08/2026.
  */
 
 const MOTIVOS = [

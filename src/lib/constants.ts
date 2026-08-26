@@ -78,3 +78,19 @@ export const INSTITUICOES_FORMACAO = [
   "Universidade Estácio de Sá (UNESA)",
   "Centro Universitário do Estado do Pará (CESUPA)",
 ] as const;
+
+// Revisao clinica do conteudo medico do site.
+//
+// Conteudo medico e YMYL: o Google avalia quem assina e quando foi revisado.
+// schema.org tem propriedades proprias para isso — MedicalWebPage.lastReviewed
+// e reviewedBy — e elas so podem ser emitidas quando a revisao de fato existe.
+//
+// Atualizar a data a cada nova revisao. Datar sem revisar e sinal falso.
+export const REVISAO_CLINICA = {
+  /** ISO 8601, formato exigido por lastReviewed. */
+  data: "2026-08-26",
+  /** Como a data aparece para o paciente. */
+  dataLegivel: "26 de agosto de 2026",
+  por: DOCTOR.name,
+  crm: DOCTOR.crm,
+} as const;

@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet-async";
+import { REVISAO_CLINICA } from "@/lib/constants";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
@@ -106,6 +107,21 @@ const CapsulotomiaYagLaser = () => {
     })),
   };
 
+  const medicalWebPageJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "MedicalWebPage",
+    name: YAG_SEO.pageTitle,
+    description: YAG_SEO.metaDescription,
+    url,
+    lastReviewed: REVISAO_CLINICA.data,
+    reviewedBy: {
+      "@type": "Physician",
+      name: REVISAO_CLINICA.por,
+      medicalSpecialty: "Ophthalmology",
+      identifier: { "@type": "PropertyValue", propertyID: "CRM", value: REVISAO_CLINICA.crm },
+    },
+  };
+
   const medicalProcedureJsonLd = {
     "@context": "https://schema.org",
     "@type": "MedicalProcedure",
@@ -147,6 +163,7 @@ const CapsulotomiaYagLaser = () => {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:image" content={`${BASE_URL}/og-image.jpg`} />
         <meta name="robots" content="index, follow" />
+        <script type="application/ld+json">{JSON.stringify(medicalWebPageJsonLd)}</script>
         <script type="application/ld+json">
           {JSON.stringify(breadcrumbJsonLd)}
         </script>
@@ -409,6 +426,13 @@ const CapsulotomiaYagLaser = () => {
               </Button>
             </div>
           </section>
+          <div className="container mx-auto px-4 max-w-3xl">
+            <p className="mt-4 pt-5 border-t border-border/60 text-xs text-muted-foreground">
+              Conteúdo revisado por {REVISAO_CLINICA.por}, {REVISAO_CLINICA.crm}, em{" "}
+              {REVISAO_CLINICA.dataLegivel}. Esta página é informativa e não substitui
+              a consulta: a indicação depende de avaliação presencial.
+            </p>
+          </div>
         </main>
 
         <Footer />

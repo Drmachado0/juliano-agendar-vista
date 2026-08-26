@@ -8,6 +8,7 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { REVISAO_CLINICA } from "@/lib/constants";
 
 export interface ProcedureSection {
   title: string;
@@ -73,6 +74,29 @@ const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
     ],
   };
 
+  // MedicalWebPage carrega lastReviewed e reviewedBy, as propriedades que o
+  // schema.org define para conteudo de saude revisado. So faz sentido emitir
+  // porque a revisao existe de fato — datar sem revisar seria sinal falso.
+  const medicalWebPageJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "MedicalWebPage",
+    name: data.pageTitle,
+    description: data.metaDescription,
+    url,
+    lastReviewed: REVISAO_CLINICA.data,
+    reviewedBy: {
+      "@type": "Physician",
+      name: REVISAO_CLINICA.por,
+      medicalSpecialty: "Ophthalmology",
+      identifier: {
+        "@type": "PropertyValue",
+        propertyID: "CRM",
+        value: REVISAO_CLINICA.crm,
+      },
+    },
+    about: { "@type": "MedicalProcedure", name: data.procedureName },
+  };
+
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -119,6 +143,7 @@ const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
         <meta name="robots" content="index, follow" />
         <script type="application/ld+json">{JSON.stringify(breadcrumbJsonLd)}</script>
         <script type="application/ld+json">{JSON.stringify(medicalProcedureJsonLd)}</script>
+        <script type="application/ld+json">{JSON.stringify(medicalWebPageJsonLd)}</script>
         <script type="application/ld+json">{JSON.stringify(faqJsonLd)}</script>
       </Helmet>
 
@@ -237,6 +262,12 @@ const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
                     ))}
                   </Accordion>
                 </section>
+
+                <p className="mt-10 pt-5 border-t border-border/60 text-xs text-muted-foreground">
+                  Conteúdo revisado por {REVISAO_CLINICA.por}, {REVISAO_CLINICA.crm},
+                  em {REVISAO_CLINICA.dataLegivel}. Esta página é informativa e não
+                  substitui a consulta: a indicação depende de avaliação presencial.
+                </p>
               </div>
 
               {/* Sidebar CTA */}

@@ -1,16 +1,13 @@
 import ProcedurePageLayout, { type ProcedurePageData } from "@/components/procedimentos/ProcedurePageLayout";
 
 /**
- * REVISAO MEDICA PENDENTE.
+ * Conteudo clinico revisado e aprovado pelo Dr. Juliano Machado em 26/08/2026.
  *
- * Todo o texto clinico desta pagina foi redigido a partir de conhecimento geral
- * de oftalmologia e dos servicos que o site ja declara oferecer (tonometria,
- * gonioscopia, campo visual, OCT e iridotomia a laser). NAO foi escrito nem
- * revisado pelo Dr. Juliano Machado.
- *
- * Conteudo medico e YMYL: antes de manter esta pagina indexavel, o medico
- * responsavel precisa revisar especialmente a secao de sinais de alerta do
- * glaucoma agudo e as faixas de acompanhamento citadas nas FAQs.
+ * A revisao cobriu especialmente a secao de sinais de alerta do glaucoma agudo
+ * e as faixas de acompanhamento das FAQs. A data e o revisor sao emitidos no
+ * JSON-LD como MedicalWebPage.lastReviewed / reviewedBy, e aparecem ao pe da
+ * pagina. Ver REVISAO_CLINICA em src/lib/constants.ts — mudou o texto clinico,
+ * atualize a data la.
  */
 const data: ProcedurePageData = {
   slug: "glaucoma",

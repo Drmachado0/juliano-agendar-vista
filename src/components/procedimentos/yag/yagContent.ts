@@ -4,7 +4,8 @@
  * O texto médico das três primeiras seções e das cinco primeiras FAQs foi
  * preservado da versão anterior da página (apenas a cidade mudou de Belém
  * para Paragominas/HGP). O conteúdo adicional — preparo, acompanhante e
- * sinais de alerta — é novo e deve ser revisado pelo médico responsável.
+ * sinais de alerta — foi revisado e aprovado pelo Dr. Juliano Machado em
+ * 26/08/2026. Ver REVISAO_CLINICA em src/lib/constants.ts.
  */
 
 export const HGP_SLUG = "hgp";
