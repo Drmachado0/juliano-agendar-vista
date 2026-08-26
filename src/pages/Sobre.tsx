@@ -4,9 +4,9 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CalendarCheck, GraduationCap, BadgeCheck, MapPin } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarCheck, GraduationCap, BadgeCheck, MapPin } from "lucide-react";
 import { DOCTOR, FORMACAO, INSTITUICOES_FORMACAO } from "@/lib/constants";
-import { BASE_URL, PHYSICIAN_ID, citiesServed } from "@/lib/locations";
+import { LOCATIONS, BASE_URL, PHYSICIAN_ID, citiesServed } from "@/lib/locations";
 
 const URL_SOBRE = `${BASE_URL}/sobre`;
 
@@ -159,6 +159,68 @@ export default function Sobre() {
                 </li>
               ))}
             </ul>
+          </section>
+
+
+          <section aria-labelledby="atuacao" className="mb-12">
+            <h2 id="atuacao" className="text-xl md:text-2xl font-bold text-foreground mb-3">
+              Principais áreas de atuação
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              O fellowship em glaucoma orienta boa parte da rotina, mas o
+              consultório cobre a oftalmologia geral — da consulta de rotina às
+              cirurgias eletivas.
+            </p>
+            <ul className="space-y-3">
+              {[
+                { to: "/procedimentos/glaucoma", t: "Glaucoma", d: "Diagnóstico e acompanhamento, com tonometria, gonioscopia, campo visual e OCT." },
+                { to: "/procedimentos/cirurgia-de-catarata", t: "Cirurgia de catarata", d: "Substituição do cristalino opaco por lente intraocular." },
+                { to: "/procedimentos/cirurgia-de-pterigio", t: "Cirurgia de pterígio", d: "Remoção do tecido que avança sobre a córnea." },
+                { to: "/procedimentos/capsulotomia-yag-laser", t: "Capsulotomia YAG laser", d: "Tratamento da opacificação da cápsula após a cirurgia de catarata." },
+                { to: "/procedimentos/consulta-oftalmologica", t: "Consulta oftalmológica", d: "Avaliação completa da saúde ocular e acompanhamento." },
+              ].map((a) => (
+                <li key={a.to}>
+                  <Link
+                    to={a.to}
+                    className="group flex items-start gap-3 rounded-lg border border-border/60 bg-card p-4 hover:border-primary/40 transition-colors"
+                  >
+                    <ArrowRight className="w-4 h-4 text-primary shrink-0 mt-1 transition-transform group-hover:translate-x-0.5" />
+                    <span>
+                      <span className="font-semibold text-foreground block">{a.t}</span>
+                      <span className="text-sm text-muted-foreground">{a.d}</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section aria-labelledby="onde" className="mb-12">
+            <h2 id="onde" className="text-xl md:text-2xl font-bold text-foreground mb-3">
+              Onde atendo
+            </h2>
+            <p className="text-sm text-muted-foreground mb-5">
+              São quatro endereços entre as duas cidades. A unidade é escolhida
+              no agendamento, pela que for mais conveniente para você.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-3 mb-5">
+              {LOCATIONS.map((l) => (
+                <div key={l.slug} className="rounded-lg border border-border/60 bg-card p-4">
+                  <p className="font-semibold text-foreground text-sm">{l.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{l.displayAddress}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              <Link to="/paragominas" className="inline-flex items-center gap-2 text-primary font-semibold text-sm hover:underline underline-offset-4">
+                <MapPin className="w-4 h-4" />
+                Atendimento em Paragominas
+              </Link>
+              <Link to="/belem" className="inline-flex items-center gap-2 text-primary font-semibold text-sm hover:underline underline-offset-4">
+                <MapPin className="w-4 h-4" />
+                Atendimento em Belém
+              </Link>
+            </div>
           </section>
 
           <div className="rounded-xl border border-border bg-card p-6">
