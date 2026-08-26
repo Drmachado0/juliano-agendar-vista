@@ -58,10 +58,6 @@ const AgendarFAQSection = () => {
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
           }`}
         >
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 border border-primary/15 text-primary font-semibold text-sm mb-6 uppercase tracking-[0.08em]">
-            <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
-            Tire suas dúvidas
-          </span>
           <h2
             id="agendar-faq-heading"
             className="text-2xl md:text-3xl font-bold text-foreground mb-3"

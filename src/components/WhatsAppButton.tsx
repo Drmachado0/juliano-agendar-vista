@@ -49,7 +49,21 @@ const WhatsAppButton = () => {
   const [show, setShow] = useState(false);
   const [pulseReady, setPulseReady] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  // O hero ja tem um CTA "Falar no WhatsApp" bem visivel. Como este botao e
+  // fixed e entrava por timer, ele aparecia sobreposto aquele CTA no mobile:
+  // duas chamadas para a mesma acao, uma em cima da outra. So entra depois que
+  // o usuario rola para fora do hero.
+  const [passouDoHero, setPassouDoHero] = useState(false);
   const whatsappUrl = waLink("Olá! Gostaria de agendar uma consulta oftalmológica com o Dr. Juliano Machado.", "site_floating");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const limiar = () => window.innerHeight * 0.6;
+    const aoRolar = () => setPassouDoHero(window.scrollY > limiar());
+    aoRolar();
+    window.addEventListener("scroll", aoRolar, { passive: true });
+    return () => window.removeEventListener("scroll", aoRolar);
+  }, []);
 
   useEffect(() => {
     const showTimer = setTimeout(() => setShow(true), 3000);
@@ -66,7 +80,7 @@ const WhatsAppButton = () => {
 
   return (
     <div className={`fixed bottom-24 lg:bottom-6 right-6 z-50 flex flex-col items-end gap-2 transition-all duration-500 ease-out-expo ${
-      show ? 'translate-x-0 opacity-100' : 'translate-x-[60px] opacity-0'
+      show && passouDoHero ? 'translate-x-0 opacity-100' : 'translate-x-[60px] opacity-0 pointer-events-none'
     }`}>
       {/* Tooltip speech bubble */}
       <div className={`bg-card/95 backdrop-blur-sm text-foreground text-xs font-medium px-3 py-2 rounded-xl border border-border/60 shadow-lg transition-all duration-300 ${
