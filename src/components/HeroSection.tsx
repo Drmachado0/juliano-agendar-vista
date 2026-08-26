@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Star, CalendarCheck, MessageCircle, ShieldCheck, ArrowRight, MapPin, Pause, Play } from "lucide-react";
+import { Star, CalendarCheck, MessageCircle, ShieldCheck, ArrowRight, Pause, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import drJulianoHeroWebp from "@/assets/dr-juliano-hero.webp";
@@ -49,7 +49,7 @@ const HeroSection = () => {
 
 
   return (
-    <section className="relative overflow-hidden hero-gradient min-h-[88vh] lg:min-h-[92vh] flex items-center pt-24 pb-12 sm:pt-32 sm:pb-16">
+    <section className="relative overflow-hidden hero-gradient min-h-[78vh] lg:min-h-[82vh] flex items-center pt-24 pb-10 sm:pt-28 sm:pb-14">
       {/* Atmosphere */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <div className="absolute top-[30%] left-[28%] w-[420px] h-[420px] rounded-full bg-primary/8 blur-[110px]" />
@@ -70,28 +70,18 @@ const HeroSection = () => {
         <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-8 lg:gap-10 items-center">
           {/* Content */}
           <div className="text-center lg:text-left order-2 lg:order-1">
-            {/* City + credential eyebrow */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-panel mb-5">
-              <MapPin className="w-3.5 h-3.5 text-primary" />
-              <span className="text-xs font-semibold text-foreground/90 tracking-wide uppercase">
-                Oftalmologista em Paragominas e Belém
-              </span>
-            </div>
-
             {/* Heading — LCP, sem animação de opacity/delay */}
-            <h1 className="text-[2rem] leading-[1.1] sm:text-4xl lg:text-[3.5rem] font-extrabold mb-5 text-foreground">
-              Cuide da sua visão com{" "}
-              <span className="gradient-text-accent">atendimento em Paragominas e Belém</span>
+            <h1 className="text-balance text-[2.15rem] sm:text-5xl lg:text-[3.75rem] font-extrabold tracking-[-0.03em] leading-[1.08] mb-5 text-foreground">
+              Oftalmologista em{" "}
+              <span className="text-primary">Paragominas e Belém</span>
             </h1>
 
             {/* Subtitle — apoio direto */}
             <p className="text-[15px] sm:text-lg text-muted-foreground leading-relaxed mb-7 max-w-xl mx-auto lg:mx-0">
-              Consultas e acompanhamento oftalmológico com o{" "}
-              <span className="text-foreground font-semibold">{DOCTOR.name}</span> na{" "}
-              <span className="text-foreground font-semibold">Clinicor</span> e no{" "}
-              <span className="text-foreground font-semibold">HGP</span> (Paragominas), e no{" "}
-              <span className="text-foreground font-semibold">IOB</span> e{" "}
-              <span className="text-foreground font-semibold">Vitria</span> (Belém).
+              Consultas, exames e cirurgias com o{" "}
+              <span className="text-foreground font-semibold">{DOCTOR.name}</span>. São
+              quatro locais de atendimento entre as duas cidades — você escolhe o
+              mais perto de você ao agendar.
             </p>
 
             {/* CTAs — CTA primária "Ver horários disponíveis" */}

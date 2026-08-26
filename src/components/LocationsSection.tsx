@@ -62,7 +62,7 @@ const LocationsSection = () => {
   )}&z=16&hl=pt-BR&output=embed`;
 
   return (
-    <section id="locais" className="py-20 md:py-28 bg-card relative noise-overlay" ref={sectionRef}>
+    <section id="locais" className="overflow-hidden py-20 md:py-28 bg-card relative noise-overlay" ref={sectionRef}>
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
 
       {/* Topographic rings decoration */}

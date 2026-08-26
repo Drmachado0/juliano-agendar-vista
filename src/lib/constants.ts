@@ -8,7 +8,10 @@ export const GOOGLE_REVIEW_URL = "https://g.page/r/CTkTpXB1m13mEAE/review";
 // avaliações reais crescem no perfil do Google Business.
 export const GOOGLE_REVIEWS = {
   rating: 5.0,
-  count: 10,
+  // 14 e a contagem real do pool sincronizado do Google. Estava em 10, e como o
+  // hero usa esta constante enquanto a secao de depoimentos usa o pool, a mesma
+  // pagina exibia 10 no topo e 14 mais abaixo.
+  count: 14,
 } as const;
 
 // Identidade profissional — exibida no header/hero/rodapé.
