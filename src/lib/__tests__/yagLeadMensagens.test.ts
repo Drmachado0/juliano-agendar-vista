@@ -7,6 +7,9 @@ import {
   BOAS_VINDAS_YAG_FALLBACK,
   TELEFONE_NOTIFICACAO_INTERNA,
   ehLeadYag,
+  ehNumeroNotificacaoInterna,
+  getTelefoneNotificacaoInterna,
+  normalizarTelefoneInterno,
   extrairOlho,
   formatarTelefoneBr,
   formatarNascimento,
@@ -125,5 +128,42 @@ describe("Aviso interno com os dados do paciente", () => {
   it("não polui o aviso quando o paciente foi avisado", () => {
     const msg = montarResumoLeadYag({ ...base, pacienteAvisado: true });
     expect(msg).not.toMatch(/NÃO chegou/i);
+  });
+});
+
+describe("Número interno da clínica", () => {
+  it("usa o padrão quando não há secret configurado", () => {
+    expect(getTelefoneNotificacaoInterna()).toBe(TELEFONE_NOTIFICACAO_INTERNA);
+  });
+
+  it("normaliza para 55 + DDD + número", () => {
+    expect(normalizarTelefoneInterno("(91) 99130-0174")).toBe("5591991300174");
+    expect(normalizarTelefoneInterno("91991300174")).toBe("5591991300174");
+    expect(normalizarTelefoneInterno("5591991300174")).toBe("5591991300174");
+    expect(normalizarTelefoneInterno("")).toBe("");
+    expect(normalizarTelefoneInterno(null)).toBe("");
+  });
+
+  it("reconhece o número interno em qualquer formatação", () => {
+    for (const t of [
+      "5591991300174",
+      "+55 (91) 99130-0174",
+      "91991300174",
+      "991300174",
+    ]) {
+      expect(ehNumeroNotificacaoInterna(t)).toBe(true);
+    }
+  });
+
+  it("não confunde com o telefone de um paciente", () => {
+    for (const t of ["5591993937966", "5562984719356", "5592991662007"]) {
+      expect(ehNumeroNotificacaoInterna(t)).toBe(false);
+    }
+  });
+
+  it("não trata ausência de telefone como número interno", () => {
+    for (const t of ["", null, undefined, "   ", "123"]) {
+      expect(ehNumeroNotificacaoInterna(t)).toBe(false);
+    }
   });
 });

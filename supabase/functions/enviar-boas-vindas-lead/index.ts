@@ -9,6 +9,7 @@ import {
   BOAS_VINDAS_YAG_FALLBACK,
   TEMPLATE_YAG,
   ehLeadYag,
+  ehNumeroNotificacaoInterna,
 } from "../_shared/yagLeadMensagens.ts";
 
 
@@ -184,7 +185,39 @@ Deno.serve(async (req) => {
         const phoneClean = lead.telefone_whatsapp.replace(/\D/g, '');
         const normalizedPhone = normalizePhoneNumber(phoneClean);
 
-        // GUARD #0: rate-limit anti-loop (telefone)
+        // GUARD #0: o número interno da clínica não é paciente.
+        // Quando um lead entra com o mesmo aparelho que recebe os avisos, a
+        // clínica passa a receber "Olá, <nome>! Recebemos o seu formulário",
+        // endereçada a si mesma, e o aviso com os dados de quem preencheu se
+        // perde no meio. Aqui o envio automático para e o lead vai para um
+        // humano decidir — provavelmente é cadastro de teste ou telefone
+        // digitado errado no formulário.
+        if (ehNumeroNotificacaoInterna(phoneClean)) {
+          console.warn(`[boas-vindas] ☎️ ${normalizedPhone} é o número interno da clínica — lead ${lead.id} → PRECISA_DE_HUMANO`);
+          await supabase
+            .from('agendamentos')
+            .update({
+              status_crm: 'PRECISA_DE_HUMANO',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', lead.id)
+            .eq('status_funil', 'lead')
+            .eq('status_crm', 'NOVO LEAD');
+
+          await supabase.from('mensagens_whatsapp').insert({
+            agendamento_id: lead.id,
+            telefone: normalizedPhone,
+            direcao: 'OUT',
+            conteudo: mensagem,
+            tipo_mensagem: 'boas_vindas',
+            status_envio: 'erro',
+            error_message: 'Telefone do lead e o numero interno de avisos da clinica',
+          });
+          falhas++;
+          continue;
+        }
+
+        // GUARD #1: rate-limit anti-loop (telefone)
         const rl = await podeEnviarOutbound(supabase, phoneClean, [LIMITES_PADRAO.boas_vindas]);
         if (!rl.ok) {
           console.warn(`[boas-vindas] 🚫 Rate limit ${normalizedPhone} lead ${lead.id}: ${rl.motivo}`);
@@ -193,7 +226,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // GUARD #1: cache de verificações WhatsApp — se sabemos que o número
+        // GUARD #2: cache de verificações WhatsApp — se sabemos que o número
         // não tem WhatsApp, não tenta enviar (evita HTTP 400 da Evolution).
         const numeroInvalido = await isKnownInvalidWhatsapp(supabase, phoneClean);
         if (numeroInvalido) {

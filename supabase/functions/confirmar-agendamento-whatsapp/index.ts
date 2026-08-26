@@ -218,8 +218,23 @@ serve(async (req) => {
       ? formatarData(agendamentoData.data_nascimento)
       : '';
 
+    // Chave de idempotência consumida pelo n8n (n8n_eventos_processados, com
+    // ON CONFLICT DO NOTHING). Precisa ser única por confirmação: com o literal
+    // `sem_id`, toda confirmação sem agendamento_id gerava a MESMA chave, e
+    // pacientes distintos na mesma rodada colidiam entre si — o dedup passava a
+    // tratar o segundo como repetição do primeiro. Sem id, o evento é
+    // identificado pelo trio telefone+data+hora: continua determinístico (uma
+    // retentativa do mesmo envio ainda deduplica) sem colidir entre pacientes.
+    const chaveEvento =
+      agendamentoId ||
+      [telefoneFormatado, dataFmt, horaFmt]
+        .map((parte) => (parte ?? '').trim())
+        .filter(Boolean)
+        .join('|') ||
+      'sem_id';
+
     const payload = {
-      event_id: `${agendamentoId ?? 'sem_id'}:confirmacao_imediata`,
+      event_id: `${chaveEvento}:confirmacao_imediata`,
       agendamento_id: agendamentoId,
       telefone: telefoneFormatado,
       nome: agendamentoData.nome_completo,

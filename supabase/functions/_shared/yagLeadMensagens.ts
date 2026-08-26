@@ -10,11 +10,64 @@
  */
 
 /**
- * Número interno da clínica para avisos de novo lead.
+ * Número interno da clínica para avisos de novo lead — valor padrão.
  * Mesmo valor de HANDOFF_NOTIFICATION_PHONE (handoff de exames) — mantido aqui
  * como constante própria para não acoplar este fluxo ao guard de exames.
+ *
+ * Prefira `getTelefoneNotificacaoInterna()` a esta constante: ela respeita o
+ * secret `TELEFONE_NOTIFICACAO_INTERNA` e permite apontar os avisos para outro
+ * aparelho sem deploy. O padrão só vale enquanto o secret não existir.
  */
 export const TELEFONE_NOTIFICACAO_INTERNA = "5591991300174";
+
+/**
+ * Lê um secret sem exigir o runtime do Deno.
+ * Em produção roda no Deno; nos testes (vitest/Node) o global não existe e o
+ * módulo precisa continuar importável — daí o acesso defensivo.
+ */
+function lerEnv(nome: string): string {
+  const runtime = (globalThis as {
+    Deno?: { env?: { get(k: string): string | undefined } };
+  }).Deno;
+  try {
+    return runtime?.env?.get(nome) ?? "";
+  } catch {
+    // Deno sem permissão de env: cai no padrão em vez de derrubar o envio.
+    return "";
+  }
+}
+
+/** Só dígitos, com DDI 55 na frente. Base para comparar dois telefones. */
+export function normalizarTelefoneInterno(input?: string | null): string {
+  let d = (input ?? "").replace(/\D/g, "");
+  if (!d) return "";
+  if (!d.startsWith("55") && (d.length === 10 || d.length === 11)) d = "55" + d;
+  return d;
+}
+
+/** Número que recebe os avisos internos: secret quando houver, padrão quando não. */
+export function getTelefoneNotificacaoInterna(): string {
+  return (
+    normalizarTelefoneInterno(lerEnv("TELEFONE_NOTIFICACAO_INTERNA")) ||
+    TELEFONE_NOTIFICACAO_INTERNA
+  );
+}
+
+/**
+ * True quando o telefone é o número interno da clínica.
+ *
+ * Existe porque o mesmo aparelho que recebe os avisos já apareceu cadastrado
+ * como lead: a clínica passou a receber mensagens de boas-vindas endereçadas a
+ * si mesma, no lugar do aviso com os dados do paciente. Compara pelos últimos 8
+ * dígitos, mesma convenção de `isKnownInvalidWhatsapp`, para tolerar variação
+ * de DDI e do nono dígito.
+ */
+export function ehNumeroNotificacaoInterna(telefone?: string | null): boolean {
+  const alvo = normalizarTelefoneInterno(getTelefoneNotificacaoInterna());
+  const candidato = normalizarTelefoneInterno(telefone);
+  if (alvo.length < 8 || candidato.length < 8) return false;
+  return alvo.slice(-8) === candidato.slice(-8);
+}
 
 /** Tipo de template no banco (`templates_whatsapp.tipo`). */
 export const TEMPLATE_YAG = "boas_vindas_lead_yag";
