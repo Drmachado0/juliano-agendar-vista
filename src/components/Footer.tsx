@@ -1,5 +1,5 @@
 import { Heart, MapPin, Instagram, MessageCircle } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import logoImage from "@/assets/dr-juliano-logo.svg";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
@@ -14,8 +14,17 @@ const Footer = () => {
   const footerContactUrl = waLink(undefined, "site_footer_contact");
   const footerSocialUrl = waLink(undefined, "site_footer_social");
 
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  // Mesmo problema do Header: fora da home o id nao existe e o clique morria em
+  // silencio. Navega para a home com a ancora; o ScrollToTop rola ate a secao.
   const scrollToSection = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    if (pathname === "/") {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    navigate(`/#${id}`);
   };
 
   return (
