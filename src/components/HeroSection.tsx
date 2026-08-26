@@ -3,6 +3,7 @@ import { Star, CalendarCheck, MessageCircle, ShieldCheck, ArrowRight, MapPin, Pa
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import drJulianoHeroWebp from "@/assets/dr-juliano-hero.webp";
+import drJulianoHeroWebp540 from "@/assets/dr-juliano-hero-540.webp";
 import drJulianoHeroVideo from "@/assets/dr-juliano-hero.mp4";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
@@ -23,6 +24,10 @@ const HeroSection = () => {
   // Renderiza o vídeo sempre que possível (inclusive mobile).
   // Só desabilita se o usuário pediu reduced-motion ou está em save-data/2g.
   const [enableVideo, setEnableVideo] = useState(false);
+  // O atributo poster do <video> nao aceita srcset, entao a fonte e escolhida
+  // aqui. Abaixo de lg o container tem no maximo 16rem (256px CSS), coberto de
+  // sobra pela variante de 540px; servir a de 900px ali desperdicava ~30 KB.
+  const [heroPoster, setHeroPoster] = useState(drJulianoHeroWebp540);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -30,6 +35,9 @@ const HeroSection = () => {
     const conn = (navigator as any).connection;
     const saveData = !!(conn && (conn.saveData || /2g/.test(conn.effectiveType || "")));
     setEnableVideo(!reducedMotion && !saveData);
+    if (window.matchMedia("(min-width: 1024px)").matches) {
+      setHeroPoster(drJulianoHeroWebp);
+    }
   }, []);
 
   const toggleVideo = () => {
@@ -142,7 +150,7 @@ const HeroSection = () => {
                     <video
                       ref={videoRef}
                       src={drJulianoHeroVideo}
-                      poster={drJulianoHeroWebp}
+                      poster={heroPoster}
                       autoPlay
                       muted
                       loop
@@ -165,6 +173,8 @@ const HeroSection = () => {
                 ) : (
                   <img
                     src={drJulianoHeroWebp}
+                    srcSet={`${drJulianoHeroWebp540} 540w, ${drJulianoHeroWebp} 900w`}
+                    sizes="(min-width: 1024px) 23rem, (min-width: 640px) 16rem, 11rem"
                     alt={`${DOCTOR.name} - ${DOCTOR.specialty}`}
                     width={368}
                     height={480}

@@ -35,12 +35,14 @@ const InsuranceSection = () => {
   }, []);
 
   const insurances = [
-    { name: "Particular", logo: logoParticular, highlight: true },
-    { name: "Bradesco Saúde", logo: logoBradesco, highlight: false },
-    { name: "Unimed", logo: logoUnimed, highlight: false },
-    { name: "Cassi", logo: logoCassi, highlight: false },
-    { name: "Sul América", logo: logoSulamerica, highlight: false },
-    { name: "Saúde Caixa", logo: logoSaudeCaixa, highlight: false },
+    // width = largura intrinseca reescalada para height=28. Sem ela, com
+    // "w-auto" o browser nao reserva espaco horizontal e o layout salta.
+    { name: "Particular", logo: logoParticular, width: 32, highlight: true },
+    { name: "Bradesco Saúde", logo: logoBradesco, width: 26, highlight: false },
+    { name: "Unimed", logo: logoUnimed, width: 37, highlight: false },
+    { name: "Cassi", logo: logoCassi, width: 46, highlight: false },
+    { name: "Sul América", logo: logoSulamerica, width: 51, highlight: false },
+    { name: "Saúde Caixa", logo: logoSaudeCaixa, width: 45, highlight: false },
   ];
 
   return (
@@ -77,6 +79,7 @@ const InsuranceSection = () => {
                   alt={`Convênio ${insurance.name}`}
                   loading="lazy"
                   decoding="async"
+                  width={insurance.width}
                   height={28}
                   className="h-7 w-auto object-contain"
                 />
