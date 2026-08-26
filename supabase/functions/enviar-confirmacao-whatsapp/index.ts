@@ -13,6 +13,8 @@ import { isBotPaused, isKnownInvalidWhatsapp } from '../_shared/whatsappGuards.t
 import { podeEnviarOutbound, LIMITES_PADRAO, logarBloqueioRateLimit } from '../_shared/rateLimitOutbound.ts';
 import { envioAutomaticoLiberado } from '../_shared/envioStatusGlobal.ts';
 import { requireCronSecret, unauthorizedResponse } from '../_shared/authGuards.ts';
+import { isRegistroAtivo } from '../_shared/statusTerminais.ts';
+import { dataCivilBelem } from '../_shared/dataBelem.ts';
 
 
 const corsHeaders = {
@@ -59,8 +61,11 @@ serve(async (req) => {
     const now = new Date();
     const futureLimit = new Date(now.getTime() + CONFIRMATION_HOURS_BEFORE * 60 * 60 * 1000);
     
-    const todayDate = now.toISOString().split('T')[0];
-    const futureLimitDate = futureLimit.toISOString().split('T')[0];
+    // Janela pelo calendário de Belém, não pelo de UTC: `toISOString()` já
+    // aponta para o dia seguinte depois das 21:00 locais, e o agendamento de
+    // hoje cairia fora do `gte` e ficaria sem confirmação.
+    const todayDate = dataCivilBelem(now);
+    const futureLimitDate = dataCivilBelem(futureLimit);
 
     console.log(`[Confirmação] Buscando agendamentos entre ${todayDate} e ${futureLimitDate}`);
 
@@ -98,6 +103,20 @@ serve(async (req) => {
     // Processar cada agendamento
     for (const agendamento of agendamentos) {
       try {
+        // GUARD #0: registro terminal ou de teste não recebe confirmação.
+        //
+        // A busca filtra só por confirmation_status e data, então um
+        // agendamento CANCELADO que ficou como 'nao_enviado' recebia
+        // "Recebemos seu pedido de agendamento..." na véspera.
+        if (!isRegistroAtivo(agendamento)) {
+          console.log(
+            `[Confirmação] ${agendamento.id} inativo` +
+              ` (crm=${agendamento.status_crm} funil=${agendamento.status_funil}` +
+              ` sandbox=${agendamento.is_sandbox}) — pulando`,
+          );
+          continue;
+        }
+
         // Verificar se o agendamento está dentro da janela de tempo
         const agendamentoDateTime = new Date(
           `${agendamento.data_agendamento}T${agendamento.hora_agendamento}`

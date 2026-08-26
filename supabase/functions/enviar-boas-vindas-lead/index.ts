@@ -107,6 +107,8 @@ Deno.serve(async (req) => {
         .select('id, nome_completo, telefone_whatsapp, tipo_atendimento, local_atendimento, convenio')
         .eq('status_funil', 'lead')
         .eq('status_crm', 'NOVO LEAD')
+        // Registro de teste nao dispara WhatsApp para numero real.
+        .not('is_sandbox', 'is', true)
         .lt('created_at', cutoffISO)
         .order('created_at', { ascending: true })
         .limit(fetchLimit);
