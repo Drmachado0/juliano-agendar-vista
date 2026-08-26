@@ -28,6 +28,12 @@ const ProcedimentosIndex = () => {
       icon: Zap,
     },
     {
+      title: "Glaucoma",
+      description: "Diagnóstico e acompanhamento do glaucoma, com tonometria, gonioscopia, campo visual e OCT.",
+      link: "/procedimentos/glaucoma",
+      icon: Eye,
+    },
+    {
       title: "Consulta Oftalmológica",
       description: "Avaliação completa da saúde ocular, prescrição de óculos e acompanhamento de doenças.",
       link: "/procedimentos/consulta-oftalmologica",

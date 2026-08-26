@@ -15,6 +15,7 @@
 - [Consulta Oftalmológica](/procedimentos/consulta-oftalmologica): Avaliação completa da saúde ocular, prescrição de óculos e acompanhamento de doenças.
 - [Cirurgia de Catarata](/procedimentos/cirurgia-de-catarata): Substituição do cristalino opaco por lente intraocular.
 - [Cirurgia de Pterígio](/procedimentos/cirurgia-de-pterigio): Remoção do tecido que cresce sobre a córnea.
+- [Glaucoma](/procedimentos/glaucoma): Diagnóstico e acompanhamento do glaucoma; exames e tratamento.
 - [Capsulotomia YAG Laser](/procedimentos/capsulotomia-yag-laser): Tratamento da opacificação da cápsula após cirurgia de catarata.
 
 ## Outros
