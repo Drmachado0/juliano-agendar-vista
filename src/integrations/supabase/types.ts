@@ -225,6 +225,27 @@ export type Database = {
           },
         ]
       }
+      alertas_sistema: {
+        Row: {
+          created_at: string
+          detalhe: string | null
+          id: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          detalhe?: string | null
+          id?: string
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          detalhe?: string | null
+          id?: string
+          tipo?: string
+        }
+        Relationships: []
+      }
       avaliacoes_google: {
         Row: {
           ativo: boolean | null
