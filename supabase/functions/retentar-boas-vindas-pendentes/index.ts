@@ -18,6 +18,7 @@ import {
   sanitizePayload,
 } from "../_shared/evolutionApiClient.ts";
 import { requireCronSecret } from "../_shared/authGuards.ts";
+import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
 
 
 const corsHeaders = {
@@ -77,6 +78,18 @@ Deno.serve(async (req) => {
     });
   }
 
+  // KILL SWITCH: o botao "Parar tudo agora" do admin precisa alcancar ESTE cron.
+  // Ele ficou de fora quando o guard foi adicionado aos outros tres crons, e o
+  // resultado foi um reenvio que a parada de emergencia nao conseguia conter.
+  const killSwitch = await envioAutomaticoLiberado(supabase);
+  if (!killSwitch.liberado) {
+    console.warn(`[retry-boas-vindas] 🛑 Bloqueado pelo kill switch: ${killSwitch.motivo}`);
+    return new Response(
+      JSON.stringify({ processed: 0, retried: 0, confirmed: 0, escalated: 0, total_pending: 0, blocked: true, reason: killSwitch.motivo }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
   const nowIso = new Date().toISOString();
   const cutoffPendingIso = new Date(
     Date.now() - PENDING_GRACE_MIN * 60_000,
@@ -87,7 +100,7 @@ Deno.serve(async (req) => {
     //    e que ainda estão em NOVO LEAD).
     const { data: pendentes, error: errPend } = await supabase
       .from("mensagens_whatsapp")
-      .select("id, agendamento_id, telefone, conteudo, created_at, status_envio")
+      .select("id, agendamento_id, telefone, conteudo, created_at, status_envio, payload")
       .eq("tipo_mensagem", "boas_vindas")
       .eq("direcao", "OUT")
       .eq("status_envio", "pendente")
@@ -141,16 +154,25 @@ Deno.serve(async (req) => {
       if (!lead) continue; // já mudou de status, não re-tenta
       processed++;
 
-      // Conta tentativas anteriores e checa backoff
+      // Conta tentativas anteriores e checa backoff.
+      //
+      // O contador NAO pode sair do numero de linhas: o indice parcial
+      // mensagens_whatsapp_boas_vindas_unique admite UMA linha boas_vindas OUT
+      // por agendamento, entao a contagem por linhas ficava presa em 1 e o teto
+      // de MAX_TENTATIVAS nunca era alcancado — o lead era reenviado para
+      // sempre. A tentativa vive no payload da propria linha.
       const { data: tentativas } = await supabase
         .from("mensagens_whatsapp")
-        .select("id, created_at, status_envio")
+        .select("id, created_at, status_envio, payload")
         .eq("agendamento_id", cand.agendamento_id!)
         .eq("tipo_mensagem", "boas_vindas")
         .eq("direcao", "OUT")
         .order("created_at", { ascending: false });
 
-      const totalTentativas = tentativas?.length ?? 0;
+      const totalTentativas = Math.max(
+        tentativas?.length ?? 0,
+        ...(tentativas ?? []).map((t: any) => Number(t.payload?.tentativa) || 0),
+      );
       const ultima = tentativas?.[0];
       const ultimaMs = ultima ? new Date(ultima.created_at).getTime() : 0;
       const idadeMin = (Date.now() - ultimaMs) / 60_000;
@@ -195,29 +217,52 @@ Deno.serve(async (req) => {
 
         if (!resultado.success) {
           statusEnvio = "erro";
-        } else if (resultado.confirmed && resultado.messageId) {
-          statusEnvio = (resultado.deliveryStatus as any) ?? "enviado";
-          confirmadoEntrega = true;
         } else {
-          statusEnvio = "pendente";
+          // O provedor atual (n8n -> ManyChat) nao devolve ack de entrega, entao
+          // `confirmed` e sempre false aqui. Gravar "pendente" fazia toda
+          // mensagem ENTREGUE voltar para a fila deste cron na rodada seguinte.
+          // O status passa a refletir o despacho real; a promocao para
+          // AGUARDANDO segue exigindo ack de verdade.
+          statusEnvio = (resultado.deliveryStatus as any) ?? "enviado";
+          confirmadoEntrega = resultado.confirmed === true && !!resultado.messageId;
         }
 
-        await supabase.from("mensagens_whatsapp").insert({
-          agendamento_id: cand.agendamento_id,
-          telefone: normalizedPhone,
-          direcao: "OUT",
-          conteudo,
-          tipo_mensagem: "boas_vindas",
-          status_envio: statusEnvio,
-          mensagem_externa_id: resultado.messageId || null,
-          error_message: resultado.errorMessage || null,
-          payload: sanitizePayload({
-            event: "boas_vindas_retry",
-            tentativa: totalTentativas + 1,
-            evolution_status: resultado.evolutionStatus ?? null,
-            response: resultado.sanitizedResponse ?? null,
-          }) as any,
-        });
+        // UPDATE, nao INSERT: o indice parcial unico so admite uma linha
+        // boas_vindas OUT por agendamento, entao o insert batia em 23505 a cada
+        // rodada — em silencio, porque o erro nunca era conferido — e a linha
+        // original seguia "pendente", realimentando este mesmo cron.
+        const { error: updateErr } = await supabase
+          .from("mensagens_whatsapp")
+          .update({
+            telefone: normalizedPhone,
+            status_envio: statusEnvio,
+            mensagem_externa_id: resultado.messageId || null,
+            error_message: resultado.errorMessage || null,
+            payload: sanitizePayload({
+              event: "boas_vindas_retry",
+              tentativa: totalTentativas + 1,
+              evolution_status: resultado.evolutionStatus ?? null,
+              response: resultado.sanitizedResponse ?? null,
+            }) as any,
+          })
+          .eq("id", cand.id);
+
+        if (updateErr) {
+          // Sem registrar a tentativa, o proximo ciclo reenviaria com o mesmo
+          // contador. Escala para humano e para por aqui, em vez de repetir.
+          console.error(
+            `[retry-boas-vindas] falha ao registrar tentativa do lead ${cand.agendamento_id}:`,
+            updateErr.message,
+          );
+          await escalarParaHumano(
+            supabase,
+            cand.agendamento_id!,
+            lead.telefone_whatsapp,
+            totalTentativas + 1,
+          );
+          escalated++;
+          continue;
+        }
 
         retried++;
 
