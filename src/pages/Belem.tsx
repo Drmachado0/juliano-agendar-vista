@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import AreasDeAtuacao from "@/components/AreasDeAtuacao";
 import { Button } from "@/components/ui/button";
 import { CalendarCheck, MapPin, Phone, Navigation, BadgeCheck } from "lucide-react";
 import { DOCTOR } from "@/lib/constants";
@@ -186,6 +187,14 @@ export default function Belem() {
                 </div>
               ))}
             </dl>
+          </section>
+
+          <section aria-labelledby="atuacao-belem" className="mb-12">
+            <AreasDeAtuacao
+              headingId="atuacao-belem"
+              titulo="O que é atendido em Belém"
+              descricao="Consultas, exames e procedimentos. A indicação e o local de cada um são definidos na consulta."
+            />
           </section>
 
           <div className="rounded-xl border border-border bg-card p-6">

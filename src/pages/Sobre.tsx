@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import AreasDeAtuacao from "@/components/AreasDeAtuacao";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, CalendarCheck, GraduationCap, BadgeCheck, MapPin } from "lucide-react";
 import { DOCTOR, FORMACAO, INSTITUICOES_FORMACAO } from "@/lib/constants";
@@ -163,36 +164,10 @@ export default function Sobre() {
 
 
           <section aria-labelledby="atuacao" className="mb-12">
-            <h2 id="atuacao" className="text-xl md:text-2xl font-bold text-foreground mb-3">
-              Principais áreas de atuação
-            </h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              O fellowship em glaucoma orienta boa parte da rotina, mas o
-              consultório cobre a oftalmologia geral — da consulta de rotina às
-              cirurgias eletivas.
-            </p>
-            <ul className="space-y-3">
-              {[
-                { to: "/procedimentos/glaucoma", t: "Glaucoma", d: "Diagnóstico e acompanhamento, com tonometria, gonioscopia, campo visual e OCT." },
-                { to: "/procedimentos/cirurgia-de-catarata", t: "Cirurgia de catarata", d: "Substituição do cristalino opaco por lente intraocular." },
-                { to: "/procedimentos/cirurgia-de-pterigio", t: "Cirurgia de pterígio", d: "Remoção do tecido que avança sobre a córnea." },
-                { to: "/procedimentos/capsulotomia-yag-laser", t: "Capsulotomia YAG laser", d: "Tratamento da opacificação da cápsula após a cirurgia de catarata." },
-                { to: "/procedimentos/consulta-oftalmologica", t: "Consulta oftalmológica", d: "Avaliação completa da saúde ocular e acompanhamento." },
-              ].map((a) => (
-                <li key={a.to}>
-                  <Link
-                    to={a.to}
-                    className="group flex items-start gap-3 rounded-lg border border-border/60 bg-card p-4 hover:border-primary/40 transition-colors"
-                  >
-                    <ArrowRight className="w-4 h-4 text-primary shrink-0 mt-1 transition-transform group-hover:translate-x-0.5" />
-                    <span>
-                      <span className="font-semibold text-foreground block">{a.t}</span>
-                      <span className="text-sm text-muted-foreground">{a.d}</span>
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <AreasDeAtuacao
+              headingId="atuacao"
+              descricao="O fellowship em glaucoma orienta boa parte da rotina, mas o consultório cobre a oftalmologia geral — da consulta de rotina às cirurgias eletivas."
+            />
           </section>
 
           <section aria-labelledby="onde" className="mb-12">

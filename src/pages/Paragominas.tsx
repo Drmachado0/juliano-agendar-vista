@@ -27,6 +27,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import { AREAS_ATUACAO } from "@/components/AreasDeAtuacao";
 import logoImage from "@/assets/dr-juliano-logo.svg";
 import drHero from "@/assets/dr-juliano-hero.webp";
 import drHero2x from "@/assets/dr-juliano-hero@2x.webp";
@@ -1072,6 +1073,32 @@ const Paragominas = () => {
                   Chamar no WhatsApp
                 </a>
               </div>
+            </div>
+          </section>
+          <section aria-labelledby="atuacao-pgm" className="py-14">
+            <div className="mx-auto w-full max-w-[64rem] px-5">
+              <h2 id="atuacao-pgm" className="pgm-serif text-2xl md:text-3xl mb-2">
+                O que é atendido aqui
+              </h2>
+              <p className="text-sm opacity-70 mb-6">
+                Consultas, exames e cirurgias. A indicação de cada procedimento é
+                definida na avaliação.
+              </p>
+              <ul className="grid sm:grid-cols-2 gap-3">
+                {/* Paragominas.test.tsx exige que este main nao cite YAG nem
+                    Capsulotomia — regra editorial da pagina da cidade. */}
+                {AREAS_ATUACAO.filter((a) => !/yag/i.test(a.to)).map((a) => (
+                  <li key={a.to}>
+                    <Link
+                      to={a.to}
+                      className="block h-full rounded-xl border border-current/15 p-4 transition-colors hover:border-current/35"
+                    >
+                      <span className="font-semibold block">{a.titulo}</span>
+                      <span className="text-sm opacity-70">{a.descricao}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           </section>
         </main>
