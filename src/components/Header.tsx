@@ -21,9 +21,11 @@ const Header = () => {
     // "Sobre" tem pagina propria; os demais sao ancoras de secao da home.
     { label: "Sobre", id: "sobre", href: "/sobre" },
     { label: "Procedimentos", id: "procedimentos" },
+    { label: "Glaucoma", id: "glaucoma", href: "/procedimentos/glaucoma" },
     { label: "YAG Laser", id: "yag-laser" },
     { label: "Depoimentos", id: "depoimentos" },
     { label: "Locais", id: "locais" },
+    { label: "Belém", id: "belem", href: "/belem" },
     { label: "Convênios", id: "convenios" },
   ];
 
@@ -92,7 +94,7 @@ const Header = () => {
           </button>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-0.5">
+          <nav className="hidden xl:flex items-center gap-0.5">
             {navItems.map((item) => {
               const classes = `relative px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                 activeSection === item.id
@@ -132,7 +134,7 @@ const Header = () => {
           </div>
 
           {/* Mobile Actions */}
-          <div className="flex md:hidden items-center gap-1.5">
+          <div className="flex xl:hidden items-center gap-1.5">
             <Link
               to="/agendamento"
               onClick={() => trackCTAClick('agendar_consulta', 'header_mobile', 'Agendar')}
@@ -153,7 +155,7 @@ const Header = () => {
         </div>
 
         {/* Mobile Menu */}
-        <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
+        <div className={`xl:hidden overflow-hidden transition-all duration-300 ease-in-out ${
           isMenuOpen ? 'max-h-[28rem] mt-3 pb-4 border-t border-border/30 pt-3' : 'max-h-0'
         }`}>
           <div className={`${isMenuOpen ? 'backdrop-blur-xl' : ''}`}>
