@@ -192,10 +192,16 @@ const TestimonialsSection = ({
   const ratingLabel = displayRating.toFixed(1);
   const title = displayRating >= 4.95 ? "Nota máxima no Google" : "Avaliação dos pacientes no Google";
 
-  // useGoogleReviews já resolve o fallback (realCount ?? GOOGLE_REVIEWS.count),
-  // então reviews.count nunca é inválido. Antes isto caía para pool.length, que
-  // exibia "0 avaliações" sempre que a sincronização do Google não trazia nada.
-  const displayCount = reviews.count;
+  // Mesma escada do displayRating acima. A contagem real do pool (hoje 14) e
+  // melhor que a constante, entao vem primeiro; a constante so entra enquanto o
+  // pool ainda nao carregou. Antes caia direto para pool.length, o que fazia a
+  // secao exibir "5.0 baseado em 0 avaliacoes" durante o carregamento — sob o
+  // titulo "Nota maxima no Google".
+  const displayCount = reviews.hasRealAggregate
+    ? reviews.count
+    : pool.length > 0
+    ? pool.length
+    : GOOGLE_REVIEWS.count;
 
   // Layout responsivo + auto-rotate controls.
   const itemsPerPageRaw = useItemsPerPage();
