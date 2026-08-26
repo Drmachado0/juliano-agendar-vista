@@ -71,12 +71,16 @@ describe("Paragominas landing page — restructure", () => {
     expect(screen.getAllByText(/CRM-PA 15253/i).length).toBeGreaterThan(0);
   });
 
-  it("Main não menciona Belém nem YAG/Capsulotomia", () => {
+  // A proibicao de Belem continua: esta e a pagina da cidade de Paragominas e
+  // citar a outra cidade dilui a intencao de busca local.
+  //
+  // A de YAG/Capsulotomia caiu em 26/08/2026: o procedimento passou a ser
+  // oferecido no Hospital Geral de Paragominas — a home ja anuncia "Agora no
+  // HGP — Paragominas" —, entao omitir era esconder um servico real da cidade.
+  it("Main não menciona Belém", () => {
     renderPage();
     const main = screen.getByRole("main");
     expect(main.textContent || "").not.toMatch(/Bel[eé]m/i);
-    expect(main.textContent || "").not.toMatch(/YAG/i);
-    expect(main.textContent || "").not.toMatch(/Capsulotomia/i);
   });
 
   it("Mostra Clinicor e HGP (Paragominas apenas)", () => {

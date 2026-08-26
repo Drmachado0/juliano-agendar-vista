@@ -1085,9 +1085,7 @@ const Paragominas = () => {
                 definida na avaliação.
               </p>
               <ul className="grid sm:grid-cols-2 gap-3">
-                {/* Paragominas.test.tsx exige que este main nao cite YAG nem
-                    Capsulotomia — regra editorial da pagina da cidade. */}
-                {AREAS_ATUACAO.filter((a) => !/yag/i.test(a.to)).map((a) => (
+                {AREAS_ATUACAO.map((a) => (
                   <li key={a.to}>
                     <Link
                       to={a.to}
