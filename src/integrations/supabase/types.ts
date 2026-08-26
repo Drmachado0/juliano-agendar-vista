@@ -2188,6 +2188,10 @@ export type Database = {
           telefone_whatsapp: string
         }[]
       }
+      buscar_agendamento_por_telefone_norm: {
+        Args: { p_telefone_normalizado: string }
+        Returns: string
+      }
       buscar_paciente: {
         Args: { p_phone_number: string }
         Returns: {
