@@ -18,6 +18,7 @@ import {
   sanitizePayload,
 } from "../_shared/evolutionApiClient.ts";
 import { requireCronSecret } from "../_shared/authGuards.ts";
+import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
 
 
 const corsHeaders = {
@@ -75,6 +76,19 @@ Deno.serve(async (req) => {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+  }
+
+  // KILL SWITCH: o botao de panico bloqueia `enviar-boas-vindas-lead`, mas
+  // esta funcao — que reenvia exatamente as mesmas boas-vindas — nao o
+  // consultava. Parar tudo parava o envio novo e deixava o retry seguir
+  // mandando, o que anulava o botao para esse tipo de mensagem.
+  const killSwitch = await envioAutomaticoLiberado(supabase);
+  if (!killSwitch.liberado) {
+    console.warn(`[retry-boas-vindas] 🛑 Bloqueado pelo kill switch: ${killSwitch.motivo}`);
+    return new Response(
+      JSON.stringify({ processed: 0, retried: 0, blocked: true, reason: killSwitch.motivo }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 
   const nowIso = new Date().toISOString();
