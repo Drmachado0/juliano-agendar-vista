@@ -306,12 +306,14 @@ Deno.serve(async (req) => {
         if (!resultado.success) {
           statusEnvio = 'erro';
           confirmadoEntrega = false;
-        } else if (resultado.confirmed && resultado.messageId) {
-          statusEnvio = resultado.deliveryStatus ?? 'enviado';
-          confirmadoEntrega = true;
         } else {
-          statusEnvio = 'pendente';
-          confirmadoEntrega = false;
+          // O provedor atual (n8n → ManyChat) não devolve ack de entrega, então
+          // `confirmed` é sempre false aqui. Gravar 'pendente' deixava toda
+          // mensagem ENTREGUE na fila de `retentar-boas-vindas-pendentes`, que
+          // a reenviava a cada ciclo, para sempre. O status passa a refletir o
+          // despacho real; a promoção para AGUARDANDO segue exigindo ack.
+          statusEnvio = resultado.deliveryStatus ?? 'enviado';
+          confirmadoEntrega = resultado.confirmed === true && !!resultado.messageId;
         }
 
         // Atualiza o claim com o resultado real (NÃO insere de novo — dedup garantida)
