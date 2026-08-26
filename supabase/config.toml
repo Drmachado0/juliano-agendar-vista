@@ -146,3 +146,6 @@ verify_jwt = true
 # buscar-contexto-paciente e atualizar-status-crm. Nunca publica.
 [functions.confirmar-agendamento]
 verify_jwt = false
+
+[functions.alerta-envio-whatsapp-fora]
+verify_jwt = false
