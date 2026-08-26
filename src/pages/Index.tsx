@@ -1,4 +1,6 @@
 import { Helmet } from "react-helmet-async";
+import { DOCTOR } from "@/lib/constants";
+import { BASE_URL, PHYSICIAN_ID, clinicNodes, citiesServed } from "@/lib/locations";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import AboutSection from "@/components/AboutSection";
@@ -19,42 +21,46 @@ import { useGoogleReviews } from "@/hooks/useGoogleReviews";
 const Index = () => {
   const { raw: waRaw } = useSiteWhatsApp();
   const reviews = useGoogleReviews();
-  // Structured data for SEO (ratingCount = total EXATO, exigido pelo Google)
+  // JSON-LD em @graph: um no Physician + um MedicalClinic por endereco fisico.
+  // Antes era uma unica entidade Physician com array de 2 address (de 4 reais),
+  // o que faz o Google associar telefone e avaliacoes a um local so. Os
+  // enderecos vem de lib/locations.ts, a mesma fonte que alimenta a interface.
   const structuredData = {
     "@context": "https://schema.org",
-    "@type": "Physician",
-    "name": "Dr. Juliano Machado",
-    "description": "Oftalmologista especializado em catarata, pterígio, exames de campo visual e OCT. Atendimento em Paragominas e Belém.",
-    "medicalSpecialty": "Ophthalmology",
-    "url": "https://drjulianomachado.com",
-    "image": "https://drjulianomachado.com/og-image.jpg",
-    "telephone": `+${waRaw}`,
-    "priceRange": "$$",
-    "address": [
+    "@graph": [
       {
-        "@type": "PostalAddress",
-        "streetAddress": "Rua Eixo W1, R. Célio Miranda, N° 729",
-        "addressLocality": "Paragominas",
-        "addressRegion": "PA",
-        "addressCountry": "BR"
+        "@type": "Physician",
+        "@id": PHYSICIAN_ID,
+        "name": DOCTOR.name,
+        "description":
+          "Oftalmologista especializado em catarata, pterígio, exames de campo visual e OCT. Atendimento em Paragominas e Belém.",
+        "medicalSpecialty": "Ophthalmology",
+        "url": BASE_URL,
+        "image": `${BASE_URL}/og-image.jpg`,
+        "telephone": `+${waRaw}`,
+        "priceRange": "$$",
+        "identifier": {
+          "@type": "PropertyValue",
+          "propertyID": "CRM",
+          "value": DOCTOR.crm,
+        },
+        "memberOf": DOCTOR.memberships.map((m) => ({
+          "@type": "Organization",
+          "name": m,
+        })),
+        "areaServed": citiesServed().map((c) => ({ "@type": "City", "name": c })),
+        // ratingCount = total EXATO, exigido pelo Google
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": String(reviews.rating),
+          "bestRating": "5",
+          "ratingCount": String(reviews.count),
+        },
+        "workLocation": clinicNodes().map((c) => ({ "@id": c["@id"] })),
+        "sameAs": ["https://www.instagram.com/drjulianomachado.oftalmo/"],
       },
-      {
-        "@type": "PostalAddress",
-        "streetAddress": "Av. Generalíssimo Deodoro, 904 - Nazaré",
-        "addressLocality": "Belém",
-        "addressRegion": "PA",
-        "addressCountry": "BR"
-      }
+      ...clinicNodes(),
     ],
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": String(reviews.rating),
-      "bestRating": "5",
-      "ratingCount": String(reviews.count)
-    },
-    "sameAs": [
-      "https://www.instagram.com/drjulianomachado.oftalmo/"
-    ]
   };
 
   return (

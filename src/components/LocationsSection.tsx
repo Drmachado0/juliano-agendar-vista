@@ -1,6 +1,7 @@
 import { MapPin, Phone, Clock, ExternalLink, Hospital, Heart, Eye, Glasses, Navigation } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+import { LOCATIONS } from "@/lib/locations";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 
 const LocationsSection = () => {
@@ -34,44 +35,24 @@ const LocationsSection = () => {
     return () => observer.disconnect();
   }, []);
 
-  const locations = [
-    {
-      name: "Clinicor",
-      city: "Paragominas",
-      address: "Rua Eixo W1, R. Célio Miranda, N° 729, Paragominas - PA",
-      phone: "(91) 93618-0476",
-      hours: "Agende para ver disponibilidade",
-      icon: Heart,
-      mapsLink: "https://maps.google.com/?q=Clinicor+Rua+Celio+Miranda+729+Paragominas+PA",
-    },
-    {
-      name: "Hospital Geral de Paragominas",
-      city: "Paragominas",
-      address: "R. Santa Terezinha, 304 - Centro, Paragominas - PA",
-      phone: "(91) 9100-0303",
-      hours: "Agende para ver disponibilidade",
-      icon: Hospital,
-      mapsLink: "https://maps.google.com/?q=Hospital+Geral+Paragominas+Santa+Terezinha+304",
-    },
-    {
-      name: "Instituto de Olhos de Belém",
-      city: "Belém",
-      address: "Av. Generalíssimo Deodoro, 904 - Nazaré, Belém - PA",
-      phone: "(91) 3239-4600",
-      hours: "Agende para ver disponibilidade",
-      icon: Eye,
-      mapsLink: "https://maps.google.com/?q=Instituto+de+Olhos+de+Belem+Av+Generalissimo+Deodoro+904+Nazare+Belem+PA",
-    },
-    {
-      name: "Vitria - Ed. Síntese 21",
-      city: "Belém",
-      address: "Av. Conselheiro Furtado, 2865 - Sobreloja, salas 08-10 - São Braz, Belém - PA",
-      phone: "(91) 3342-1463",
-      hours: "Agende para ver disponibilidade",
-      icon: Glasses,
-      mapsLink: "https://maps.google.com/?q=Vitria+Ed+Sintese+21+Av+Conselheiro+Furtado+2865+Sao+Braz+Belem+PA",
-    },
-  ];
+  // NAP vem de lib/locations.ts — fonte unica compartilhada com o JSON-LD da
+  // home. Aqui ficam so os adornos de interface: icone e o texto de horario.
+  const ICONS: Record<string, typeof Heart> = {
+    clinicor: Heart,
+    hgp: Hospital,
+    "belem-iob": Eye,
+    "belem-vitria": Glasses,
+  };
+
+  const locations = LOCATIONS.map((l) => ({
+    name: l.name,
+    city: l.city,
+    address: l.displayAddress,
+    phone: l.phone,
+    hours: "Agende para ver disponibilidade",
+    icon: ICONS[l.slug],
+    mapsLink: l.mapsLink,
+  }));
 
   const activeLocationData = locations[activeLocation];
 
