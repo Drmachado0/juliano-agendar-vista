@@ -8,6 +8,7 @@ import { isBotPaused, isKnownInvalidWhatsapp } from "../_shared/whatsappGuards.t
 import { podeEnviarOutbound, LIMITES_PADRAO } from "../_shared/rateLimitOutbound.ts";
 import { assertNomePacienteValido } from "../_shared/sanitizeOptionalFields.ts";
 import { montarEventIdConfirmacao } from "../_shared/eventIdConfirmacao.ts";
+import { isRegistroAtivo } from "../_shared/statusTerminais.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -82,6 +83,21 @@ serve(async (req) => {
         );
       }
       agendamentoData = agendamento;
+    }
+
+    // Registro terminal ou de teste não recebe confirmação: reenviar a
+    // confirmação de um agendamento já cancelado dá ao paciente a impressão
+    // de que ele voltou a existir.
+    if (agendamentoId && !isRegistroAtivo(agendamentoData)) {
+      console.warn(
+        `[ConfirmarWhatsApp] ⏭️  ${agendamentoId} inativo` +
+          ` (crm=${agendamentoData.status_crm} funil=${agendamentoData.status_funil}` +
+          ` sandbox=${agendamentoData.is_sandbox})`,
+      );
+      return new Response(
+        JSON.stringify({ success: true, message: 'Agendamento nao esta ativo', skipped: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     if (agendamentoId && agendamentoData.aceita_contato_whatsapp_email === false) {

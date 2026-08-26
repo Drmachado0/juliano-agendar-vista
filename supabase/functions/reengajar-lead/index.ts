@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { isRegistroAtivo } from "../_shared/statusTerminais.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,7 +43,7 @@ serve(async (req) => {
 
   const { data: ag, error: selErr } = await supabase
     .from("agendamentos")
-    .select("id, telefone_whatsapp, bot_ativo, bot_pausado_ate, ultimo_followup_em, status_funil")
+    .select("id, telefone_whatsapp, bot_ativo, bot_pausado_ate, ultimo_followup_em, status_funil, status_crm, is_sandbox")
     .eq("id", agendamento_id)
     .maybeSingle();
 
@@ -52,6 +53,13 @@ serve(async (req) => {
   // Guarda 0: leads em YAG laser aguardam contato humano da equipe — bot não reengaja
   if ((ag as any).status_funil === "yag_laser") {
     return json({ ok: false, motivo: "yag_laser_aguarda_humano" });
+  }
+
+  // Guarda de registro ativo: quem cancelou, faltou ou já foi atendido não
+  // recebe convite para escolher horário — e registro de teste (is_sandbox)
+  // não dispara mensagem para número real.
+  if (!isRegistroAtivo(ag as any)) {
+    return json({ ok: false, motivo: "registro_inativo" });
   }
 
   const agora = Date.now();
