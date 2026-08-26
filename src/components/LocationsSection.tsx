@@ -92,6 +92,13 @@ const LocationsSection = () => {
             <MapPin className="w-4 h-4" />
             Atendimento oftalmológico em Paragominas
           </Link>
+          <Link
+            to="/belem"
+            className="inline-flex items-center gap-2 mt-5 ml-6 text-primary font-semibold text-sm hover:underline underline-offset-4"
+          >
+            <MapPin className="w-4 h-4" />
+            Atendimento oftalmológico em Belém
+          </Link>
 
         </div>
 

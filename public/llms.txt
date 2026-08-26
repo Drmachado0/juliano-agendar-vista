@@ -7,6 +7,7 @@
 - [Início](/): Apresentação do Dr. Juliano Machado, procedimentos, locais de atendimento, convênios e depoimentos.
 - [Sobre](/sobre): Formação, residência médica em Oftalmologia, fellowship em Glaucoma e afiliações.
 - [Agendar Consulta](/agendamento): Formulário online para agendar consulta, retorno, exame ou cirurgia.
+- [Oftalmologista em Belém](/belem): Atendimento em Belém — Instituto de Olhos de Belém e Ed. Síntese 21.
 - [Oftalmologista em Paragominas](/paragominas): Atendimento em Paragominas — Clinicor e Hospital Geral de Paragominas.
 
 ## Procedimentos

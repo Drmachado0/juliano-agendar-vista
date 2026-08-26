@@ -21,6 +21,7 @@ import ScrollToTop from "./components/ScrollToTop";
 const Agendamento = lazy(() => import("./pages/Agendamento"));
 const Paragominas = lazy(() => import("./pages/Paragominas"));
 const Sobre = lazy(() => import("./pages/Sobre"));
+const Belem = lazy(() => import("./pages/Belem"));
 const ParagominasAgendamento = lazy(() => import("./pages/ParagominasAgendamento"));
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
 const AdminAgendamentos = lazy(() => import("./pages/admin/Agendamentos"));
@@ -77,6 +78,7 @@ const App = () => (
               <Route path="/agendar-consulta" element={<RedirectToAgendamento />} />
               <Route path="/agendamento" element={<Agendamento />} />
               <Route path="/paragominas" element={<Paragominas />} />
+              <Route path="/belem" element={<Belem />} />
               <Route path="/paragominas/agendamento" element={<ParagominasAgendamento />} />
               <Route path="/procedimentos" element={<ProcedimentosIndex />} />
               <Route path="/procedimentos/cirurgia-de-catarata" element={<ProcCatarata />} />
