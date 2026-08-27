@@ -11,7 +11,7 @@ import ProcedurePageLayout, { type ProcedurePageData } from "@/components/proced
 const data: ProcedurePageData = {
   slug: "mapeamento-de-retina",
   procedureName: "Mapeamento de Retina",
-  pageTitle: "Mapeamento de Retina em Paragominas e Belém | Dr. Juliano Machado",
+  pageTitle: "Mapeamento de Retina em Paragominas | Dr. Juliano Machado",
   metaDescription:
     "Mapeamento de retina em Paragominas e Belém com o Dr. Juliano Machado, CRM-PA 15253. Exame de fundo de olho para diabetes, miopia alta e sintomas de alerta.",
   h1: "Mapeamento de Retina em Paragominas e Belém",

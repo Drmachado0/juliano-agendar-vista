@@ -1,0 +1,539 @@
+[
+  {
+    "url": "https://drjulianomachado.com/",
+    "status": 200,
+    "title": "Dr. Juliano Machado – Oftalmologista em Paragominas e Belém",
+    "titleLen": 59,
+    "desc": "Oftalmologista em Paragominas e Belém. Dr. Juliano Machado, CRM-PA 15253. Catarata, pterígio, glaucoma. Agende sua consulta online.",
+    "descLen": 131,
+    "canonical": "https://drjulianomachado.com/",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Oftalmologista em Paragominas e Belém"
+    ],
+    "h2": 8,
+    "h3": 22,
+    "palavras": 991,
+    "jsonldBlocos": 1,
+    "jsonldTipos": [
+      "Physician",
+      "WebSite",
+      "MedicalWebPage",
+      "FAQPage",
+      "MedicalClinic"
+    ],
+    "linksInternos": 27,
+    "imgs": 13,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/agendamento",
+    "status": 200,
+    "title": "Agendar Consulta — Dr. Juliano Machado | Oftalmologista",
+    "titleLen": 55,
+    "desc": "Agende sua consulta com Dr. Juliano Machado: oftalmologista 5 estrelas em Paragominas e Belém. Agendamento online ou direto com nossa secretária pelo WhatsApp.",
+    "descLen": 159,
+    "canonical": "https://drjulianomachado.com/agendamento",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": null,
+    "h1": [
+      "Dr. Juliano Machado"
+    ],
+    "h2": 1,
+    "h3": 2,
+    "palavras": 224,
+    "jsonldBlocos": 1,
+    "jsonldTipos": [
+      "Physician",
+      "WebSite",
+      "MedicalWebPage"
+    ],
+    "linksInternos": 2,
+    "imgs": 1,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/paragominas",
+    "status": 200,
+    "title": "Oftalmologista em Paragominas | Dr. Juliano Machado",
+    "titleLen": 51,
+    "desc": "Consulta oftalmológica em Paragominas com Dr. Juliano Machado (CRM-PA 15253). Atendimento na Clinicor e no Hospital Geral de Paragominas. Agende online.",
+    "descLen": 152,
+    "canonical": "https://drjulianomachado.com/paragominas",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Sua visão,\ncom mais clareza."
+    ],
+    "h2": 9,
+    "h3": 10,
+    "palavras": 562,
+    "jsonldBlocos": 1,
+    "jsonldTipos": [
+      "Physician",
+      "WebSite",
+      "MedicalWebPage",
+      "FAQPage",
+      "MedicalClinic"
+    ],
+    "linksInternos": 17,
+    "imgs": 4,
+    "imgsSemAlt": 1,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/belem",
+    "status": 200,
+    "title": "Oftalmologista em Belém | Dr. Juliano Machado",
+    "titleLen": 45,
+    "desc": "Consulta oftalmológica em Belém com Dr. Juliano Machado (CRM-PA 15253). Atendimento no Instituto de Olhos de Belém e no Ed. Síntese 21. Agende online.",
+    "descLen": 150,
+    "canonical": "https://drjulianomachado.com/belem",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Oftalmologista em Belém"
+    ],
+    "h2": 5,
+    "h3": 2,
+    "palavras": 378,
+    "jsonldBlocos": 1,
+    "jsonldTipos": [
+      "Physician",
+      "WebSite",
+      "MedicalWebPage",
+      "FAQPage",
+      "MedicalClinic"
+    ],
+    "linksInternos": 18,
+    "imgs": 2,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/procedimentos",
+    "status": 200,
+    "title": "Procedimentos Oftalmológicos em Paragominas e Belém",
+    "titleLen": 51,
+    "desc": "Conheça os procedimentos realizados pelo Dr. Juliano Machado: Cirurgia de Catarata, Pterígio, YAG Laser e consultas. Atendimento em Paragominas e Belém.",
+    "descLen": 152,
+    "canonical": "https://drjulianomachado.com/procedimentos",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": null,
+    "h1": [
+      "Procedimentos Oftalmológicos"
+    ],
+    "h2": 6,
+    "h3": 1,
+    "palavras": 170,
+    "jsonldBlocos": 1,
+    "jsonldTipos": [
+      "Physician",
+      "WebSite",
+      "MedicalWebPage",
+      "BreadcrumbList",
+      "ItemList"
+    ],
+    "linksInternos": 19,
+    "imgs": 2,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/procedimentos/consulta-oftalmologica",
+    "status": 200,
+    "title": "Consulta Oftalmológica em Paragominas e Belém | Dr. Juliano Machado",
+    "titleLen": 67,
+    "desc": "Consulta oftalmológica em Paragominas e Belém com o Dr. Juliano Machado. Mais de 15 anos de experiência clínica. Avaliação completa da visão e agendamento online.",
+    "descLen": 162,
+    "canonical": "https://drjulianomachado.com/procedimentos/consulta-oftalmologica",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Consulta Oftalmológica em Paragominas e Belém"
+    ],
+    "h2": 6,
+    "h3": 6,
+    "palavras": 511,
+    "jsonldBlocos": 4,
+    "jsonldTipos": [
+      "BreadcrumbList",
+      "MedicalProcedure",
+      "MedicalWebPage",
+      "FAQPage"
+    ],
+    "linksInternos": 17,
+    "imgs": 5,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/procedimentos/cirurgia-de-catarata",
+    "status": 200,
+    "title": "Cirurgia de Catarata em Paragominas e Belém | Dr. Juliano Machado",
+    "titleLen": 65,
+    "desc": "Cirurgia de catarata em Paragominas e Belém com o Dr. Juliano Machado. Especialista com mais de 15 anos de atuação. Avaliação, lente intraocular e agendamento.",
+    "descLen": 159,
+    "canonical": "https://drjulianomachado.com/procedimentos/cirurgia-de-catarata",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Cirurgia de Catarata em Paragominas e Belém"
+    ],
+    "h2": 6,
+    "h3": 6,
+    "palavras": 662,
+    "jsonldBlocos": 4,
+    "jsonldTipos": [
+      "BreadcrumbList",
+      "MedicalProcedure",
+      "MedicalWebPage",
+      "FAQPage"
+    ],
+    "linksInternos": 18,
+    "imgs": 5,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/procedimentos/cirurgia-de-pterigio",
+    "status": 200,
+    "title": "Cirurgia de Pterígio em Paragominas e Belém | Dr. Juliano Machado",
+    "titleLen": 65,
+    "desc": "Cirurgia de pterígio em Paragominas e Belém com o Dr. Juliano Machado. Experiência de mais de 15 anos em procedimentos oculares. Técnica com enxerto conjuntival.",
+    "descLen": 161,
+    "canonical": "https://drjulianomachado.com/procedimentos/cirurgia-de-pterigio",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Cirurgia de Pterígio em Paragominas e Belém"
+    ],
+    "h2": 6,
+    "h3": 6,
+    "palavras": 557,
+    "jsonldBlocos": 4,
+    "jsonldTipos": [
+      "BreadcrumbList",
+      "MedicalProcedure",
+      "MedicalWebPage",
+      "FAQPage"
+    ],
+    "linksInternos": 17,
+    "imgs": 5,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/procedimentos/capsulotomia-yag-laser",
+    "status": 200,
+    "title": "Capsulotomia YAG Laser em Paragominas | Dr. Juliano Machado",
+    "titleLen": 59,
+    "desc": "Capsulotomia YAG Laser em Paragominas, no Hospital Geral de Paragominas (HGP), com o Dr. Juliano Machado. Tratamento da opacificação da cápsula posterior após cirurgia de catarata.",
+    "descLen": 180,
+    "canonical": "https://drjulianomachado.com/procedimentos/capsulotomia-yag-laser",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Capsulotomia YAG Laser em Paragominas"
+    ],
+    "h2": 14,
+    "h3": 14,
+    "palavras": 1415,
+    "jsonldBlocos": 4,
+    "jsonldTipos": [
+      "MedicalWebPage",
+      "BreadcrumbList",
+      "MedicalProcedure",
+      "FAQPage"
+    ],
+    "linksInternos": 14,
+    "imgs": 5,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/sobre",
+    "status": 200,
+    "title": "Sobre o Dr. Juliano Machado — formação e trajetória",
+    "titleLen": 51,
+    "desc": "Dr. Juliano Machado, CRM-PA 15253. Residência em Oftalmologia no Hospital Federal de Bonsucesso e fellowship em Glaucoma. Atendimento em Paragominas e Belém.",
+    "descLen": 157,
+    "canonical": "https://drjulianomachado.com/sobre",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Sobre o Dr. Juliano Machado"
+    ],
+    "h2": 5,
+    "h3": 5,
+    "palavras": 369,
+    "jsonldBlocos": 1,
+    "jsonldTipos": [
+      "Physician",
+      "WebSite",
+      "MedicalWebPage"
+    ],
+    "linksInternos": 20,
+    "imgs": 2,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/procedimentos/glaucoma",
+    "status": 200,
+    "title": "Glaucoma em Paragominas e Belém | Dr. Juliano Machado",
+    "titleLen": 53,
+    "desc": "Diagnóstico e acompanhamento de glaucoma em Paragominas e Belém com o Dr. Juliano Machado, CRM-PA 15253, com fellowship em Glaucoma. Tonometria, gonioscopia, campo visual e OCT.",
+    "descLen": 177,
+    "canonical": "https://drjulianomachado.com/procedimentos/glaucoma",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Glaucoma em Paragominas e Belém"
+    ],
+    "h2": 8,
+    "h3": 7,
+    "palavras": 1050,
+    "jsonldBlocos": 4,
+    "jsonldTipos": [
+      "BreadcrumbList",
+      "MedicalProcedure",
+      "MedicalWebPage",
+      "FAQPage"
+    ],
+    "linksInternos": 17,
+    "imgs": 5,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/procedimentos/mapeamento-de-retina",
+    "status": 200,
+    "title": "Mapeamento de Retina em Paragominas e Belém | Dr. Juliano Machado",
+    "titleLen": 65,
+    "desc": "Mapeamento de retina em Paragominas e Belém com o Dr. Juliano Machado, CRM-PA 15253. Exame de fundo de olho para diabetes, miopia alta e sintomas de alerta.",
+    "descLen": 156,
+    "canonical": "https://drjulianomachado.com/procedimentos/mapeamento-de-retina",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Mapeamento de Retina em Paragominas e Belém"
+    ],
+    "h2": 7,
+    "h3": 7,
+    "palavras": 761,
+    "jsonldBlocos": 4,
+    "jsonldTipos": [
+      "BreadcrumbList",
+      "MedicalProcedure",
+      "MedicalWebPage",
+      "FAQPage"
+    ],
+    "linksInternos": 17,
+    "imgs": 5,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/procedimentos/retinografia",
+    "status": 200,
+    "title": "Retinografia em Paragominas e Belém | Dr. Juliano Machado",
+    "titleLen": 57,
+    "desc": "Retinografia em Paragominas e Belém com o Dr. Juliano Machado, CRM-PA 15253. Fotografia do fundo do olho para acompanhar diabetes, glaucoma e doenças da retina.",
+    "descLen": 160,
+    "canonical": "https://drjulianomachado.com/procedimentos/retinografia",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Retinografia em Paragominas e Belém"
+    ],
+    "h2": 6,
+    "h3": 7,
+    "palavras": 602,
+    "jsonldBlocos": 4,
+    "jsonldTipos": [
+      "BreadcrumbList",
+      "MedicalProcedure",
+      "MedicalWebPage",
+      "FAQPage"
+    ],
+    "linksInternos": 17,
+    "imgs": 5,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/procedimentos/tonometria",
+    "status": 200,
+    "title": "Tonometria em Paragominas e Belém | Dr. Juliano Machado",
+    "titleLen": 55,
+    "desc": "Tonometria em Paragominas e Belém com o Dr. Juliano Machado, CRM-PA 15253. Medida da pressão intraocular, exame básico no rastreio do glaucoma.",
+    "descLen": 143,
+    "canonical": "https://drjulianomachado.com/procedimentos/tonometria",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Tonometria em Paragominas e Belém"
+    ],
+    "h2": 6,
+    "h3": 7,
+    "palavras": 590,
+    "jsonldBlocos": 4,
+    "jsonldTipos": [
+      "BreadcrumbList",
+      "MedicalProcedure",
+      "MedicalWebPage",
+      "FAQPage"
+    ],
+    "linksInternos": 17,
+    "imgs": 5,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/procedimentos/gonioscopia",
+    "status": 200,
+    "title": "Gonioscopia em Paragominas e Belém | Dr. Juliano Machado",
+    "titleLen": 56,
+    "desc": "Gonioscopia em Paragominas e Belém com o Dr. Juliano Machado, CRM-PA 15253, com fellowship em Glaucoma. Exame que define se o ângulo de drenagem é aberto ou fechado.",
+    "descLen": 165,
+    "canonical": "https://drjulianomachado.com/procedimentos/gonioscopia",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Gonioscopia em Paragominas e Belém"
+    ],
+    "h2": 6,
+    "h3": 7,
+    "palavras": 589,
+    "jsonldBlocos": 4,
+    "jsonldTipos": [
+      "BreadcrumbList",
+      "MedicalProcedure",
+      "MedicalWebPage",
+      "FAQPage"
+    ],
+    "linksInternos": 17,
+    "imgs": 5,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/procedimentos/biometria-ultrassonica",
+    "status": 200,
+    "title": "Biometria Ultrassônica em Paragominas e Belém | Dr. Juliano Machado",
+    "titleLen": 67,
+    "desc": "Biometria ultrassônica em Paragominas e Belém com o Dr. Juliano Machado, CRM-PA 15253. Exame que calcula o grau da lente intraocular da cirurgia de catarata.",
+    "descLen": 157,
+    "canonical": "https://drjulianomachado.com/procedimentos/biometria-ultrassonica",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Biometria Ultrassônica em Paragominas e Belém"
+    ],
+    "h2": 6,
+    "h3": 7,
+    "palavras": 560,
+    "jsonldBlocos": 4,
+    "jsonldTipos": [
+      "BreadcrumbList",
+      "MedicalProcedure",
+      "MedicalWebPage",
+      "FAQPage"
+    ],
+    "linksInternos": 17,
+    "imgs": 5,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/procedimentos/iridotomia-a-laser",
+    "status": 200,
+    "title": "Iridotomia a Laser em Paragominas e Belém | Dr. Juliano Machado",
+    "titleLen": 63,
+    "desc": "Iridotomia a laser em Paragominas e Belém com o Dr. Juliano Machado, CRM-PA 15253, com fellowship em Glaucoma. Procedimento preventivo para ângulo estreito.",
+    "descLen": 156,
+    "canonical": "https://drjulianomachado.com/procedimentos/iridotomia-a-laser",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Iridotomia a Laser em Paragominas e Belém"
+    ],
+    "h2": 6,
+    "h3": 7,
+    "palavras": 606,
+    "jsonldBlocos": 4,
+    "jsonldTipos": [
+      "BreadcrumbList",
+      "MedicalProcedure",
+      "MedicalWebPage",
+      "FAQPage"
+    ],
+    "linksInternos": 17,
+    "imgs": 5,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  },
+  {
+    "url": "https://drjulianomachado.com/politica-de-privacidade",
+    "status": 200,
+    "title": "Política de Privacidade · Dr. Juliano Machado",
+    "titleLen": 45,
+    "desc": "Política de Privacidade e tratamento de dados pessoais do site Dr. Juliano Machado, em conformidade com a LGPD.",
+    "descLen": 111,
+    "canonical": "https://drjulianomachado.com/politica-de-privacidade",
+    "canonicalCount": 1,
+    "descCount": 1,
+    "robots": "index, follow",
+    "h1": [
+      "Política de Privacidade"
+    ],
+    "h2": 11,
+    "h3": 0,
+    "palavras": 473,
+    "jsonldBlocos": 0,
+    "jsonldTipos": [],
+    "linksInternos": 12,
+    "imgs": 2,
+    "imgsSemAlt": 0,
+    "ogImage": "https://drjulianomachado.com/og-image.jpg",
+    "lang": "pt-BR"
+  }
+]

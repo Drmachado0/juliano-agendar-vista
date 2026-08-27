@@ -1,0 +1,221 @@
+{
+  "summary": {
+    "health_score": 79,
+    "business_type": "Local Service - Medical Practice (oftalmologia, 2 cidades)",
+    "top_findings": [
+      "LCP de 4.946ms no campo, faixa ruim, porque nada pinta antes do JS executar",
+      "HTML servido e casca de 9,8 KB nas 18 rotas; prerender nao roda no build da Lovable",
+      "Crawler de IA sem execucao de JS nao ve conteudo nenhum",
+      "258,6 KB gzip no caminho critico, com Supabase pre-carregado ate onde nao e usado",
+      "Seis titulos passam de 60 caracteres e sao cortados no resultado"
+    ],
+    "quick_wins": [
+      "FEITO: seis titulos encurtados para caber em 60 caracteres",
+      "FEITO: cinco descriptions aparadas para a faixa de 120-160",
+      "CANCELADO: tirar supabase do modulepreload seria pessimizacao, ver Performance",
+      "CANCELADO: o alt vazio de /paragominas e correto, imagem decorativa com aria-hidden",
+      "Ampliar /procedimentos, hoje com 170 palavras"
+    ]
+  },
+  "categories": [
+    {
+      "name": "Technical SEO",
+      "score": 82,
+      "what_works": [
+        "robots.txt libera o site e bloqueia /admin/, /auth e /obrigado, com Sitemap declarado",
+        "sitemap.xml com 18 URLs, todas respondendo 200",
+        "canonical auto-referente e unico nas 18 paginas",
+        "http:// e www. redirecionam para a versao canonica https sem www",
+        "HSTS com includeSubDomains, X-Content-Type-Options e Referrer-Policy presentes",
+        "assets com Cache-Control immutable de 1 ano"
+      ],
+      "findings": [
+        {
+          "title": "O HTML servido e uma casca de 9,8 KB nas 18 rotas",
+          "severity": "High",
+          "description": "Producao devolve o mesmo shell sem h1, canonical ou JSON-LD para toda rota. O prerender existe e funciona no build local (18 rotas em 9s), mas o container de build da Lovable nao tem as bibliotecas de sistema do Chromium (libglib-2.0.so.0, exitCode=127), registrado em /prerender-status.json. O Google executa JS e indexa normalmente; o prejuizo e para buscadores e crawlers que nao executam.",
+          "recommendation": "Decisao ja tomada de aceitar. Se virar prioridade: Chromium empacotado, SSG sem navegador, ou troca de host. Ver .claude/skills/prerender-na-lovable/."
+        },
+        {
+          "title": "Falta X-Frame-Options e Content-Security-Policy",
+          "severity": "Low",
+          "description": "Os cabecalhos cobrem HSTS, nosniff e Referrer-Policy, mas nao ha protecao contra clickjacking nem CSP.",
+          "recommendation": "Baixa prioridade em site institucional. Se a Lovable permitir cabecalho customizado, adicionar X-Frame-Options: SAMEORIGIN."
+        }
+      ]
+    },
+    {
+      "name": "Content Quality",
+      "score": 88,
+      "what_works": [
+        "18 paginas com conteudo clinico proprio, entre 170 e 1.415 palavras",
+        "E-E-A-T forte: CRM-PA 15253 visivel, formacao detalhada, revisao medica com data e revisor",
+        "MedicalWebPage.lastReviewed e reviewedBy alimentados por fonte unica (REVISAO_CLINICA)",
+        "Seis exames que eram becos sem saida agora tem pagina propria e interligada",
+        "Nenhum titulo ou description duplicado entre as 18 paginas"
+      ],
+      "findings": [
+        {
+          "title": "/procedimentos tem 170 palavras e /agendamento tem 224",
+          "severity": "Low",
+          "description": "As duas unicas paginas abaixo de 300 palavras. Ambas sao de navegacao ou transacao, nao de conteudo, entao o volume baixo e coerente com a funcao.",
+          "recommendation": "Em /procedimentos, um paragrafo curto por grupo de exames captaria buscas amplas sem competir com as filhas. /agendamento pode ficar como esta."
+        }
+      ]
+    },
+    {
+      "name": "On-Page SEO",
+      "score": 86,
+      "what_works": [
+        "Exatamente um H1 por pagina nas 18",
+        "Hierarquia H2/H3 coerente, ate 14 H2 nas paginas longas",
+        "Nenhuma tag duplicada de canonical ou description",
+        "html lang=pt-BR e og:image em todas"
+      ],
+      "findings": [
+        {
+          "title": "Seis titulos passam de 60 caracteres",
+          "severity": "Medium",
+          "description": "consulta-oftalmologica (67), biometria-ultrassonica (67), cirurgia-de-catarata (65), cirurgia-de-pterigio (65), mapeamento-de-retina (65) e iridotomia-a-laser (63). O Google corta perto de 60, entao o sufixo com o nome do medico some do resultado.",
+          "recommendation": "Encurtar para caber. Ex.: Biometria Ultrassonica em Paragominas | Dr. Juliano Machado, que da 57."
+        },
+        {
+          "title": "Seis descriptions fora da faixa de 120-160",
+          "severity": "Low",
+          "description": "capsulotomia-yag-laser (180) e glaucoma (177) passam do corte; politica-de-privacidade (111) fica curta.",
+          "recommendation": "Aparar as duas longas para 155-160. A da politica pode ficar."
+        }
+      ]
+    },
+    {
+      "name": "Schema / Structured Data",
+      "score": 92,
+      "what_works": [
+        "@graph completo: Physician, MedicalClinic, MedicalWebPage, MedicalProcedure, FAQPage, BreadcrumbList, ItemList",
+        "MedicalWebPage com lastReviewed e reviewedBy nas 17 paginas de conteudo",
+        "BreadcrumbList em 12 paginas, FAQPage em 14",
+        "aggregateRating auto-declarado removido, que era achado da auditoria anterior",
+        "Quatro blocos JSON-LD por pagina de procedimento"
+      ],
+      "findings": [
+        {
+          "title": "/politica-de-privacidade sem structured data",
+          "severity": "Info",
+          "description": "Unica pagina sem JSON-LD.",
+          "recommendation": "Um WebPage simples fecharia, mas o ganho e proximo de zero."
+        }
+      ]
+    },
+    {
+      "name": "Performance (CWV)",
+      "score": 38,
+      "what_works": [
+        "CLS de 0,048 no campo, dentro do bom",
+        "Assets com cache immutable de 1 ano",
+        "Fontes auto-hospedadas com preload, sem ida ao Google Fonts",
+        "modulepreload ja configurado para os chunks principais"
+      ],
+      "findings": [
+        {
+          "title": "LCP de 4.946 ms no campo (CrUX p75), faixa ruim",
+          "severity": "Critical",
+          "description": "Dados reais de 25 semanas: LCP 4.946ms, FCP 4.041ms, TTFB 2.119ms, CLS 0,048, INP sem dados. Em laboratorio com emulacao movel, FCP e LCP sao IGUAIS na home (3.132ms): nada pinta antes do JS executar e o React montar. O elemento LCP e um paragrafo de texto, nao imagem. Nao adianta otimizar imagem porque imagem nao e o gargalo.",
+          "recommendation": "O conserto estrutural e servir HTML pronto, que e o que o prerender faria e nao roda na Lovable. Sem ele, os ganhos sao marginais: enxugar o caminho critico."
+        },
+        {
+          "title": "258,6 KB gzip no caminho critico, com Supabase carregado ate onde nao e usado",
+          "severity": "High",
+          "description": "O index.html e compartilhado por todas as rotas e faz modulepreload de supabase (48,2 KB gzip), que paginas informativas como /procedimentos/glaucoma nao usam ate haver interacao. Entry 112,8 + react 57,2 + supabase 48,2 + css 26,1 + query 11,9.",
+          "recommendation": "NAO basta tirar o modulepreload: supabase e import ESTATICO da raiz, via AuthContext (que envolve o app todo) e WhatsAppButton (presente em toda pagina). Sem o preload os mesmos bytes continuariam necessarios, so descobertos mais tarde - seria pessimizacao. O ganho real exige import dinamico nos dois: no WhatsAppButton e trivial, porque so usa supabase dentro do clique; no AuthContext e refatoracao do bootstrap de autenticacao, que merece decisao propria por mexer em login de sistema em producao."
+        },
+        {
+          "title": "TTFB de 2.119 ms no campo",
+          "severity": "High",
+          "description": "Medido daqui: 1,7s a frio e 0,21s quente. O HTML vai com no-cache, must-revalidate, entao nao fica na borda da Cloudflare e cada visita nova busca na origem.",
+          "recommendation": "Fora do nosso controle na Lovable. Seria resolvido por host que permita cache de HTML na borda com revalidacao."
+        }
+      ]
+    },
+    {
+      "name": "AI Search Readiness",
+      "score": 55,
+      "what_works": [
+        "llms.txt publicado com as 18 paginas e resumo do consultorio",
+        "robots.txt nao bloqueia crawlers de IA",
+        "Conteudo em perguntas e respostas, formato que LLM cita bem",
+        "FAQPage em 14 paginas com perguntas que sao buscas reais"
+      ],
+      "findings": [
+        {
+          "title": "Crawler que nao executa JS enxerga pagina vazia",
+          "severity": "High",
+          "description": "O HTML cru tem 9,8 KB e nenhum conteudo. Boa parte dos crawlers de IA nao renderiza JavaScript, entao llms.txt e FAQPage nao compensam: o texto que eles citariam nao esta la. Os previews de link do WhatsApp e Facebook sobrevivem apenas pelas tags og estaticas do index.html.",
+          "recommendation": "Mesmo conserto do prerender. Ate la, o llms.txt e a unica superficie que esses crawlers leem de verdade, entao vale mante-lo rico."
+        }
+      ]
+    },
+    {
+      "name": "Images",
+      "score": 96,
+      "what_works": [
+        "og:image nas 18 paginas",
+        "alt presente em praticamente todas as imagens",
+        "Fontes auto-hospedadas em woff2 com subset latin",
+        "A unica imagem sem texto alternativo e um logo decorativo com alt vazio e aria-hidden, que e a marcacao correta: alt vazio evita anuncio duplicado no leitor de tela"
+      ],
+      "findings": []
+    }
+  ],
+  "action_plan": {
+    "phases": [
+      {
+        "name": "Fase 1: Ganhos rapidos",
+        "timeframe": "Esta semana",
+        "items": [
+          "[feito] Encurtar os seis titulos acima de 60 caracteres",
+          "[feito] Aparar as cinco descriptions acima de 160 caracteres",
+          "[cancelado] Remover supabase do modulepreload: seria pessimizacao, nao ganho",
+          "[cancelado] Adicionar alt em /paragominas: a marcacao ja esta correta"
+        ]
+      },
+      {
+        "name": "Fase 2: Conteudo",
+        "timeframe": "Duas a tres semanas",
+        "items": [
+          "Ampliar /procedimentos com um paragrafo por grupo de exames",
+          "Manter llms.txt rico, pois hoje e a unica superficie que crawler sem JS le"
+        ]
+      },
+      {
+        "name": "Fase 2b: Supabase fora do caminho critico",
+        "timeframe": "Decisao propria, nao e ganho rapido",
+        "items": [
+          "WhatsAppButton: trocar import estatico por dinamico dentro do clique (baixo risco)",
+          "AuthContext: adiar o cliente para depois da primeira pintura (mexe em bootstrap de login)",
+          "So os dois juntos tiram os 48,2 KB do caminho critico; um sozinho nao muda nada"
+        ]
+      },
+      {
+        "name": "Fase 3: Decisao estrutural",
+        "timeframe": "Quando virar prioridade",
+        "items": [
+          "Reavaliar o prerender: Chromium empacotado, SSG sem navegador, ou troca de host",
+          "So vale se LCP e citacao por IA entrarem como meta de negocio"
+        ]
+      },
+      {
+        "name": "Fase 4: Monitoramento",
+        "timeframe": "Continuo",
+        "items": [
+          "Acompanhar CrUX mensalmente: LCP, FCP e TTFB",
+          "Conferir /prerender-status.json apos cada deploy",
+          "Ligar o Search Console por conta de servico para ter indexacao real"
+        ]
+      }
+    ]
+  },
+  "artifacts": {
+    "findings_dir": "findings/",
+    "screenshots_dir": "screenshots/"
+  }
+}

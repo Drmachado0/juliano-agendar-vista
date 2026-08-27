@@ -4,7 +4,7 @@ import ProcedurePageLayout, { type ProcedurePageData } from "@/components/proced
 const data: ProcedurePageData = {
   slug: "cirurgia-de-catarata",
   procedureName: "Cirurgia de Catarata",
-  pageTitle: "Cirurgia de Catarata em Paragominas e Belém | Dr. Juliano Machado",
+  pageTitle: "Cirurgia de Catarata em Paragominas | Dr. Juliano Machado",
   metaDescription:
     "Cirurgia de catarata em Paragominas e Belém com o Dr. Juliano Machado. Especialista com mais de 15 anos de atuação. Avaliação, lente intraocular e agendamento.",
   h1: "Cirurgia de Catarata em Paragominas e Belém",

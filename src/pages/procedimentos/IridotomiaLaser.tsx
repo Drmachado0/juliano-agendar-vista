@@ -13,7 +13,7 @@ import ProcedurePageLayout, { type ProcedurePageData } from "@/components/proced
 const data: ProcedurePageData = {
   slug: "iridotomia-a-laser",
   procedureName: "Iridotomia a Laser",
-  pageTitle: "Iridotomia a Laser em Paragominas e Belém | Dr. Juliano Machado",
+  pageTitle: "Iridotomia a Laser em Paragominas | Dr. Juliano Machado",
   metaDescription:
     "Iridotomia a laser em Paragominas e Belém com o Dr. Juliano Machado, CRM-PA 15253, com fellowship em Glaucoma. Procedimento preventivo para ângulo estreito.",
   h1: "Iridotomia a Laser em Paragominas e Belém",

@@ -13,7 +13,7 @@ import ProcedurePageLayout, { type ProcedurePageData } from "@/components/proced
 const data: ProcedurePageData = {
   slug: "biometria-ultrassonica",
   procedureName: "Biometria Ultrassônica",
-  pageTitle: "Biometria Ultrassônica em Paragominas e Belém | Dr. Juliano Machado",
+  pageTitle: "Biometria Ultrassônica em Paragominas | Dr. Juliano Machado",
   metaDescription:
     "Biometria ultrassônica em Paragominas e Belém com o Dr. Juliano Machado, CRM-PA 15253. Exame que calcula o grau da lente intraocular da cirurgia de catarata.",
   h1: "Biometria Ultrassônica em Paragominas e Belém",

@@ -15,7 +15,7 @@ const data: ProcedurePageData = {
   procedureName: "Gonioscopia",
   pageTitle: "Gonioscopia em Paragominas e Belém | Dr. Juliano Machado",
   metaDescription:
-    "Gonioscopia em Paragominas e Belém com o Dr. Juliano Machado, CRM-PA 15253, com fellowship em Glaucoma. Exame que define se o ângulo de drenagem é aberto ou fechado.",
+    "Gonioscopia em Paragominas e Belém com o Dr. Juliano Machado, com fellowship em Glaucoma. Define se o ângulo de drenagem é aberto ou fechado.",
   h1: "Gonioscopia em Paragominas e Belém",
   intro:
     "A gonioscopia examina o ângulo de drenagem do olho, por onde o líquido interno escoa. É ela que define se um glaucoma é de ângulo aberto ou fechado — e essa distinção muda todo o tratamento.",

@@ -54,7 +54,7 @@ export const YAG_SEO = {
   procedureName: "Capsulotomia YAG Laser",
   pageTitle: "Capsulotomia YAG Laser em Paragominas | Dr. Juliano Machado",
   metaDescription:
-    "Capsulotomia YAG Laser em Paragominas, no Hospital Geral de Paragominas (HGP), com o Dr. Juliano Machado. Tratamento da opacificação da cápsula posterior após cirurgia de catarata.",
+    "Capsulotomia YAG Laser no Hospital Geral de Paragominas (HGP), com o Dr. Juliano Machado. Trata a opacificação da cápsula posterior após catarata.",
   h1: "Capsulotomia YAG Laser em Paragominas",
   intro:
     "A capsulotomia YAG é um procedimento a laser que trata a opacificação da cápsula posterior — a chamada catarata secundária — que pode surgir meses ou anos após a cirurgia de catarata. O procedimento é realizado no Hospital Geral de Paragominas (HGP), mediante avaliação e agendamento com o Dr. Juliano Machado.",

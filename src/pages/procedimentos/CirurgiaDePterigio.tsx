@@ -3,9 +3,9 @@ import ProcedurePageLayout, { type ProcedurePageData } from "@/components/proced
 const data: ProcedurePageData = {
   slug: "cirurgia-de-pterigio",
   procedureName: "Cirurgia de Pterígio",
-  pageTitle: "Cirurgia de Pterígio em Paragominas e Belém | Dr. Juliano Machado",
+  pageTitle: "Cirurgia de Pterígio em Paragominas | Dr. Juliano Machado",
   metaDescription:
-    "Cirurgia de pterígio em Paragominas e Belém com o Dr. Juliano Machado. Experiência de mais de 15 anos em procedimentos oculares. Técnica com enxerto conjuntival.",
+    "Cirurgia de pterígio em Paragominas e Belém com o Dr. Juliano Machado. Mais de 15 anos em procedimentos oculares. Técnica com enxerto conjuntival.",
   h1: "Cirurgia de Pterígio em Paragominas e Belém",
   intro:
     "O pterígio é um crescimento de tecido sobre a córnea que pode causar vermelhidão, irritação e, em alguns casos, alteração da visão. O Dr. Juliano Machado avalia a indicação cirúrgica e realiza o procedimento em Paragominas e Belém.",

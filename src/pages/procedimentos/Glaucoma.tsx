@@ -14,7 +14,7 @@ const data: ProcedurePageData = {
   procedureName: "Tratamento de Glaucoma",
   pageTitle: "Glaucoma em Paragominas e Belém | Dr. Juliano Machado",
   metaDescription:
-    "Diagnóstico e acompanhamento de glaucoma em Paragominas e Belém com o Dr. Juliano Machado, CRM-PA 15253, com fellowship em Glaucoma. Tonometria, gonioscopia, campo visual e OCT.",
+    "Diagnóstico e acompanhamento de glaucoma em Paragominas e Belém com o Dr. Juliano Machado, com fellowship em Glaucoma. Tonometria, campo visual e OCT.",
   h1: "Glaucoma em Paragominas e Belém",
   intro:
     "O glaucoma é a principal causa de cegueira irreversível no mundo — e costuma avançar sem dor e sem sintoma até estágios avançados. O Dr. Juliano Machado tem fellowship em Glaucoma pela Unidade Paulista de Oftalmologia e realiza a investigação completa, do exame de pressão ao campo visual, em Paragominas e Belém.",
