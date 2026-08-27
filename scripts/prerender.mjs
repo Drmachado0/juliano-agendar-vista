@@ -101,6 +101,8 @@ function servir() {
  * Continua sem poder derrubar o build: se o download falhar, devolve null e o
  * chamador publica a SPA normalmente.
  */
+let porqueSemChromium = null;
+
 async function abrirNavegador(chromium) {
   try {
     return await chromium.launch();
@@ -116,6 +118,14 @@ async function abrirNavegador(chromium) {
       });
       return await chromium.launch();
     } catch (segundo) {
+      // Guardado para o relatorio: o texto do erro separa causas que pedem
+      // saidas diferentes — bloqueio de rede ao CDN da Playwright, falta de
+      // permissao de escrita, prazo estourado, ou dependencia de sistema
+      // faltando no container. Sem ele, "sem-chromium" nao diz o que tentar.
+      porqueSemChromium = {
+        aoAbrir: String(primeiro).slice(0, 300),
+        aoBaixar: String(segundo).slice(0, 300),
+      };
       console.warn(
         `[prerender] sem Chromium apos o download (${String(segundo).slice(0, 60)}). Pulando.`
       );
@@ -184,7 +194,7 @@ async function main() {
   browser = await abrirNavegador(chromium);
   if (!browser) {
     servidor.close();
-    await registrar("sem-chromium");
+    await registrar("sem-chromium", porqueSemChromium ?? {});
     return;
   }
 
