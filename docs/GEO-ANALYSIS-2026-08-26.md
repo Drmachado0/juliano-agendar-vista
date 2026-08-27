@@ -39,7 +39,7 @@ O site não tem problema de conteúdo nem, hoje, de dado estruturado. Tem um pro
 
 ---
 
-## 1. [CRÍTICO · em aberto] Produção serve HTML vazio em todas as rotas
+## 1. [CRÍTICO · correção publicada, aguardando confirmação] Produção serve HTML vazio
 
 **Evidência medida contra produção:**
 
@@ -58,8 +58,18 @@ As sete rotas retornam **byte a byte o mesmo arquivo**. O `<body>` contém apena
 `<div id="root"></div>`. As "203 palavras" detectadas são o script de consentimento inline
 e as meta tags — zero conteúdo médico.
 
-**Bundle em produção:** `/assets/index-BlI5od9Q.js` — o mesmo bundle antigo do deploy
-travado. O prerender nunca chegou ao ar.
+**Causa raiz (corrigida).** A leitura inicial — "deploy travado" — estava errada. O deploy
+sempre funcionou; o **prerender é que nunca rodou no build do Lovable**. O `playwright` só
+baixa o Chromium num `postinstall`, e havia três caminhos para esse passo ser pulado: o
+pacote estava em `devDependencies` (install de produção ignora), o bun bloqueia lifecycle
+script fora da allowlist (este repo é bun — `bun.lock` versionado, `package-lock.json` no
+gitignore), e `npm --ignore-scripts` faz o mesmo. Qualquer um bastava.
+
+Passava despercebido porque `scripts/prerender.mjs` **falha suave de propósito** (nunca
+deve derrubar um deploy) e porque na máquina local o navegador existe: build local verde,
+produção publicando casca. Corrigido em `25ce116` — `playwright` movido para
+`dependencies`, `trustedDependencies` liberando o postinstall no bun, e uma tentativa de
+baixar o Chromium antes de desistir.
 
 **Build local, fresco:** 18 rotas, ~5s, `0 mantida(s) como shell`, `dist/index.html` com
 183 KB, 1 H1 e o `@graph` completo.
@@ -190,6 +200,28 @@ e Google Business Profile por CID) — o Lattes ficou de fora de propósito, por
 buscatextual devolve captcha.
 
 Títulos únicos nas 18 rotas, hierarquia H1→H2→H3 limpa.
+
+---
+
+## 8. [ALTO · corrigido] `aggregateRating` auto-declarado em duas rotas
+
+`Physician` herda de `MedicalBusiness` → `LocalBusiness`, e a política de dados
+estruturados do Google trata avaliação que a própria entidade publica sobre si como
+*self-serving*: inelegível para rich result e sujeita a ação manual por marcação enganosa.
+O lado positivo é zero — para negócio local o Google mostra a nota do próprio Perfil da
+Empresa, não a marcada na página.
+
+`b9ed644` removeu a marcação da home, mas parou ali. `/agendamento` continuava emitindo, e
+`/paragominas` passou a emitir quando o `Physician` escrito à mão dela foi migrado para o
+grafo compartilhado — a migração preservou o `aggregateRating` do nó antigo e reintroduziu
+na entidade canônica o que a home tinha acabado de perder. Como o `@id` é o mesmo nos três
+lugares, não eram três avaliações: era a **mesma entidade** com nota auto-atribuída em duas
+páginas.
+
+Removido das duas (`fead56e`). A nota do Google continua **visível** no bloco de prova
+social de `/agendamento` e na seção de depoimentos de `/paragominas` — ótima para conversão
+e para E-E-A-T. Sai só a marcação. Verificado: nenhuma das 18 rotas emite
+`aggregateRating`.
 
 ---
 
