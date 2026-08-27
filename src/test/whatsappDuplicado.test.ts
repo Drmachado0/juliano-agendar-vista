@@ -74,3 +74,39 @@ describe("WhatsApp — um canal por largura de tela", () => {
     expect(s).toMatch(/hidden lg:flex/);
   });
 });
+
+/**
+ * Guarda a barra fixa contra voltar a ficar inerte sob o banner de cookies.
+ *
+ * POR QUE: o banner LGPD ocupa o mesmo rodape e fica por cima da barra. Medido
+ * em producao com elementFromPoint, os DOIS botoes da barra tinham um BUTTON do
+ * banner no ponto central — nao respondiam ao toque. So acontecia com quem
+ * ainda nao decidiu os cookies, ou seja, o visitante de primeira viagem.
+ *
+ * Um CTA visivel e inerte nao aparece em teste de render nem em auditoria de
+ * HTML: os elementos existem, tem tamanho e passam em qualquer contagem. Por
+ * isso o guard e sobre a LIGACAO com a fonte de consentimento, que e o que
+ * impede a barra de entrar cedo demais.
+ */
+describe("Barra fixa — espera a decisao de cookies antes de entrar", () => {
+  const fonte = readFileSync(
+    resolve(process.cwd(), "src/components/MobileStickyCTA.tsx"),
+    "utf-8",
+  );
+
+  it("consulta a mesma fonte de consentimento que o banner", () => {
+    expect(fonte).toMatch(/from\s+"@\/lib\/consent"/);
+    expect(fonte).toMatch(/hasDecided/);
+  });
+
+  it("reage a decisao sem exigir recarregar a pagina", () => {
+    expect(fonte).toMatch(/subscribeConsent/);
+  });
+
+  it("condiciona a entrada da barra a decisao, nao so ao scroll", () => {
+    // Sem isto os imports existiriam sem efeito e os testes acima passariam
+    // mentindo — foi assim que o defeito original sobreviveu a um comentario
+    // que dizia evitar a sobreposicao.
+    expect(fonte).toMatch(/show\s*&&\s*decidido/);
+  });
+});
