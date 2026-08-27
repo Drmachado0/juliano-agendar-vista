@@ -8,17 +8,22 @@ import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 import Index from "./pages/Index";
-import Obrigado from "./pages/Obrigado";
+
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
 import NotFound from "./pages/NotFound";
 import ConsentBanner from "./components/ConsentBanner";
-import Auth from "./pages/Auth";
+
 import RouteChangeTracker from "./components/RouteChangeTracker";
 import ScrollToTop from "./components/ScrollToTop";
 
 // Code-splitting: a página pública /agendamento e toda a área /admin
 // vivem em chunks separados — não pesam no bundle inicial da home.
 const Agendamento = lazy(() => import("./pages/Agendamento"));
+// Baixo trafego e ambas puxam o Supabase: como imports estaticos, colocavam
+// 48 KB gzip no caminho critico de toda visita para servir duas paginas que
+// a maioria nunca abre.
+const Obrigado = lazy(() => import("./pages/Obrigado"));
+const Auth = lazy(() => import("./pages/Auth"));
 const Paragominas = lazy(() => import("./pages/Paragominas"));
 const Sobre = lazy(() => import("./pages/Sobre"));
 const Belem = lazy(() => import("./pages/Belem"));

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/lazy";
 import { GOOGLE_REVIEWS } from "@/lib/constants";
 
 export interface GoogleReviewsData {
@@ -25,6 +25,7 @@ export function useGoogleReviews(): GoogleReviewsData {
   const { data } = useQuery({
     queryKey: ["google-reviews-meta"],
     queryFn: async (): Promise<SiteConfigReviews | null> => {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from("site_config" as any)
         .select("*")

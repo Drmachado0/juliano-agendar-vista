@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/lazy";
 
 export interface AvaliacaoGoogle {
   id: string;
@@ -42,6 +42,7 @@ export async function sincronizarAvaliacoesManualmente(): Promise<{
   synced?: number;
   errors?: number;
 }> {
+  const supabase = await getSupabase();
   const { data, error } = await supabase.functions.invoke('sincronizar-avaliacoes-google');
 
   if (error) {

@@ -29,11 +29,21 @@ export default defineConfig(({ mode }) => ({
         // lazy), mas baixado em toda visita a home. Sem a entrada abaixo, o
         // Rollup o agrupa junto dos chunks assincronos do admin.
         //   react / react-router  -> raiz do App
-        //   @supabase/supabase-js -> AuthContext (raiz) e WhatsAppButton (home)
+          //
+          // @supabase/supabase-js SAIU desta lista em 27/08/2026. Deixou de ser
+          // dependencia da raiz: AuthContext, WhatsAppButton, os servicos e o
+          // useGoogleReviews resolvem o cliente por import dinamico
+          // (src/integrations/supabase/lazy.ts), e Auth e Obrigado viraram rotas
+          // lazy.
+          //
+          // Tornar os imports dinamicos NAO bastou: enquanto o nome ficou aqui,
+          // o modulepreload continuou sendo gerado e os 48 KB gzip seguiram no
+          // caminho critico de toda rota. Mesmo efeito que o paragrafo acima
+          // descreve para o recharts — a configuracao desfazia o trabalho do
+          // codigo.
         //   @tanstack/react-query -> QueryClientProvider (raiz)
         manualChunks: {
           react: ["react", "react-dom", "react-router-dom"],
-          supabase: ["@supabase/supabase-js"],
           query: ["@tanstack/react-query"],
         },
       },

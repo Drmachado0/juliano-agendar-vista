@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/lazy";
 
 export interface SiteConfig {
   whatsapp_number: string;
@@ -29,6 +29,7 @@ export async function updateWhatsAppNumber(
   whatsapp_number: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
+    const supabase = await getSupabase();
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
       .from("site_config" as any)

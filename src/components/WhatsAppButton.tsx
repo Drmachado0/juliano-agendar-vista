@@ -2,7 +2,7 @@ import { MessageCircle } from "lucide-react";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/lazy";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 
 /**
@@ -29,6 +29,10 @@ const WhatsAppButton = ({ apenasDesktop = false }: { apenasDesktop?: boolean }) 
     const params = new URLSearchParams(window.location.search);
     const ssGet = (k: string) => params.get(k) ?? sessionStorage.getItem(k) ?? undefined;
     try {
+      // Import dinamico: este componente esta em toda pagina, mas so toca o
+      // Supabase quando alguem clica. Com import estatico, o chunk de 48 KB
+      // entrava no caminho critico de todas elas.
+      const supabase = await getSupabase();
       await supabase.functions.invoke('meta-capi', {
         body: {
           event_name: 'Contact',
