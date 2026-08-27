@@ -6,6 +6,10 @@ import MobileStickyCTA from "@/components/MobileStickyCTA";
 import { Link } from "react-router-dom";
 import { ArrowRight, Eye, ClipboardList, Zap, Stethoscope } from "lucide-react";
 import { DOCTOR } from "@/lib/constants";
+import { BASE_URL } from "@/lib/locations";
+import { physicianNode, websiteNode, medicalWebPageNode } from "@/lib/schema";
+
+const CANONICAL = `${BASE_URL}/procedimentos`;
 
 const ProcedimentosIndex = () => {
   const procedimentos = [
@@ -55,29 +59,45 @@ const ProcedimentosIndex = () => {
           name="description"
           content="Conheça os procedimentos realizados pelo Dr. Juliano Machado: Cirurgia de Catarata, Pterígio, YAG Laser e consultas. Atendimento em Paragominas e Belém."
         />
-        <link rel="canonical" href="https://drjulianomachado.com/procedimentos" />
+        <link rel="canonical" href={CANONICAL} />
+        {/*
+          Um @graph unico em vez de dois blocos soltos. Breadcrumb e ItemList ja
+          existiam, mas a pagina nao declarava QUEM realiza os procedimentos nem
+          QUE pagina e esta: sem Physician, sem WebSite e sem MedicalWebPage, um
+          mecanismo que le so esta URL ve um indice de procedimentos sem dono e
+          sem data de revisao clinica. Os nos vem dos mesmos helpers da home,
+          entao e a mesma entidade, nao uma copia.
+        */}
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Início", item: "https://drjulianomachado.com/" },
-              { "@type": "ListItem", position: 2, name: "Procedimentos", item: "https://drjulianomachado.com/procedimentos" },
+            "@graph": [
+              physicianNode({ mainEntityOfPage: CANONICAL }),
+              websiteNode(),
+              medicalWebPageNode({
+                name: "Procedimentos Oftalmológicos em Paragominas e Belém",
+                description: `Procedimentos realizados por ${DOCTOR.name} (${DOCTOR.crm}): cirurgia de catarata, pterígio, YAG laser, exames e consultas.`,
+                url: CANONICAL,
+              }),
+              {
+                "@type": "BreadcrumbList",
+                itemListElement: [
+                  { "@type": "ListItem", position: 1, name: "Início", item: `${BASE_URL}/` },
+                  { "@type": "ListItem", position: 2, name: "Procedimentos", item: CANONICAL },
+                ],
+              },
+              {
+                "@type": "ItemList",
+                name: "Procedimentos oftalmológicos",
+                itemListElement: procedimentos.map((p, i) => ({
+                  "@type": "ListItem",
+                  position: i + 1,
+                  name: p.title,
+                  description: p.description,
+                  url: `${BASE_URL}${p.link}`,
+                })),
+              },
             ],
-          })}
-        </script>
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "ItemList",
-            name: "Procedimentos oftalmológicos",
-            itemListElement: procedimentos.map((p, i) => ({
-              "@type": "ListItem",
-              position: i + 1,
-              name: p.title,
-              description: p.description,
-              url: `https://drjulianomachado.com${p.link}`,
-            })),
           })}
         </script>
       </Helmet>

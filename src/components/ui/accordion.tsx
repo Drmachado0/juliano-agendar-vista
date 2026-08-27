@@ -40,7 +40,19 @@ const AccordionContent = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <AccordionPrimitive.Content
     ref={ref}
-    className="overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
+    // data-[state=closed]:h-0 existe por causa do forceMount.
+    //
+    // Sem forceMount o Radix desmonta o conteudo fechado e nada disso importa.
+    // COM forceMount ele mantem o no e deixa de aplicar o atributo `hidden`, e
+    // ai o colapso passaria a depender so de `animate-accordion-up` — que e
+    // "0.2s ease-out" SEM fill-mode forwards. Animacao sem forwards nao retem o
+    // estado final: o elemento volta a altura natural quando ela termina, e na
+    // primeira renderizacao (fechado, sem nunca ter animado) ela nem roda. O
+    // resultado seria o FAQ inteiro aberto na tela.
+    //
+    // h-0 + overflow-hidden colapsa de verdade e mantem o texto no DOM, que e o
+    // ponto: resposta legivel por extrator, sem recorrer a display:none.
+    className="overflow-hidden text-sm transition-all data-[state=closed]:h-0 data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
     {...props}
   >
     <div className={cn("pb-4 pt-0", className)}>{children}</div>

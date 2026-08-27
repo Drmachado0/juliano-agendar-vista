@@ -68,7 +68,18 @@ const AgendarFAQSection = () => {
                 <AccordionTrigger className="text-left text-sm md:text-base font-semibold text-foreground py-5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md">
                   {faq.question}
                 </AccordionTrigger>
-                <AccordionContent className="text-sm md:text-base text-muted-foreground leading-relaxed">
+                {/*
+                  forceMount mantem a resposta no HTML mesmo com o item
+                  fechado. Sem ele o Radix desmonta o conteudo, e o texto da
+                  resposta nao existia no HTML prerenderizado — so as perguntas.
+                  O JSON-LD de FAQPage ja levava o par completo, mas extrator
+                  que le texto visivel, e nao dado estruturado, via pergunta
+                  sem resposta.
+                */}
+                <AccordionContent
+                  forceMount
+                  className="text-sm md:text-base text-muted-foreground leading-relaxed"
+                >
                   {faq.answer}
                 </AccordionContent>
               </AccordionItem>

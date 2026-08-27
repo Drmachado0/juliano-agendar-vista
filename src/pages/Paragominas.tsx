@@ -33,6 +33,13 @@ import drHero from "@/assets/dr-juliano-hero.webp";
 import drHero2x from "@/assets/dr-juliano-hero@2x.webp";
 import drConsultorio from "@/assets/dr-juliano-consultorio.jpg";
 import { DOCTOR, GOOGLE_REVIEWS } from "@/lib/constants";
+import { clinicNodes } from "@/lib/locations";
+import {
+  physicianNode,
+  websiteNode,
+  medicalWebPageNode,
+  faqPageNode,
+} from "@/lib/schema";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import { useGoogleReviews } from "@/hooks/useGoogleReviews";
@@ -179,31 +186,44 @@ const Paragominas = () => {
   const main = pool[reviewIndex];
   const previews = [pool[(reviewIndex + 1) % Math.max(1, pool.length)], pool[(reviewIndex + 2) % Math.max(1, pool.length)]];
 
+  // Grafo montado pelos helpers de lib/schema, como a home e /sobre.
+  //
+  // O que estava aqui era um Physician escrito a mao — e era exatamente a
+  // divergencia que lib/schema.ts foi criado para acabar:
+  //
+  //   - SEM @id, entao para o Google este era um SEGUNDO medico, diferente do
+  //     da home, com as avaliacoes presas nele em vez de na entidade real;
+  //   - `identifier: DOCTOR.crm` como string crua, enquanto o no canonico usa
+  //     PropertyValue {propertyID: "CRM", value} — dois formatos para o mesmo
+  //     registro profissional;
+  //   - `url: CANONICAL` com a mesma entidade da home, que declara `url` como
+  //     a raiz: a mesma pessoa apontando para dois enderecos canonicos;
+  //   - `memberOf` como MedicalOrganization aqui e Organization la;
+  //   - os dois enderecos inline no proprio no, em vez dos MedicalClinic com
+  //     @id proprio que a busca local precisa.
+  //
+  // mainEntityOfPage e o jeito correto de dizer "esta pagina fala dele" sem
+  // disputar o canonico. O rating continua sendo emitido porque esta pagina
+  // exibe a nota na tela (secao de depoimentos).
   const structuredData = {
     "@context": "https://schema.org",
-    "@type": "Physician",
-    name: DOCTOR.name,
-    medicalSpecialty: "Ophthalmology",
-    url: CANONICAL,
-    identifier: DOCTOR.crm,
-    areaServed: [{ "@type": "City", name: "Paragominas", addressRegion: "PA", addressCountry: "BR" }],
-    address: LOCAIS.map((l) => ({
-      "@type": "PostalAddress",
-      streetAddress: l.address,
-      addressLocality: "Paragominas",
-      addressRegion: "PA",
-      addressCountry: "BR",
-    })),
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: String(ratingValue),
-      bestRating: "5",
-      ratingCount: String(ratingCount),
-    },
-    memberOf: DOCTOR.memberships.map((name) => ({
-      "@type": "MedicalOrganization",
-      name,
-    })),
+    "@graph": [
+      physicianNode({
+        mainEntityOfPage: CANONICAL,
+        rating: { rating: ratingValue, count: ratingCount },
+      }),
+      websiteNode(),
+      medicalWebPageNode({
+        name: `Oftalmologista em Paragominas — ${DOCTOR.name}`,
+        description: `Consulta oftalmológica em Paragominas com ${DOCTOR.name} (${DOCTOR.crm}). Clinicor e Hospital Geral de Paragominas.`,
+        url: CANONICAL,
+      }),
+      faqPageNode(
+        FAQ.map((f) => ({ question: f.q, answer: f.a })),
+        CANONICAL
+      ),
+      ...clinicNodes("Paragominas"),
+    ],
   };
 
   const [menuOpen, setMenuOpen] = useState(false);

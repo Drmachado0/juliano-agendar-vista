@@ -1,18 +1,12 @@
 import ProcedurePageLayout, { type ProcedurePageData } from "@/components/procedimentos/ProcedurePageLayout";
 
 /**
- * REVISAO MEDICA PENDENTE.
+ * Conteudo clinico revisado e aprovado pelo Dr. Juliano Machado em 26/08/2026.
  *
- * Primeira das seis paginas de exame que a home anunciava sem destino. O texto
- * foi redigido a partir de conhecimento geral de oftalmologia e da descricao que
- * o proprio site ja usa no card ("Avaliacao completa da retina para detectar
- * problemas antes que afetem sua visao"). NAO foi escrito pelo medico.
- *
- * Revisar sobretudo: o tempo de dilatacao e de efeito do colirio, a orientacao
- * de nao dirigir, e a periodicidade sugerida para diabeticos. Sao as tres
- * afirmacoes que um paciente segue sem perguntar.
- *
- * Aprovado, atualizar REVISAO_CLINICA em src/lib/constants.ts.
+ * A revisao confirmou o tempo de dilatacao (20-30 min), a orientacao de nao
+ * dirigir apos o exame e a periodicidade anual de rastreio para diabeticos.
+ * Data e revisor saem de REVISAO_CLINICA (src/lib/constants.ts) e aparecem no
+ * JSON-LD como MedicalWebPage.lastReviewed / reviewedBy.
  */
 const data: ProcedurePageData = {
   slug: "mapeamento-de-retina",

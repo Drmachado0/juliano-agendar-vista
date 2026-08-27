@@ -28,15 +28,15 @@ const ProceduresSection = () => {
   }, []);
 
   const procedures: ProcedureItem[] = [
-    { icon: RetinografiaIcon, title: "Retinografia", description: "Fotografia detalhada do fundo do olho. Essencial para acompanhar diabetes, glaucoma e doenças da retina.", category: "exames" },
+    { icon: RetinografiaIcon, title: "Retinografia", description: "Fotografia detalhada do fundo do olho. Essencial para acompanhar diabetes, glaucoma e doenças da retina.", category: "exames" , href: "/procedimentos/retinografia"},
     { icon: MapeamentoRetinaIcon, title: "Mapeamento de Retina", description: "Avaliação completa da retina para detectar problemas antes que afetem sua visão.", category: "exames", href: "/procedimentos/mapeamento-de-retina" },
-    { icon: TonometriaIcon, title: "Tonometria", description: "Mede a pressão do olho — o principal exame para prevenir e controlar o glaucoma.", category: "exames" },
-    { icon: GonioscopiaIcon, title: "Gonioscopia", description: "Examina a drenagem interna do olho para avaliar o risco de glaucoma.", category: "exames", href: "/procedimentos/glaucoma" },
-    { icon: BiometriaIcon, title: "Biometria Ultrassônica", description: "Calcula o grau exato da lente que será implantada na cirurgia de catarata.", category: "exames" },
+    { icon: TonometriaIcon, title: "Tonometria", description: "Mede a pressão do olho — o principal exame para prevenir e controlar o glaucoma.", category: "exames" , href: "/procedimentos/tonometria"},
+    { icon: GonioscopiaIcon, title: "Gonioscopia", description: "Examina a drenagem interna do olho para avaliar o risco de glaucoma.", category: "exames", href: "/procedimentos/gonioscopia" },
+    { icon: BiometriaIcon, title: "Biometria Ultrassônica", description: "Calcula o grau exato da lente que será implantada na cirurgia de catarata.", category: "exames" , href: "/procedimentos/biometria-ultrassonica"},
     { icon: CatarataIcon, title: "Cirurgia de Catarata", description: "Troca do cristalino opaco por uma lente artificial. Procedimento rápido, seguro e que pode até reduzir a dependência de óculos.", category: "cirurgias", href: "/procedimentos/cirurgia-de-catarata" },
     { icon: PterigioIcon, title: "Cirurgia de Pterígio", description: "Remove a membrana que cresce sobre o olho, causando irritação e vermelhidão, com técnica microcirúrgica.", category: "cirurgias", href: "/procedimentos/cirurgia-de-pterigio" },
     { icon: YagLaserIcon, title: "YAG Laser", description: "Procedimento rápido (poucos minutos) para limpar a lente quando ela fica embaçada após cirurgia de catarata.", category: "laser", href: "/procedimentos/capsulotomia-yag-laser" },
-    { icon: IridotomiaIcon, title: "Iridotomia a Laser", description: "Laser preventivo para pacientes com risco de glaucoma agudo. Indolor e feito no consultório.", category: "laser", href: "/procedimentos/glaucoma" },
+    { icon: IridotomiaIcon, title: "Iridotomia a Laser", description: "Laser preventivo para pacientes com risco de glaucoma agudo. Indolor e feito no consultório.", category: "laser", href: "/procedimentos/iridotomia-a-laser" },
   ];
 
   const categories = [

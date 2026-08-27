@@ -1,6 +1,6 @@
 # Dr. Juliano Machado — Oftalmologista
 
-> Site oficial do Dr. Juliano Machado, médico oftalmologista (CRM-PA 15253) com mais de 13 anos de experiência, atendendo em Paragominas e Belém (PA). Catarata, pterígio, glaucoma, retina, OCT e campo visual. Agendamento online com confirmação por WhatsApp.
+> Site oficial do Dr. Juliano Machado, médico oftalmologista (CRM-PA 15253) com mais de 15 anos de experiência, atendendo em Paragominas e Belém (PA). Catarata, pterígio, glaucoma, retina, OCT e campo visual. Agendamento online com confirmação por WhatsApp.
 
 ## Pages
 
@@ -14,6 +14,11 @@
 
 - [Todos os procedimentos](/procedimentos): Índice das cirurgias e consultas realizadas.
 - [Mapeamento de Retina](/procedimentos/mapeamento-de-retina): Exame do fundo do olho, incluindo a periferia.
+- [Retinografia](/procedimentos/retinografia): Fotografia do fundo do olho que documenta e permite comparar ao longo do tempo.
+- [Tonometria](/procedimentos/tonometria): Medida da pressao intraocular, exame basico no rastreio do glaucoma.
+- [Gonioscopia](/procedimentos/gonioscopia): Exame que define se o angulo de drenagem do olho e aberto ou fechado.
+- [Biometria Ultrassonica](/procedimentos/biometria-ultrassonica): Mede o olho para calcular o grau da lente da cirurgia de catarata.
+- [Iridotomia a Laser](/procedimentos/iridotomia-a-laser): Laser preventivo para olhos com angulo estreito, feito no consultorio.
 - [Consulta Oftalmológica](/procedimentos/consulta-oftalmologica): Avaliação completa da saúde ocular, prescrição de óculos e acompanhamento de doenças.
 - [Cirurgia de Catarata](/procedimentos/cirurgia-de-catarata): Substituição do cristalino opaco por lente intraocular.
 - [Cirurgia de Pterígio](/procedimentos/cirurgia-de-pterigio): Remoção do tecido que cresce sobre a córnea.

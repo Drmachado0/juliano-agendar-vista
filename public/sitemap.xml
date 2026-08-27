@@ -61,6 +61,31 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://drjulianomachado.com/procedimentos/retinografia</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drjulianomachado.com/procedimentos/tonometria</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drjulianomachado.com/procedimentos/gonioscopia</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drjulianomachado.com/procedimentos/biometria-ultrassonica</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drjulianomachado.com/procedimentos/iridotomia-a-laser</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://drjulianomachado.com/politica-de-privacidade</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>

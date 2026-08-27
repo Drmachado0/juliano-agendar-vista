@@ -7,7 +7,13 @@ import AreasDeAtuacao from "@/components/AreasDeAtuacao";
 import { Button } from "@/components/ui/button";
 import { CalendarCheck, MapPin, Phone, Navigation, BadgeCheck } from "lucide-react";
 import { DOCTOR } from "@/lib/constants";
-import { LOCATIONS, BASE_URL, PHYSICIAN_ID } from "@/lib/locations";
+import { LOCATIONS, BASE_URL, clinicNodes } from "@/lib/locations";
+import {
+  physicianNode,
+  websiteNode,
+  medicalWebPageNode,
+  faqPageNode,
+} from "@/lib/schema";
 
 const CANONICAL = `${BASE_URL}/belem`;
 
@@ -54,27 +60,37 @@ const FAQ = [
 export default function Belem() {
   const unidades = LOCATIONS.filter((l) => l.city === "Belém");
 
-  // Um no MedicalClinic por unidade, ambos referenciando o mesmo Physician.
+  // Grafo completo da pagina, montado pelos mesmos helpers da home.
+  //
+  // Antes daqui saia SO um MedicalClinic por unidade. A pagina que responde por
+  // "oftalmologista em Belem" nao declarava quem e o medico, nem que pagina e
+  // esta, nem quando o conteudo foi revisado — os clinicos apontavam para um
+  // @id de Physician que a propria pagina nunca definia. Para um mecanismo que
+  // le esta URL isolada (e e assim que assistente de IA le), a entidade
+  // principal simplesmente nao existia.
+  //
+  // O FAQ ja estava na tela em <dl>/<dt>/<dd> desde sempre, sem FAQPage. Como
+  // faqPageNode recebe o MESMO array que a interface renderiza, nao ha risco de
+  // marcar pergunta que o paciente nao ve.
+  //
+  // Sem `rating`: esta pagina nao exibe avaliacao, e aggregateRating so pode
+  // sair onde a nota esta visivel.
   const structuredData = {
     "@context": "https://schema.org",
-    "@graph": unidades.map((u) => ({
-      "@type": "MedicalClinic",
-      "@id": `${BASE_URL}/#clinic-${u.slug}`,
-      name: u.name,
-      address: {
-        "@type": "PostalAddress",
-        streetAddress: u.streetAddress,
-        addressLocality: u.addressLocality,
-        addressRegion: u.addressRegion,
-        addressCountry: u.addressCountry,
-      },
-      telephone: u.phoneE164,
-      areaServed: { "@type": "City", name: "Belém" },
-      medicalSpecialty: "Ophthalmology",
-      hasMap: u.mapsLink,
-      url: CANONICAL,
-      physician: { "@id": PHYSICIAN_ID },
-    })),
+    "@graph": [
+      physicianNode({ mainEntityOfPage: CANONICAL }),
+      websiteNode(),
+      medicalWebPageNode({
+        name: `Oftalmologista em Belém — ${DOCTOR.name}`,
+        description: `Consultas, exames e cirurgias oftalmológicas em Belém com ${DOCTOR.name}, ${DOCTOR.crm}.`,
+        url: CANONICAL,
+      }),
+      faqPageNode(
+        FAQ.map((f) => ({ question: f.q, answer: f.a })),
+        CANONICAL
+      ),
+      ...clinicNodes("Belém"),
+    ],
   };
 
   return (

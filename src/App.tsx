@@ -47,6 +47,11 @@ const ProcConsulta = lazy(() => import("./pages/procedimentos/ConsultaOftalmolog
 const ProcYagLaser = lazy(() => import("./pages/procedimentos/CapsulotomiaYagLaser"));
 const ProcGlaucoma = lazy(() => import("./pages/procedimentos/Glaucoma"));
 const ProcMapeamento = lazy(() => import("./pages/procedimentos/MapeamentoDeRetina"));
+const ProcRetinografia = lazy(() => import("./pages/procedimentos/Retinografia"));
+const ProcTonometria = lazy(() => import("./pages/procedimentos/Tonometria"));
+const ProcGonioscopia = lazy(() => import("./pages/procedimentos/Gonioscopia"));
+const ProcBiometria = lazy(() => import("./pages/procedimentos/BiometriaUltrassonica"));
+const ProcIridotomia = lazy(() => import("./pages/procedimentos/IridotomiaLaser"));
 
 const queryClient = new QueryClient();
 
@@ -88,6 +93,11 @@ const App = () => (
               <Route path="/procedimentos/capsulotomia-yag-laser" element={<ProcYagLaser />} />
               <Route path="/procedimentos/glaucoma" element={<ProcGlaucoma />} />
               <Route path="/procedimentos/mapeamento-de-retina" element={<ProcMapeamento />} />
+              <Route path="/procedimentos/retinografia" element={<ProcRetinografia />} />
+              <Route path="/procedimentos/tonometria" element={<ProcTonometria />} />
+              <Route path="/procedimentos/gonioscopia" element={<ProcGonioscopia />} />
+              <Route path="/procedimentos/biometria-ultrassonica" element={<ProcBiometria />} />
+              <Route path="/procedimentos/iridotomia-a-laser" element={<ProcIridotomia />} />
               <Route path="/obrigado" element={<Obrigado />} />
               <Route path="/sobre" element={<Sobre />} />
               <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />

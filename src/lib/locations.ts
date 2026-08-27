@@ -106,9 +106,15 @@ export const PHYSICIAN_ID = `${BASE_URL}/#physician`;
  * Sem `geo` e `openingHoursSpecification` de proposito: nao existe dado real de
  * coordenada nem de horario no projeto (o campo hours da interface e o texto
  * "Agende para ver disponibilidade"). Inventar NAP e pior do que omitir.
+ *
+ * `city` filtra as unidades. Pagina de cidade so deve declarar os enderecos que
+ * ela de fato exibe — /belem emitindo a Clinicor de Paragominas seria dado
+ * estruturado divergindo do que esta na tela. Os @id continuam ancorados em
+ * BASE_URL, entao e a MESMA entidade que a home referencia, nao uma copia.
  */
-export function clinicNodes() {
-  return LOCATIONS.map((l) => ({
+export function clinicNodes(city?: ClinicLocation["city"]) {
+  const unidades = city ? LOCATIONS.filter((l) => l.city === city) : LOCATIONS;
+  return unidades.map((l) => ({
     "@type": "MedicalClinic",
     "@id": `${BASE_URL}/#clinic-${l.slug}`,
     name: l.name,
