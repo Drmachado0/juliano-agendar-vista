@@ -22,6 +22,7 @@
  */
 
 import { createServer } from "node:http";
+import { execFileSync } from "node:child_process";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
@@ -86,6 +87,43 @@ function servir() {
   });
 }
 
+/**
+ * Abre o Chromium; se o binario nao estiver no ambiente, baixa e tenta de novo.
+ *
+ * POR QUE: `playwright` so baixa o navegador num postinstall, e havia tres
+ * jeitos de esse passo nao acontecer no build de producao — devDependencies
+ * pulada por install de producao, bun bloqueando lifecycle script, e npm com
+ * --ignore-scripts. Bastava um deles para este script cair no catch e publicar
+ * o site inteiro como casca de 5 KB, com a suite local passando porque AQUI o
+ * navegador existe. Os dois primeiros viraram `dependencies` e
+ * `trustedDependencies` no package.json; este retry cobre o terceiro.
+ *
+ * Continua sem poder derrubar o build: se o download falhar, devolve null e o
+ * chamador publica a SPA normalmente.
+ */
+async function abrirNavegador(chromium) {
+  try {
+    return await chromium.launch();
+  } catch (primeiro) {
+    console.warn(
+      `[prerender] Chromium ausente (${String(primeiro).slice(0, 60)}). Baixando uma vez...`
+    );
+    try {
+      execFileSync("npx", ["--yes", "playwright", "install", "chromium"], {
+        stdio: "inherit",
+        timeout: 180000,
+        shell: process.platform === "win32",
+      });
+      return await chromium.launch();
+    } catch (segundo) {
+      console.warn(
+        `[prerender] sem Chromium apos o download (${String(segundo).slice(0, 60)}). Pulando.`
+      );
+      return null;
+    }
+  }
+}
+
 async function main() {
   if (!existsSync(join(DIST, "index.html"))) {
     console.warn("[prerender] dist/index.html nao existe. Rode o build antes. Pulando.");
@@ -109,12 +147,8 @@ async function main() {
   let browser;
   let ok = 0;
   let falhas = 0;
-  try {
-    browser = await chromium.launch();
-  } catch (e) {
-    console.warn(
-      `[prerender] Chromium nao pode ser iniciado (${String(e).slice(0, 80)}). Pulando.`
-    );
+  browser = await abrirNavegador(chromium);
+  if (!browser) {
     servidor.close();
     return;
   }
