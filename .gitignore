@@ -15,6 +15,11 @@ dist-ssr
 # O lockfile versionado do projeto é o bun.lock (padrão Lovable).
 # Rodar `npm install` localmente gera este arquivo — não deve ir pro repo.
 package-lock.json
+# bun.lockb é o formato binário antigo. Manter os dois versionados deixa o
+# grafo de dependências ambíguo: qual deles o bun lê depende da versão dele,
+# e o binário aqui era o do template — sem playwright, o que fazia o
+# postinstall do Chromium nunca rodar no build de produção.
+bun.lockb
 
 # Environment / secrets
 # .env é local-only (overrides + secrets que NUNCA vão pro repo).
