@@ -34,6 +34,12 @@ const ProcedimentosIndex = () => {
       icon: Eye,
     },
     {
+      title: "Mapeamento de Retina",
+      description: "Exame do fundo do olho, incluindo a periferia, para diabetes, miopia alta e sintomas de alerta.",
+      link: "/procedimentos/mapeamento-de-retina",
+      icon: Eye,
+    },
+    {
       title: "Consulta Oftalmológica",
       description: "Avaliação completa da saúde ocular, prescrição de óculos e acompanhamento de doenças.",
       link: "/procedimentos/consulta-oftalmologica",
