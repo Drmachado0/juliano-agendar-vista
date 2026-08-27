@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:sem-prerender": "vite build"
+    "build:sem-prerender": "vite build",
+    "monitorar:seo": "node scripts/monitorar-seo.mjs"
   },
   "trustedDependencies": [
     "playwright"

@@ -1,18 +1,20 @@
 # Auditoria SEO completa - drjulianomachado.com
 
 **Data:** 27/08/2026  
-**Health Score:** 79/100  
+**Health Score:** 82/100  
 **Tipo:** Local Service - Medical Practice (oftalmologia, 2 cidades)
 
-Medicao: as 18 URLs do sitemap foram renderizadas com Playwright esperando h1 e canonical, porque o HTML cru e casca e daria falso negativo. Dados de campo do CrUX, 25 semanas.
+Medicao: as 18 URLs do sitemap renderizadas com Playwright esperando h1 e canonical, porque o HTML cru e casca e daria falso negativo. Campo pela CrUX History API.
+
+Verificacao continua: `npm run monitorar:seo`.
 
 ## Notas por categoria
 
 | Categoria | Nota | Peso |
 |---|---|---|
 | Technical SEO | 82/100 | 22% |
-| Content Quality | 88/100 | 23% |
-| On-Page SEO | 86/100 | 20% |
+| Content Quality | 92/100 | 23% |
+| On-Page SEO | 96/100 | 20% |
 | Schema / Structured Data | 92/100 | 10% |
 | Performance (CWV) | 38/100 | 10% |
 | AI Search Readiness | 55/100 | 10% |
@@ -20,11 +22,12 @@ Medicao: as 18 URLs do sitemap foram renderizadas com Playwright esperando h1 e 
 
 ## Principais achados
 
-1. LCP de 4.946ms no campo, faixa ruim, porque nada pinta antes do JS executar
+1. LCP de 4.132ms no campo (janela ate 2026-08-01), faixa ruim, porque nada pinta antes do JS executar
 2. HTML servido e casca de 9,8 KB nas 18 rotas; prerender nao roda no build da Lovable
 3. Crawler de IA sem execucao de JS nao ve conteudo nenhum
 4. 258,6 KB gzip no caminho critico, com Supabase pre-carregado ate onde nao e usado
 5. Seis titulos passam de 60 caracteres e sao cortados no resultado
+6. Dados de campo sao esparsos: o site nao tem trafego para o CrUX reportar toda semana
 
 ## Situacao dos ganhos rapidos
 
@@ -63,7 +66,7 @@ Os cabecalhos cobrem HSTS, nosniff e Referrer-Policy, mas nao ha protecao contra
 
 ---
 
-## Content Quality - 88/100
+## Content Quality - 92/100
 
 ### O que esta certo
 
@@ -83,7 +86,7 @@ As duas unicas paginas abaixo de 300 palavras. Ambas sao de navegacao ou transac
 
 ---
 
-## On-Page SEO - 86/100
+## On-Page SEO - 96/100
 
 ### O que esta certo
 
@@ -132,16 +135,16 @@ Unica pagina sem JSON-LD.
 
 ### O que esta certo
 
-- CLS de 0,048 no campo, dentro do bom
+- CLS de 0 no campo, dentro do bom
 - Assets com cache immutable de 1 ano
 - Fontes auto-hospedadas com preload, sem ida ao Google Fonts
 - modulepreload ja configurado para os chunks principais
 
 ### Achados
 
-**[Critical] LCP de 4.946 ms no campo (CrUX p75), faixa ruim**
+**[Critical] LCP de 4.132 ms no campo (CrUX, janela ate 2026-08-01), faixa ruim**
 
-Dados reais de 25 semanas: LCP 4.946ms, FCP 4.041ms, TTFB 2.119ms, CLS 0,048, INP sem dados. Em laboratorio com emulacao movel, FCP e LCP sao IGUAIS na home (3.132ms): nada pinta antes do JS executar e o React montar. O elemento LCP e um paragrafo de texto, nao imagem. Nao adianta otimizar imagem porque imagem nao e o gargalo.
+Leitura direta da CrUX History API, janela semanal terminando em 2026-08-01, a mais recente com dados: LCP 4.132ms, FCP 3.527ms, TTFB 2.056ms, CLS 0 (bom), INP sem dados. As tres semanas seguintes vieram VAZIAS: o site nao atinge trafego suficiente para o CrUX reportar toda semana, e o registro corrente (queryRecord) devolve 404 para esta origem. Em laboratorio com emulacao movel, FCP e LCP sao IGUAIS na home (3.132ms): nada pinta antes do JS executar e o React montar. O elemento LCP e um paragrafo de texto, nao imagem, entao otimizar imagem nao resolveria nada.
 
 *Correcao:* O conserto estrutural e servir HTML pronto, que e o que o prerender faria e nao roda na Lovable. Sem ele, os ganhos sao marginais: enxugar o caminho critico.
 
@@ -151,7 +154,7 @@ O index.html e compartilhado por todas as rotas e faz modulepreload de supabase 
 
 *Correcao:* NAO basta tirar o modulepreload: supabase e import ESTATICO da raiz, via AuthContext (que envolve o app todo) e WhatsAppButton (presente em toda pagina). Sem o preload os mesmos bytes continuariam necessarios, so descobertos mais tarde - seria pessimizacao. O ganho real exige import dinamico nos dois: no WhatsAppButton e trivial, porque so usa supabase dentro do clique; no AuthContext e refatoracao do bootstrap de autenticacao, que merece decisao propria por mexer em login de sistema em producao.
 
-**[High] TTFB de 2.119 ms no campo**
+**[High] TTFB de 2.056 ms no campo**
 
 Medido daqui: 1,7s a frio e 0,21s quente. O HTML vai com no-cache, must-revalidate, entao nao fica na borda da Cloudflare e cada visita nova busca na origem.
 

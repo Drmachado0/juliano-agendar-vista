@@ -1,6 +1,6 @@
 # Plano de acao - drjulianomachado.com
 
-Health Score: 79/100
+Health Score: 82/100
 
 ## Fase 1: Ganhos rapidos
 
@@ -8,15 +8,17 @@ Health Score: 79/100
 
 - [x] [feito] Encurtar os seis titulos acima de 60 caracteres
 - [x] [feito] Aparar as cinco descriptions acima de 160 caracteres
-- [ ] [cancelado] Remover supabase do modulepreload: seria pessimizacao, nao ganho
-- [ ] [cancelado] Adicionar alt em /paragominas: a marcacao ja esta correta
+- [x] [cancelado] Remover supabase do modulepreload: seria pessimizacao, nao ganho
+- [x] [cancelado] Adicionar alt em /paragominas: a marcacao ja esta correta
 
 ## Fase 2: Conteudo
 
-**Prazo:** Duas a tres semanas
+**Prazo:** FEITO em 27/08/2026
 
-- [ ] Ampliar /procedimentos com um paragrafo por grupo de exames
-- [ ] Manter llms.txt rico, pois hoje e a unica superficie que crawler sem JS le
+- [x] [feito] /procedimentos reagrupado em tres secoes com paragrafo editorial cada; 170 -> 433 palavras
+- [x] [feito] Os cinco exames orfaos entraram no indice: 6 -> 11 links para paginas filhas
+- [x] [feito] Teste src/test/procedimentosIndex.test.ts guarda o indice contra o sitemap
+- [x] [ja estava ok] llms.txt cobre as 18 rotas, guardado por src/test/llmsTxt.test.ts
 
 ## Fase 2b: Supabase fora do caminho critico
 
@@ -28,15 +30,17 @@ Health Score: 79/100
 
 ## Fase 3: Decisao estrutural
 
-**Prazo:** Quando virar prioridade
+**Prazo:** DECIDIDO em 27/08/2026: aceitar como esta
 
-- [ ] Reavaliar o prerender: Chromium empacotado, SSG sem navegador, ou troca de host
-- [ ] So vale se LCP e citacao por IA entrarem como meta de negocio
+- [x] [decidido] Prerender nao roda no build da Lovable por falta de bibliotecas de sistema do Chromium (libglib-2.0.so.0, exitCode=127). Descartados com evidencia: flags de container, rede, permissao e prazo. Registro em scripts/prerender.mjs e .claude/skills/prerender-na-lovable/.
+- [x] [decidido] Aceitar: o Google executa JS e indexa; os previews de link vivem das tags og estaticas do index.html. O custo recai sobre crawlers de IA que nao executam JS.
+- [ ] GATILHO PARA REABRIR: se o LCP de campo passar de 5.000ms de forma sustentada, ou se citacao por IA virar meta de negocio. O monitor reporta os dois — rode npm run monitorar:seo.
+- [ ] Se reabrir, as saidas em ordem de custo: Chromium empacotado (@sparticuz/chromium), SSG sem navegador, troca de host.
 
 ## Fase 4: Monitoramento
 
-**Prazo:** Continuo
+**Prazo:** FEITO em 27/08/2026; rodar sob demanda
 
-- [ ] Acompanhar CrUX mensalmente: LCP, FCP e TTFB
-- [ ] Conferir /prerender-status.json apos cada deploy
-- [ ] Ligar o Search Console por conta de servico para ter indexacao real
+- [x] [feito] npm run monitorar:seo — checa prerender-status, sitemap x rotas vivas, invariantes por pagina e CrUX; sai com codigo 1 em regressao
+- [x] [feito] O monitor usa queryHistoryRecord e informa a data da janela, porque a serie e esparsa
+- [ ] Ligar o Search Console por conta de servico para ter indexacao real (precisa de credencial sua)

@@ -1,4 +1,4 @@
-# Content Quality - nota 88/100
+# Content Quality - nota 92/100
 
 ## O que esta certo
 

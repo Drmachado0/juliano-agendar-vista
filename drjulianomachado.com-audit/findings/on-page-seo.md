@@ -1,4 +1,4 @@
-# On-Page SEO - nota 86/100
+# On-Page SEO - nota 96/100
 
 ## O que esta certo
 
