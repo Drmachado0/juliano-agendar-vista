@@ -103,9 +103,31 @@ function servir() {
  */
 let porqueSemChromium = null;
 
+/**
+ * Flags para rodar Chromium dentro de container de build.
+ *
+ * POR QUE: o relatorio de 97e82b4 mostrou que o download FUNCIONA no servidor
+ * da Lovable — o segundo erro ja nao e "Executable doesn't exist", e sim
+ * "Target page, context or browser has been closed" com o binario sendo
+ * lancado. O navegador baixa, abre e morre em seguida: assinatura do sandbox
+ * do Chromium em container sem user namespace sem privilegio.
+ *
+ * --no-sandbox e seguro AQUI, e so aqui: o unico conteudo carregado e o nosso
+ * proprio build, servido por um servidor local nesta mesma maquina. Nao ha
+ * pagina de terceiro envolvida, que e o que o sandbox existe para conter.
+ *
+ * --disable-dev-shm-usage cobre a outra morte comum de container: /dev/shm
+ * pequeno demais, que derruba o Chromium do mesmo jeito e com erro parecido.
+ */
+const FLAGS_CONTAINER = [
+  "--no-sandbox",
+  "--disable-setuid-sandbox",
+  "--disable-dev-shm-usage",
+];
+
 async function abrirNavegador(chromium) {
   try {
-    return await chromium.launch();
+    return await chromium.launch({ args: FLAGS_CONTAINER });
   } catch (primeiro) {
     console.warn(
       `[prerender] Chromium ausente (${String(primeiro).slice(0, 60)}). Baixando uma vez...`
@@ -116,7 +138,7 @@ async function abrirNavegador(chromium) {
         timeout: 180000,
         shell: process.platform === "win32",
       });
-      return await chromium.launch();
+      return await chromium.launch({ args: FLAGS_CONTAINER });
     } catch (segundo) {
       // Guardado para o relatorio: o texto do erro separa causas que pedem
       // saidas diferentes — bloqueio de rede ao CDN da Playwright, falta de
@@ -124,7 +146,7 @@ async function abrirNavegador(chromium) {
       // faltando no container. Sem ele, "sem-chromium" nao diz o que tentar.
       porqueSemChromium = {
         aoAbrir: String(primeiro).slice(0, 300),
-        aoBaixar: String(segundo).slice(0, 300),
+        aoBaixar: String(segundo).slice(0, 700),
       };
       console.warn(
         `[prerender] sem Chromium apos o download (${String(segundo).slice(0, 60)}). Pulando.`
