@@ -104,6 +104,25 @@ function servir() {
 let porqueSemChromium = null;
 
 /**
+ * Resume um erro de launch preservando as DUAS pontas.
+ *
+ * POR QUE: o log de erro do Chromium comeca com a lista inteira de argumentos
+ * — centenas de caracteres de flags que a Playwright passa por padrao — e so
+ * DEPOIS dela vem a causa da morte ("Failed to move to new namespace",
+ * "error while loading shared libraries", etc). Truncar pelo comeco, que era o
+ * que este relatorio fazia, guardava exatamente a parte inutil e jogava fora a
+ * resposta. Cortar pelo meio preserva o tipo do erro (comeco) e o motivo real
+ * (fim).
+ */
+function resumir(e, cabeca = 220, cauda = 900) {
+  const t = String(e);
+  if (t.length <= cabeca + cauda) return t;
+  return `${t.slice(0, cabeca)}
+  [...${t.length - cabeca - cauda} chars...]
+${t.slice(-cauda)}`;
+}
+
+/**
  * Flags para rodar Chromium dentro de container de build.
  *
  * POR QUE: o relatorio de 97e82b4 mostrou que o download FUNCIONA no servidor
@@ -145,8 +164,11 @@ async function abrirNavegador(chromium) {
       // permissao de escrita, prazo estourado, ou dependencia de sistema
       // faltando no container. Sem ele, "sem-chromium" nao diz o que tentar.
       porqueSemChromium = {
-        aoAbrir: String(primeiro).slice(0, 300),
-        aoBaixar: String(segundo).slice(0, 700),
+        // Registrado explicitamente: inferir isso do log truncado nao funciona,
+        // porque args customizados sao anexados no FIM da lista da Playwright.
+        flagsPassadas: FLAGS_CONTAINER,
+        aoAbrir: resumir(primeiro),
+        aoBaixar: resumir(segundo),
       };
       console.warn(
         `[prerender] sem Chromium apos o download (${String(segundo).slice(0, 60)}). Pulando.`
