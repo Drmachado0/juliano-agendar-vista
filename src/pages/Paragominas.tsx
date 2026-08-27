@@ -203,15 +203,18 @@ const Paragominas = () => {
   //     @id proprio que a busca local precisa.
   //
   // mainEntityOfPage e o jeito correto de dizer "esta pagina fala dele" sem
-  // disputar o canonico. O rating continua sendo emitido porque esta pagina
-  // exibe a nota na tela (secao de depoimentos).
+  // disputar o canonico.
+  //
+  // Sem `rating`, pelo mesmo motivo que a home deixou de emitir: Physician
+  // herda de MedicalBusiness -> LocalBusiness, e avaliacao que a propria
+  // entidade publica sobre si e tratada como self-serving pela politica de
+  // dados estruturados do Google — inelegivel para rich result e sujeita a
+  // acao manual. A nota do Google continua VISIVEL na secao de depoimentos;
+  // sai so a marcacao.
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
-      physicianNode({
-        mainEntityOfPage: CANONICAL,
-        rating: { rating: ratingValue, count: ratingCount },
-      }),
+      physicianNode({ mainEntityOfPage: CANONICAL }),
       websiteNode(),
       medicalWebPageNode({
         name: `Oftalmologista em Paragominas — ${DOCTOR.name}`,

@@ -500,10 +500,11 @@ const Agendamento = () => {
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
-      physicianNode({
-        rating: { rating: reviews.rating, count: reviews.count },
-        mainEntityOfPage: URL_AGENDAMENTO,
-      }),
+      // Sem `rating`, pelo mesmo motivo que a home e /paragominas deixaram de
+      // emitir: Physician herda de MedicalBusiness -> LocalBusiness, e nota que
+      // a propria entidade publica sobre si e self-serving pela politica de
+      // dados estruturados do Google. A nota continua visivel na pagina.
+      physicianNode({ mainEntityOfPage: URL_AGENDAMENTO }),
       websiteNode(),
       medicalWebPageNode({
         name: "Agendar Consulta — Dr. Juliano Machado",
