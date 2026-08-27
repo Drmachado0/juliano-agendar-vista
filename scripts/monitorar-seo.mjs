@@ -105,6 +105,19 @@ async function rotasDoSitemap() {
     return [];
   }
   const xml = await r.text();
+
+  // lastmod ausente foi a causa de 10 das 18 rotas nunca terem sido rastreadas:
+  // o Google guardou uma versao de 8 URLs e nao teve motivo para reler, porque
+  // o sitemap nao anunciava mudanca nenhuma. Vigiar isso aqui e barato.
+  const blocos = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => m[1]);
+  const semLastmod = blocos
+    .filter((b) => !/<lastmod>\s*\d{4}-\d{2}-\d{2}/.test(b))
+    .map((b) => (b.match(/<loc>([^<]+)<\/loc>/) || [])[1])
+    .filter(Boolean);
+  if (semLastmod.length) {
+    falha(`${semLastmod.length} rota(s) sem <lastmod> valido no sitemap: ${semLastmod.slice(0, 3).join(", ")}${semLastmod.length > 3 ? "..." : ""}`);
+  }
+
   return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
 }
 
