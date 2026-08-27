@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
@@ -71,11 +71,32 @@ const RouteFallback = () => (
   </div>
 );
 
+/**
+ * Envolve apenas as rotas que precisam de sessao.
+ *
+ * POR QUE: o AuthProvider envolvia o app inteiro, e ele consulta a sessao no
+ * useEffect de montagem. Resultado: o cliente Supabase era necessario em TODA
+ * pagina, inclusive nas 18 rotas publicas que nunca leem sessao — 48,2 KB gzip
+ * dentro de um caminho critico de 250 KB.
+ *
+ * Passar os imports para dinamico (41a8839) foi necessario mas nao suficiente:
+ * enquanto o bootstrap rodasse em pagina publica, o chunk carregava em pagina
+ * publica, e o Vite o pre-carregava com razao.
+ *
+ * Verificado antes de mover: NENHUM componente publico chama useAuth(). Os
+ * consumidores sao AdminLayout, tres paginas /admin, dois modais de admin e a
+ * propria /auth — todos abaixo desta rota de layout.
+ */
+const RotasAutenticadas = () => (
+  <AuthProvider>
+    <Outlet />
+  </AuthProvider>
+);
+
 const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
           <Toaster />
           <Sonner closeButton richColors position="top-right" />
           <BrowserRouter>
@@ -106,6 +127,7 @@ const App = () => (
               <Route path="/obrigado" element={<Obrigado />} />
               <Route path="/sobre" element={<Sobre />} />
               <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
+              <Route element={<RotasAutenticadas />}>
               <Route path="/auth" element={<Auth />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
@@ -125,11 +147,11 @@ const App = () => (
               <Route path="/admin/relatorios" element={<AdminRelatorios />} />
               <Route path="/admin/saude-integracoes" element={<AdminSaudeIntegracoes />} />
               <Route path="/admin/monitoramento-crm" element={<AdminMonitoramentoCrm />} />
+              </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
           </BrowserRouter>
-        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   </HelmetProvider>
