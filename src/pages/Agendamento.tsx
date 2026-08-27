@@ -52,7 +52,25 @@ type Depoimento = {
 /** URL canonica desta pagina. Usada no canonical, no og:url e no JSON-LD. */
 const URL_AGENDAMENTO = `${BASE_URL}/agendamento`;
 
+/**
+ * ORDEM IMPORTA: o depoimento mais longo vem primeiro.
+ *
+ * POR QUE: para texto, o LCP mede a area ocupada pelo TEXTO, nao a caixa do
+ * elemento. Igualar a caixa dos slides nao bastou — medido, os tres paragrafos
+ * ficaram com 140px identicos e o carrossel ainda gerava candidato novo aos
+ * 17,3s, porque 192 caracteres preenchem mais que 86 no mesmo espaco.
+ *
+ * Com o maior pintando primeiro, nenhum slide posterior pode supera-lo, e o LCP
+ * passa a refletir o primeiro paint de verdade. Ao adicionar depoimento, mantenha
+ * a ordem decrescente por tamanho de texto.
+ */
 const DEPOIMENTOS: Depoimento[] = [
+  {
+    nome: "Fernanda Cruz",
+    data: "Avaliação verificada · Google",
+    texto:
+      "Um ótimo atendimento, e dr Juliano um grande profissional. Levei meu filho para fazer o teste do olhinho e o dr. foi muito atencioso, cauteloso e muito cuidadoso no atendimento do meu pequeno.",
+  },
   {
     nome: "Jéssica Oliveira da Costa",
     data: "Avaliação verificada · Google",
@@ -64,12 +82,6 @@ const DEPOIMENTOS: Depoimento[] = [
     data: "Avaliação verificada · Google",
     texto:
       "Atendimento excelente, médico atencioso e equipe muito profissional. Recomendo demais!",
-  },
-  {
-    nome: "Fernanda Cruz",
-    data: "Avaliação verificada · Google",
-    texto:
-      "Um ótimo atendimento, e dr Juliano um grande profissional. Levei meu filho para fazer o teste do olhinho e o dr. foi muito atencioso, cauteloso e muito cuidadoso no atendimento do meu pequeno.",
   },
 ];
 
@@ -615,21 +627,30 @@ const Agendamento = () => {
                     </span>
                   </div>
 
-                  <div className="relative min-h-[120px]">
+                  <div className="relative h-[184px] sm:h-[160px]">
                     {DEPOIMENTOS.map((d, idx) => (
                       <div
                         key={d.nome + d.data}
-                        className={`absolute inset-0 transition-all duration-500 ${
+                        className={`absolute inset-0 flex flex-col transition-all duration-500 ${
                           idx === depoimentoAtivo
                             ? "translate-x-0 opacity-100"
                             : "pointer-events-none translate-x-2 opacity-0"
                         }`}
                         aria-hidden={idx !== depoimentoAtivo}
                       >
-                        <p className="text-sm italic leading-relaxed text-foreground md:text-base">
+                        <p className="flex-1 text-sm italic leading-relaxed text-foreground md:text-base">
                           "{d.texto}"
                         </p>
-                        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                        {/*
+                            Altura fixa tambem aqui. O <p> acima usa
+                            flex-1 e recebe o espaco que sobra — se este
+                            bloco quebrar em duas linhas num depoimento e
+                            uma noutro, o texto muda de tamanho e volta a
+                            gerar candidato novo a LCP. Medido: 138px num
+                            slide e 156px noutro, exatamente uma linha de
+                            diferenca daqui.
+                          */}
+                          <div className="mt-3 flex h-8 shrink-0 flex-wrap items-start gap-x-2 gap-y-0.5 overflow-hidden text-xs">
                           <strong className="text-foreground">{d.nome}</strong>
                           <span className="text-muted-foreground">· {d.data}</span>
                         </div>
@@ -637,19 +658,22 @@ const Agendamento = () => {
                     ))}
                   </div>
 
-                  <div className="mt-4 flex items-center justify-center gap-1.5">
+                  <div className="mt-2 flex items-center justify-center">
                     {DEPOIMENTOS.map((_, idx) => (
                       <button
                         key={idx}
                         type="button"
                         onClick={() => setDepoimentoAtivo(idx)}
                         aria-label={`Ver depoimento ${idx + 1}`}
-                        className={`h-1.5 rounded-full transition-all ${
-                          idx === depoimentoAtivo
-                            ? "w-6 bg-accent"
-                            : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                        }`}
-                      />
+                        className="flex h-11 w-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`block h-1.5 rounded-full transition-all ${
+                            idx === depoimentoAtivo ? "w-6 bg-accent" : "w-1.5 bg-muted-foreground/30"
+                          }`}
+                        />
+                      </button>
                     ))}
                   </div>
                 </div>

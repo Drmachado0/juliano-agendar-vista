@@ -400,7 +400,26 @@ const TestimonialsSection = ({
                   </button>
                 </div>
 
-                <div className="flex items-center gap-1.5" role="tablist" aria-label="Página de avaliações">
+                {/*
+                    No celular, contador em vez de pontinhos.
+
+                    POR QUE: sao ate 14 paginas, e alvo de toque decente pede
+                    44x44 (WCAG 2.2 / HIG). 14 x 44 = 616px, que nao cabe numa
+                    tela de 393px. Aumentar o alvo aqui era impossivel, e manter
+                    os pontos de 8px era manter um controle que ninguem acerta
+                    com o dedo.
+
+                    As setas ao lado ja tem 44x44 e navegam igual, entao no
+                    mobile o ponto perde a funcao de controle e vira so
+                    indicacao de posicao — que um contador comunica melhor e sem
+                    fingir ser clicavel. A partir de sm, onde ha espaco e
+                    normalmente ha mouse, os pontos voltam.
+                  */}
+                  <p className="sm:hidden text-sm font-medium text-muted-foreground tabular-nums" aria-hidden="true">
+                    {page + 1} / {pageCount}
+                  </p>
+
+                  <div className="hidden sm:flex items-center gap-1.5" role="tablist" aria-label="Página de avaliações">
                   {Array.from({ length: pageCount }).map((_, i) => (
                     <button
                       key={i}
