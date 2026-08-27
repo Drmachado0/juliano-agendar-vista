@@ -161,7 +161,7 @@ const Header = () => {
           <div className={`${isMenuOpen ? 'backdrop-blur-xl' : ''}`}>
             <nav className="flex flex-col gap-0.5">
               {navItems.map((item, index) => {
-                const classes = `text-sm font-medium text-left px-4 py-2.5 rounded-lg transition-all duration-300 ${
+                const classes = `flex min-h-[44px] items-center text-sm font-medium text-left px-4 py-2.5 rounded-lg transition-all duration-300 ${
                   activeSection === item.id
                     ? "text-primary bg-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"

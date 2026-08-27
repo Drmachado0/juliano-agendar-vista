@@ -191,7 +191,7 @@ const Footer = () => {
               href="https://www.instagram.com/drjulianomachado.oftalmo/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-300"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               aria-label="Instagram"
             >
               <Instagram className="w-4 h-4" />
@@ -204,7 +204,7 @@ const Footer = () => {
                 trackWhatsAppClick(footerSocialUrl, 'WhatsApp Footer Social', 'whatsapp_footer_social', 'footer_social');
                 trackMetaContact('WhatsApp');
               }}
-              className="text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-300"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               aria-label="WhatsApp"
             >
               <MessageCircle className="w-4 h-4" />

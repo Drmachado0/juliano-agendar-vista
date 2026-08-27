@@ -560,7 +560,7 @@ const Agendamento = () => {
               <h1 className="text-base font-serif font-semibold leading-tight text-foreground md:text-lg">
                 Dr. Juliano Machado
               </h1>
-              <p className="text-[11px] text-muted-foreground md:text-xs">Médico Oftalmologista · CRM-PA 15253</p>
+              <p className="text-xs text-muted-foreground md:text-xs">Médico Oftalmologista · CRM-PA 15253</p>
             </div>
             <div />
           </div>
@@ -590,7 +590,7 @@ const Agendamento = () => {
               <div className="mb-8 text-center lg:text-left">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-panel mb-4 lg:hidden">
                   <ShieldCheck className="w-4 h-4 text-primary" />
-                  <span className="text-[11px] font-bold text-foreground/90 uppercase tracking-widest">
+                  <span className="text-xs font-bold text-foreground/90 uppercase tracking-widest">
                     Ambiente Seguro
                   </span>
                 </div>
@@ -622,7 +622,7 @@ const Agendamento = () => {
                         5.0 · Avaliações do Google
                       </span>
                     </div>
-                    <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                    <span className="text-xs uppercase tracking-wider text-muted-foreground">
                       Depoimentos
                     </span>
                   </div>

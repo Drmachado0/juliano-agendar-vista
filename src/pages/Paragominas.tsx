@@ -332,7 +332,7 @@ const Paragominas = () => {
             {/* Marcador vertical Paragominas · PA */}
             <p
               aria-hidden="true"
-              className="hidden md:block absolute left-6 top-1/2 -translate-y-1/2 rotate-180 pgm-mono text-[10px] tracking-[0.6em] uppercase"
+              className="hidden md:block absolute left-6 top-1/2 -translate-y-1/2 rotate-180 pgm-mono text-xs tracking-[0.6em] uppercase"
               style={{ writingMode: "vertical-rl", color: "var(--pgm-champagne)" }}
             >
               PARAGOMINAS · PA · 68625
@@ -809,7 +809,7 @@ const Paragominas = () => {
                           href={l.mapsLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="pgm-btn--link-dark inline-flex items-center gap-1.5 text-sm"
+                          className="pgm-btn--link-dark inline-flex min-h-[44px] items-center gap-1.5 text-sm"
                           aria-label={`Abrir ${l.name} no Google Maps`}
                         >
                           <Navigation className="w-3.5 h-3.5" aria-hidden="true" />
@@ -995,7 +995,7 @@ const Paragominas = () => {
                         <span className="font-semibold" style={{ color: "var(--pgm-petroleo)" }}>{main.name}</span>
                         {main.date && <> · {main.date}</>}
                       </span>
-                      <span className="pgm-mono text-[10px] tracking-[0.3em] uppercase" style={{ color: "var(--pgm-champagne)" }}>
+                      <span className="pgm-mono text-xs tracking-[0.3em] uppercase" style={{ color: "var(--pgm-champagne)" }}>
                         Google Reviews
                       </span>
                     </footer>

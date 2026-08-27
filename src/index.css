@@ -780,8 +780,20 @@
 .pgm-btn--link-dark:hover { color: var(--pgm-grafite); }
 
 /* Eyebrow tipográfico */
+/*
+   12px, nao 10px.
+
+   POR QUE: sao rotulos decorativos, e 10px seria defensavel em muitos sites.
+   Aqui nao: e um consultorio de oftalmologia, e boa parte de quem le tem
+   justamente dificuldade de visao. A auditoria movel encontrou 13 elementos
+   nesta classe abaixo do minimo confortavel, todos em /paragominas.
+
+   O tracking largo compensa o corpo maior, entao a proporcao do rotulo se
+   mantem. Se precisar economizar espaco, encurte o texto do rotulo antes de
+   voltar a reduzir o corpo.
+*/
 .pgm-eyebrow {
-  font-size: 10px; letter-spacing: .32em; text-transform: uppercase;
+  font-size: 12px; letter-spacing: .28em; text-transform: uppercase;
   font-weight: 600;
 }
 
