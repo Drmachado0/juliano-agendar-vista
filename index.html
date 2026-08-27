@@ -55,11 +55,83 @@
     })();</script>
     <!-- End consent bootstrap -->
 
-    <!-- Preconnect + carregamento de fontes (no <head>, descoberto cedo) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Archivo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Archivo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" />
+    <!-- Fontes auto-hospedadas (variaveis, subsets latin + latin-ext).
+         ANTES: <link rel="stylesheet"> para fonts.googleapis.com. CSS e
+         render-blocking mesmo com display=swap, entao nenhum pixel pintava
+         antes de DNS + TLS + fetch numa origem de terceiros. Agora o
+         @font-face e inline e os arquivos sao da propria origem.
+         So Archivo (h1-h3 da landing) e Inter (corpo) recebem preload:
+         sao as unicas que pintam acima da dobra. -->
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/archivo-latin.woff2" crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-latin.woff2" crossorigin />
+    <style>
+      @font-face {
+        font-family: 'Archivo';
+        font-style: normal;
+        font-weight: 400 900;
+        font-stretch: 100%;
+        font-display: swap;
+        src: url(/fonts/archivo-latin-ext.woff2) format('woff2');
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: 'Archivo';
+        font-style: normal;
+        font-weight: 400 900;
+        font-stretch: 100%;
+        font-display: swap;
+        src: url(/fonts/archivo-latin.woff2) format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: 'Fraunces';
+        font-style: normal;
+        font-weight: 500 700;
+        font-display: swap;
+        src: url(/fonts/fraunces-latin-ext.woff2) format('woff2');
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: 'Fraunces';
+        font-style: normal;
+        font-weight: 500 700;
+        font-display: swap;
+        src: url(/fonts/fraunces-latin.woff2) format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: swap;
+        src: url(/fonts/inter-latin-ext.woff2) format('woff2');
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: swap;
+        src: url(/fonts/inter-latin.woff2) format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: 'Plus Jakarta Sans';
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: swap;
+        src: url(/fonts/plus-jakarta-sans-latin-ext.woff2) format('woff2');
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: 'Plus Jakarta Sans';
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: swap;
+        src: url(/fonts/plus-jakarta-sans-latin.woff2) format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+    </style>
 
     <!-- Primary Meta -->
     <title>Dr. Juliano Machado – Oftalmologista em Paragominas e Belém</title>
@@ -67,13 +139,23 @@
          react-helmet-async anexa as dele em vez de substituir, e duas tags em
          conflito fazem o Google descartar o sinal. Cada rota define as suas. -->
     
-    <!-- Open Graph -->
-    <meta property="og:type" content="website" />
+    <!-- Open Graph.
+         As 4 tags abaixo levam data-rh="true" DE PROPOSITO. O react-helmet-async
+         ANEXA suas tags em vez de substituir — exceto as que ja carregam esse
+         atributo, que ele remove e repoe no mount. Sem isso ficavam duas
+         og:description no head e o scraper (WhatsApp/Facebook) lia a primeira,
+         a estatica, matando a versao especifica de cada rota.
+         Continuam estaticas porque crawler social NAO executa JS: enquanto uma
+         rota nao estiver prerenderizada, estas sao as unicas que ele enxerga.
+         So podem levar data-rh tags que TODA rota redeclara — se o helmet
+         apagar uma que ninguem repoe, ela some da pagina renderizada.
+         og:image e twitter:* ficam sem o atributo: nem toda rota os declara. -->
+    <meta property="og:type" content="website" data-rh="true" />
+    <meta property="og:title" content="Dr. Juliano Machado – Oftalmologista em Paragominas e Belém" data-rh="true" />
+    <meta property="og:description" content="Agende sua consulta com Dr. Juliano Machado, oftalmologista com mais de 15 anos de experiência. Catarata, pterígio, OCT." data-rh="true" />
+    <meta property="og:url" content="https://drjulianomachado.com/" data-rh="true" />
     <meta property="og:locale" content="pt_BR" />
     <meta property="og:site_name" content="Dr. Juliano Machado" />
-    <meta property="og:title" content="Dr. Juliano Machado – Oftalmologista em Paragominas e Belém" />
-    <meta property="og:description" content="Agende sua consulta com Dr. Juliano Machado, oftalmologista com mais de 15 anos de experiência. Catarata, pterígio, OCT." />
-    <meta property="og:url" content="https://drjulianomachado.com" />
     <meta property="og:image" content="https://drjulianomachado.com/og-image.jpg" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Dr. Juliano Machado – Oftalmologista" />
