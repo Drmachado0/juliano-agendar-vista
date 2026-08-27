@@ -6,8 +6,13 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 import AreasDeAtuacao from "@/components/AreasDeAtuacao";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, CalendarCheck, GraduationCap, BadgeCheck, MapPin } from "lucide-react";
-import { DOCTOR, FORMACAO, INSTITUICOES_FORMACAO } from "@/lib/constants";
-import { LOCATIONS, BASE_URL, PHYSICIAN_ID, citiesServed } from "@/lib/locations";
+import { DOCTOR, FORMACAO } from "@/lib/constants";
+import { LOCATIONS, BASE_URL } from "@/lib/locations";
+import {
+  physicianNode,
+  websiteNode,
+  medicalWebPageNode,
+} from "@/lib/schema";
 
 const URL_SOBRE = `${BASE_URL}/sobre`;
 
@@ -23,38 +28,24 @@ const URL_SOBRE = `${BASE_URL}/sobre`;
  * alimentam ao mesmo tempo o texto visivel e o alumniOf do JSON-LD.
  */
 export default function Sobre() {
-  // Mesmo @id do no Physician da home: e a mesma entidade descrita em outra
-  // pagina, nao uma segunda pessoa.
+  // Mesma entidade da home: mesmo @id e mesmo `url` canonico (a home). O que
+  // muda e mainEntityOfPage, a propriedade que diz "esta pagina aqui descreve
+  // o profissional". Antes daqui saia `url: URL_SOBRE` com o @id da home — a
+  // mesma pessoa declarando dois enderecos canonicos para o Google.
+  //
+  // alumniOf e knowsAbout, que so existiam aqui, agora vivem no no compartido
+  // de lib/schema.ts e valem tambem para a home.
   const structuredData = {
     "@context": "https://schema.org",
-    "@type": "Physician",
-    "@id": PHYSICIAN_ID,
-    name: DOCTOR.name,
-    url: URL_SOBRE,
-    image: `${BASE_URL}/og-image.jpg`,
-    medicalSpecialty: "Ophthalmology",
-    identifier: {
-      "@type": "PropertyValue",
-      propertyID: "CRM",
-      value: DOCTOR.crm,
-    },
-    alumniOf: INSTITUICOES_FORMACAO.map((nome) => ({
-      "@type": "CollegeOrUniversity",
-      name: nome,
-    })),
-    memberOf: DOCTOR.memberships.map((m) => ({
-      "@type": "Organization",
-      name: m,
-    })),
-    knowsAbout: [
-      "Glaucoma",
-      "Cirurgia de catarata",
-      "Pterígio",
-      "Capsulotomia YAG laser",
-      "Campo visual",
-      "Tomografia de coerência óptica (OCT)",
+    "@graph": [
+      physicianNode({ mainEntityOfPage: URL_SOBRE }),
+      websiteNode(),
+      medicalWebPageNode({
+        name: `Sobre o ${DOCTOR.name} — formação e trajetória`,
+        description: `Formação, residência médica e áreas de atuação do ${DOCTOR.name}, ${DOCTOR.crm}.`,
+        url: URL_SOBRE,
+      }),
     ],
-    areaServed: citiesServed().map((c) => ({ "@type": "City", name: c })),
   };
 
   return (

@@ -27,7 +27,14 @@ import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import drJulianoHero from "@/assets/dr-juliano-hero.jpg";
-import { GOOGLE_REVIEWS, DOCTOR } from "@/lib/constants";
+import { DOCTOR } from "@/lib/constants";
+import { BASE_URL } from "@/lib/locations";
+import { useGoogleReviews } from "@/hooks/useGoogleReviews";
+import {
+  physicianNode,
+  websiteNode,
+  medicalWebPageNode,
+} from "@/lib/schema";
 import { buildLeadUserData, collectAttribution } from "@/lib/leadUserData";
 import { fbqTrack } from "@/lib/metaPixelClient";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
@@ -42,6 +49,9 @@ type Depoimento = {
 // Mantidas em código para o carrossel da landing /agendamento — espelham
 // as avaliações exibidas na home. Conformidade com CFM 2.336/2023:
 // apenas avaliações verificadas reais, sem depoimentos fictícios.
+/** URL canonica desta pagina. Usada no canonical, no og:url e no JSON-LD. */
+const URL_AGENDAMENTO = `${BASE_URL}/agendamento`;
+
 const DEPOIMENTOS: Depoimento[] = [
   {
     nome: "Jéssica Oliveira da Costa",
@@ -118,6 +128,9 @@ const Agendamento = () => {
     trackAppointmentSuccess,
   } = useGoogleTag();
   const { waLink } = useSiteWhatsApp();
+  // Mesma fonte de avaliacao da home: o texto visivel desta pagina e o
+  // aggregateRating do JSON-LD nao podem divergir entre si nem da home.
+  const reviews = useGoogleReviews();
   const WHATSAPP_URL = waLink(WHATSAPP_DEFAULT_MSG, "agendamento_secretaria");
   const formStartFiredRef = useRef(false);
   const successFiredRef = useRef(false);
@@ -479,64 +492,26 @@ const Agendamento = () => {
   );
 
 
-  // JSON-LD — @type Physician (mesmos dados da Home) + MedicalWebPage
-  // apontando que /agendamento é a página oficial de agendamento online.
-  const physicianJsonLd = {
+  // JSON-LD. O no do medico vem de lib/schema.ts — o MESMO @id da home e de
+  // /sobre. Antes esta pagina montava um Physician proprio SEM @id, com dois
+  // dos quatro enderecos hardcoded aqui dentro e o identifier noutro formato
+  // ({CRM-PA, "15253"} contra {CRM, "CRM-PA 15253"} da home). Para o Google
+  // aquilo era um segundo medico, com NAP parcial e registro conflitante.
+  const structuredData = {
     "@context": "https://schema.org",
-    "@type": "Physician",
-    name: "Dr. Juliano Machado",
-    description:
-      "Oftalmologista especializado em catarata, pterígio, exames de campo visual e OCT. Atendimento em Paragominas e Belém.",
-    medicalSpecialty: "Ophthalmology",
-    url: "https://drjulianomachado.com",
-    image: "https://drjulianomachado.com/og-image.jpg",
-    telephone: "+5591936180476",
-    priceRange: "$$",
-    address: [
-      {
-        "@type": "PostalAddress",
-        streetAddress: "Rua Eixo W1, R. Célio Miranda, N° 729",
-        addressLocality: "Paragominas",
-        addressRegion: "PA",
-        addressCountry: "BR",
-      },
-      {
-        "@type": "PostalAddress",
-        streetAddress: "Av. Generalíssimo Deodoro, 904 - Nazaré",
-        addressLocality: "Belém",
-        addressRegion: "PA",
-        addressCountry: "BR",
-      },
+    "@graph": [
+      physicianNode({
+        rating: { rating: reviews.rating, count: reviews.count },
+        mainEntityOfPage: URL_AGENDAMENTO,
+      }),
+      websiteNode(),
+      medicalWebPageNode({
+        name: "Agendar Consulta — Dr. Juliano Machado",
+        description:
+          "Página oficial de agendamento online de consultas oftalmológicas com o Dr. Juliano Machado em Paragominas e Belém.",
+        url: URL_AGENDAMENTO,
+      }),
     ],
-    identifier: {
-      "@type": "PropertyValue",
-      propertyID: "CRM-PA",
-      value: "15253",
-    },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: String(GOOGLE_REVIEWS.rating),
-      bestRating: "5",
-      ratingCount: String(GOOGLE_REVIEWS.count),
-    },
-    sameAs: ["https://www.instagram.com/drjulianomachado.oftalmo/"],
-  };
-  const medicalWebPageJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "MedicalWebPage",
-    name: "Agendar Consulta — Dr. Juliano Machado",
-    description:
-      "Página oficial de agendamento online de consultas oftalmológicas com o Dr. Juliano Machado em Paragominas e Belém.",
-    url: "https://drjulianomachado.com/agendamento",
-    inLanguage: "pt-BR",
-    isPartOf: {
-      "@type": "WebSite",
-      name: "Dr. Juliano Machado — Oftalmologista",
-      url: "https://drjulianomachado.com",
-    },
-    about: physicianJsonLd,
-    audience: { "@type": "MedicalAudience", audienceType: "Patient" },
-    mainEntity: physicianJsonLd,
   };
 
   return (
@@ -554,8 +529,7 @@ const Agendamento = () => {
           content="Agende sua consulta com Dr. Juliano Machado: oftalmologista 5 estrelas em Paragominas e Belém. Agendamento online ou direto com nossa secretária pelo WhatsApp."
         />
         <link rel="canonical" href="https://drjulianomachado.com/agendamento" />
-        <script type="application/ld+json">{JSON.stringify(physicianJsonLd)}</script>
-        <script type="application/ld+json">{JSON.stringify(medicalWebPageJsonLd)}</script>
+        <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -584,7 +558,7 @@ const Agendamento = () => {
           <div className="mb-5 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground lg:hidden">
             <span className="flex items-center gap-1">
               <Star className="h-3.5 w-3.5 fill-accent text-accent" />
-              <strong className="text-foreground">{GOOGLE_REVIEWS.rating.toFixed(1)}</strong> · {GOOGLE_REVIEWS.count} avaliações
+              <strong className="text-foreground">{reviews.rating.toFixed(1)}</strong> · {reviews.count} avaliações
             </span>
             <span className="flex items-center gap-1">
               <Award className="h-3.5 w-3.5 text-accent" />
@@ -740,7 +714,7 @@ const Agendamento = () => {
                     <Star key={i} className="h-5 w-5 fill-accent text-accent" />
                   ))}
                   <span className="ml-2 text-sm font-semibold text-foreground">5.0/5</span>
-                  <span className="text-xs text-muted-foreground">({GOOGLE_REVIEWS.count} avaliações)</span>
+                  <span className="text-xs text-muted-foreground">({reviews.count} avaliações)</span>
                 </div>
 
                 <img

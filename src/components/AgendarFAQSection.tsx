@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { HelpCircle } from "lucide-react";
+import { FAQS_AGENDAMENTO as faqs } from "@/lib/faqsAgendamento";
 import {
   Accordion,
   AccordionContent,
@@ -7,23 +8,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-const faqs = [
-  {
-    question: "Quanto tempo leva para marcar a consulta?",
-    answer:
-      "Muito rápido. Em menos de 1 minuto você escolhe o horário, preenche seus dados e envia o pedido. Nossa equipe confirma em até 2 horas úteis.",
-  },
-  {
-    question: "Como recebo a confirmação do agendamento?",
-    answer:
-      "Você recebe a confirmação pelo WhatsApp com a data, o local de atendimento e as orientações para o dia da consulta.",
-  },
-  {
-    question: "Posso cancelar ou remarcar?",
-    answer:
-      "Sim, sem problema. Basta avisar com antecedência pelo WhatsApp ou pelo telefone da clínica. Nós ajustamos o horário para você.",
-  },
-];
 
 const AgendarFAQSection = () => {
   const [isVisible, setIsVisible] = useState(false);

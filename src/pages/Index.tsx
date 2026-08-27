@@ -1,6 +1,12 @@
 import { Helmet } from "react-helmet-async";
-import { DOCTOR } from "@/lib/constants";
-import { BASE_URL, PHYSICIAN_ID, clinicNodes, citiesServed } from "@/lib/locations";
+import { BASE_URL, clinicNodes } from "@/lib/locations";
+import { FAQS_AGENDAMENTO } from "@/lib/faqsAgendamento";
+import {
+  physicianNode,
+  websiteNode,
+  medicalWebPageNode,
+  faqPageNode,
+} from "@/lib/schema";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import AboutSection from "@/components/AboutSection";
@@ -21,44 +27,34 @@ import { useGoogleReviews } from "@/hooks/useGoogleReviews";
 const Index = () => {
   const { raw: waRaw } = useSiteWhatsApp();
   const reviews = useGoogleReviews();
-  // JSON-LD em @graph: um no Physician + um MedicalClinic por endereco fisico.
-  // Antes era uma unica entidade Physician com array de 2 address (de 4 reais),
-  // o que faz o Google associar telefone e avaliacoes a um local so. Os
-  // enderecos vem de lib/locations.ts, a mesma fonte que alimenta a interface.
+  // JSON-LD em @graph. Um no por entidade real, todos amarrados por @id:
+  //   Physician  -> quem atende (o mesmo no de /sobre e /agendamento)
+  //   WebSite    -> o site, ancora de isPartOf
+  //   MedicalWebPage -> esta pagina, com lastReviewed/reviewedBy (YMYL)
+  //   FAQPage    -> as perguntas que a propria pagina exibe
+  //   MedicalClinic x4 -> um por endereco fisico
+  //
+  // O no do medico sai de lib/schema.ts e os enderecos de lib/locations.ts:
+  // a mesma fonte que alimenta a interface. Antes o Physician era escrito a
+  // mao aqui, e /agendamento tinha uma segunda copia sem @id — duas pessoas
+  // diferentes para o Google.
+  const HOME_URL = `${BASE_URL}/`;
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
-      {
-        "@type": "Physician",
-        "@id": PHYSICIAN_ID,
-        "name": DOCTOR.name,
-        "description":
-          "Oftalmologista especializado em catarata, pterígio, exames de campo visual e OCT. Atendimento em Paragominas e Belém.",
-        "medicalSpecialty": "Ophthalmology",
-        "url": BASE_URL,
-        "image": `${BASE_URL}/og-image.jpg`,
-        "telephone": `+${waRaw}`,
-        "priceRange": "$$",
-        "identifier": {
-          "@type": "PropertyValue",
-          "propertyID": "CRM",
-          "value": DOCTOR.crm,
-        },
-        "memberOf": DOCTOR.memberships.map((m) => ({
-          "@type": "Organization",
-          "name": m,
-        })),
-        "areaServed": citiesServed().map((c) => ({ "@type": "City", "name": c })),
-        // ratingCount = total EXATO, exigido pelo Google
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": String(reviews.rating),
-          "bestRating": "5",
-          "ratingCount": String(reviews.count),
-        },
-        "workLocation": clinicNodes().map((c) => ({ "@id": c["@id"] })),
-        "sameAs": ["https://www.instagram.com/drjulianomachado.oftalmo/"],
-      },
+      physicianNode({
+        telephoneRaw: waRaw,
+        rating: { rating: reviews.rating, count: reviews.count },
+        mainEntityOfPage: HOME_URL,
+      }),
+      websiteNode(),
+      medicalWebPageNode({
+        name: "Dr. Juliano Machado — Oftalmologista em Paragominas e Belém",
+        description:
+          "Oftalmologista em Paragominas e Belém. Catarata, pterígio, glaucoma, campo visual e OCT.",
+        url: HOME_URL,
+      }),
+      faqPageNode(FAQS_AGENDAMENTO, HOME_URL),
       ...clinicNodes(),
     ],
   };
@@ -70,10 +66,6 @@ const Index = () => {
         <meta
           name="description"
           content="Oftalmologista em Paragominas e Belém. Dr. Juliano Machado, CRM-PA 15253. Catarata, pterígio, glaucoma. Agende sua consulta online."
-        />
-        <meta
-          name="keywords"
-          content="oftalmologista Paragominas, oftalmologista Belém, catarata, pterígio, OCT, campo visual, Dr. Juliano Machado, agendar consulta oftalmologista"
         />
         <link rel="canonical" href="https://drjulianomachado.com/" />
         <meta property="og:title" content="Dr. Juliano Machado – Oftalmologista em Paragominas e Belém" />

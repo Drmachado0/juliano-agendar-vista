@@ -79,6 +79,30 @@ export const INSTITUICOES_FORMACAO = [
   "Centro Universitário do Estado do Pará (CESUPA)",
 ] as const;
 
+// Areas de atuacao clinica. Alimentam knowsAbout no JSON-LD e a secao
+// "Areas de atuacao" da pagina Sobre — mesma fonte, para o dado estruturado
+// nunca declarar competencia que o texto visivel nao sustenta.
+export const AREAS_CONHECIMENTO = [
+  "Glaucoma",
+  "Cirurgia de catarata",
+  "Pterígio",
+  "Capsulotomia YAG laser",
+  "Campo visual",
+  "Tomografia de coerência óptica (OCT)",
+] as const;
+
+// Perfis oficiais, para sameAs no JSON-LD. E como o Google reconcilia a
+// entidade do site com o Google Business Profile e as redes.
+//
+// So entram URLs verificadas que respondem 200 e sao a pagina oficial. O
+// Lattes (id K4525719A1) ficou de fora de proposito: a URL do buscatextual
+// devolve captcha, e sameAs apontando para captcha nao prova nada.
+export const PERFIS_SOCIAIS = [
+  "https://www.instagram.com/drjulianomachado.oftalmo/",
+  // Google Business Profile canonico (CID extraido do link g.page oficial).
+  "https://www.google.com/maps?cid=16599594730260861753",
+] as const;
+
 // Revisao clinica do conteudo medico do site.
 //
 // Conteudo medico e YMYL: o Google avalia quem assina e quando foi revisado.
