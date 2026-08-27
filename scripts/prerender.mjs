@@ -124,9 +124,42 @@ async function abrirNavegador(chromium) {
   }
 }
 
+/**
+ * Grava dist/prerender-status.json em toda saida, inclusive nas que pulam.
+ *
+ * POR QUE: a falha suave acima e correta — prerender e ganho, nao deve derrubar
+ * deploy. Mas ela era SILENCIOSA, e silencio em producao e indistinguivel de
+ * sucesso. O site publicou casca de 9 KB em todas as 18 rotas por varios
+ * deploys enquanto o build local prerenderizava as 18, porque aqui o Chromium
+ * existe e no servidor de build nao. Ninguem tinha como saber sem pedir o HTML
+ * cru e contar bytes.
+ *
+ * Este arquivo torna o resultado observavel de fora: GET /prerender-status.json
+ * no site publicado diz o que aconteceu no ultimo build.
+ *
+ * Ele tambem separa as duas causas possiveis, que pedem condutas OPOSTAS:
+ *   - arquivo AUSENTE em producao  -> o host nao roda o script "build" do
+ *     package.json; encadear o prerender ali nunca vai funcionar
+ *   - motivo "sem-chromium"        -> o host roda o script, mas nao consegue o
+ *     navegador; a saida e obter o binario ou trocar por SSG sem navegador
+ */
+async function registrar(motivo, extra = {}) {
+  try {
+    await mkdir(DIST, { recursive: true });
+    await writeFile(
+      join(DIST, "prerender-status.json"),
+      JSON.stringify({ motivo, ...extra, em: new Date().toISOString() }, null, 2),
+      "utf-8"
+    );
+  } catch {
+    // Diagnostico nunca pode ser o que derruba o build.
+  }
+}
+
 async function main() {
   if (!existsSync(join(DIST, "index.html"))) {
     console.warn("[prerender] dist/index.html nao existe. Rode o build antes. Pulando.");
+    await registrar("sem-dist");
     return;
   }
 
@@ -137,6 +170,7 @@ async function main() {
     console.warn(
       "[prerender] playwright indisponivel neste ambiente. Pulando — a SPA e publicada normalmente."
     );
+    await registrar("playwright-indisponivel");
     return;
   }
 
@@ -150,6 +184,7 @@ async function main() {
   browser = await abrirNavegador(chromium);
   if (!browser) {
     servidor.close();
+    await registrar("sem-chromium");
     return;
   }
 
@@ -217,8 +252,14 @@ async function main() {
 
   await browser.close();
   servidor.close();
+  const segundos = Math.round((Date.now() - inicio) / 1000);
+  await registrar(ok > 0 ? "ok" : "nenhuma-rota", {
+    rotas: ok,
+    shell: falhas,
+    segundos,
+  });
   console.log(
-    `[prerender] ${ok} rota(s) em ${Math.round((Date.now() - inicio) / 1000)}s, ${falhas} mantida(s) como shell.`
+    `[prerender] ${ok} rota(s) em ${segundos}s, ${falhas} mantida(s) como shell.`
   );
 }
 
@@ -227,4 +268,5 @@ main().catch((e) => {
   console.warn(
     `[prerender] falhou: ${String(e).slice(0, 120)}. A SPA e publicada normalmente.`
   );
+  return registrar("erro", { erro: String(e).slice(0, 200) });
 });
