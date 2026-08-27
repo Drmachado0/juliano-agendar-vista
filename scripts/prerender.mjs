@@ -16,6 +16,23 @@
  * vez de hidratar. Nao ha risco de erro de hidratacao: o HTML prerenderizado
  * serve ao crawler e ao primeiro paint, e o app assume em seguida.
  *
+ * VEREDITO NA LOVABLE (27/08/2026): o prerender NAO roda no build deles, e nao
+ * ha conserto barato. O container executa o script normalmente e ate baixa o
+ * Chromium, mas nao tem as bibliotecas de sistema dele:
+ *
+ *   chrome-headless-shell: error while loading shared libraries:
+ *   libglib-2.0.so.0: cannot open shared object file      (exitCode=127)
+ *
+ * Descartados com evidencia em /prerender-status.json: as flags de container
+ * (--no-sandbox e cia foram aplicadas, confirmadas no log, e o processo morre
+ * igual) e a hipotese de rede/permissao/prazo (o download funciona).
+ * `playwright install --with-deps` exigiria root e apt no container.
+ *
+ * DECISAO DO DONO DO SITE: aceitar assim. O Google executa JS e indexa
+ * normalmente; os previews de link vivem das tags og estaticas do index.html.
+ * O prerender segue valendo no build local e em qualquer host com Chromium
+ * completo. NAO reabra isto sem ler .claude/skills/prerender-na-lovable/.
+ *
  * FALHA SUAVE, DE PROPOSITO: se o Chromium nao estiver disponivel no ambiente de
  * build, o script avisa e sai com codigo 0. O build continua e publica a SPA
  * normal. Prerender e ganho, nao dependencia — nunca deve derrubar um deploy.
