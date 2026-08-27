@@ -36,7 +36,7 @@ const MobileStickyCTA = () => {
         <Link
           to="/agendamento"
           onClick={() => trackCTAClick("agendar_consulta", "sticky_mobile", "Agendar consulta")}
-          className="flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-xl px-4 text-sm font-bold bg-gradient-to-r from-gold-400 via-primary to-gold-600 text-gold-900 shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform"
+          className="flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-xl px-4 text-sm font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform"
         >
           <CalendarCheck className="w-4 h-4" />
           Agendar consulta

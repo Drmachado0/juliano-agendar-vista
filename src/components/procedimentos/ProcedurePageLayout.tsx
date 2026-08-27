@@ -147,7 +147,7 @@ const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
         <script type="application/ld+json">{JSON.stringify(faqJsonLd)}</script>
       </Helmet>
 
-      <div className="min-h-screen bg-background">
+      <div className="theme-obsidian min-h-screen bg-background">
         <Header />
 
         <main className="pt-28 md:pt-32">

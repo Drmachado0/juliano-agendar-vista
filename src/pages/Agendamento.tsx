@@ -533,7 +533,7 @@ const Agendamento = () => {
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+      <div className="theme-obsidian min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
         {/* Header */}
         <header className="sticky top-0 z-50 border-b border-border/50 bg-background/90 backdrop-blur-sm">
           <div className="container mx-auto flex items-center justify-between gap-3 px-4 py-3">

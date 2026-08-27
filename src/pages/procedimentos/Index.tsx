@@ -274,7 +274,7 @@ const ProcedimentosIndex = () => {
         </main>
 
         <Footer />
-        <WhatsAppButton />
+        <WhatsAppButton apenasDesktop />
         <MobileStickyCTA />
       </div>
     </>

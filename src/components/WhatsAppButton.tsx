@@ -5,7 +5,17 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 
-const WhatsAppButton = () => {
+/**
+ * `apenasDesktop` existe porque MobileStickyCTA ja traz um botao de WhatsApp no
+ * mobile. Nas paginas que montam os dois, o flutuante aparecia empilhado sobre o
+ * da barra: dois botoes verdes identicos, um em cima do outro, para a mesma
+ * acao. E a segunda vez que este componente colide com outro CTA — a primeira
+ * foi com o do hero, que gerou o `passouDoHero` acima.
+ *
+ * Quem monta MobileStickyCTA passa apenasDesktop; o flutuante some abaixo de lg,
+ * exatamente onde a barra assume. Guardado por src/test/whatsappDuplicado.test.ts.
+ */
+const WhatsAppButton = ({ apenasDesktop = false }: { apenasDesktop?: boolean }) => {
   const { trackWhatsAppClick, trackWhatsAppGoogleAdsConversion } = useGoogleTag();
   const { trackContact: trackMetaContact, generateEventId } = useMetaPixel();
   const { waLink } = useSiteWhatsApp();
@@ -79,7 +89,7 @@ const WhatsAppButton = () => {
   }, []);
 
   return (
-    <div className={`fixed bottom-24 lg:bottom-6 right-6 z-50 flex flex-col items-end gap-2 transition-all duration-500 ease-out-expo ${
+    <div className={`${apenasDesktop ? "hidden lg:flex" : "flex"} fixed bottom-24 lg:bottom-6 right-6 z-50 flex-col items-end gap-2 transition-all duration-500 ease-out-expo ${
       show && passouDoHero ? 'translate-x-0 opacity-100' : 'translate-x-[60px] opacity-0 pointer-events-none'
     }`}>
       {/* Tooltip speech bubble */}
