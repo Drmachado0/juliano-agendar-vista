@@ -1,10 +1,14 @@
 import ProcedurePageLayout, { type ProcedurePageData } from "@/components/procedimentos/ProcedurePageLayout";
 
 /**
- * REVISAO MEDICA PENDENTE. Texto redigido a partir de conhecimento geral de
- * oftalmologia e da descricao que o site ja usa no card da home. NAO escrito
- * pelo medico. Aprovado, trocar este bloco pelo registro da revisao, como em
- * MapeamentoDeRetina.tsx.
+ * Conteudo clinico revisado e aprovado pelo Dr. Juliano Machado em 26/08/2026.
+ *
+ * A revisao confirmou a necessidade de dilatacao na maioria dos casos e a
+ * orientacao de nao dirigir depois.
+ *
+ * Data e revisor saem de REVISAO_CLINICA (src/lib/constants.ts) e aparecem no
+ * JSON-LD como MedicalWebPage.lastReviewed / reviewedBy, alem da linha visivel
+ * ao pe da pagina. Mudou o texto clinico, atualize a data la.
  */
 const data: ProcedurePageData = {
   slug: "retinografia",

@@ -1,12 +1,14 @@
 import ProcedurePageLayout, { type ProcedurePageData } from "@/components/procedimentos/ProcedurePageLayout";
 
 /**
- * REVISAO MEDICA PENDENTE. Texto redigido a partir de conhecimento geral de
- * oftalmologia e da descricao que o site ja usa no card da home. NAO escrito
- * pelo medico. Aprovado, trocar este bloco pelo registro da revisao, como em
- * MapeamentoDeRetina.tsx.
+ * Conteudo clinico revisado e aprovado pelo Dr. Juliano Machado em 26/08/2026.
  *
- * Revisar com atencao a secao de crise aguda: e orientacao de urgencia.
+ * A revisao cobriu especialmente a secao de crise aguda, que e orientacao de
+ * urgencia, e a indicacao frequente nos dois olhos.
+ *
+ * Data e revisor saem de REVISAO_CLINICA (src/lib/constants.ts) e aparecem no
+ * JSON-LD como MedicalWebPage.lastReviewed / reviewedBy, alem da linha visivel
+ * ao pe da pagina. Mudou o texto clinico, atualize a data la.
  */
 const data: ProcedurePageData = {
   slug: "iridotomia-a-laser",
