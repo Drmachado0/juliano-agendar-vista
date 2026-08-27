@@ -22,11 +22,9 @@ import MobileStickyCTA from "@/components/MobileStickyCTA";
 import Footer from "@/components/Footer";
 
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
-import { useGoogleReviews } from "@/hooks/useGoogleReviews";
 
 const Index = () => {
   const { raw: waRaw } = useSiteWhatsApp();
-  const reviews = useGoogleReviews();
   // JSON-LD em @graph. Um no por entidade real, todos amarrados por @id:
   //   Physician  -> quem atende (o mesmo no de /sobre e /agendamento)
   //   WebSite    -> o site, ancora de isPartOf
@@ -44,7 +42,6 @@ const Index = () => {
     "@graph": [
       physicianNode({
         telephoneRaw: waRaw,
-        rating: { rating: reviews.rating, count: reviews.count },
         mainEntityOfPage: HOME_URL,
       }),
       websiteNode(),
