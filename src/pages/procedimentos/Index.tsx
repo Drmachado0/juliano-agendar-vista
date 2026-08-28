@@ -150,7 +150,14 @@ const ProcedimentosIndex = () => {
           name="description"
           content="Exames, cirurgias e consultas realizados pelo Dr. Juliano Machado em Paragominas e Belém: catarata, pterígio, glaucoma, laser e exames diagnósticos."
         />
+        <meta property="og:title" content="Procedimentos Oftalmológicos em Paragominas e Belém" />
+        <meta
+          property="og:description"
+          content="Exames, cirurgias e consultas realizados pelo Dr. Juliano Machado em Paragominas e Belém: catarata, pterígio, glaucoma, laser e exames diagnósticos."
+        />
+        <meta property="og:url" content={CANONICAL} />
         <link rel="canonical" href={CANONICAL} />
+
         {/*
           Um @graph unico em vez de dois blocos soltos. Breadcrumb e ItemList ja
           existiam, mas a pagina nao declarava QUEM realiza os procedimentos nem
