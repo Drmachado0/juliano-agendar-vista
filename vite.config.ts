@@ -4,7 +4,7 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode, isSsrBuild }) => ({
   server: {
     host: "::",
     port: 8080,
@@ -15,10 +15,26 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  ssr: {
+    // Empacota as dependencias no bundle de SSR em vez de deixa-las externas.
+    //
+    // POR QUE: react-helmet-async e CommonJS. Externalizado, o Node falha com
+    // "Named export 'Helmet' not found ... is a CommonJS module". Empacotando,
+    // o Vite resolve o interop na hora do build. Este bundle so existe durante
+    // o build para gerar HTML, nunca chega ao navegador, entao o tamanho dele
+    // nao afeta ninguem.
+    noExternal: true,
+  },
   esbuild: mode === "production"
     ? { pure: ["console.log", "console.info", "console.debug"] }
     : undefined,
   build: {
+    // As duas otimizacoes abaixo, modulePreload e manualChunks, valem SO para o
+    // build de cliente. No build de SSR (src/entry-server.tsx) nao existe
+    // <link rel="modulepreload"> nem divisao de chunk para o navegador, e o
+    // Rollup rejeita manualChunks com "react cannot be included in
+    // manualChunks because it is resolved as an external module".
+    //
     // O chunk do cliente Supabase nao entra no preload da entry.
     //
     // POR QUE: com o AuthProvider restrito as rotas /admin e /auth, pagina
@@ -29,12 +45,14 @@ export default defineConfig(({ mode }) => ({
     //
     // Filtrar so a DICA e seguro: quem realmente precisa (admin e login)
     // carrega pelo import dinamico normalmente, so sem a antecipacao.
-    modulePreload: {
-      resolveDependencies: (_arquivo: string, deps: string[]) =>
-        deps.filter((d) => !/client-[A-Za-z0-9_-]+\.js$/.test(d)),
-    },
+    modulePreload: isSsrBuild
+      ? undefined
+      : {
+          resolveDependencies: (_arquivo: string, deps: string[]) =>
+            deps.filter((d) => !/client-[A-Za-z0-9_-]+\.js$/.test(d)),
+        },
     rollupOptions: {
-      output: {
+      output: isSsrBuild ? {} : {
         // Separa libs pesadas do chunk principal (era ~789 kB).
         // Só bibliotecas que as paginas PUBLICAS realmente carregam entram
         // aqui. manualChunks estatico promove o chunk a dependencia inicial da

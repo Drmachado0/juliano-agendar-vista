@@ -93,13 +93,36 @@ const RotasAutenticadas = () => (
   </AuthProvider>
 );
 
-const App = () => (
-  <HelmetProvider>
+/**
+ * Provedores que nao dependem de roteador.
+ *
+ * POR QUE ESTA SEPARADO: o build de SSG (scripts/og-por-rota.mjs via
+ * src/entry-server.tsx) precisa trocar o BrowserRouter por StaticRouter e
+ * passar um `context` ao HelmetProvider para coletar as tags do <head>. Sem
+ * esta separacao, seria preciso duplicar toda a arvore de provedores no
+ * servidor, e as duas copias divergiriam na primeira mudanca.
+ */
+export const AppProvedores = ({
+  helmetContext,
+  children,
+}: {
+  helmetContext?: Record<string, unknown>;
+  children: React.ReactNode;
+}) => (
+  <HelmetProvider context={helmetContext}>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-          <Toaster />
-          <Sonner closeButton richColors position="top-right" />
-          <BrowserRouter>
+        <Toaster />
+        <Sonner closeButton richColors position="top-right" />
+        {children}
+      </TooltipProvider>
+    </QueryClientProvider>
+  </HelmetProvider>
+);
+
+/** Conteudo que vive dentro do roteador. Compartilhado por cliente e servidor. */
+export const AppConteudo = () => (
+  <>
           <RouteChangeTracker />
           <ScrollToTop />
           <ConsentBanner />
@@ -151,10 +174,15 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
-          </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  </HelmetProvider>
+  </>
+);
+
+const App = () => (
+  <AppProvedores>
+    <BrowserRouter>
+      <AppConteudo />
+    </BrowserRouter>
+  </AppProvedores>
 );
 
 export default App;
