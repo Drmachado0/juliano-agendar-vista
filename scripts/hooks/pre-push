@@ -1,0 +1,53 @@
+#!/bin/sh
+#
+# Gate de verificacao antes do push.
+#
+# POR QUE: na Lovable, `git push` para a main dispara o deploy. Nao existe etapa
+# de revisao entre o push e o site no ar, e o build deles NAO roda tsc. Entao um
+# erro que o TypeScript pegaria em 10 segundos chega a producao em silencio.
+#
+# Foi exatamente o que aconteceu em 27/08/2026: o commit 41a8839 converteu o
+# cliente Supabase para import dinamico e deixou tres funcoes usando a variavel
+# antiga. Virou "ReferenceError: supabase is not defined" no console de 10 das 18
+# URLs, e so foi descoberto na auditoria de SEO do dia seguinte. O tsc pega esse
+# caso como TS2304 mesmo com strict desligado, porque e erro de resolucao de
+# nome, nao de tipagem.
+#
+# ESCOPO: roda em todo push, para qualquer branch. Custa cerca de 45 segundos.
+# Para pular num caso legitimo, use `git push --no-verify`.
+#
+# Instalado por `npm run hooks:instalar`. O arquivo canonico vive versionado em
+# scripts/hooks/pre-push, entao a correcao chega a quem clonar o repo.
+
+set -e
+
+echo ""
+echo "  Gate de pre-push: verificando antes de deixar o codigo sair."
+echo ""
+
+if [ ! -d node_modules ]; then
+  echo "  node_modules ausente. Rode 'npm install' ou 'bun install' antes do push."
+  echo "  Para pular este gate: git push --no-verify"
+  exit 1
+fi
+
+echo "  1 de 2  Checagem de tipos (tsc --noEmit)"
+if ! npm run --silent typecheck; then
+  echo ""
+  echo "  Push bloqueado: a checagem de tipos falhou."
+  echo "  Corrija os erros acima. A Lovable nao roda tsc, entao isso iria ao ar."
+  echo "  Para pular mesmo assim: git push --no-verify"
+  exit 1
+fi
+
+echo "  2 de 2  Testes (vitest run)"
+if ! npm run --silent test; then
+  echo ""
+  echo "  Push bloqueado: os testes falharam."
+  echo "  Para pular mesmo assim: git push --no-verify"
+  exit 1
+fi
+
+echo ""
+echo "  Tudo certo. Seguindo com o push."
+echo ""

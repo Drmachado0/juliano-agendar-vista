@@ -1,0 +1,38 @@
+# Rede de seguranca para o que o hook de pre-push nao alcanca.
+#
+# O hook local bloqueia o push a partir da maquina de quem o instalou. Mas o
+# editor da Lovable commita direto no GitHub, sem passar por hook nenhum. Esse
+# caminho so e coberto aqui.
+#
+# Este workflow NAO bloqueia o deploy: a Lovable publica pelo proprio sistema,
+# independente do GitHub Actions. O que ele faz e avisar, com um X vermelho no
+# commit, que o que foi ao ar tem erro de tipo ou teste quebrado.
+
+name: Verificar
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Instalar dependencias
+        run: bun install --frozen-lockfile
+
+      - name: Checagem de tipos
+        run: bun run typecheck
+
+      - name: Testes
+        run: bun run test

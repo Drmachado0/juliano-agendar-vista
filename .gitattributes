@@ -1,0 +1,7 @@
+# Scripts de hook precisam de LF, sempre.
+#
+# POR QUE: com core.autocrlf=true no Windows, o git converte para CRLF ao fazer
+# checkout. O Git Bash entao nao consegue executar o script e falha com "bad
+# interpreter: no such file or directory", uma mensagem que nao diz nada sobre
+# fim de linha. Marcar como LF resolve na origem, para qualquer clone.
+scripts/hooks/* text eol=lf
