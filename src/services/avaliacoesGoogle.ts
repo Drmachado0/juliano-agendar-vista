@@ -19,6 +19,7 @@ export interface AvaliacaoGoogle {
  * Busca avaliações ativas do Google armazenadas no banco
  */
 export async function buscarAvaliacoesGoogle(): Promise<AvaliacaoGoogle[]> {
+  const supabase = await getSupabase();
   const { data, error } = await supabase
     .from('avaliacoes_google')
     .select('*')
@@ -60,6 +61,7 @@ export async function sincronizarAvaliacoesManualmente(): Promise<{
  * Alterna o status ativo de uma avaliação (apenas para admins)
  */
 export async function toggleAvaliacaoAtiva(id: string, ativo: boolean): Promise<boolean> {
+  const supabase = await getSupabase();
   const { error } = await supabase
     .from('avaliacoes_google')
     .update({ ativo, updated_at: new Date().toISOString() })

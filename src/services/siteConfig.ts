@@ -11,6 +11,7 @@ export async function fetchSiteConfig(): Promise<{
   error: string | null;
 }> {
   try {
+    const supabase = await getSupabase();
     const { data, error } = await supabase
       .from("site_config" as any)
       .select("whatsapp_number, updated_at, updated_by")
