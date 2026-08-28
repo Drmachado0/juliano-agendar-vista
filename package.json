@@ -15,6 +15,7 @@
     "build:sem-prerender": "vite build",
     "monitorar:seo": "node scripts/monitorar-seo.mjs",
     "sitemap:lastmod": "node scripts/atualizar-lastmod.mjs",
+    "indexnow": "node scripts/indexnow.mjs",
     "hooks:instalar": "node scripts/hooks/instalar.mjs"
   },
   "trustedDependencies": [
