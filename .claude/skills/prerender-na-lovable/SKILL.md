@@ -9,15 +9,66 @@ description: >
   saber se o host executa mesmo o script `build` do package.json. Carrega
   tambem o veredito ja apurado para a Lovable: o container de build nao tem as
   bibliotecas de sistema do Chromium, e nenhum ajuste de flag resolve - leia
-  isso antes de tentar consertar de novo. Use mesmo que o pedido nao cite "prerender" — vale para qualquer
+  isso antes de tentar consertar de novo. RESOLVIDO em 28/08/2026 por SSG com
+  renderToPipeableStream, sem navegador nenhum: nao reabra o prerender, leia a
+  secao "Resolvido" logo no inicio. Use mesmo que o pedido nao cite "prerender" — vale para qualquer
   passo de build que falha em silencio num host fechado.
 license: MIT
 metadata:
   author: Juliano Machado
-  version: "1.1"
+  version: "1.2"
 ---
 
 # Diagnosticar passo de build que falha calado na Lovable
+
+## Resolvido em 28/08/2026: o caminho que funcionou
+
+**Nao tente mais fazer o Chromium rodar no container da Lovable.** O veredito
+abaixo continua valido: falta biblioteca de sistema, e nenhuma flag resolve.
+
+O problema real, producao servir casca vazia, foi resolvido por outro caminho,
+que a propria secao "Veredito" ja indicava como saida: SSG sem navegador.
+
+- `src/entry-server.tsx` renderiza cada rota com `renderToPipeableStream`
+- `scripts/build-ssr.mjs` roda `vite build --ssr` sem poder derrubar o deploy
+- `scripts/ssg.mjs` grava `dist/<rota>/index.html` com head e body prontos
+
+Resultado medido em producao: as 18 rotas passaram de 9,8 KB sem texto para
+45 a 143 KB com 1.883 a 6.726 caracteres de conteudo real e JSON-LD. O
+`prerender-status.json` publicado continua dizendo `sem-chromium`, e agora isso
+nao importa: o prerender virou um bonus para ambiente local, e o SSG cobre o
+mesmo terreno em Node puro.
+
+**Por que so foi possivel em 28/08 e nao antes.** O cabecalho de
+`scripts/prerender.mjs` descartou SSR citando dois bloqueios reais: o
+`BrowserRouter` na raiz e o Supabase junto do consent e do tracking. Os commits
+de performance de 27/08 removeram os dois sem esse objetivo, `41a8839` passou o
+Supabase para import dinamico e `811df9d` restringiu o `AuthProvider` as rotas
+autenticadas. Sobrou separar o roteador em `AppProvedores` e `AppConteudo`.
+
+**A licao generalizavel:** um veredito de "nao da" tem prazo de validade. Este
+estava correto quando foi escrito e ficou obsoleto por trabalho feito com outro
+proposito, sem ninguem revisitar a conclusao. Ao encontrar um "nao reabra
+isto", confira se as premissas dele ainda valem antes de obedecer.
+
+**Detalhes que custaram tempo, se for refazer em outro projeto:**
+
+- `renderToPipeableStream`, nunca `renderToString`, quando as rotas usam
+  `React.lazy`. O `renderToString` entrega o fallback de carregamento como se
+  fosse o conteudo da pagina, que e pior do que nao gerar nada.
+- Importe `StaticRouter` do mesmo pacote que o app usa. Se o app importa de
+  `react-router-dom` e o entry de `react-router`, sob vitest viram instancias de
+  modulo separadas e o render morre com "useLocation() may be used only in the
+  context of a Router component".
+- `ssr.noExternal: true` no vite.config resolve o interop de dependencia
+  CommonJS, `react-helmet-async` falha com "Named export not found" sem isso.
+- `manualChunks` e `modulePreload` valem so para o build de cliente. No build de
+  SSR o Rollup rejeita com "react cannot be included in manualChunks".
+- Colete `helmet.script`, nao so `meta` e `link`. E onde vive o JSON-LD. Esquecer
+  gera HTML com o texto certo e zero dado estruturado, e passa despercebido.
+- Sem hidratacao, de proposito. `createRoot().render()` substitui o conteudo do
+  container, entao nao ha risco de erro de hidratacao. `hydrateRoot` exigiria
+  paridade exata que um app com banner de consentimento e dados remotos nao tem.
 
 Como descobrir, de fora, por que um passo encadeado em `npm run build` nao
 surte efeito no site publicado — e como corrigir o caso ja resolvido aqui
@@ -152,8 +203,12 @@ auto-contido (ex. `@sparticuz/chromium`) ou trocar por SSG sem navegador.
   cima de palpite errado.
 - **Supor CDN bloqueado / permissao / prazo estourado.** Descartadas de uma vez
   pelo segundo erro mostrar `<launching>` com o binario presente.
-- **Planejar migracao para `vite-ssg` / SSR.** Desnecessario. Eram tres flags.
-  So considere se o erro apontar dependencia de sistema faltando no container.
+- **Planejar migracao para `vite-ssg` / SSR.** Foi descartado cedo demais. A
+  frase original aqui dizia "desnecessario, eram tres flags". Estava errada: as
+  tres flags nao resolveram nada, e em 28/08/2026 o SSG foi exatamente o que
+  resolveu. O erro de julgamento foi tratar SSR como migracao estrutural cara
+  sem medir o custo real, que acabou sendo separar o roteador e escrever um
+  entry de servidor. Meca antes de descartar.
 - **Culpar o prerender por deploys travados.** Reverter o prerender provou que
   o deploy continuava travado. Correlacao, nao causa.
 - **As tres flags de container (`--no-sandbox`, `--disable-setuid-sandbox`,
