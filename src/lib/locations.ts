@@ -21,6 +21,18 @@ export interface ClinicLocation {
   addressLocality: string;
   addressRegion: string;
   addressCountry: string;
+  /**
+   * CEP. O Google espera este campo em negocio local e ele estava ausente nos
+   * quatro enderecos ate 29/08/2026.
+   *
+   * De onde vieram: tres sairam da geocodificacao do proprio Google, lidos nos
+   * perfis do Google Business Profile depois de criados. O da Clinicor veio da
+   * base dos Correios e foi confirmado pelo medico.
+   *
+   * Note que o Google e os Correios discordam de bairro em dois casos, em Belem.
+   * O CEP e que vale, o bairro fica como esta.
+   */
+  postalCode: string;
   /** Endereco completo em uma linha, para exibicao na interface. */
   displayAddress: string;
   /** Telefone formatado para leitura humana. */
@@ -39,6 +51,7 @@ export const LOCATIONS: readonly ClinicLocation[] = [
     addressLocality: "Paragominas",
     addressRegion: "PA",
     addressCountry: "BR",
+    postalCode: "68625-050",
     displayAddress: "Rua Eixo W1, R. Célio Miranda, N° 729, Paragominas - PA",
     phone: "(91) 93618-0476",
     phoneE164: "+5591936180476",
@@ -53,6 +66,7 @@ export const LOCATIONS: readonly ClinicLocation[] = [
     addressLocality: "Paragominas",
     addressRegion: "PA",
     addressCountry: "BR",
+    postalCode: "68625-080",
     displayAddress: "R. Santa Terezinha, 304 - Centro, Paragominas - PA",
     phone: "(91) 9100-0303",
     phoneE164: "+559191000303",
@@ -67,6 +81,7 @@ export const LOCATIONS: readonly ClinicLocation[] = [
     addressLocality: "Belém",
     addressRegion: "PA",
     addressCountry: "BR",
+    postalCode: "66055-240",
     displayAddress: "Av. Generalíssimo Deodoro, 904 - Nazaré, Belém - PA",
     phone: "(91) 3239-4600",
     phoneE164: "+559132394600",
@@ -82,6 +97,7 @@ export const LOCATIONS: readonly ClinicLocation[] = [
     addressLocality: "Belém",
     addressRegion: "PA",
     addressCountry: "BR",
+    postalCode: "66025-160",
     displayAddress:
       "Av. Conselheiro Furtado, 2865 - Sobreloja, salas 08-10 - São Braz, Belém - PA",
     phone: "(91) 3342-1463",
@@ -112,19 +128,36 @@ export const PHYSICIAN_ID = `${BASE_URL}/#physician`;
  * estruturado divergindo do que esta na tela. Os @id continuam ancorados em
  * BASE_URL, entao e a MESMA entidade que a home referencia, nao uma copia.
  */
+/**
+ * Endereco de uma unidade no formato que o schema.org espera.
+ *
+ * POR QUE EXISTE: os campos de endereco eram montados a mao em tres lugares,
+ * aqui, no physicianNode de lib/schema.ts e no no Hospital da capsulotomia YAG.
+ * Acrescentar o postalCode em 29/08/2026 exigiu tres edicoes coordenadas para
+ * um campo so, que e exatamente o custo que a fonte unica de NAP deveria
+ * eliminar. O proximo campo, geo, repetiria a conta.
+ *
+ * FICA NESTE ARQUIVO E NAO EM schema.ts de proposito: locations.ts nao importa
+ * nada, e schema.ts importa dele. O contrario criaria import circular.
+ */
+export function postalAddressNode(local: ClinicLocation) {
+  return {
+    "@type": "PostalAddress",
+    streetAddress: local.streetAddress,
+    addressLocality: local.addressLocality,
+    addressRegion: local.addressRegion,
+    addressCountry: local.addressCountry,
+    postalCode: local.postalCode,
+  };
+}
+
 export function clinicNodes(city?: ClinicLocation["city"]) {
   const unidades = city ? LOCATIONS.filter((l) => l.city === city) : LOCATIONS;
   return unidades.map((l) => ({
     "@type": "MedicalClinic",
     "@id": `${BASE_URL}/#clinic-${l.slug}`,
     name: l.name,
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: l.streetAddress,
-      addressLocality: l.addressLocality,
-      addressRegion: l.addressRegion,
-      addressCountry: l.addressCountry,
-    },
+    address: postalAddressNode(l),
     telephone: l.phoneE164,
     areaServed: { "@type": "City", name: l.city },
     medicalSpecialty: "Ophthalmology",

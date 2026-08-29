@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import { REVISAO_CLINICA } from "@/lib/constants";
-import { BASE_URL, localPorSlug } from "@/lib/locations";
+import { BASE_URL, localPorSlug, postalAddressNode } from "@/lib/locations";
 import { procedureGraph } from "@/lib/schema";
 import { Link } from "react-router-dom";
 import {
@@ -102,13 +102,7 @@ const CapsulotomiaYagLaser = () => {
     location: {
       "@type": "Hospital",
       name: HGP.name,
-      address: {
-        "@type": "PostalAddress",
-        streetAddress: HGP.streetAddress,
-        addressLocality: HGP.addressLocality,
-        addressRegion: HGP.addressRegion,
-        addressCountry: HGP.addressCountry,
-      },
+      address: postalAddressNode(HGP),
     },
   });
 

@@ -28,8 +28,7 @@ import {
   BASE_URL,
   PHYSICIAN_ID,
   clinicNodes,
-  citiesServed,
-} from "@/lib/locations";
+  citiesServed, postalAddressNode } from "@/lib/locations";
 
 export const WEBSITE_ID = `${BASE_URL}/#website`;
 
@@ -81,13 +80,7 @@ export function physicianNode(opts: PhysicianNodeOpts = {}) {
     image: `${BASE_URL}/og-image.jpg`,
     telephone: telefone,
     priceRange: "$$",
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: principal.streetAddress,
-      addressLocality: principal.addressLocality,
-      addressRegion: principal.addressRegion,
-      addressCountry: principal.addressCountry,
-    },
+    address: postalAddressNode(principal),
     identifier: {
       "@type": "PropertyValue",
       propertyID: "CRM",

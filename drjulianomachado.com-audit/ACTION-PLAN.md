@@ -237,20 +237,35 @@ A primeira rodada inseriu o bloco de breadcrumb **duas vezes** nas quatro pagina
 
 **Prazo original: proximo mes**
 
-- [ ] **3.1 BLOQUEADO POR DADO. `postalCode` nos quatro enderecos.**
+- [x] **3.1 FEITO em 29/08/2026. `postalCode` nos quatro enderecos.**
 
-  Ausente em 100% deles. E campo esperado pelo Google em negocio local, e CEP errado no schema e pior que CEP ausente, porque o Google reconcilia NAP entre o site e o Google Business Profile.
+  Estava ausente em 100% deles. Campo esperado pelo Google em negocio local, e
+  CEP errado e pior que CEP ausente, porque o Google reconcilia NAP entre o site
+  e o Google Business Profile.
 
-  Consultei a base publica dos Correios pelo ViaCEP. Deu para confirmar so um:
+  **Como os CEPs apareceram, e vale a pena registrar.** Nao veio de consulta aos
+  Correios. Tres sairam da geocodificacao do proprio Google, lidos nos perfis do
+  Google Business Profile depois que o medico os criou. Criar os perfis resolveu
+  um item que estava travado por falta de dado.
 
-  | Unidade | CEP | Situacao |
+  | Unidade | CEP | Origem |
   |---|---|---|
-  | Clinicor, R. Celio Miranda 729 | **68625-050** | unica "Rua Celio Miranda" na base, provavel correto |
-  | Hospital Geral, R. Santa Terezinha 304 | ? | rua nao consta na base |
-  | Instituto de Olhos, Av. Generalissimo Deodoro 904, Nazare | 66040-140 ou 66035-090 | dois CEPs para a avenida no mesmo bairro |
-  | Vitria, Av. Conselheiro Furtado 2865, Sao Braz | ? | a base nao lista Sao Braz nessa avenida |
+  | Clinicor | 68625-050 | base dos Correios, confirmado pelo medico |
+  | Hospital Geral | 68625-080 | perfil do Google, Paragominas |
+  | Instituto de Olhos | 66055-240 | perfil do Google, criado em 29/08 |
+  | Vitria | 66025-160 | perfil do Google, criado em 29/08 |
 
-  *O que falta:* os quatro CEPs confirmados. Estao em qualquer conta de luz ou cartao das clinicas.
+  Nota: o Google e os Correios discordam de bairro em dois casos, em Belem. Os
+  Correios listam 66055-240 como Umarizal e 66025-160 como Batista Campos, e o
+  Google resolveu os dois como Nazare e Sao Braz. E divergencia de fronteira de
+  bairro, comum em Belem. O CEP e o que vale, o bairro fica como esta.
+
+  *Onde entrou:* `postalCode` no tipo `ClinicLocation`, nas quatro entradas, no
+  `PostalAddress` de `clinicNodes()`, no endereco do `physicianNode` e no no
+  Hospital exclusivo da capsulotomia YAG.
+
+  *Verificado:* os CEPs saem no JSON-LD das rotas publicadas.
+
 - [ ] **3.2 BLOQUEADO POR DADO. `geo` e `openingHoursSpecification` nas quatro clinicas.**
 
   As coordenadas eu consigo derivar dos links de mapa que ja existem em `src/lib/locations.ts`. O horario de atendimento nao esta em lugar nenhum do repositorio, e inventar horario de consultorio medico e o tipo de erro que faz paciente aparecer com a porta fechada.
