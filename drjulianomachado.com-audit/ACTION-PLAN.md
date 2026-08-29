@@ -266,12 +266,37 @@ A primeira rodada inseriu o bloco de breadcrumb **duas vezes** nas quatro pagina
 
   *Verificado:* os CEPs saem no JSON-LD das rotas publicadas.
 
-- [ ] **3.2 BLOQUEADO POR DADO. `geo` e `openingHoursSpecification` nas quatro clinicas.**
+- [x] **3.2 FEITO em 29/08/2026, e resolvido em duas metades.**
 
-  As coordenadas eu consigo derivar dos links de mapa que ja existem em `src/lib/locations.ts`. O horario de atendimento nao esta em lugar nenhum do repositorio, e inventar horario de consultorio medico e o tipo de erro que faz paciente aparecer com a porta fechada.
+  **`openingHoursSpecification` nao entra, por decisao.** O atendimento e
+  flexivel e nao ha horario fixo. A opcao de declarar 24 por 7 foi levantada e
+  descartada: horario que nao bate com o movimento real degrada a confianca do
+  perfil no Google, e faz paciente chegar com a porta fechada. Perfil e schema
+  sem horario nao perdem posicao, so nao ganham o selo de aberto.
 
-  *O que falta:* dias e horarios de atendimento em cada uma das quatro unidades.
-- [x] **3.3 FEITO. Unificar o grafo nas 11 paginas de procedimento.** Ali o Physician e o WebSite saem sem `@id`, viram copias soltas dentro de `performer` e `reviewedBy`, desconectadas do no canonico que as outras 6 templates usam corretamente.
+  **`geo` entrou nas quatro unidades.** Coordenadas lidas do Google Maps:
+
+  | Unidade | Latitude | Longitude |
+  |---|---|---|
+  | Clinicor | -3.0013246 | -47.3549239 |
+  | Hospital Geral | -2.9927566 | -47.3552377 |
+  | Instituto de Olhos | -1.4487456 | -48.4829544 |
+  | Vitria | -1.4559713 | -48.4732988 |
+
+  A do Hospital Geral saiu do proprio perfil do medico no Google Business
+  Profile, entao e o pino que ele ja mantem. As outras tres vieram da resolucao
+  de endereco do Maps.
+
+  *Expectativa correta:* `geo` nao posiciona o negocio no Google, quem faz isso
+  e o perfil. O campo serve para quem le o dado estruturado sem consultar o
+  Maps, tipicamente assistente de IA respondendo qual unidade e a mais perto.
+
+  *Divergencia registrada, para conferir com as clinicas um dia:* o perfil da
+  Vitria mostra CEP 66025-160, e a busca de endereco no proprio Maps devolve
+  66040-100 para o mesmo numero. O schema ficou com o do perfil, porque e contra
+  ele que o Google reconcilia o site. Nao troque sem confirmar na conta de luz
+  ou no cartao da clinica.
+
 - [x] **3.4 FEITO. BreadcrumbList em `/sobre`, `/belem`, `/paragominas` e `/agendamento`.** Hoje so as paginas de procedimento e o hub tem.
 - [x] **3.5 FEITO. JSON-LD minimo em `/politica-de-privacidade`.** Unica rota com zero blocos.
 - [x] **3.6 FEITO em 29/08/2026, e era pior do que o registrado. Instagram.**

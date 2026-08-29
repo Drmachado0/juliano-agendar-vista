@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import { REVISAO_CLINICA } from "@/lib/constants";
-import { BASE_URL, localPorSlug, postalAddressNode } from "@/lib/locations";
+import { BASE_URL, localPorSlug, geoNode, postalAddressNode } from "@/lib/locations";
 import { procedureGraph } from "@/lib/schema";
 import { Link } from "react-router-dom";
 import {
@@ -103,6 +103,7 @@ const CapsulotomiaYagLaser = () => {
       "@type": "Hospital",
       name: HGP.name,
       address: postalAddressNode(HGP),
+      geo: geoNode(HGP),
     },
   });
 

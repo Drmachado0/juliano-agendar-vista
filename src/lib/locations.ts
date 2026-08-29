@@ -33,6 +33,19 @@ export interface ClinicLocation {
    * O CEP e que vale, o bairro fica como esta.
    */
   postalCode: string;
+  /**
+   * Coordenadas do ponto, lidas do Google Maps em 29/08/2026.
+   *
+   * A do Hospital Geral saiu do proprio perfil do medico no Google Business
+   * Profile, entao e o pino que ele ja mantem. As outras tres vieram da
+   * resolucao de endereco do Maps.
+   *
+   * Isto NAO substitui o perfil. O Google posiciona o negocio pelo perfil, nao
+   * por este campo. Ele serve para quem le o dado estruturado sem consultar o
+   * Maps, como assistente de IA respondendo "qual o mais perto de mim".
+   */
+  latitude: string;
+  longitude: string;
   /** Endereco completo em uma linha, para exibicao na interface. */
   displayAddress: string;
   /** Telefone formatado para leitura humana. */
@@ -52,6 +65,8 @@ export const LOCATIONS: readonly ClinicLocation[] = [
     addressRegion: "PA",
     addressCountry: "BR",
     postalCode: "68625-050",
+    latitude: "-3.0013246",
+    longitude: "-47.3549239",
     displayAddress: "Rua Eixo W1, R. Célio Miranda, N° 729, Paragominas - PA",
     phone: "(91) 93618-0476",
     phoneE164: "+5591936180476",
@@ -67,6 +82,8 @@ export const LOCATIONS: readonly ClinicLocation[] = [
     addressRegion: "PA",
     addressCountry: "BR",
     postalCode: "68625-080",
+    latitude: "-2.9927566",
+    longitude: "-47.3552377",
     displayAddress: "R. Santa Terezinha, 304 - Centro, Paragominas - PA",
     phone: "(91) 9100-0303",
     phoneE164: "+559191000303",
@@ -82,6 +99,8 @@ export const LOCATIONS: readonly ClinicLocation[] = [
     addressRegion: "PA",
     addressCountry: "BR",
     postalCode: "66055-240",
+    latitude: "-1.4487456",
+    longitude: "-48.4829544",
     displayAddress: "Av. Generalíssimo Deodoro, 904 - Nazaré, Belém - PA",
     phone: "(91) 3239-4600",
     phoneE164: "+559132394600",
@@ -98,6 +117,8 @@ export const LOCATIONS: readonly ClinicLocation[] = [
     addressRegion: "PA",
     addressCountry: "BR",
     postalCode: "66025-160",
+    latitude: "-1.4559713",
+    longitude: "-48.4732988",
     displayAddress:
       "Av. Conselheiro Furtado, 2865 - Sobreloja, salas 08-10 - São Braz, Belém - PA",
     phone: "(91) 3342-1463",
@@ -151,6 +172,15 @@ export function postalAddressNode(local: ClinicLocation) {
   };
 }
 
+/** Coordenadas no formato do schema.org. Mesmo motivo do postalAddressNode. */
+export function geoNode(local: ClinicLocation) {
+  return {
+    "@type": "GeoCoordinates",
+    latitude: local.latitude,
+    longitude: local.longitude,
+  };
+}
+
 export function clinicNodes(city?: ClinicLocation["city"]) {
   const unidades = city ? LOCATIONS.filter((l) => l.city === city) : LOCATIONS;
   return unidades.map((l) => ({
@@ -158,6 +188,7 @@ export function clinicNodes(city?: ClinicLocation["city"]) {
     "@id": `${BASE_URL}/#clinic-${l.slug}`,
     name: l.name,
     address: postalAddressNode(l),
+    geo: geoNode(l),
     telephone: l.phoneE164,
     areaServed: { "@type": "City", name: l.city },
     medicalSpecialty: "Ophthalmology",
