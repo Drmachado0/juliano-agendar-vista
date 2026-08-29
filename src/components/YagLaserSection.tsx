@@ -11,41 +11,55 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/**
- * Retroiluminações de um caso real, recortadas da arte "Capsulotomia YAG Laser
- * — Antes e Depois".
- *
- * Da peça original vieram SÓ as duas fotos. A moldura, as tarjas ANTES/DEPOIS,
- * as legendas e o rodapé são remontados aqui em HTML para nascerem no tema da
- * landing (obsidiana + teal + cobre, Archivo nos títulos e Inter no corpo), no
- * lugar do azul-marinho sobre branco e da tipografia da arte de origem. Assim o
- * bloco acompanha qualquer troca de token e continua legível no mobile.
- *
- * Para trocar as fotos, basta substituir os dois arquivos: o layout não muda.
- */
-import yagAntes from "@/assets/yag-antes.webp";
-import yagDepois from "@/assets/yag-depois.webp";
+/*
+  ESTE COMENTARIO DESCREVIA DUAS FOTOS DE UM CASO REAL, e terminava dizendo que
+  para trocar as fotos bastava substituir os dois arquivos. Removido em
+  29/08/2026 junto com as fotos, porque um comentario que instrui a repor o que
+  acabou de sair e pior que comentario nenhum: e uma armadilha para o proximo
+  leitor.
 
-/** Os dois lados da comparação. `destaque` marca o lado pós-laser (teal). */
+  A moldura, as tarjas e o rodape continuam remontados aqui em HTML para nascer
+  no tema da landing, obsidiana com teal e cobre, em vez do azul sobre branco da
+  arte de origem. Isso nao mudou. O que mudou foi o miolo, que agora e a
+  ilustracao esquematica importada abaixo.
+*/
+import { OlhoRetroiluminado } from "@/components/OlhoRetroiluminado";
+
+/**
+ * Os dois lados da comparacao didatica.
+ *
+ * ATE 29/08/2026 AQUI HAVIA DUAS FOTOS de um caso real, retroiluminacao do
+ * mesmo olho antes e depois do laser, com os rotulos "Antes" e "Depois" e as
+ * legendas "Visao embacada" e "Visao mais nitida". Removidas por decisao do
+ * medico: a Resolucao CFM 1.974/2011 e o Codigo de Etica Medica restringem
+ * imagem de antes e depois em publicidade medica, e o aviso de que o resultado
+ * varia nao descaracteriza a comparacao.
+ *
+ * A ilustracao que entrou no lugar ja existia, em
+ * components/procedimentos/yag/YagAntesDepois.tsx, usada na pagina da
+ * capsulotomia. Ela e desenho original, nao e foto de paciente, e mostra o que
+ * acontece na CAPSULA, que e a estrutura tratada.
+ *
+ * As legendas tambem mudaram: "Visao embacada" e "Visao mais nitida" eram
+ * promessa de resultado. O texto agora descreve a anatomia.
+ */
 const COMPARACAO = [
   {
-    id: "antes",
-    rotulo: "Antes",
-    foto: yagAntes,
-    alt: "Retroiluminação do olho antes do laser: a cápsula posterior aparece opaca e barra o reflexo do fundo do olho.",
+    id: "opaca",
+    rotulo: "Cápsula opacificada",
+    aberto: false,
     icone: CircleDotDashed,
     titulo: "Opacidade da cápsula posterior",
-    legenda: "Visão embaçada",
+    legenda: "A membrana barra a passagem da luz",
     destaque: false,
   },
   {
-    id: "depois",
-    rotulo: "Depois",
-    foto: yagDepois,
-    alt: "Retroiluminação do mesmo olho após o laser: uma janela central aberta na cápsula deixa o reflexo alaranjado do fundo do olho passar.",
+    id: "aberta",
+    rotulo: "Após a capsulotomia",
+    aberto: true,
     icone: Aperture,
-    titulo: "Abertura central após o YAG laser",
-    legenda: "Visão mais nítida",
+    titulo: "Abertura central na cápsula",
+    legenda: "A janela deixa a luz passar de novo",
     destaque: true,
   },
 ];
@@ -175,7 +189,7 @@ const YagLaserSection = () => {
               <figure className="relative m-0 card-glass rounded-3xl rounded-tl-[5rem] shadow-2xl p-5 sm:p-6 pt-8 sm:pt-10">
                 <div className="text-center mb-5">
                   <h3 className="text-lg sm:text-xl font-bold text-foreground">
-                    Antes e depois
+                    O que o laser faz na cápsula
                   </h3>
                   {/* Filete pontilhado da arte original, redesenhado em cobre */}
                   <div
@@ -193,8 +207,7 @@ const YagLaserSection = () => {
                     ({
                       id,
                       rotulo,
-                      foto,
-                      alt,
+                      aberto,
                       icone: Icone,
                       titulo,
                       legenda,
@@ -217,15 +230,7 @@ const YagLaserSection = () => {
                         >
                           {rotulo}
                         </p>
-                        <img
-                          src={foto}
-                          alt={alt}
-                          width={542}
-                          height={542}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full aspect-square object-cover"
-                        />
+                        <OlhoRetroiluminado aberto={aberto} id={`home-${id}`} />
                         <div className="p-3 sm:p-4">
                           <Icone
                             className={`w-5 h-5 mb-2 ${
@@ -255,9 +260,10 @@ const YagLaserSection = () => {
                     aria-hidden="true"
                   />
                   <span className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                    A capsulotomia YAG laser remove a opacidade da cápsula
-                    posterior e melhora a qualidade da visão. Imagens de um caso
-                    real — o resultado varia de paciente para paciente.
+                    A capsulotomia YAG laser abre uma janela na cápsula
+                    posterior opacificada. Ilustração esquemática, com fins
+                    didáticos. Não é foto de paciente e não representa
+                    resultado individual.
                   </span>
                 </figcaption>
               </figure>

@@ -21,9 +21,6 @@ vi.mock("@/hooks/useMetaPixel", () => ({
 vi.mock("@/hooks/useGoogleReviews", () => ({
   useGoogleReviews: () => ({ rating: 5.0, count: 111, hasRealAggregate: true }),
 }));
-vi.mock("@/services/avaliacoesGoogle", () => ({
-  buscarAvaliacoesGoogle: vi.fn().mockResolvedValue([]),
-}));
 vi.mock("@/hooks/useSiteWhatsApp", () => ({
   useSiteWhatsApp: () => ({
     waLink: (msg: string) => `https://wa.me/5591936180476?text=${encodeURIComponent(msg)}`,

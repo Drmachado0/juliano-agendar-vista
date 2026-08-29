@@ -39,7 +39,11 @@ const Header = () => {
     { label: "Procedimentos", id: "procedimentos", href: "/procedimentos" },
     { label: "Glaucoma", id: "glaucoma", href: "/procedimentos/glaucoma" },
     { label: "YAG Laser", id: "yag-laser" },
-    { label: "Depoimentos", id: "depoimentos" },
+    // O rotulo era "Depoimentos" ate 29/08/2026. A secao deixou de exibir
+    // depoimento de paciente, por decisao do medico, e passou a mostrar so a
+    // nota agregada do Google. O id continua "depoimentos" para nao quebrar
+    // link antigo que aponte para a ancora.
+    { label: "Avaliações", id: "depoimentos" },
     { label: "Paragominas", id: "paragominas", href: "/paragominas" },
     { label: "Belém", id: "belem", href: "/belem" },
     { label: "Convênios", id: "convenios" },

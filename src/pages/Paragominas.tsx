@@ -25,7 +25,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { useQuery } from "@tanstack/react-query";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { AREAS_ATUACAO } from "@/components/AreasDeAtuacao";
@@ -33,7 +32,7 @@ import logoImage from "@/assets/dr-juliano-logo.svg";
 import drHero from "@/assets/dr-juliano-hero.webp";
 import drHero2x from "@/assets/dr-juliano-hero@2x.webp";
 import drConsultorio from "@/assets/dr-juliano-consultorio.jpg";
-import { DOCTOR, GOOGLE_REVIEWS } from "@/lib/constants";
+import { DOCTOR, GOOGLE_REVIEWS, GOOGLE_REVIEW_URL } from "@/lib/constants";
 import { clinicNodes, LOCATIONS, BASE_URL } from "@/lib/locations";
 import {
   physicianNode,
@@ -46,8 +45,6 @@ import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import { useGoogleReviews } from "@/hooks/useGoogleReviews";
 import { buildAgendamentoLink } from "@/lib/agendamentoLink";
-import { buscarAvaliacoesGoogle } from "@/services/avaliacoesGoogle";
-import { buildTestimonialPool } from "@/lib/testimonialsPool";
 import RefractionClarityExperience from "@/components/paragominas/RefractionClarityExperience";
 
 const CANONICAL = `${BASE_URL}/paragominas`;
@@ -168,25 +165,16 @@ const Paragominas = () => {
   const footerRef = useRef<HTMLDivElement>(null);
   const stickyVisible = useMobileStickyVisibility(heroRef, footerRef);
 
-  const { data: avaliacoes } = useQuery({
-    queryKey: ["avaliacoes-google"],
-    queryFn: buscarAvaliacoesGoogle,
-    staleTime: 1000 * 60 * 30,
-    refetchInterval: 1000 * 60 * 30,
-    refetchOnWindowFocus: true,
-  });
-  const pool = useMemo(() => (avaliacoes ? buildTestimonialPool(avaliacoes) : []), [avaliacoes]);
-  const [reviewIndex, setReviewIndex] = useState(0);
-  useEffect(() => {
-    if (pool.length < 2) return;
-    if (typeof window === "undefined") return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) return;
-    const id = window.setInterval(() => setReviewIndex((i) => (i + 1) % pool.length), 7000);
-    return () => window.clearInterval(id);
-  }, [pool.length]);
-  const main = pool[reviewIndex];
-  const previews = [pool[(reviewIndex + 1) % Math.max(1, pool.length)], pool[(reviewIndex + 2) % Math.max(1, pool.length)]];
+  /*
+    AQUI VIVIA O MOTOR DO CARROSSEL DE AVALIACOES, removido em 29/08/2026 junto
+    com o carrossel em si. Ele buscava as avaliacoes no Supabase a cada 30
+    minutos e girava um setInterval de 7 segundos para sempre.
+
+    O JSX saiu numa primeira passada e este bloco ficou. Como noUnusedLocals
+    esta em false, nada acusou, e a pagina continuava baixando texto de
+    avaliacao com nome de paciente sem exibir uma linha. Remover o que se ve nao
+    e o mesmo que parar de buscar.
+  */
 
   // Grafo montado pelos helpers de lib/schema, como a home e /sobre.
   //
@@ -1029,47 +1017,30 @@ const Paragominas = () => {
                 </div>
               </header>
 
-              {main ? (
-                <div className="grid lg:grid-cols-[1.7fr_1fr] gap-10 lg:gap-16 items-start" aria-live="polite">
-                  <blockquote className="relative pt-6" style={{ borderTop: "1px solid var(--pgm-line)" }}>
-                    <span
-                      aria-hidden="true"
-                      className="pgm-serif absolute -top-10 -left-3 select-none pointer-events-none italic"
-                      style={{ ...SERIF, fontSize: "7rem", lineHeight: 1, color: "var(--pgm-champagne)", opacity: 0.5 }}
-                    >
-                      “
-                    </span>
-                    <p
-                      className="leading-[1.3] max-w-3xl"
-                      style={{ ...SERIF, color: "var(--pgm-grafite)", fontSize: "clamp(1.35rem, 3vw, 2rem)" }}
-                    >
-                      {main.text}
-                    </p>
-                    <footer className="mt-8 pt-4 flex items-center justify-between gap-4 text-sm" style={{ borderTop: "1px solid var(--pgm-line)", color: "var(--pgm-ink-soft)" }}>
-                      <span>
-                        <span className="font-semibold" style={{ color: "var(--pgm-petroleo)" }}>{main.name}</span>
-                        {main.date && <> · {main.date}</>}
-                      </span>
-                      <span className="pgm-mono text-xs tracking-[0.3em] uppercase" style={{ color: "var(--pgm-champagne)" }}>
-                        Google Reviews
-                      </span>
-                    </footer>
-                  </blockquote>
+              {/*
+                AQUI HAVIA UM CARROSSEL DE AVALIACOES com nome de paciente, uma
+                em destaque e duas na coluna lateral. Removido em 29/08/2026 por
+                decisao do medico, junto do carrossel de /agendamento e dos
+                cartoes do TestimonialsSection.
 
-                  <div className="hidden lg:flex flex-col gap-6 pl-8" style={{ borderLeft: "1px solid var(--pgm-line)" }}>
-                    {previews.filter(Boolean).map((r) => (
-                      <p key={r!.id} className="text-sm leading-relaxed italic" style={{ ...SERIF, color: "var(--pgm-ink-soft)" }}>
-                        &ldquo;{r!.text.slice(0, 160)}{r!.text.length > 160 ? "…" : ""}&rdquo;
-                        <span className="not-italic block mt-2 text-xs" style={{ color: "var(--pgm-petroleo)" }}>
-                          — {r!.name}
-                        </span>
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm" style={{ color: "var(--pgm-ink-soft)" }}>Avaliações carregando…</p>
-              )}
+                A Resolucao CFM 1.974/2011 e o Codigo de Etica Medica restringem
+                depoimento de paciente em publicidade medica. A origem ser
+                avaliacao publica do Google nao muda quem republica.
+
+                A nota agregada acima fica, porque nao reproduz relato de
+                paciente identificado. Quem quiser ler, le no Google.
+
+                NAO REINTRODUZA sem falar com ele.
+              */}
+              <a
+                href={GOOGLE_REVIEW_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pgm-btn--link-dark inline-flex min-h-[44px] items-center gap-2 text-sm"
+              >
+                Ler as avaliações no Google
+                <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+              </a>
             </div>
           </section>
 

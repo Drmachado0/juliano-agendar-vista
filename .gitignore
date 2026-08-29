@@ -46,3 +46,19 @@ bun.lockb
 
 # Estado do harness, nao e do projeto.
 .claude-flow/
+
+# Artefatos intermediarios dos agentes de auditoria, nao entregaveis.
+drjulianomachado.com-audit/findings/raw/
+drjulianomachado.com-audit/findings/geo-raw/
+drjulianomachado.com-audit/pages/
+drjulianomachado.com-audit/screenshots/
+drjulianomachado.com-audit/render_home*.json
+drjulianomachado.com-audit/findings/_*.py
+
+# Artefatos intermediarios dos agentes de auditoria, nao entregaveis.
+drjulianomachado.com-audit/findings/raw/
+drjulianomachado.com-audit/findings/geo-raw/
+drjulianomachado.com-audit/pages/
+drjulianomachado.com-audit/screenshots/
+drjulianomachado.com-audit/render_home*.json
+drjulianomachado.com-audit/findings/_*.py

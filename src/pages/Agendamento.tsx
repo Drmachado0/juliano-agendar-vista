@@ -32,6 +32,7 @@ import drJulianoHero2x from "@/assets/dr-juliano-hero@2x.webp";
 import { DOCTOR } from "@/lib/constants";
 import { BASE_URL } from "@/lib/locations";
 import { useGoogleReviews } from "@/hooks/useGoogleReviews";
+import { GOOGLE_REVIEW_URL } from "@/lib/constants";
 import {
   physicianNode,
   websiteNode,
@@ -42,51 +43,7 @@ import { buildLeadUserData, collectAttribution } from "@/lib/leadUserData";
 import { fbqTrack } from "@/lib/metaPixelClient";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
-type Depoimento = {
-  nome: string;
-  data: string;
-  texto: string;
-};
-
-// Avaliações reais do Google Business Profile do Dr. Juliano Machado.
-// Mantidas em código para o carrossel da landing /agendamento — espelham
-// as avaliações exibidas na home. Conformidade com CFM 2.336/2023:
-// apenas avaliações verificadas reais, sem depoimentos fictícios.
-/** URL canonica desta pagina. Usada no canonical, no og:url e no JSON-LD. */
 const URL_AGENDAMENTO = `${BASE_URL}/agendamento`;
-
-/**
- * ORDEM IMPORTA: o depoimento mais longo vem primeiro.
- *
- * POR QUE: para texto, o LCP mede a area ocupada pelo TEXTO, nao a caixa do
- * elemento. Igualar a caixa dos slides nao bastou — medido, os tres paragrafos
- * ficaram com 140px identicos e o carrossel ainda gerava candidato novo aos
- * 17,3s, porque 192 caracteres preenchem mais que 86 no mesmo espaco.
- *
- * Com o maior pintando primeiro, nenhum slide posterior pode supera-lo, e o LCP
- * passa a refletir o primeiro paint de verdade. Ao adicionar depoimento, mantenha
- * a ordem decrescente por tamanho de texto.
- */
-const DEPOIMENTOS: Depoimento[] = [
-  {
-    nome: "Fernanda Cruz",
-    data: "Avaliação verificada · Google",
-    texto:
-      "Um ótimo atendimento, e dr Juliano um grande profissional. Levei meu filho para fazer o teste do olhinho e o dr. foi muito atencioso, cauteloso e muito cuidadoso no atendimento do meu pequeno.",
-  },
-  {
-    nome: "Jéssica Oliveira da Costa",
-    data: "Avaliação verificada · Google",
-    texto:
-      "Atendimento muito bom, profissional excelente, muito prestativo, atencioso, humano, super indico, fala muita clara.",
-  },
-  {
-    nome: "Gislene Alves da Silva",
-    data: "Avaliação verificada · Google",
-    texto:
-      "Atendimento excelente, médico atencioso e equipe muito profissional. Recomendo demais!",
-  },
-];
 
 const initialFormData: FormData = {
   fullName: "",
@@ -124,7 +81,6 @@ const Agendamento = () => {
   const [leadId, setLeadId] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [depoimentoAtivo, setDepoimentoAtivo] = useState(0);
   const {
     trackViewContent,
     trackLead,
@@ -201,7 +157,6 @@ const Agendamento = () => {
   // Carrossel auto
   useEffect(() => {
     const interval = setInterval(() => {
-      setDepoimentoAtivo((prev) => (prev + 1) % DEPOIMENTOS.length);
     }, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -620,72 +575,43 @@ const Agendamento = () => {
                 )}
               </div>
 
-              {/* Carrossel de depoimentos */}
+              {/*
+                AQUI HAVIA UM CARROSSEL COM TRES DEPOIMENTOS DE PACIENTES, com
+                nome completo, dentro do funil de conversao. Removido em
+                29/08/2026 por decisao do medico.
+
+                A Resolucao CFM 1.974/2011 e o Codigo de Etica Medica restringem
+                depoimento de paciente em publicidade medica, e a origem ser
+                avaliacao publica do Google nao muda isso: quem republica no
+                proprio site e o medico.
+
+                O que ficou e a nota agregada mais o link. Agregado nao reproduz
+                relato de paciente identificado, e o interessado le no Google,
+                sob a responsabilidade do Google.
+
+                NAO REINTRODUZA sem falar com ele.
+              */}
               {!isSubmitted && (
-                <div className="mb-6 overflow-hidden rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-5 shadow-sm">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
-                      ))}
-                      <span className="ml-1 text-xs font-semibold text-foreground">
-                        5.0 · Avaliações do Google
-                      </span>
-                    </div>
-                    <span className="text-xs uppercase tracking-wider text-muted-foreground">
-                      Depoimentos
-                    </span>
-                  </div>
-
-                  <div className="relative h-[184px] sm:h-[160px]">
-                    {DEPOIMENTOS.map((d, idx) => (
-                      <div
-                        key={d.nome + d.data}
-                        className={`absolute inset-0 flex flex-col transition-all duration-500 ${
-                          idx === depoimentoAtivo
-                            ? "translate-x-0 opacity-100"
-                            : "pointer-events-none translate-x-2 opacity-0"
-                        }`}
-                        aria-hidden={idx !== depoimentoAtivo}
-                      >
-                        <p className="flex-1 text-sm italic leading-relaxed text-foreground md:text-base">
-                          "{d.texto}"
-                        </p>
-                        {/*
-                            Altura fixa tambem aqui. O <p> acima usa
-                            flex-1 e recebe o espaco que sobra — se este
-                            bloco quebrar em duas linhas num depoimento e
-                            uma noutro, o texto muda de tamanho e volta a
-                            gerar candidato novo a LCP. Medido: 138px num
-                            slide e 156px noutro, exatamente uma linha de
-                            diferenca daqui.
-                          */}
-                          <div className="mt-3 flex h-8 shrink-0 flex-wrap items-start gap-x-2 gap-y-0.5 overflow-hidden text-xs">
-                          <strong className="text-foreground">{d.nome}</strong>
-                          <span className="text-muted-foreground">· {d.data}</span>
-                        </div>
-                      </div>
+                <div className="mb-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-4 text-sm shadow-sm">
+                  <span className="flex items-center gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
                     ))}
-                  </div>
-
-                  <div className="mt-2 flex items-center justify-center">
-                    {DEPOIMENTOS.map((_, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setDepoimentoAtivo(idx)}
-                        aria-label={`Ver depoimento ${idx + 1}`}
-                        className="flex h-11 w-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                      >
-                        <span
-                          aria-hidden="true"
-                          className={`block h-1.5 rounded-full transition-all ${
-                            idx === depoimentoAtivo ? "w-6 bg-accent" : "w-1.5 bg-muted-foreground/30"
-                          }`}
-                        />
-                      </button>
-                    ))}
-                  </div>
+                  </span>
+                  <span className="font-semibold text-foreground">
+                    {reviews.rating.toFixed(1)}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {reviews.count} avaliações no Google
+                  </span>
+                  <a
+                    href={GOOGLE_REVIEW_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    Ler no Google
+                  </a>
                 </div>
               )}
 
@@ -820,16 +746,40 @@ const Agendamento = () => {
                 </ul>
               </div>
 
+              {/*
+                AQUI HAVIA UM DEPOIMENTO com nome completo de paciente, o quarto
+                do site. Removido em 29/08/2026 na mesma passada dos outros, e
+                pelo mesmo motivo: a Resolucao CFM 1.974/2011 e o Codigo de
+                Etica Medica restringem depoimento de paciente em publicidade
+                medica, e a origem ser avaliacao do Google nao muda quem
+                republica.
+
+                Este passou perto de escapar. Ele nao estava no array
+                DEPOIMENTOS, estava cravado no JSX da barra lateral, e so
+                apareceu ao procurar os nomes no HTML gerado depois da remocao
+                dos outros tres. Se for procurar residuo um dia, procure no
+                HTML de saida e nao so no fonte.
+              */}
               <div className="rounded-xl border border-primary/10 bg-primary/5 p-5">
                 <div className="mb-2 flex items-center gap-1">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
                   ))}
                 </div>
-                <p className="text-sm italic leading-relaxed text-foreground">
-                  "Atendimento muito bom, profissional excelente, muito prestativo, atencioso, humano, super indico."
+                <p className="text-sm font-semibold text-foreground">
+                  {reviews.rating.toFixed(1)} de 5 no Google
                 </p>
-                <p className="mt-2 text-xs text-muted-foreground">— Jéssica Oliveira da Costa · Avaliação Google</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {reviews.count} avaliações de pacientes
+                </p>
+                <a
+                  href={GOOGLE_REVIEW_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block text-xs text-primary underline-offset-4 hover:underline"
+                >
+                  Ler no Google
+                </a>
               </div>
             </aside>
           </div>

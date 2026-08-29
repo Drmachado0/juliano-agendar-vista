@@ -24,6 +24,82 @@ Nenhuma fase do plano anterior precisa ser repetida. O plano de 27/08 esta arqui
 
 ---
 
+## Fase 0: FEITA em 29/08/2026, por decisao do medico
+
+Os dois itens eram decisao dele e nao recomendacao tecnica. Ele decidiu ajustar
+conforme a norma, e a execucao ficou comigo.
+
+Base: Resolucao CFM 1.974/2011 e Codigo de Etica Medica, que restringem imagem
+de antes e depois e depoimento de paciente em publicidade medica.
+
+### Antes e depois na home
+
+- [x] Duas fotos de um caso real, retroiluminacao do mesmo olho antes e depois
+      do YAG laser, sob o titulo "Antes e depois", com as legendas "Visao
+      embacada" e "Visao mais nitida". O aviso de que o resultado varia nao
+      descaracteriza a comparacao.
+
+**A solucao ja existia no proprio repositorio.** A pagina da capsulotomia usa
+`components/procedimentos/yag/YagAntesDepois.tsx`, que e ilustracao esquematica
+original, nao foto de paciente, e diz isso na legenda. Alguem ja tinha resolvido
+o problema la. Exportei o `OlhoRetroiluminado` de dentro dele e a home passou a
+usar a mesma ilustracao. Zero design novo.
+
+As legendas tambem mudaram. "Visao embacada" e "Visao mais nitida" eram promessa
+de resultado, e viraram descricao da anatomia.
+
+### Depoimentos de paciente, e o alcance era maior
+
+- [x] O medico escolheu tirar **tudo que exibe nome de paciente**, nao so os
+      tres itens que a auditoria tinha marcado.
+
+Onde estavam:
+
+| Arquivo | O que exibia |
+|---|---|
+| `components/TestimonialsSection.tsx` | carrossel com nome, foto, nota e texto, na home e em 12 paginas de procedimento |
+| `pages/Agendamento.tsx` | carrossel de tres depoimentos no funil |
+| `pages/Agendamento.tsx` | **um quarto**, cravado no JSX da barra lateral |
+| `pages/Paragominas.tsx` | uma avaliacao em destaque e duas na coluna lateral |
+
+**O quarto quase escapou.** Tres estavam num array chamado `DEPOIMENTOS`, faceis
+de achar. O quarto estava escrito a mao no JSX, e so apareceu ao procurar os
+nomes no HTML GERADO depois de remover os outros. Buscar no fonte teria dado
+tudo limpo. Se for procurar residuo um dia, procure na saida.
+
+### O que ficou de proposito
+
+A nota agregada, 5,0 com 111 avaliacoes, mais o link para o Google. Agregado nao
+reproduz relato de paciente identificado: e dado publico do perfil, e quem
+quiser ler o relato le no Google, sob a responsabilidade do Google.
+
+*Verificado no `dist`:* nenhum nome de paciente em nenhuma das 23 rotas, nenhuma
+ocorrencia de "Antes e depois", e as fotos `yag-antes.webp` e `yag-depois.webp`
+sairam do build. A nota agregada continua nas paginas que a exibiam.
+
+*Se a leitura da norma mudar um dia,* o carrossel, a paginacao, o auto-rotate, o
+pool do Supabase e o tipo `Testimonial` estao no commit desta data.
+
+---
+
+## O que a rodada de 27/08/2026 ja fechou
+
+Nenhuma fase do plano anterior precisa ser repetida. O plano de 27/08 esta arquivado em `ACTION-PLAN-2026-08-27.md`. Situacao de cada fase dele, conferida hoje contra o site publicado e contra o repositorio:
+
+| Fase antiga | Situacao | Como conferi |
+|---|---|---|
+| **1. Ganhos rapidos** | Fechada | As 18 paginas com titulo entre 45 e 59 caracteres e description entre 111 e 160. O `alt` de `/paragominas` segue correto como decorativo. |
+| **2. Conteudo** | Fechada | `/procedimentos` saiu de 170 palavras para 609, acima das 433 registradas na epoca. O indice linka para as 11 filhas. `procedimentosIndex.test.ts` e `llmsTxt.test.ts` existem e `/llms.txt` responde 200. |
+| **2b. Supabase fora do caminho critico** | Fechada, por outro caminho | Os dois itens literais nao foram executados, mas o objetivo foi atingido. Hoje so `react` e `query` estao em `modulepreload`. Os commits 41a8839 e 811df9d, feitos para viabilizar o SSR, tiraram o Supabase da largada. O bundle de 46,7 KB ainda baixa, mas nao disputa mais banda no inicio. |
+| **3. Decisao estrutural** | Superada | A decisao era "aceitar a casca". Ela foi revertida em 28/08 pela saida que o proprio documento listava como segunda opcao, SSG sem navegador. O gatilho de reabertura perdeu objeto. |
+| **4. Monitoramento** | Fechada, com uma consequencia | `npm run monitorar:seo` existe e usa `queryHistoryRecord`. O item aberto "ligar o Search Console por conta de servico" esta feito, e foi o que permitiu os dados reais desta auditoria. A consequencia e o item 1.5 abaixo: o monitor agora aponta para o arquivo do pipeline aposentado. |
+
+**Uma correcao antiga que foi neutralizada a montante.** A Fase 2 de 27/08 tirou cinco exames orfaos ligando o indice a 11 paginas filhas, e isso funcionou, `/procedimentos` de fato linka para as 11. So que a medicao de hoje mostra que `/procedimentos` recebe **1 unico link interno**. Os 11 links de saida partem de uma pagina que ninguem alcanca. Os itens 1.3 e 2.2 deste plano consertam o lado que faltava.
+
+**Por que o plano de hoje e quase todo novo.** Ele foi construido sobre medicoes que eram impossiveis ate ontem. Enquanto o servidor entregava uma casca de 9,8 KB, nao havia links internos, grafo de schema, texto de FAQ nem conformidade de publicidade para medir. Nenhum item abaixo e repeticao.
+
+---
+
 ## Fase 0: decisao do medico, nao do desenvolvedor
 
 **Prazo: antes de qualquer outra coisa, porque muda o que sera construido**

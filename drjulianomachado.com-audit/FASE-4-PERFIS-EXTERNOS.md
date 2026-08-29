@@ -218,6 +218,27 @@ O perfil unico esta ancorado no HGP em Paragominas. Nao ha nada dele no mapa de
 Belem, e isso explica melhor as 11 paginas com zero impressao do que qualquer
 problema de HTML.
 
+### RESOLVIDO em 29/08/2026. agendarconsulta removido, e nao so corrigido
+
+O medico pediu a remocao e o perfil inteiro saiu. Conferido: a URL
+`https://agendarconsulta.com/perfil/dr-dr-juliano-machado-1720017204` devolve
+**HTTP 404**, e nem o telefone `(19) 98227-3901` nem o handle
+`@droftalmologista_` aparecem mais na resposta.
+
+**Remover foi melhor que corrigir.** Corrigir deixaria um perfil ativo, sem
+dono, que volta a envelhecer. Sem perfil nao ha o que envelhecer.
+
+*Expectativa de prazo:* ele pode continuar aparecendo na busca por algumas
+semanas, porque o Google precisa rastrear de novo para descobrir que virou 404.
+Se persistir por mais de um mes, o caminho e a ferramenta de remocao de conteudo
+obsoleto do Google.
+
+Com isso, o telefone com DDD 19 de Campinas deixa de existir em qualquer lugar
+publico ligado ao nome dele. Era o ultimo residuo conhecido do dominio antigo
+`drjulianosmachado.com.br`.
+
+---
+
 ### agendarconsulta.com, o pior caso
 
 **Perfil:** https://agendarconsulta.com/perfil/dr-dr-juliano-machado-1720017204

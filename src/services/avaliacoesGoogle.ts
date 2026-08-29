@@ -15,24 +15,26 @@ export interface AvaliacaoGoogle {
   updated_at: string;
 }
 
-/**
- * Busca avaliações ativas do Google armazenadas no banco
- */
-export async function buscarAvaliacoesGoogle(): Promise<AvaliacaoGoogle[]> {
-  const supabase = await getSupabase();
-  const { data, error } = await supabase
-    .from('avaliacoes_google')
-    .select('*')
-    .eq('ativo', true)
-    .order('time_epoch', { ascending: false });
+/*
+  A funcao buscarAvaliacoesGoogle foi removida em 29/08/2026.
 
-  if (error) {
-    console.error('Erro ao buscar avaliações do Google:', error);
-    return [];
-  }
+  Ela lia a tabela avaliacoes_google, que guarda nome e texto de paciente, e
+  alimentava os carrosseis de depoimento da home, de /agendamento e de
+  /paragominas. Esses carrosseis sairam por decisao do medico, ver a Fase 0 do
+  plano de acao, e a funcao ficou sem consumidor.
 
-  return data || [];
-}
+  O ARQUIVO CONTINUA porque sincronizarAvaliacoesManualmente segue em uso na
+  tela de admin, em pages/admin/Configuracoes.tsx. A sincronizacao ainda grava
+  as avaliacoes no banco, o que alimenta o total e a nota que o site exibe de
+  forma agregada.
+
+  QUESTAO EM ABERTO para o medico: se o site nao exibe mais texto de avaliacao,
+  vale continuar gravando o texto e o nome no banco, ou basta guardar o total e
+  a nota? Guardar menos dado pessoal e melhor por padrao.
+
+  O tipo AvaliacaoGoogle acima descreve o que a sincronizacao grava, e por isso
+  fica.
+*/
 
 /**
  * Sincroniza manualmente as avaliações do Google (apenas para admins)

@@ -58,7 +58,7 @@ const Footer = () => {
                 // funcionava na home e quebrava em silencio nas demais rotas.
                 { label: "Sobre", id: "sobre", href: "/sobre" },
                 { label: "Procedimentos", id: "procedimentos" },
-                { label: "Depoimentos", id: "depoimentos" },
+                { label: "Avaliações", id: "depoimentos" },
                 { label: "Locais de Atendimento", id: "locais" },
                 { label: "Convênios", id: "convenios" },
               ].map(link => {
