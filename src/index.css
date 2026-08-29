@@ -155,8 +155,18 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    /* PONTO CANONICO sobre a fonte do corpo. tailwind.config.ts e o <style> do
+       index.html apontam para ca.
+       Inter, a mesma que .theme-obsidian declara acima. Antes era Plus Jakarta
+       Sans, sobra do scaffold que nenhum tema do site pedia. Ela sobrevivia
+       aqui e no `sans` do Tailwind, e esse segundo era o estrago: os `font-sans`
+       da landing caem DENTRO do .theme-obsidian, e declaracao explicita ganha
+       de heranca, entao aqueles h3 e h4 pintavam em Plus Jakarta contra a
+       intencao do tema e ainda puxavam 27 KB de woff2 para a cadeia critica.
+       As paginas sem classe de tema (Auth, NotFound, Obrigado, Politica,
+       StatusAgendamento, Paragominas) herdam daqui. */
     font-family:
-      "Plus Jakarta Sans",
+      "Inter",
       system-ui,
       -apple-system,
       sans-serif;
@@ -884,7 +894,7 @@
   --ring: 175 65% 55%;                   /* ciano (foco) */
   color: var(--pgm-petroleo);
   background: var(--pgm-marfim);
-  font-family: 'Inter', 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 .theme-paragominas-agendamento h1,
 .theme-paragominas-agendamento h2,

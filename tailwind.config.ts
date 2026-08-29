@@ -15,7 +15,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        // Precisa casar com a fonte do body em src/index.css, senao todo
+        // `font-sans` sobrescreve o tema por dentro. Motivo completo la.
+        sans: ['"Inter"', 'system-ui', 'sans-serif'],
         serif: ['"Fraunces"', 'Georgia', 'serif'],
       },
       colors: {
