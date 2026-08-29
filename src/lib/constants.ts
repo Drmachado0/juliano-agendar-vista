@@ -8,10 +8,31 @@ export const GOOGLE_REVIEW_URL = "https://g.page/r/CTkTpXB1m13mEAE/review";
 // avaliações reais crescem no perfil do Google Business.
 export const GOOGLE_REVIEWS = {
   rating: 5.0,
-  // 14 e a contagem real do pool sincronizado do Google. Estava em 10, e como o
-  // hero usa esta constante enquanto a secao de depoimentos usa o pool, a mesma
-  // pagina exibia 10 no topo e 14 mais abaixo.
-  count: 14,
+  /**
+   * TOTAL de avaliacoes do perfil no Google, nao o tamanho do pool sincronizado.
+   *
+   * Os dois numeros sao diferentes e ja foram confundidos aqui. O pool sao os
+   * depoimentos que a secao de depoimentos exibe. Este campo alimenta a frase
+   * "baseado em N avaliacoes", que fala do total.
+   *
+   * ESTAVA EM 14 E O PERFIL TINHA 111, conferido no proprio Maps em 29/08/2026.
+   * O site subestimava o proprio ativo mais forte por um fator de 8.
+   *
+   * ISTO NAO E UM FALLBACK, E A FONTE UNICA. O useGoogleReviews parece buscar o
+   * valor real em site_config, mas a migration que cria as colunas
+   * google_reviews_total e google_rating, a 20260630000000, NUNCA FOI APLICADA.
+   * Confira em src/integrations/supabase/types.ts: a tabela tem apenas id,
+   * whatsapp_number, updated_at, updated_by e expected_meta_pixel_id.
+   *
+   * Consequencia pratica: hasRealAggregate e sempre false, no servidor e no
+   * cliente. Este numero e o que todo mundo ve, paciente e crawler.
+   *
+   * A CORRECAO DURAVEL tem dois passos, nesta ordem: aplicar a migration e
+   * depois rodar a edge function sincronizar-avaliacoes-google. O codigo dela ja
+   * grava user_ratings_total, que e o total certo. Enquanto isso nao acontece,
+   * confira este campo contra o perfil sempre que mexer em avaliacoes.
+   */
+  count: 111,
 } as const;
 
 // Identidade profissional — exibida no header/hero/rodapé.

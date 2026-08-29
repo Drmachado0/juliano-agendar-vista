@@ -21,8 +21,13 @@ const HeroSection = () => {
   );
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoPaused, setVideoPaused] = useState(false);
-  // Renderiza o vídeo sempre que possível (inclusive mobile).
-  // Só desabilita se o usuário pediu reduced-motion ou está em save-data/2g.
+  // Vídeo só a partir de lg. Abaixo disso o <img> do SSG fica sendo o LCP.
+  // ANTES: o vídeo montava também no mobile, depois da hidratação. Como ele
+  // SUBSTITUI o <img> ja pintado, o paint tardio do <video> virava o LCP final:
+  // resourceLoadDelay de 4.363 ms num LCP de 3,8 s (Lighthouse 13.4.1, 29/08).
+  // O loop do autoplay ainda impedia a estabilizacao visual, com Speed Index
+  // de 7,0 s no mobile contra 2,1 s no desktop. Desktop ja estava em 95, entao
+  // o video fica onde nao custa nada.
   const [enableVideo, setEnableVideo] = useState(false);
   // O atributo poster do <video> nao aceita srcset, entao a fonte e escolhida
   // aqui. Abaixo de lg o container tem no maximo 16rem (256px CSS), coberto de
@@ -34,8 +39,9 @@ const HeroSection = () => {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const conn = (navigator as any).connection;
     const saveData = !!(conn && (conn.saveData || /2g/.test(conn.effectiveType || "")));
-    setEnableVideo(!reducedMotion && !saveData);
-    if (window.matchMedia("(min-width: 1024px)").matches) {
+    const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+    setEnableVideo(isDesktop && !reducedMotion && !saveData);
+    if (isDesktop) {
       setHeroPoster(drJulianoHeroWebp);
     }
   }, []);

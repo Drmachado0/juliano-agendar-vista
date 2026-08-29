@@ -19,7 +19,7 @@ vi.mock("@/hooks/useMetaPixel", () => ({
   useMetaPixel: () => ({ trackContact: vi.fn() }),
 }));
 vi.mock("@/hooks/useGoogleReviews", () => ({
-  useGoogleReviews: () => ({ rating: 5.0, count: 14, hasRealAggregate: true }),
+  useGoogleReviews: () => ({ rating: 5.0, count: 111, hasRealAggregate: true }),
 }));
 vi.mock("@/services/avaliacoesGoogle", () => ({
   buscarAvaliacoesGoogle: vi.fn().mockResolvedValue([]),
@@ -123,7 +123,7 @@ describe("Paragominas landing page — restructure", () => {
   it("Rating real e contagem aparecem", () => {
     renderPage();
     expect(screen.getAllByText(/5\.0/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/14/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/111/).length).toBeGreaterThan(0);
   });
 
   it("Sticky mobile CTA existe (aria-hidden por padrão)", () => {
@@ -158,12 +158,12 @@ describe("Paragominas landing page — restructure", () => {
     expect(text).not.toMatch(/(Clinicor|Hospital Geral de Paragominas)[^]{0,40}\b0[12]\b/);
   });
 
-  it("Preserva números reais funcionais: CRM-PA 15253, rating 5.0, 14 avaliações e 'Mais de 15 anos'", () => {
+  it("Preserva números reais funcionais: CRM-PA 15253, rating 5.0, 111 avaliações e 'Mais de 15 anos'", () => {
     renderPage();
     expect(screen.getAllByText(/CRM-PA 15253/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/5\.0/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Mais de 15 anos/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/14/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/111/).length).toBeGreaterThan(0);
   });
 
   it("Não exibe versões antigas '+13 anos' ou '13+ anos'", () => {

@@ -192,16 +192,25 @@ const TestimonialsSection = ({
   const ratingLabel = displayRating.toFixed(1);
   const title = displayRating >= 4.95 ? "Nota máxima no Google" : "Avaliação dos pacientes no Google";
 
-  // Mesma escada do displayRating acima. A contagem real do pool (hoje 14) e
-  // melhor que a constante, entao vem primeiro; a constante so entra enquanto o
-  // pool ainda nao carregou. Antes caia direto para pool.length, o que fazia a
-  // secao exibir "5.0 baseado em 0 avaliacoes" durante o carregamento — sob o
-  // titulo "Nota maxima no Google".
+  // A ORDEM AQUI JA ESTEVE INVERTIDA. Nao troque sem ler.
+  //
+  // pool.length e quantos depoimentos esta secao EXIBE. GOOGLE_REVIEWS.count e
+  // quantas avaliacoes o perfil TEM. Sao numeros diferentes, hoje 14 e 111, e a
+  // frase ao lado diz "baseado em N avaliacoes", que fala do total.
+  //
+  // Enquanto a constante estava desatualizada em 14, por coincidencia igual ao
+  // tamanho do pool, os dois davam o mesmo resultado e a inversao nao aparecia.
+  // Ao corrigir a constante para 111 em 29/08/2026 o bug ficou visivel: a home
+  // dizia "(111 avaliacoes)" no topo, pelo HeroSection, e "baseado em 14
+  // avaliacoes" aqui embaixo, na mesma tela.
+  //
+  // pool.length continua como ultimo recurso, e nao como preferencia, porque
+  // ele so acerta por acidente.
   const displayCount = reviews.hasRealAggregate
     ? reviews.count
-    : pool.length > 0
-    ? pool.length
-    : GOOGLE_REVIEWS.count;
+    : GOOGLE_REVIEWS.count > 0
+    ? GOOGLE_REVIEWS.count
+    : pool.length;
 
   // Layout responsivo + auto-rotate controls.
   const itemsPerPageRaw = useItemsPerPage();
