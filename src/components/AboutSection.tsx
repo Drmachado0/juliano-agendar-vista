@@ -142,7 +142,11 @@ const AboutSection = () => {
                 <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
                   <Heart className="w-5 h-5 text-primary" />
                 </div>
-                <h4 className="text-foreground font-semibold text-sm mb-1.5 font-sans">Consulta sem pressa</h4>
+                {/* h3, nao h4: o titulo da secao acima e h2, entao h4 pulava um nivel e
+                    quebrava o outline para leitor de tela. O `font-sans` saiu junto porque
+                    e inerte aqui: `.theme-obsidian h3` tem especificidade maior e ja pinta
+                    todo h3 da landing em Archivo, como Retinografia e Clinicor. */}
+                <h3 className="text-foreground font-semibold text-sm mb-1.5">Consulta sem pressa</h3>
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   O Dr. Juliano dedica o tempo necessário para ouvir, examinar e explicar cada resultado com clareza.
                 </p>
@@ -154,7 +158,7 @@ const AboutSection = () => {
                 <div className="w-11 h-11 rounded-xl bg-accent/10 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
                   <Cpu className="w-5 h-5 text-accent" />
                 </div>
-                <h4 className="text-foreground font-semibold text-sm mb-1.5 font-sans">Equipamentos atualizados</h4>
+                <h3 className="text-foreground font-semibold text-sm mb-1.5">Equipamentos atualizados</h3>
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   Retinógrafo digital, biometria ultrassônica e laser — tudo o que você precisa em um só lugar.
                 </p>

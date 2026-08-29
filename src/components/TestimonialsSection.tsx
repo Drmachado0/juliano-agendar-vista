@@ -102,7 +102,11 @@ const TestimonialCard = ({ t }: { t: Testimonial }) => {
           </div>
         )}
         <div>
-          <h4 className="font-semibold text-foreground text-sm font-sans">{t.name}</h4>
+          {/* Deliberadamente NAO e heading. O nome e a atribuicao de uma citacao, nao
+              um titulo de secao. Como h4 pulava nivel a partir do h2 da secao, mas
+              promover para h3 seria pior: colocaria os 14 depoimentos no outline do
+              documento como se fossem secoes da pagina. */}
+          <p className="font-semibold text-foreground text-sm">{t.name}</p>
           <p className="text-xs text-muted-foreground">{t.date}</p>
         </div>
       </div>
