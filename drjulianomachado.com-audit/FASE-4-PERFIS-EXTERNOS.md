@@ -388,6 +388,26 @@ aparece em Belem, onde atende em dois enderecos.
 Ja conferido e correto: categoria e Oftalmologista, e nao ha perfil duplicado.
 Horario fica sem declarar, decisao registrada acima.
 
+### Decidido, os fixos de Belem ficam como estao
+
+Levantado e **descartado** em 29/08/2026, pelo medico.
+
+A pagina `/belem` publica os fixos das clinicas, `(91) 3239-4600` para o
+Instituto de Olhos e `(91) 3342-1463` para a Vitria. O agendamento dele nessas
+duas unidades acontece pelo WhatsApp proprio, `(91) 93618-0476`, em agenda
+interna, e a recepcao das clinicas nao mexe nessa agenda.
+
+Foram oferecidas tres saidas: trocar os fixos pelo WhatsApp, mostrar os dois com
+rotulo, ou deixar. **Ele escolheu deixar.**
+
+Consequencia conhecida e aceita: quando os perfis de Belem forem criados com o
+WhatsApp dele, o telefone do perfil nao vai bater com o fixo que a pagina mostra
+para aquela unidade. E divergencia de NAP de baixo impacto, porque o WhatsApp
+dele ja aparece na mesma pagina em quatro lugares.
+
+Nao "corrija" isso sem falar com ele. Os fixos sao os numeros reais das clinicas
+e estao certos como informacao.
+
 ### 3. agendarconsulta.com, corrigir ou remover
 
 Nao adotar a plataforma. O objetivo e so parar de publicar dado errado com o
