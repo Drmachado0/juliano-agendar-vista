@@ -121,6 +121,44 @@ enfraquece a associacao dele com Paragominas e Belem.
 
 ## O que eu encontrei, verificado em 29/08/2026
 
+### RESOLVIDO em 29/08/2026, as avaliacoes voltaram a se atualizar sozinhas
+
+A cadeia inteira foi fechada no mesmo dia. Fica o registro porque o caminho ate
+aqui tem tres armadilhas que valem para a proxima pessoa.
+
+| Etapa | Quem fez | Resultado |
+|---|---|---|
+| Colunas `google_reviews_total` e `google_rating` | o medico, pelo SQL editor | criadas |
+| Sincronizacao | o medico, pelo botao do admin | rodou |
+| Valor gravado | | **111 avaliacoes, nota 5,0** |
+| Atualizacao daria as 6h | ja existia | segue sozinha |
+
+**Armadilha 1, dois bancos parecidos.** O conector do Supabase desta sessao
+enxerga um projeto chamado `juliano-agendar-vista`, ref `qwpgmvudxvndmzqwrskt`,
+com `site_config` e `avaliacoes_google` de 14 linhas. Bate com tudo. **Nao e o
+do site.** O bundle publicado chama `cnpifhaszbonwlqruwnn`, que nao aparece na
+lista porque e provisionado pela Lovable. Rodar a migration no primeiro daria
+sucesso e nao mudaria nada no site.
+
+**Armadilha 2, o 401 nao era do gateway.** A funcao tem gate proprio, na linha
+41 do `index.ts`: aceita `Bearer <CRON_SECRET>` ou um usuario autenticado de
+verdade. Chave anonima nao e usuario, e chave de projeto. Por isso a chamada
+externa e a invocacao pelo painel falharam, e por isso o unico caminho era o
+botao em `src/pages/admin/Configuracoes.tsx:310`, que manda a sessao do medico.
+
+**Armadilha 3, cinco e cento e onze.** O botao respondeu "Synchronized 5
+reviews" e o banco recebeu 111. Nao e contradicao: a API do Google devolve no
+maximo 5 depoimentos para exibir, e junto manda `user_ratings_total`, que e
+quantas avaliacoes o perfil tem. Confundir os dois foi a causa do bug original.
+
+**O que sobra.** O `count` em `src/lib/constants.ts` virou irrelevante para o
+cliente, porque o banco manda. Mas o SSG continua usando ele, ja que no servidor
+nao ha sessao para consultar o banco. Entao 111 segue sendo o numero que o
+Google e o preview do WhatsApp leem, e ele volta a envelhecer. A correcao
+duravel e o SSG ler o valor no build. Nao e urgente.
+
+---
+
 ### Google Business Profile, melhor do que se supunha e com um dado que o site erra
 
 Abri o perfil pelo CID declarado no site e li a tela. Nao e relato de terceiro.
@@ -246,64 +284,144 @@ ha o que editar, porque a pagina de origem nao existe mais.
 
 ---
 
+## CORRECAO DE 29/08/2026, o medico nao usa diretorio
+
+Ele informou que **nao usa agendarconsulta nem Doctoralia**. Isso inverte parte
+da recomendacao acima, que foi escrita supondo o contrario.
+
+**O que muda.** O objetivo nesses diretorios deixa de ser construir presenca e
+passa a ser **controle de dano**. Perfil de diretorio sem dono nao e vitrine
+vazia, e um cadastro que outra empresa mantem sobre voce, e a plataforma ganha
+dinheiro exibindo ele com ou sem a sua participacao.
+
+**Perfil abandonado e pior que perfil inexistente.** Paciente que manda mensagem
+por um canal que ninguem le nao conclui "ele nao usa isso", conclui "ele nao
+respondeu". Criar cadastro em plataforma que nao sera mantida troca um problema
+de ausencia por um de descaso.
+
+### O que fica valendo
+
+- [ ] **agendarconsulta: corrigir ou remover, nao adotar.** O motivo nao e SEO,
+      e o telefone `(19) 98227-3901`, de Campinas, publicado com o nome e o CRM
+      dele. Paciente que liga cai em outro estado. Procure "reportar dados
+      incorretos" ou o formulario de contato. Se der para reivindicar so para
+      apagar o numero e abandonar, resolve igual.
+
+- [ ] **BoaConsulta: mesma coisa.** Seis enderecos, quatro em cidades onde ele
+      nao atende. Nao ha telefone la, entao o dano e menor que o do
+      agendarconsulta, mas quatro cidades falsas diluem a relevancia local dele
+      nas duas cidades reais.
+
+- [x] **Doctoralia: NAO criar.** Recomendacao anterior cancelada. O argumento
+      era o homonimo ortopedista de Recife ocupando o espaco de marca, e ele
+      continua verdadeiro, mas nao justifica manter um canal que ninguem
+      responde. Se um dia houver secretaria dedicada a isso, reabra.
+
+- [x] **Bing Places, Apple Business Connect, Facebook: adiar.** Mesma logica.
+      Sao cadastros, e cadastro sem dono envelhece.
+
+### Onde a energia rende, e como fazer
+
+Sobra uma frente, e ela e a que mais rende de qualquer forma: o **Google
+Business Profile**, que ele de fato controla e ja mantem, com post proprio e
+resposta em quase toda avaliacao.
+
+**O buraco e Belem.** Um perfil so, ancorado no Hospital Geral em Paragominas,
+onde ele e primeiro lugar no mapa. Em Belem nao aparece em posicao nenhuma,
+apesar de atender em dois enderecos.
+
+**Confirmado com ele em 29/08/2026:** em Belem ele atende DENTRO da estrutura de
+terceiros, tanto no IOB quanto na Vitria. Nao sao consultorios dele.
+
+Isso nao impede perfil proprio, e a prova esta no proprio caso dele. O perfil de
+Paragominas fica no Hospital Geral, que tambem e estrutura de terceiro, existe,
+esta ativo e e primeiro lugar. A regra do Google permite perfil de profissional
+em local de outra empresa quando ele atende o proprio publico e o local tem mais
+de um profissional. IOB e Vitria atendem os dois criterios.
+
+**O que fazer:** dois perfis de profissional, um por endereco, com o nome dele e
+nao o da clinica. Categoria Oftalmologista. Endereco da clinica, com sala quando
+houver.
+
+**Duas condicoes que decidem se funciona:**
+
+1. **Avisar as clinicas antes.** A verificacao costuma ser por carta ou ligacao
+   naquele endereco, e sem colaboracao trava. Alem disso, perfil surpresa no
+   endereco de um parceiro cria atrito a toa.
+2. **Nao usar o telefone da clinica.** Use o WhatsApp dele. O perfil e dele, e
+   paciente que liga precisa chegar nele, nao na recepcao do parceiro.
+
+**Nota de nomenclatura:** "Vitria" esta CORRETO, confirmado com o medico em
+29/08/2026. Nao troque para "Vitrea". O site usa "Vitria" em doze lugares e
+todos estao certos.
+
+---
+
 ## Ordem de prioridade
+
+Reescrita em 29/08/2026, depois que o medico informou que nao usa diretorio. A
+versao anterior mandava criar perfil no Doctoralia, no Bing Places e no Apple
+Business Connect. Estava errada para o caso dele, e foi removida em vez de
+mantida ao lado da correta.
 
 A ordem nao e por facilidade, e por quanto cada uma move o ponteiro.
 
-### 1. Google Business Profile
+### 1. Google Business Profile, Belem
 
-O fator isolado de maior peso. Confira, para cada unidade:
+O maior ganho disponivel. Ele e primeiro lugar no mapa de Paragominas e nao
+aparece em Belem, onde atende em dois enderecos.
 
-- [ ] Categoria principal e **Oftalmologista**
-- [ ] Nome, endereco e telefone identicos a tabela acima
-- [ ] Horario de atendimento preenchido
-- [ ] Site apontando para `https://drjulianomachado.com`
-- [ ] Fotos do consultorio, nao so a fachada
+- [ ] Avisar o IOB e a Vitria antes, a verificacao passa pelo endereco delas
+- [ ] Criar perfil de profissional em cada endereco, com o nome dele e nao o da
+      clinica, categoria Oftalmologista
+- [ ] Usar o WhatsApp dele, nao o telefone da recepcao do parceiro
+
+### 2. Google Business Profile, o que ja existe
+
+- [ ] O telefone do perfil e `(91) 3729-3200` e o site diz `(91) 9100-0303` para
+      o mesmo endereco. Decidir qual fica e igualar os dois
+- [ ] O endereco do perfil traz "Sala 07", que o site nao tem. Acrescentar em
+      `src/lib/locations.ts` para o NAP bater letra por letra
+- [ ] Fotos do consultorio, nao so a do Street View
 - [ ] Servicos listados, um por procedimento
-- [ ] **Existe apenas UM perfil por endereco?** Perfil duplicado divide as
-      avaliacoes e e problema comum quando o medico atende em varios locais
 
-### 2. agendarconsulta.com
+Ja conferido e correto: categoria e Oftalmologista, e nao ha perfil duplicado.
+Horario fica sem declarar, decisao registrada acima.
 
-Prioridade alta por ser onde o telefone errado esta.
+### 3. agendarconsulta.com, corrigir ou remover
 
-- [ ] Trocar o telefone com DDD 19 pelo `(91) 93618-0476`
-- [ ] Conferir se aparece "11 anos" e trocar por "Mais de 15 anos"
-- [ ] Conferir endereco contra a tabela
+Nao adotar a plataforma. O objetivo e so parar de publicar dado errado com o
+nome e o CRM dele.
 
-### 3. Doctoralia
+- [ ] Apagar o telefone `(19) 98227-3901`, de Campinas
+- [ ] Trocar `@droftalmologista_` por `@drjuliano.oftalmo`, ou apagar
+- [ ] Se der para remover o perfil inteiro, melhor ainda
 
-O maior diretorio medico do Brasil, e forte em busca de nome de medico. Uma
-verificacao anterior caiu num homonimo ortopedista de Pernambuco, entao pode ser
-que ele nem tenha perfil.
+### 4. BoaConsulta, mesma logica
 
-- [ ] Se nao existir, criar
-- [ ] Se existir sem reivindicacao, reivindicar
-- [ ] Cadastro: https://www.doctoralia.com.br/cadastro-de-profissionais
+Dano menor, porque nao ha telefone la. Mas quatro cidades falsas diluem a
+relevancia local dele nas duas cidades reais.
 
-### 4. CRM-PA
+- [ ] Apagar os enderecos de Tome-Acu, Sao Miguel do Guama e Ananindeua
+- [ ] Corrigir Av. Generalissimo Deodoro de 868 Umarizal para 904 Nazare
+- [ ] Corrigir o bairro do Hospital Geral, de Celio Miranda para Centro
 
-Registro no conselho regional. Nao traz trafego, mas e a fonte que o Google usa
-para confirmar que o profissional existe e e habilitado. Peso alto em conteudo
-de saude.
+### 5. CRM-PA e sociedades da especialidade
 
-- [ ] Conferir se os dados publicos do registro batem com o site
-- [ ] https://www.crmpa.org.br
+Nao trazem trafego. Sao a fonte que o Google usa para confirmar que o
+profissional existe e e habilitado, e valem peso alto em conteudo de saude. Nao
+exigem manutencao, que e o que os separa dos diretorios acima.
 
-### 5. Sociedades da especialidade
-
-Sinal de autoridade, e o tipo de citacao que diretorio generico nao substitui.
-
+- [ ] Conferir se os dados publicos do CRM-PA batem com o site
 - [ ] Conselho Brasileiro de Oftalmologia, https://www.cbo.com.br
-- [ ] Sociedade Brasileira de Glaucoma, https://www.sbglaucoma.com.br
-      Vale especialmente por causa do fellowship em glaucoma
+- [ ] Sociedade Brasileira de Glaucoma, https://www.sbglaucoma.com.br,
+      especialmente pelo fellowship em glaucoma
 
-### 6. As de menor peso, mas baratas
+### Fora da lista, de proposito
 
-- [ ] Bing Places, https://www.bingplaces.com
-- [ ] Apple Business Connect, https://businessconnect.apple.com
-      Serve o Maps do iPhone, que boa parte dos pacientes usa
-- [ ] Pagina no Facebook, que hoje nao existe
+Doctoralia, Bing Places, Apple Business Connect e pagina no Facebook. Todos
+seriam cadastro novo em plataforma que ninguem vai manter. Reabra apenas se
+houver secretaria dedicada a responder por esses canais.
 
 ---
 
