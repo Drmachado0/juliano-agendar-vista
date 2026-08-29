@@ -9,6 +9,8 @@ import TestimonialsSection from "@/components/TestimonialsSection";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { REVISAO_CLINICA } from "@/lib/constants";
+import { BASE_URL } from "@/lib/locations";
+import { procedureGraph } from "@/lib/schema";
 
 export interface ProcedureSection {
   title: string;
@@ -50,8 +52,6 @@ export interface ProcedurePageData {
   };
 }
 
-const BASE_URL = "https://drjulianomachado.com";
-
 const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
   const url = `${BASE_URL}/procedimentos/${data.slug}`;
   const locations = data.locations ?? {
@@ -64,68 +64,18 @@ const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
   };
 
 
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Início", item: BASE_URL + "/" },
-      { "@type": "ListItem", position: 2, name: "Procedimentos", item: BASE_URL + "/#procedimentos" },
-      { "@type": "ListItem", position: 3, name: data.procedureName, item: url },
-    ],
-  };
-
-  // MedicalWebPage carrega lastReviewed e reviewedBy, as propriedades que o
-  // schema.org define para conteudo de saude revisado. So faz sentido emitir
-  // porque a revisao existe de fato — datar sem revisar seria sinal falso.
-  const medicalWebPageJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "MedicalWebPage",
-    name: data.pageTitle,
-    description: data.metaDescription,
+  // O grafo inteiro vem de procedureGraph, em lib/schema.ts. As doze paginas de
+  // procedimento usam a mesma funcao, inclusive a de capsulotomia YAG, que nao
+  // usa este layout. Ver o cabecalho de la para o porque.
+  const structuredData = procedureGraph({
     url,
-    lastReviewed: REVISAO_CLINICA.data,
-    reviewedBy: {
-      "@type": "Physician",
-      name: REVISAO_CLINICA.por,
-      medicalSpecialty: "Ophthalmology",
-      identifier: {
-        "@type": "PropertyValue",
-        propertyID: "CRM",
-        value: REVISAO_CLINICA.crm,
-      },
-    },
-    about: { "@type": "MedicalProcedure", name: data.procedureName },
-  };
-
-  const faqJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: data.faqs.map((f) => ({
-      "@type": "Question",
-      name: f.question,
-      acceptedAnswer: { "@type": "Answer", text: f.answer },
-    })),
-  };
-
-  const medicalProcedureJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "MedicalProcedure",
-    name: data.procedureName,
-    procedureType: data.medicalProcedureType || "https://schema.org/TherapeuticProcedure",
-    bodyLocation: data.bodyLocation || "Olho",
-    description: data.metaDescription,
-    url,
-    performer: {
-      "@type": "Physician",
-      name: "Dr. Juliano Machado",
-      medicalSpecialty: "Ophthalmology",
-      url: BASE_URL,
-    },
-    availableService: {
-      "@type": "MedicalProcedure",
-      name: data.procedureName,
-    },
-  };
+    pageTitle: data.pageTitle,
+    metaDescription: data.metaDescription,
+    procedureName: data.procedureName,
+    faqs: data.faqs,
+    procedureType: data.medicalProcedureType,
+    bodyLocation: data.bodyLocation,
+  });
 
   return (
     <>
@@ -141,10 +91,7 @@ const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:image" content={`${BASE_URL}/og-image.jpg`} />
         <meta name="robots" content="index, follow" />
-        <script type="application/ld+json">{JSON.stringify(breadcrumbJsonLd)}</script>
-        <script type="application/ld+json">{JSON.stringify(medicalProcedureJsonLd)}</script>
-        <script type="application/ld+json">{JSON.stringify(medicalWebPageJsonLd)}</script>
-        <script type="application/ld+json">{JSON.stringify(faqJsonLd)}</script>
+        <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
       <div className="theme-obsidian min-h-screen bg-background">
@@ -164,7 +111,7 @@ const ProcedurePageLayout = ({ data }: { data: ProcedurePageData }) => {
                   <ChevronRight className="w-3.5 h-3.5" />
                 </li>
                 <li>
-                  <Link to="/#procedimentos" className="hover:text-primary transition-colors">
+                  <Link to="/procedimentos" className="hover:text-primary transition-colors">
                     Procedimentos
                   </Link>
                 </li>

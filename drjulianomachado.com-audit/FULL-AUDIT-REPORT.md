@@ -1,191 +1,153 @@
-# Auditoria SEO completa - drjulianomachado.com
+# Auditoria SEO completa, drjulianomachado.com
 
-**Data:** 27/08/2026  
-**Health Score:** 82/100  
-**Tipo:** Local Service - Medical Practice (oftalmologia, 2 cidades)
+**Data:** 28/08/2026
+**Health Score:** 66/100
+**Tipo:** Local Service, consultorio medico de oftalmologia, duas cidades no Para
+**Auditoria anterior:** 27/08/2026, 82/100
 
-Medicao: as 18 URLs do sitemap renderizadas com Playwright esperando h1 e canonical, porque o HTML cru e casca e daria falso negativo. Campo pela CrUX History API.
+Medicao: as 18 URLs do sitemap baixadas com `curl` puro, **sem execucao de JavaScript**. Isso mudou hoje. Ate ontem o HTML servido era uma casca de 9,8 KB e qualquer medicao exigia Playwright. Campo pela CrUX History API. Laboratorio pelo PageSpeed Insights.
 
-Verificacao continua: `npm run monitorar:seo`.
+## Leia isto antes de olhar as notas
+
+**A nota caiu de 82 para 66 e nada regrediu.** As duas auditorias mediram coisas diferentes.
+
+A de 27/08 avaliava um site cujo HTML era casca. Ela nao tinha como enxergar links internos, grafo de schema, conformidade de publicidade medica ou experiencia de busca, porque nada disso existia no HTML servido. As notas altas de entao refletiam o que o codigo React prometia.
+
+A de hoje mede o que o servidor entrega. Aparecerem problemas que estavam escondidos nao e piora, e o primeiro retrato honesto.
+
+**O que de fato mudou hoje, para melhor:** o SSG entrou no ar. As 18 rotas servem HTML completo, de 45 a 143 KB. O LCP de laboratorio em desktop caiu para 0,7s e o TTFB de origem esta entre 5 e 10ms. A causa registrada do LCP ruim de campo, "nada pinta antes do JS executar", deixou de existir.
 
 ## Notas por categoria
 
-| Categoria | Nota | Peso |
-|---|---|---|
-| Technical SEO | 82/100 | 22% |
-| Content Quality | 92/100 | 23% |
-| On-Page SEO | 96/100 | 20% |
-| Schema / Structured Data | 92/100 | 10% |
-| Performance (CWV) | 38/100 | 10% |
-| AI Search Readiness | 55/100 | 10% |
-| Images | 96/100 | 5% |
+| Categoria | Nota | Peso | Anterior |
+|---|---|---|---|
+| Technical SEO | 55/100 | 22% | 82 |
+| Content Quality | 65/100 | 23% | 92 |
+| On-Page SEO | 78/100 | 20% | 96 |
+| Schema / Structured Data | 58/100 | 10% | 92 |
+| Performance (CWV) | 74/100 | 10% | 38 |
+| AI Search Readiness | 60/100 | 10% | 55 |
+| Images | 84/100 | 5% | 96 |
 
-## Principais achados
+Fora da media ponderada, medidos pela primeira vez:
 
-1. LCP de 4.132ms no campo (janela ate 2026-08-01), faixa ruim, porque nada pinta antes do JS executar
-2. HTML servido e casca de 9,8 KB nas 18 rotas; prerender nao roda no build da Lovable
-3. Crawler de IA sem execucao de JS nao ve conteudo nenhum
-4. 258,6 KB gzip no caminho critico, com Supabase pre-carregado ate onde nao e usado
-5. Seis titulos passam de 60 caracteres e sao cortados no resultado
-6. Dados de campo sao esparsos: o site nao tem trafego para o CrUX reportar toda semana
+| Categoria | Nota |
+|---|---|
+| SXO, experiencia de busca | 58/100 |
+| Local SEO | 54/100 |
 
-## Situacao dos ganhos rapidos
+## Os cinco achados que importam
 
-- FEITO: seis titulos encurtados para caber em 60 caracteres
-- FEITO: cinco descriptions aparadas para a faixa de 120-160
-- CANCELADO: tirar supabase do modulepreload seria pessimizacao, ver Performance
-- CANCELADO: o alt vazio de /paragominas e correto, imagem decorativa com aria-hidden
-- Ampliar /procedimentos, hoje com 170 palavras
+### 1. Publicidade medica, dois itens Critical
 
----
+A home tem uma secao "Antes e depois" com fotos reais do mesmo olho, legendadas "Opacidade da capsula posterior" e "Abertura central apos o YAG laser". A `/agendamento` reproduz tres depoimentos de pacientes com nome completo dentro do funil de conversao.
 
-## Technical SEO - 82/100
+Os dois esbarram na Resolucao CFM 1.974/2011 e no art. 112 do Codigo de Etica Medica. O aviso "resultado varia de paciente para paciente" nao descaracteriza a comparacao.
 
-### O que esta certo
+Este e o unico item da auditoria cujo risco nao e de ranqueamento. E decisao do medico, nao recomendacao tecnica. Detalhe em `findings/content-quality.md`.
 
-- robots.txt libera o site e bloqueia /admin/, /auth e /obrigado, com Sitemap declarado
-- sitemap.xml com 18 URLs, todas respondendo 200
-- canonical auto-referente e unico nas 18 paginas
-- http:// e www. redirecionam para a versao canonica https sem www
-- HSTS com includeSubDomains, X-Content-Type-Options e Referrer-Policy presentes
-- assets com Cache-Control immutable de 1 ano
+### 2. Toda URL fora do sitemap serve a home inteira
 
-### Achados
+`scripts/ssg.mjs` le `public/sitemap.xml` como lista de rotas, e escreve a rota `/` em `dist/index.html`, que e tambem o arquivo de fallback da SPA. Consequencia: qualquer URL nao reconhecida devolve 147.248 bytes identicos a home, com HTTP 200 e `index, follow`.
 
-**[High] O HTML servido e uma casca de 9,8 KB nas 18 rotas**
+Isso atinge quatro rotas reais do app, incluindo `/paragominas/agendamento`, uma pagina de conversao da cidade principal que nenhum crawler enxerga e que nao esta no sitemap. Detalhe em `findings/ssg-cobertura-e-monitor.md`.
 
-Producao devolve o mesmo shell sem h1, canonical ou JSON-LD para toda rota. O prerender existe e funciona no build local (18 rotas em 9s), mas o container de build da Lovable nao tem as bibliotecas de sistema do Chromium (libglib-2.0.so.0, exitCode=127), registrado em /prerender-status.json. O Google executa JS e indexa normalmente; o prejuizo e para buscadores e crawlers que nao executam.
+Antes do SSG o fallback era uma casca neutra e inofensiva. O SSG melhorou 18 rotas e, pelo mesmo mecanismo, transformou o fallback em conteudo duplicado real.
 
-*Correcao:* Decisao ja tomada de aceitar. Se virar prioridade: Chromium empacotado, SSG sem navegador, ou troca de host. Ver .claude/skills/prerender-na-lovable/.
+**Isto deixou de ser risco e virou fato.** O relatorio de paginas do Search Console ja registra impressoes para `/auth/` e `/home/`. Nenhuma das duas deveria estar la: `/auth` e bloqueada no `robots.txt`, e `/home` nao e rota do app, nao existe em lugar nenhum do `src/App.tsx`. As duas devolvem os mesmos 147.248 bytes da home, com `index, follow`. O Google esta acumulando impressoes em URLs inventadas que servem conteudo duplicado.
 
-**[Low] Falta X-Frame-Options e Content-Security-Policy**
+### 3. Cinquenta e sete respostas de FAQ nao existem no HTML servido
 
-Os cabecalhos cobrem HSTS, nosniff e Referrer-Policy, mas nao ha protecao contra clickjacking nem CSP.
+O acordeao Radix renderiza conteudo fechado como div vazia no servidor. Nas 11 paginas de procedimento e em `/paragominas`, as respostas so existem dentro do JSON-LD. `/` e `/belem` fazem certo, o que prova ser bug e nao decisao.
 
-*Correcao:* Baixa prioridade em site institucional. Se a Lovable permitir cabecalho customizado, adicionar X-Frame-Options: SAMEORIGIN.
+Isso anula, nessas doze rotas, boa parte do ganho que o SSG acabou de entregar para crawlers que nao executam JS.
 
----
+### 4. Paragominas e a cidade mais invisivel do proprio site
 
-## Content Quality - 92/100
+A cidade sede nao esta na navegacao global. `/belem` recebe 16 links internos, `/paragominas` recebe 2. O h1 de `/paragominas` e "Sua visao,com mais clareza.", sem a cidade e sem o espaco depois da virgula, enquanto `/belem` usa "Oftalmologista em Belem". A pagina nao tem telefone clicavel na tela, so dentro do JSON-LD.
 
-### O que esta certo
+Some-se a isso que `/paragominas/agendamento`, destino dos CTAs da landing, serve a home.
 
-- 18 paginas com conteudo clinico proprio, entre 170 e 1.415 palavras
-- E-E-A-T forte: CRM-PA 15253 visivel, formacao detalhada, revisao medica com data e revisor
-- MedicalWebPage.lastReviewed e reviewedBy alimentados por fonte unica (REVISAO_CLINICA)
-- Seis exames que eram becos sem saida agora tem pagina propria e interligada
-- Nenhum titulo ou description duplicado entre as 18 paginas
+### 5. O hub `/procedimentos` recebe 1 link interno
 
-### Achados
+O breadcrumb das 11 paginas filhas aponta o nivel 2 para `/#procedimentos`, uma ancora na home, em vez do hub real. HTML e JSON-LD erram junto, o que ao menos os mantem coerentes entre si. O rich result de breadcrumb na SERP mostra a home como pagina mae.
 
-**[Low] /procedimentos tem 170 palavras e /agendamento tem 224**
+## O que esta certo, e vale proteger
 
-As duas unicas paginas abaixo de 300 palavras. Ambas sao de navegacao ou transacao, nao de conteudo, entao o volume baixo e coerente com a funcao.
+- **SSG cobrindo as 18 rotas do sitemap.** `render_page.py` confirma `is_spa: false` e `content` igual a `raw_content`. Nenhum cloaking: os seis crawlers de IA testados recebem o mesmo HTML.
+- **Titulos e descriptions.** As 18 paginas dentro da faixa, 45 a 59 e 111 a 160 caracteres.
+- **E-E-A-T de base.** CRM-PA 15253 no cabecalho fixo, formacao com datas e carga horaria, rodape de revisao por procedimento com data, `reviewedBy` no schema, politica LGPD completa.
+- **NAP interno consistente.** Quatro clinicas com endereco e telefone proprios, sem residuo do DDD 19 nem do "11 anos" do site antigo.
+- **Performance de desktop.** LCP 0,7s, performance 96 a 100, TTFB de origem 5 a 10ms.
+- **Hero da home.** `srcSet` com duas variantes, `sizes` real, dimensoes declaradas, `fetchpriority="high"`. O padrao correto existe no repositorio.
 
-*Correcao:* Em /procedimentos, um paragrafo curto por grupo de exames captaria buscas amplas sem competir com as filhas. /agendamento pode ficar como esta.
+## Detalhe por categoria
 
----
+Cada arquivo em `findings/` traz evidencia, comando de verificacao e correcao especifica.
 
-## On-Page SEO - 96/100
+| Arquivo | Autor |
+|---|---|
+| `technical-seo.md` | agente tecnico |
+| `content-quality.md` | agente de conteudo |
+| `schema.md` | agente de schema |
+| `performance.md` | agente de performance |
+| `ai-search-readiness.md` | agente de GEO |
+| `local-seo.md` | agente local |
+| `sxo.md` | agente de SXO |
+| `on-page-seo.md` | medicao propria |
+| `images.md` | medicao propria |
+| `ssg-cobertura-e-monitor.md` | medicao propria |
+| `google-data.md` | agente de APIs do Google |
 
-### O que esta certo
+## Dados reais do Google
 
-- Exatamente um H1 por pagina nas 18
-- Hierarquia H2/H3 coerente, ate 14 H2 nas paginas longas
-- Nenhuma tag duplicada de canonical ou description
-- html lang=pt-BR e og:image em todas
+Propriedade GSC `https://drjulianomachado.com/`, propriedade GA4 `449024836`. Detalhe completo em `findings/google-data.md`.
 
-### Achados
+### Indexacao: as 18 rotas estao certas
 
-**[Medium] Seis titulos passam de 60 caracteres**
+As 18 URLs do sitemap foram inspecionadas **uma por uma**, nao em lote, porque `gsc_inspect.py --batch` devolve estado vazio sem sinalizar erro. Todas voltaram "Submitted and indexed", fetch SUCCESSFUL, robots ALLOWED, canonical escolhida pelo Google igual a declarada. Zero divergencia.
 
-consulta-oftalmologica (67), biometria-ultrassonica (67), cirurgia-de-catarata (65), cirurgia-de-pterigio (65), mapeamento-de-retina (65) e iridotomia-a-laser (63). O Google corta perto de 60, entao o sufixo com o nome do medico some do resultado.
+Ressalva de leitura: os ultimos rastreamentos vao de 05/06/2026 ate 28/08/2026 as 18h52 UTC, quase todos **anteriores** ao SSG entrar no ar. O Google indexou essas paginas executando JS na casca. O que ele vai encontrar no proximo rastreamento e melhor do que o que ele indexou.
 
-*Correcao:* Encurtar para caber. Ex.: Biometria Ultrassonica em Paragominas | Dr. Juliano Machado, que da 57.
+### Trafego: pequeno, e concentrado
 
-**[Low] Seis descriptions fora da faixa de 120-160**
+| Janela | Cliques | Impressoes | CTR | Posicao |
+|---|---|---|---|---|
+| 28 dias, 31/07 a 25/08 | 11 | 611 | 1,8% | 3,5 |
+| 28 dias anteriores, 05/07 a 30/07 | 9 | 582 | | |
+| 3 meses, 30/05 a 25/08 | 35 | 1.865 | | 3,4 |
+| 3 meses anteriores, 03/03 a 29/05 | 40 | 2.047 | | |
 
-capsulotomia-yag-laser (180) e glaucoma (177) passam do corte; politica-de-privacidade (111) fica curta.
+GA4 organico, 90 dias: 19 sessoes, 15 usuarios, 65 pageviews. Media de 1,5 sessao por dia. So duas paginas de destino organicas, a home com 14 sessoes e `/agendamento` com 4.
 
-*Correcao:* Aparar as duas longas para 155-160. A da politica pode ficar.
+Mobile domina, 29 dos 35 cliques em tres meses. A consulta "oftalmologista paragominas" concentra a maior parte dos cliques reais.
 
----
+Nota sobre a comparacao trimestral: o trimestre anterior se sobrepoe ao bug documentado de contagem de impressoes do GSC, de 13/05/2025 a 27/04/2026. Cliques nao foram afetados. Nao trate a queda de 2.047 para 1.865 impressoes como sinal.
 
-## Schema / Structured Data - 92/100
+### O numero que reorganiza a prioridade
 
-### O que esta certo
+**Onze das dezoito paginas tiveram zero impressao em tres meses.**
 
-- @graph completo: Physician, MedicalClinic, MedicalWebPage, MedicalProcedure, FAQPage, BreadcrumbList, ItemList
-- MedicalWebPage com lastReviewed e reviewedBy nas 17 paginas de conteudo
-- BreadcrumbList em 12 paginas, FAQPage em 14
-- aggregateRating auto-declarado removido, que era achado da auditoria anterior
-- Quatro blocos JSON-LD por pagina de procedimento
+Isso conversa diretamente com a medicao de links internos deste relatorio. Seis das onze paginas de procedimento recebem 2 links internos cada, o hub `/procedimentos` recebe 1, e `/paragominas` recebe 2. Paginas que o proprio site nao linka sao paginas que o Google nao tem motivo para ranquear.
 
-### Achados
+A hipotese e falsificavel: se as correcoes da Fase 2 do plano forem aplicadas e o numero de paginas com zero impressao nao cair nas semanas seguintes, o problema nao era link interno.
 
-**[Info] /politica-de-privacidade sem structured data**
+### Posicao 3,4 com CTR de 1,8%
 
-Unica pagina sem JSON-LD.
+Posicao media 3,4 deveria render CTR bem acima de 1,8%. As leituras possiveis sao duas: as impressoes vem majoritariamente de termos de marca ou do pacote local, onde o clique vai para o Maps e nao para o site, ou o site ranqueia em terceiro para termos de volume muito baixo. Nao consegui separar as duas com os dados disponiveis. Vale investigar antes de tratar CTR como problema de titulo, porque os titulos ja estao todos na faixa correta.
 
-*Correcao:* Um WebPage simples fecharia, mas o ganho e proximo de zero.
+### Rotas fora do sitemap
 
----
+`/agendar`, `/paragominas/agendamento`, `/agendar-consulta` e `/obrigado` voltaram "URL is unknown to Google". O Google ainda nao as rastreou, entao a duplicacao ainda nao esta confirmada para elas. Ja `/auth/` e `/home/` aparecem no relatorio de paginas com impressoes, o que confirma o mecanismo.
 
-## Performance (CWV) - 38/100
+### Migracao do dominio antigo
 
-### O que esta certo
+Nenhum sinal encontrado nos dados coletados. Nao existe endpoint de API para o status de Mudanca de Endereco, entao isso so pode ser conferido na interface do Search Console.
 
-- CLS de 0 no campo, dentro do bom
-- Assets com cache immutable de 1 ano
-- Fontes auto-hospedadas com preload, sem ida ao Google Fonts
-- modulepreload ja configurado para os chunks principais
+## Limitacoes desta auditoria
 
-### Achados
-
-**[Critical] LCP de 4.132 ms no campo (CrUX, janela ate 2026-08-01), faixa ruim**
-
-Leitura direta da CrUX History API, janela semanal terminando em 2026-08-01, a mais recente com dados: LCP 4.132ms, FCP 3.527ms, TTFB 2.056ms, CLS 0 (bom), INP sem dados. As tres semanas seguintes vieram VAZIAS: o site nao atinge trafego suficiente para o CrUX reportar toda semana, e o registro corrente (queryRecord) devolve 404 para esta origem. Em laboratorio com emulacao movel, FCP e LCP sao IGUAIS na home (3.132ms): nada pinta antes do JS executar e o React montar. O elemento LCP e um paragrafo de texto, nao imagem, entao otimizar imagem nao resolveria nada.
-
-*Correcao:* O conserto estrutural e servir HTML pronto, que e o que o prerender faria e nao roda na Lovable. Sem ele, os ganhos sao marginais: enxugar o caminho critico.
-
-**[High] 258,6 KB gzip no caminho critico, com Supabase carregado ate onde nao e usado**
-
-O index.html e compartilhado por todas as rotas e faz modulepreload de supabase (48,2 KB gzip), que paginas informativas como /procedimentos/glaucoma nao usam ate haver interacao. Entry 112,8 + react 57,2 + supabase 48,2 + css 26,1 + query 11,9.
-
-*Correcao:* NAO basta tirar o modulepreload: supabase e import ESTATICO da raiz, via AuthContext (que envolve o app todo) e WhatsAppButton (presente em toda pagina). Sem o preload os mesmos bytes continuariam necessarios, so descobertos mais tarde - seria pessimizacao. O ganho real exige import dinamico nos dois: no WhatsAppButton e trivial, porque so usa supabase dentro do clique; no AuthContext e refatoracao do bootstrap de autenticacao, que merece decisao propria por mexer em login de sistema em producao.
-
-**[High] TTFB de 2.056 ms no campo**
-
-Medido daqui: 1,7s a frio e 0,21s quente. O HTML vai com no-cache, must-revalidate, entao nao fica na borda da Cloudflare e cada visita nova busca na origem.
-
-*Correcao:* Fora do nosso controle na Lovable. Seria resolvido por host que permita cache de HTML na borda com revalidacao.
-
----
-
-## AI Search Readiness - 55/100
-
-### O que esta certo
-
-- llms.txt publicado com as 18 paginas e resumo do consultorio
-- robots.txt nao bloqueia crawlers de IA
-- Conteudo em perguntas e respostas, formato que LLM cita bem
-- FAQPage em 14 paginas com perguntas que sao buscas reais
-
-### Achados
-
-**[High] Crawler que nao executa JS enxerga pagina vazia**
-
-O HTML cru tem 9,8 KB e nenhum conteudo. Boa parte dos crawlers de IA nao renderiza JavaScript, entao llms.txt e FAQPage nao compensam: o texto que eles citariam nao esta la. Os previews de link do WhatsApp e Facebook sobrevivem apenas pelas tags og estaticas do index.html.
-
-*Correcao:* Mesmo conserto do prerender. Ate la, o llms.txt e a unica superficie que esses crawlers leem de verdade, entao vale mante-lo rico.
-
----
-
-## Images - 96/100
-
-### O que esta certo
-
-- og:image nas 18 paginas
-- alt presente em praticamente todas as imagens
-- Fontes auto-hospedadas em woff2 com subset latin
-- A unica imagem sem texto alternativo e um logo decorativo com alt vazio e aria-hidden, que e a marcacao correta: alt vazio evita anuncio duplicado no leitor de tela
+- **Campo nao cobre o pos-SSG.** A ultima janela completa do CrUX e 05/07 a 01/08/2026, inteiramente anterior. As tres janelas seguintes vieram vazias por trafego insuficiente. INP de campo nao existe em nenhuma das 25 semanas coletadas.
+- **Perfis externos nao verificados.** Google Business Profile, Doctoralia, AgendarConsulta e o registro no CRM-PA nao puderam ser confirmados. A URL testada no Doctoralia caiu num homonimo ortopedista de Pernambuco.
+- **Backlinks nao analisados.** Nenhum agente de backlinks foi acionado nesta rodada.
+- **Propriedade GA4 duplicada nao conferida.** `449076345` nao foi consultada nesta rodada.
+- **Sem baseline de drift.** `drift_history.py` nao encontrou banco para esta URL, entao nao ha comparacao automatica com estados anteriores.

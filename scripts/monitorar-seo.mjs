@@ -18,8 +18,14 @@
  *
  * SAIDA: codigo 0 se tudo passa, 1 se ha regressao. O que ele checa:
  *
- *   1. prerender-status.json — se o passo de build rodou no host e com que
- *      resultado. Ausente significa que o host parou de rodar o script "build".
+ *   1. ssg-status.json, se o passo de build rodou no host e com que resultado.
+ *      Ausente significa que o host parou de rodar o script "build".
+ *      ATENCAO ao trocar isto de arquivo: ate 28/08/2026 esta secao lia
+ *      prerender-status.json, do prerender por Playwright que nunca rodou na
+ *      Lovable por falta das bibliotecas do Chromium. Ele reportava falha
+ *      correta para um pipeline aposentado, entao o monitor gritava sempre e
+ *      ninguem olhava, e ao mesmo tempo nao enxergava regressao do SSG, que e
+ *      o pipeline vivo. Alarme que toca sempre nao e alarme.
  *   2. Sitemap x rotas vivas — toda <loc> responde 200 e monta de verdade.
  *   3. Invariantes de cada pagina — 1 h1, 1 canonical auto-referente, titulo
  *      ate 60 caracteres, description entre 120 e 160, sem noindex, sem titulo
@@ -76,25 +82,36 @@ function chaveCrux() {
   }
 }
 
-async function checarPrerender() {
-  const r = await fetch(`${BASE}/prerender-status.json`).catch(() => null);
+async function checarSSG() {
+  const r = await fetch(`${BASE}/ssg-status.json`).catch(() => null);
   if (!r || !r.ok) {
     falha(
-      "prerender-status.json ausente (HTTP " +
+      "ssg-status.json ausente (HTTP " +
         (r ? r.status : "sem resposta") +
         "). O host pode ter parado de rodar o script build do package.json.",
     );
     return;
   }
   const s = await r.json();
-  relatorio.prerender = s;
-  if (s.motivo === "ok") {
-    log(`  prerender: ok, ${s.rotas} rota(s) em ${s.segundos}s`);
-  } else {
-    // Nao e falha: na Lovable o prerender nao roda por falta de bibliotecas de
-    // sistema do Chromium, e a decisao registrada foi aceitar. Vira aviso para
-    // continuar visivel sem sujar o codigo de saida.
-    avisa(`prerender nao rodou no host: motivo "${s.motivo}" (esperado na Lovable)`);
+  relatorio.ssg = s;
+
+  const escritas = s.escritas?.length ?? 0;
+  const puladas = s.puladas ?? [];
+  log(`  ssg: ${escritas} rota(s) com HTML completo, gerado em ${s.em}`);
+
+  // Rota pulada e o modo de falha silencioso do scripts/ssg.mjs por design:
+  // ela nao derruba o build, volta a servir a casca. Aqui vira regressao, que
+  // e o unico lugar onde alguem vai ver.
+  if (puladas.length) {
+    falha(
+      `${puladas.length} rota(s) puladas pelo SSG, servindo casca: ` +
+        puladas.map((x) => x.rota).join(", "),
+    );
+  }
+
+  // doSitemap so existe em builds a partir de 28/08/2026. Sem ele, pula.
+  if (typeof s.doSitemap === "number" && escritas < s.doSitemap) {
+    falha(`SSG escreveu ${escritas} rota(s) para ${s.doSitemap} do sitemap`);
   }
 }
 
@@ -269,9 +286,11 @@ async function checarCrux() {
     const idade = u.semanasAtras === 0 ? "semana atual" : `${u.semanasAtras} semana(s) atras`;
     relatorio.crux[rotulo] = { valor: u.valor, faixa, medidoEm: u.data };
     log(`  CrUX ${rotulo}: ${u.valor}${un} — ${faixa} (janela ate ${u.data}, ${idade})`);
-    // Campo ruim vira aviso, nao falha: a causa conhecida e estrutural (SPA sem
-    // prerender no host) e a decisao registrada foi aceitar. Falhar aqui faria
-    // o monitor gritar todo dia por algo ja decidido.
+    // Campo ruim vira aviso, nao falha. Ate 27/08/2026 a causa era estrutural,
+    // SPA servindo casca, e a decisao registrada era aceitar. O SSG de
+    // 28/08/2026 removeu essa causa, mas a serie da CrUX e esparsa e leva
+    // semanas para refletir a mudanca. Falhar aqui faria o monitor gritar por
+    // um numero que ainda descreve o site antigo.
     if (faixa === "ruim") avisa(`CrUX ${rotulo} em ${u.valor}${un}, faixa ruim (medido ate ${u.data})`);
   }
 
@@ -285,8 +304,8 @@ async function checarCrux() {
 async function main() {
   log(`Monitor de SEO — ${BASE}\n`);
 
-  log("[1/4] prerender");
-  await checarPrerender();
+  log("[1/4] ssg");
+  await checarSSG();
 
   log("\n[2/4] sitemap");
   const urls = await rotasDoSitemap();

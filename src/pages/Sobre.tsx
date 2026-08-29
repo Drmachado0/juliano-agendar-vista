@@ -12,6 +12,7 @@ import {
   physicianNode,
   websiteNode,
   medicalWebPageNode,
+  breadcrumbNode,
 } from "@/lib/schema";
 
 const URL_SOBRE = `${BASE_URL}/sobre`;
@@ -38,6 +39,13 @@ export default function Sobre() {
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
+      breadcrumbNode(
+        [
+          { name: "Início", url: `${BASE_URL}/` },
+          { name: "Sobre", url: URL_SOBRE },
+        ],
+        URL_SOBRE,
+      ),
       physicianNode({ mainEntityOfPage: URL_SOBRE }),
       websiteNode(),
       medicalWebPageNode({

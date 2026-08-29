@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -174,6 +175,31 @@ const Auth = () => {
   }
 
   return (
+    <>
+      {/*
+        noindex porque esta e a tela de login, nao conteudo.
+
+        POR QUE ISTO IMPORTA E NAO ERA SO ZELO: em 28/08/2026 o relatorio de
+        paginas do Search Console mostrava /auth/ com impressoes. A causa e o
+        modo de falha classico de robots.txt. A rota estava em Disallow, entao o
+        Google nunca a rastreava, e URL bloqueada por robots pode ser indexada
+        assim mesmo, sem conteudo, so pelo endereco. Bloquear rastreio nao
+        remove do indice, quem remove e o noindex, e para ler o noindex o
+        crawler precisa poder entrar.
+
+        Por isso a correcao veio em tres partes: este noindex, a saida de /auth
+        do Disallow em public/robots.txt, e a entrada de /auth em ROTAS_EXTRA no
+        scripts/ssg.mjs, para que a tag esteja no HTML cru e nao so depois da
+        hidratacao. /admin/ continua em Disallow, aquelas rotas nunca apareceram
+        no relatorio.
+
+        A tela de 2FA tem seu proprio return acima e nao recebe Helmet. Ela so
+        existe apos interacao do usuario, entao nenhum crawler chega la.
+      */}
+      <Helmet>
+        <title>Acesso restrito | Dr. Juliano Machado</title>
+        <meta name="robots" content="noindex, follow" />
+      </Helmet>
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
       <Card className="w-full max-w-md shadow-xl border-border/50">
         <CardHeader className="text-center space-y-4">
@@ -304,6 +330,7 @@ const Auth = () => {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 };
 

@@ -1,14 +1,25 @@
+# NAO devolva /auth e /obrigado para Disallow sem ler isto.
+#
+# As duas estavam bloqueadas aqui ate 28/08/2026. O efeito foi o oposto do
+# pretendido: em 28/08 o relatorio de paginas do Search Console mostrava /auth/
+# com impressoes. Bloquear rastreio nao tira do indice. URL em Disallow pode ser
+# indexada assim mesmo, so pelo endereco, sem conteudo, e o Google nunca entra
+# para ler o noindex que resolveria.
+#
+# As duas agora servem <meta name="robots" content="noindex, follow"> no HTML
+# cru, porque entraram em ROTAS_EXTRA no scripts/ssg.mjs. Rastreavel mais
+# noindex remove do indice. Bloqueado mais noindex nao remove nada.
+#
+# /admin/ fica em Disallow. Aquelas rotas nunca apareceram em relatorio nenhum,
+# e ali o objetivo e nao gastar rastreio, nao desindexar.
+
 User-agent: Googlebot
 Allow: /
 Disallow: /admin/
-Disallow: /auth
-Disallow: /obrigado
 
 User-agent: Bingbot
 Allow: /
 Disallow: /admin/
-Disallow: /auth
-Disallow: /obrigado
 
 User-agent: Twitterbot
 Allow: /
@@ -19,7 +30,5 @@ Allow: /
 User-agent: *
 Allow: /
 Disallow: /admin/
-Disallow: /auth
-Disallow: /obrigado
 
 Sitemap: https://drjulianomachado.com/sitemap.xml

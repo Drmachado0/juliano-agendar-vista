@@ -133,6 +133,29 @@ export function clinicNodes(city?: ClinicLocation["city"]) {
   }));
 }
 
+/**
+ * Unidade por slug, lancando quando nao existe.
+ *
+ * POR QUE LANCA, em vez de devolver undefined: os slugs sao literais deste
+ * arquivo, entao chamador que passa slug valido nunca recebe undefined na
+ * pratica, mas o tipo obriga cada um a tratar um ramo que nunca acontece. O
+ * resultado foi ternario morto no JSON-LD da capsulotomia YAG.
+ *
+ * ATENCAO ao alcance do throw: ele NAO derruba o build. O scripts/ssg.mjs
+ * envolve cada rota em try/catch e apenas empurra a rota para "puladas",
+ * saindo com codigo 0. Quem transforma isso em alarme e o monitor, que desde
+ * 28/08/2026 falha quando "puladas" nao esta vazio. Lancar aqui garante que a
+ * pagina nao seja publicada com schema pela metade, nao que alguem perceba na
+ * hora.
+ */
+export function localPorSlug(slug: string): ClinicLocation {
+  const encontrado = LOCATIONS.find((l) => l.slug === slug)
+  if (!encontrado) {
+    throw new Error("Unidade sem cadastro em LOCATIONS: " + slug)
+  }
+  return encontrado
+}
+
 /** Cidades atendidas, sem repetir, na ordem em que aparecem em LOCATIONS. */
 export function citiesServed(): string[] {
   return [...new Set(LOCATIONS.map((l) => l.city))];

@@ -17,14 +17,30 @@ const Header = () => {
   const { waLink, display } = useSiteWhatsApp();
   const headerWaUrl = waLink(undefined, "site_header");
 
+  // Item com href vira Link, item sem href rola ate a secao da home.
+  //
+  // DUAS TROCAS EM 28/08/2026, ambas medidas na auditoria daquele dia:
+  //
+  // "Procedimentos" ganhou href. Era ancora de rolagem para a secao da home, e
+  // por isso a pagina /procedimentos recebia 1 unico link interno no site
+  // inteiro. Um hub com 11 filhas e sem autoridade para distribuir a elas.
+  //
+  // "Locais" saiu e "Paragominas" entrou no lugar. Belem estava no menu e
+  // Paragominas nao, apesar de Paragominas ser a cidade sede e vir primeiro no
+  // h1 da home. O placar era 16 links internos para /belem contra 2 para
+  // /paragominas. "Locais" era ancora para a secao que lista as unidades, o que
+  // as duas paginas de cidade fazem melhor, entao a troca nao perde nada.
+  //
+  // A contagem de itens ficou em 8 de proposito. O menu de desktop so aparece a
+  // partir de xl e divide a linha com logo e dois CTAs, entao acrescentar um
+  // nono item arriscava quebrar em 1280px.
   const navItems = [
-    // "Sobre" tem pagina propria; os demais sao ancoras de secao da home.
     { label: "Sobre", id: "sobre", href: "/sobre" },
-    { label: "Procedimentos", id: "procedimentos" },
+    { label: "Procedimentos", id: "procedimentos", href: "/procedimentos" },
     { label: "Glaucoma", id: "glaucoma", href: "/procedimentos/glaucoma" },
     { label: "YAG Laser", id: "yag-laser" },
     { label: "Depoimentos", id: "depoimentos" },
-    { label: "Locais", id: "locais" },
+    { label: "Paragominas", id: "paragominas", href: "/paragominas" },
     { label: "Belém", id: "belem", href: "/belem" },
     { label: "Convênios", id: "convenios" },
   ];

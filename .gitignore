@@ -43,3 +43,6 @@ bun.lockb
 *.sw?
 *.orig
 *.bak
+
+# Estado do harness, nao e do projeto.
+.claude-flow/

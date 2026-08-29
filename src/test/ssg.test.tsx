@@ -66,4 +66,31 @@ describe("SSG das rotas publicas", () => {
     // O bug que motivou tudo isto: as 18 rotas serviam o title da home.
     expect(helmet.title).toContain("Belém")
   }, 30000)
+
+  // POR QUE ESTE TESTE EXISTE: o acordeao de FAQ usa Radix. Sem forceMount o
+  // Radix desmonta o conteudo fechado, e no servidor a regiao sai como
+  // <div hidden=""></div>, vazia. A auditoria de 28/08/2026 contou 57 respostas
+  // nessa situacao, nas 11 paginas de procedimento e na /paragominas. O texto
+  // existia so no JSON-LD do FAQPage, invisivel para extrator que le corpo.
+  //
+  // O modo de falha e traicoeiro por dois motivos. O Google executa JS e
+  // hidrata, entao ele via as respostas e nada parecia errado. E o teste de
+  // conteudo minimo acima continuava passando, porque a pagina tinha texto de
+  // sobra fora do FAQ. So a ausencia especifica da resposta denunciava.
+  it("as respostas de FAQ saem no corpo, nao so no JSON-LD", async () => {
+    const { html, helmet } = await renderizarRota("/procedimentos/cirurgia-de-catarata")
+
+    const regiaoVazia = /hidden=""[^>]*><\/div>/
+    expect(
+      regiaoVazia.test(html),
+      "acordeao renderizou regiao vazia, forceMount provavelmente caiu do AccordionContent"
+    ).toBe(false)
+
+    const corpo = textoVisivel(html)
+    expect(corpo, "resposta de FAQ ausente do corpo").toContain("durar poucos minutos por olho")
+
+    // A resposta precisa estar nos DOIS lugares. Se sair so do JSON-LD, o
+    // problema e outro e a correcao tambem.
+    expect(helmet.script).toContain("FAQPage")
+  }, 30000)
 })

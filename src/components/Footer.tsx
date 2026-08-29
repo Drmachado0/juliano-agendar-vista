@@ -127,13 +127,13 @@ const Footer = () => {
                 {display}
               </a>
               <a
-                href="https://www.instagram.com/drjulianomachado.oftalmo/"
+                href="https://www.instagram.com/drjuliano.oftalmo/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <Instagram className="w-4 h-4 text-primary" />
-                @drjulianomachado.oftalmo
+                @drjuliano.oftalmo
               </a>
             </div>
           </div>
@@ -188,7 +188,7 @@ const Footer = () => {
           </div>
           <div className="flex items-center gap-4">
             <a
-              href="https://www.instagram.com/drjulianomachado.oftalmo/"
+              href="https://www.instagram.com/drjuliano.oftalmo/"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"

@@ -13,6 +13,7 @@ import {
   websiteNode,
   medicalWebPageNode,
   faqPageNode,
+  breadcrumbNode,
 } from "@/lib/schema";
 
 const CANONICAL = `${BASE_URL}/belem`;
@@ -78,6 +79,13 @@ export default function Belem() {
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
+      breadcrumbNode(
+        [
+          { name: "Início", url: `${BASE_URL}/` },
+          { name: "Belém", url: CANONICAL },
+        ],
+        CANONICAL,
+      ),
       physicianNode({ mainEntityOfPage: CANONICAL }),
       websiteNode(),
       medicalWebPageNode({

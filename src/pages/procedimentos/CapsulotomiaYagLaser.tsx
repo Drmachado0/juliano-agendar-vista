@@ -1,5 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import { REVISAO_CLINICA } from "@/lib/constants";
+import { BASE_URL, localPorSlug } from "@/lib/locations";
+import { procedureGraph } from "@/lib/schema";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
@@ -32,7 +34,6 @@ import YagLocation from "@/components/procedimentos/yag/YagLocation";
 import YagSchedulingForm from "@/components/procedimentos/yag/YagSchedulingForm";
 import {
   FAQS,
-  HGP_FALLBACK,
   SECTIONS,
   SINAIS_ALERTA,
   VALOR_YAG_COMPLETO,
@@ -40,7 +41,16 @@ import {
   WHATSAPP_ORIGEM,
 } from "@/components/procedimentos/yag/yagContent";
 
-const BASE_URL = "https://drjulianomachado.com";
+
+/**
+ * Unidade onde a capsulotomia YAG e feita, vinda da fonte unica de NAP.
+ *
+ * O endereco estava escrito a mao dentro do JSON-LD desta pagina, copiado de
+ * src/lib/locations.ts. O cabecalho daquele arquivo pede que endereco e
+ * telefone mudem la e so la, porque o Google reconcilia NAP entre o schema e o
+ * Google Business Profile. Copia a mao envelhece em silencio.
+ */
+const HGP = localPorSlug("hgp")
 
 /**
  * Metadados de SEO da página, exportados para permitir asserção em teste
@@ -59,7 +69,7 @@ export const YAG_SEO = {
   intro:
     "A capsulotomia YAG é um procedimento a laser que trata a opacificação da cápsula posterior — a chamada catarata secundária — que pode surgir meses ou anos após a cirurgia de catarata. O procedimento é realizado no Hospital Geral de Paragominas (HGP), mediante avaliação e agendamento com o Dr. Juliano Machado.",
   cidade: "Paragominas",
-  local: HGP_FALLBACK.nome,
+  local: HGP.name,
 } as const;
 
 const CapsulotomiaYagLaser = () => {
@@ -77,77 +87,30 @@ const CapsulotomiaYagLaser = () => {
     alvo.scrollIntoView({ behavior: suave as ScrollBehavior, block: "start" });
   };
 
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Início", item: `${BASE_URL}/` },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Procedimentos",
-        item: `${BASE_URL}/#procedimentos`,
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: YAG_SEO.procedureName,
-        item: url,
-      },
-    ],
-  };
-
-  const faqJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: FAQS.map((f) => ({
-      "@type": "Question",
-      name: f.question,
-      acceptedAnswer: { "@type": "Answer", text: f.answer },
-    })),
-  };
-
-  const medicalWebPageJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "MedicalWebPage",
-    name: YAG_SEO.pageTitle,
-    description: YAG_SEO.metaDescription,
+  // Mesma funcao das outras onze paginas de procedimento. Esta pagina nao usa o
+  // ProcedurePageLayout, por ter estrutura propria, entao o ponto de reuso e a
+  // lib de schema e nao o componente. Ver o cabecalho de procedureGraph.
+  //
+  // O location fica so aqui porque a capsulotomia YAG e feita apenas no HGP. E
+  // a unica pagina de procedimento com local exclusivo.
+  const structuredData = procedureGraph({
     url,
-    lastReviewed: REVISAO_CLINICA.data,
-    reviewedBy: {
-      "@type": "Physician",
-      name: REVISAO_CLINICA.por,
-      medicalSpecialty: "Ophthalmology",
-      identifier: { "@type": "PropertyValue", propertyID: "CRM", value: REVISAO_CLINICA.crm },
-    },
-  };
-
-  const medicalProcedureJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "MedicalProcedure",
-    name: YAG_SEO.procedureName,
-    procedureType: "https://schema.org/TherapeuticProcedure",
-    bodyLocation: "Olho",
-    description: YAG_SEO.metaDescription,
-    url,
-    performer: {
-      "@type": "Physician",
-      name: "Dr. Juliano Machado",
-      medicalSpecialty: "Ophthalmology",
-      url: BASE_URL,
-    },
+    pageTitle: YAG_SEO.pageTitle,
+    metaDescription: YAG_SEO.metaDescription,
+    procedureName: YAG_SEO.procedureName,
+    faqs: FAQS,
     location: {
       "@type": "Hospital",
-      name: HGP_FALLBACK.nome,
+      name: HGP.name,
       address: {
         "@type": "PostalAddress",
-        streetAddress: "R. Santa Terezinha, 304 - Centro",
-        addressLocality: "Paragominas",
-        addressRegion: "PA",
-        addressCountry: "BR",
+        streetAddress: HGP.streetAddress,
+        addressLocality: HGP.addressLocality,
+        addressRegion: HGP.addressRegion,
+        addressCountry: HGP.addressCountry,
       },
     },
-  };
+  });
 
   return (
     <>
@@ -163,14 +126,7 @@ const CapsulotomiaYagLaser = () => {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:image" content={`${BASE_URL}/og-image.jpg`} />
         <meta name="robots" content="index, follow" />
-        <script type="application/ld+json">{JSON.stringify(medicalWebPageJsonLd)}</script>
-        <script type="application/ld+json">
-          {JSON.stringify(breadcrumbJsonLd)}
-        </script>
-        <script type="application/ld+json">
-          {JSON.stringify(medicalProcedureJsonLd)}
-        </script>
-        <script type="application/ld+json">{JSON.stringify(faqJsonLd)}</script>
+        <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
       <div className="min-h-screen bg-background">

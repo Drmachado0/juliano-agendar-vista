@@ -189,3 +189,105 @@ export function faqPageNode(
     })),
   };
 }
+
+export interface BreadcrumbItem {
+  name: string;
+  /** URL absoluta. O Google descarta a trilha inteira se um item for relativo. */
+  url: string;
+}
+
+/**
+ * Trilha de navegacao.
+ *
+ * Ate 28/08/2026 so as paginas de procedimento e o indice tinham BreadcrumbList.
+ * /sobre, /belem, /paragominas e /agendamento ficavam sem, e sem ela o Google
+ * exibe a URL crua no resultado em vez do caminho legivel.
+ *
+ * Estas quatro sao paginas de primeiro nivel, entao a trilha tem dois degraus.
+ * Nao invente um nivel intermediario que nao existe como pagina. Uma trilha que
+ * aponta para URL inexistente e pior que trilha nenhuma.
+ */
+export function breadcrumbNode(
+  items: readonly BreadcrumbItem[],
+  pageUrl: string
+) {
+  return {
+    "@type": "BreadcrumbList",
+    "@id": `${pageUrl}#breadcrumb`,
+    itemListElement: items.map((item, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  };
+}
+
+export interface ProcedureGraphOpts {
+  /** URL canonica da pagina do procedimento. */
+  url: string;
+  pageTitle: string;
+  metaDescription: string;
+  procedureName: string;
+  faqs: readonly { question: string; answer: string }[];
+  /** Default: TherapeuticProcedure. */
+  procedureType?: string;
+  /** Default: Olho. */
+  bodyLocation?: string;
+  /**
+   * Local exclusivo do procedimento. So use quando ele nao for feito em todas
+   * as unidades, senao o lugar da informacao e o workLocation do Physician.
+   */
+  location?: Record<string, unknown>;
+}
+
+/**
+ * Grafo completo de uma pagina de procedimento.
+ *
+ * POR QUE ISTO E UMA FUNCAO, E NAO ESTA NO ProcedurePageLayout: dez das doze
+ * paginas usam aquele layout, mas a de capsulotomia YAG nao usa, ela tem
+ * estrutura propria. Ate 29/08/2026 as duas montavam o mesmo grafo de seis nos
+ * a mao, e a correcao de 28/08, que ligou performer e reviewedBy ao no canonico
+ * do medico, precisou ser escrita duas vezes. A proxima correcao de schema
+ * teria o mesmo risco: acertar num arquivo e esquecer o outro.
+ *
+ * O ponto de reuso tem que ser esta lib justamente porque a YAG nao usa o
+ * layout. Forcar a YAG dentro do layout exigiria props de escape que deixariam
+ * o layout mais raso para as outras dez.
+ */
+export function procedureGraph(opts: ProcedureGraphOpts) {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      physicianNode({ mainEntityOfPage: opts.url }),
+      websiteNode(),
+      medicalWebPageNode({
+        name: opts.pageTitle,
+        description: opts.metaDescription,
+        url: opts.url,
+      }),
+      breadcrumbNode(
+        [
+          { name: "Início", url: `${BASE_URL}/` },
+          { name: "Procedimentos", url: `${BASE_URL}/procedimentos` },
+          { name: opts.procedureName, url: opts.url },
+        ],
+        opts.url,
+      ),
+      {
+        "@type": "MedicalProcedure",
+        "@id": `${opts.url}#procedure`,
+        name: opts.procedureName,
+        procedureType:
+          opts.procedureType || "https://schema.org/TherapeuticProcedure",
+        bodyLocation: opts.bodyLocation || "Olho",
+        description: opts.metaDescription,
+        url: opts.url,
+        // Referencia ao no canonico, em vez de repetir nome e especialidade.
+        performer: { "@id": PHYSICIAN_ID },
+        ...(opts.location ? { location: opts.location } : {}),
+      },
+      faqPageNode(opts.faqs, opts.url),
+    ],
+  };
+}

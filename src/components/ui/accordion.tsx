@@ -40,6 +40,15 @@ const AccordionContent = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <AccordionPrimitive.Content
     ref={ref}
+    // forceMount mantem a resposta no DOM mesmo com o item fechado.
+    //
+    // POR QUE: sem ele o Radix desmonta o conteudo fechado, e no HTML que o
+    // SSG gera a regiao sai como <div hidden=""></div>, vazia. A auditoria de
+    // 28/08/2026 contou 57 respostas de FAQ nessa situacao, nas 11 paginas de
+    // procedimento e na /paragominas. O texto existia so dentro do JSON-LD do
+    // FAQPage, invisivel para qualquer extrator que le corpo de pagina. O
+    // Google executa JS e hidrata, entao ele via. Quem nao executa, nao via.
+    forceMount
     // data-[state=closed]:h-0 existe por causa do forceMount.
     //
     // Sem forceMount o Radix desmonta o conteudo fechado e nada disso importa.
@@ -52,7 +61,13 @@ const AccordionContent = React.forwardRef<
     //
     // h-0 + overflow-hidden colapsa de verdade e mantem o texto no DOM, que e o
     // ponto: resposta legivel por extrator, sem recorrer a display:none.
-    className="overflow-hidden text-sm transition-all data-[state=closed]:h-0 data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
+    // SEM transition aqui, de proposito. O colapso vem dos keyframes
+    // accordion-up e accordion-down do tailwind.config.ts, e animacao CSS vence
+    // transition na mesma propriedade. Alem disso height de auto para 0 nao
+    // transiciona. A classe transition-all que existia ate 29/08/2026 nunca
+    // produziu efeito, e com forceMount ela passaria a fazer o motor de estilo
+    // vigiar toda propriedade animavel em 96 regioes a cada recalculo.
+    className="overflow-hidden text-sm data-[state=closed]:h-0 data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
     {...props}
   >
     <div className={cn("pb-4 pt-0", className)}>{children}</div>

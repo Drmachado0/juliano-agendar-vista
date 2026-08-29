@@ -17,6 +17,7 @@ import {
   Eye,
   MessageSquare,
   BadgeCheck,
+  Phone,
 } from "lucide-react";
 import {
   Accordion,
@@ -33,12 +34,13 @@ import drHero from "@/assets/dr-juliano-hero.webp";
 import drHero2x from "@/assets/dr-juliano-hero@2x.webp";
 import drConsultorio from "@/assets/dr-juliano-consultorio.jpg";
 import { DOCTOR, GOOGLE_REVIEWS } from "@/lib/constants";
-import { clinicNodes } from "@/lib/locations";
+import { clinicNodes, LOCATIONS, BASE_URL } from "@/lib/locations";
 import {
   physicianNode,
   websiteNode,
   medicalWebPageNode,
   faqPageNode,
+  breadcrumbNode,
 } from "@/lib/schema";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
@@ -48,30 +50,30 @@ import { buscarAvaliacoesGoogle } from "@/services/avaliacoesGoogle";
 import { buildTestimonialPool } from "@/lib/testimonialsPool";
 import RefractionClarityExperience from "@/components/paragominas/RefractionClarityExperience";
 
-const CANONICAL = "https://drjulianomachado.com/paragominas";
+const CANONICAL = `${BASE_URL}/paragominas`;
 const SERIF: React.CSSProperties = { fontFamily: "Fraunces, 'Playfair Display', Georgia, serif" };
 
-type Local = {
-  name: string;
-  address: string;
-  mapsLink: string;
-  utmContent: string;
-};
-
-const LOCAIS: readonly Local[] = [
-  {
-    name: "Clinicor",
-    address: "Rua Eixo W1, R. Célio Miranda, 729 — Paragominas/PA",
-    mapsLink: "https://maps.google.com/?q=Clinicor+Rua+Celio+Miranda+729+Paragominas+PA",
-    utmContent: "local_clinicor",
-  },
-  {
-    name: "Hospital Geral de Paragominas",
-    address: "R. Santa Terezinha, 304 — Centro, Paragominas/PA",
-    mapsLink: "https://maps.google.com/?q=Hospital+Geral+Paragominas+Santa+Terezinha+304",
-    utmContent: "local_hgp",
-  },
-] as const;
+/**
+ * As unidades de Paragominas, derivadas da fonte unica de NAP.
+ *
+ * Ate 29/08/2026 esta pagina mantinha uma copia de nome, endereco e link do
+ * mapa. E as copias ja tinham divergido: o endereco da Clinicor aqui era
+ * "R. Celio Miranda, 729 — Paragominas/PA" e em locations.ts era "N° 729,
+ * Paragominas - PA". Endereco divergente entre paginas e exatamente o que o
+ * cabecalho daquele arquivo pede para evitar, porque o Google reconcilia NAP
+ * entre o site e o Google Business Profile.
+ *
+ * A /belem ja fazia esse filtro por cidade. Agora as duas fazem igual.
+ *
+ * So utm_content fica aqui, porque e dado de campanha desta pagina e nao de
+ * cadastro da clinica.
+ */
+const LOCAIS = LOCATIONS.filter((l) => l.city === "Paragominas").map((l) => ({
+  ...l,
+  // utm_content e dado de campanha desta pagina, nao de cadastro da clinica,
+  // por isso e o unico campo que nao vem de locations.ts.
+  utmContent: `local_${l.slug}`,
+}));
 
 const MOTIVOS = [
   { title: "Mudança no grau", note: "Perto, longe ou ao dirigir." },
@@ -214,6 +216,13 @@ const Paragominas = () => {
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
+      breadcrumbNode(
+        [
+          { name: "Início", url: `${BASE_URL}/` },
+          { name: "Paragominas", url: CANONICAL },
+        ],
+        CANONICAL,
+      ),
       physicianNode({ mainEntityOfPage: CANONICAL }),
       websiteNode(),
       medicalWebPageNode({
@@ -342,7 +351,7 @@ const Paragominas = () => {
               {/* Cabeçalho de campanha */}
               <div className="mb-10 md:mb-14 flex items-center gap-5">
                 <span className="pgm-eyebrow" style={{ color: "var(--pgm-champagne)" }}>
-                  Oftalmologista em Paragominas
+                  Clinicor · Hospital Geral
                 </span>
                 <div className="pgm-rule flex-1 max-w-[280px]" />
               </div>
@@ -352,18 +361,51 @@ const Paragominas = () => {
                 <div>
                   <h1
                     id="hero-heading"
-                    className="leading-[0.94] tracking-[-0.025em] mb-8"
+                    className="leading-[0.94] tracking-[-0.025em] mb-4"
                     style={{
                       ...SERIF,
                       color: "var(--pgm-petroleo)",
-                      fontSize: "clamp(2.6rem, 8vw, 6.2rem)",
+                      // Reduzido de clamp(2.6rem, 8vw, 6.2rem) em 28/08/2026.
+                      // O h1 antigo era "Sua visão," mais "com mais clareza.",
+                      // duas linhas curtas. O novo, "Oftalmologista em
+                      // Paragominas", tem uma palavra de 14 caracteres, e a
+                      // 6.2rem ela sozinha passava de 800px numa coluna de
+                      // ~700px. Resultado: tres linhas, hero empurrado para
+                      // baixo e subtitulo fora da primeira dobra.
+                      fontSize: "clamp(2.1rem, 5vw, 4rem)",
                     }}
                   >
-                    <span className="block">Sua visão,</span>
-                    <span className="block italic" style={{ color: "var(--pgm-grafite)" }}>
-                      com mais clareza.
+                    Oftalmologista em{" "}
+                    <span className="italic" style={{ color: "var(--pgm-grafite)" }}>
+                      Paragominas
                     </span>
                   </h1>
+
+                  {/*
+                    A linha editorial saiu do h1 e virou subtítulo por dois
+                    motivos medidos na auditoria de 28/08/2026.
+
+                    O primeiro é a busca local: esta era a única página de cidade
+                    cujo h1 não dizia a cidade. A /belem usa "Oftalmologista em
+                    Belém", e as 11 páginas de procedimento também nomeiam as
+                    cidades. Só Paragominas, que é a sede, ficava de fora.
+
+                    O segundo é mais sutil. Os dois spans eram irmãos com
+                    className="block", então visualmente havia quebra de linha,
+                    mas o textContent saía grudado, "Sua visão,com mais clareza.".
+                    É isso que um crawler lê. Por isso o h1 novo é texto contíguo
+                    com um {" "} explícito, e não dois blocos.
+                  */}
+                  <p
+                    className="italic mb-8"
+                    style={{
+                      ...SERIF,
+                      color: "var(--pgm-grafite)",
+                      fontSize: "clamp(1.35rem, 3vw, 2.1rem)",
+                    }}
+                  >
+                    Sua visão, com mais clareza.
+                  </p>
 
                   <p
                     className="text-base md:text-lg leading-relaxed max-w-xl mb-10"
@@ -791,8 +833,21 @@ const Paragominas = () => {
                       </h3>
                       <p className="text-base leading-relaxed mb-8 flex items-start gap-3 max-w-md flex-1" style={{ color: "var(--pgm-ink-soft)" }}>
                         <Navigation className="w-4 h-4 shrink-0 mt-1" style={{ color: "var(--pgm-petroleo)" }} aria-hidden="true" />
-                        <span>{l.address}</span>
+                        <span>{l.displayAddress}</span>
                       </p>
+
+                      {/* Clique para ligar. Ate 28/08/2026 os telefones das duas
+                          unidades de Paragominas existiam apenas dentro do
+                          JSON-LD, entao a pagina da cidade sede nao oferecia
+                          nenhum numero tocavel na tela. A /belem ja fazia isto. */}
+                      <a
+                        href={`tel:${l.phoneE164}`}
+                        className="pgm-btn--link-dark mb-6 inline-flex min-h-[44px] items-center gap-2 text-sm"
+                        aria-label={`Ligar para ${l.name}, ${l.phone}`}
+                      >
+                        <Phone className="w-3.5 h-3.5" aria-hidden="true" />
+                        {l.phone}
+                      </a>
 
                       <div className="flex items-center gap-6 flex-wrap">
                         <Link

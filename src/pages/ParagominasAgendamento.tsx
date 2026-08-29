@@ -20,7 +20,10 @@ import { useAgendamentoFlow } from "@/features/agendamento/useAgendamentoFlow";
 import type { Clinica } from "@/services/clinicas";
 import type { TipoAtendimento } from "@/services/tiposAtendimento";
 import { DOCTOR } from "@/lib/constants";
-import drJulianoHero from "@/assets/dr-juliano-hero.jpg";
+// Variante de 540w, 32 KB. Este avatar tem 64 por 64 pixels, e ate 29/08/2026
+// baixava o JPG de 122 KB para exibir nesse tamanho. Esta pagina era o ultimo
+// consumidor daquele arquivo, entao a troca tira o JPG do build inteiro.
+import drJulianoHero from "@/assets/dr-juliano-hero-540.webp";
 
 const STEPS: { id: number; label: string; short: string; icon: typeof User }[] = [
   { id: 1, label: "Dados", short: "Dados", icon: User },
@@ -179,6 +182,8 @@ const ParagominasAgendamento = () => {
                 src={drJulianoHero}
                 alt=""
                 aria-hidden
+                width={64}
+                height={64}
                 loading="lazy"
                 decoding="async"
                 className="h-16 w-16 rounded-full object-cover object-top ring-1"

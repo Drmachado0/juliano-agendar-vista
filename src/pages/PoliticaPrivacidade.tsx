@@ -6,8 +6,51 @@ import { Button } from "@/components/ui/button";
 import { ShieldCheck, ArrowLeft } from "lucide-react";
 import { openPreferences } from "@/lib/consent";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
+import { BASE_URL, PHYSICIAN_ID } from "@/lib/locations";
+import {
+  physicianNode,
+  websiteNode,
+  breadcrumbNode,
+  WEBSITE_ID,
+} from "@/lib/schema";
 
 const ULTIMA_ATUALIZACAO = "02 de maio de 2026";
+const CANONICAL = `${BASE_URL}/politica-de-privacidade`;
+const DESCRICAO =
+  "Política de Privacidade e tratamento de dados pessoais do site Dr. Juliano Machado, em conformidade com a LGPD.";
+
+/**
+ * Esta era a unica das 18 rotas sem nenhum dado estruturado, ate 28/08/2026.
+ *
+ * Aqui o tipo e WebPage, nao MedicalWebPage. Politica de privacidade nao e
+ * conteudo de saude, e marcar como tal atrairia para ela as expectativas de
+ * E-E-A-T medico que o Google aplica a conteudo YMYL. Pelo mesmo motivo ela nao
+ * leva lastReviewed nem reviewedBy: o documento nao passa por revisao clinica.
+ */
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@graph": [
+    physicianNode({ mainEntityOfPage: CANONICAL }),
+    websiteNode(),
+    {
+      "@type": "WebPage",
+      "@id": `${CANONICAL}#webpage`,
+      name: "Política de Privacidade",
+      description: DESCRICAO,
+      url: CANONICAL,
+      inLanguage: "pt-BR",
+      isPartOf: { "@id": WEBSITE_ID },
+      about: { "@id": PHYSICIAN_ID },
+    },
+    breadcrumbNode(
+      [
+        { name: "Início", url: `${BASE_URL}/` },
+        { name: "Política de Privacidade", url: CANONICAL },
+      ],
+      CANONICAL,
+    ),
+  ],
+};
 
 export default function PoliticaPrivacidade() {
   const { waLink, display } = useSiteWhatsApp(); const waLinkBare = waLink(undefined, "politica_privacidade");
@@ -15,16 +58,14 @@ export default function PoliticaPrivacidade() {
     <>
       <Helmet>
         <title>Política de Privacidade · Dr. Juliano Machado</title>
-        <meta
-          name="description"
-          content="Política de Privacidade e tratamento de dados pessoais do site Dr. Juliano Machado, em conformidade com a LGPD."
-        />
-        <link rel="canonical" href="https://drjulianomachado.com/politica-de-privacidade" />
+        <meta name="description" content={DESCRICAO} />
+        <link rel="canonical" href={CANONICAL} />
         <meta property="og:title" content="Política de Privacidade · Dr. Juliano Machado" />
         <meta property="og:description" content="Como o site Dr. Juliano Machado coleta, utiliza e protege seus dados pessoais, em conformidade com a LGPD." />
-        <meta property="og:url" content="https://drjulianomachado.com/politica-de-privacidade" />
+        <meta property="og:url" content={CANONICAL} />
         <meta property="og:type" content="article" />
         <meta name="robots" content="index, follow" />
+        <script type="application/ld+json">{JSON.stringify(STRUCTURED_DATA)}</script>
       </Helmet>
 
       <div className="min-h-screen bg-background">
@@ -65,7 +106,7 @@ export default function PoliticaPrivacidade() {
                 <strong className="text-foreground">Dr. Juliano Machado</strong> — Médico Oftalmologista.
                 <br />
                 Endereços de atendimento: Paragominas/PA (Clinicor e Hospital Geral) e Belém/PA
-                (Instituto de Olhos da Bahia e Vitria).
+                (Instituto de Olhos de Belém e Vitria).
                 <br />
                 Contato:{" "}
                   <a

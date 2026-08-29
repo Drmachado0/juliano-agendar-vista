@@ -26,7 +26,9 @@ import { notificarN8n } from "@/services/integracoes";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
-import drJulianoHero from "@/assets/dr-juliano-hero.jpg";
+import drJulianoHero540 from "@/assets/dr-juliano-hero-540.webp";
+import drJulianoHero from "@/assets/dr-juliano-hero.webp";
+import drJulianoHero2x from "@/assets/dr-juliano-hero@2x.webp";
 import { DOCTOR } from "@/lib/constants";
 import { BASE_URL } from "@/lib/locations";
 import { useGoogleReviews } from "@/hooks/useGoogleReviews";
@@ -34,6 +36,7 @@ import {
   physicianNode,
   websiteNode,
   medicalWebPageNode,
+  breadcrumbNode,
 } from "@/lib/schema";
 import { buildLeadUserData, collectAttribution } from "@/lib/leadUserData";
 import { fbqTrack } from "@/lib/metaPixelClient";
@@ -512,6 +515,13 @@ const Agendamento = () => {
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
+      breadcrumbNode(
+        [
+          { name: "Início", url: `${BASE_URL}/` },
+          { name: "Agendamento", url: URL_AGENDAMENTO },
+        ],
+        URL_AGENDAMENTO,
+      ),
       // Sem `rating`, pelo mesmo motivo que a home e /paragominas deixaram de
       // emitir: Physician herda de MedicalBusiness -> LocalBusiness, e nota que
       // a propria entidade publica sobre si e self-serving pela politica de
@@ -742,13 +752,35 @@ const Agendamento = () => {
                   <span className="text-xs text-muted-foreground">({reviews.count} avaliações)</span>
                 </div>
 
-                <img
-                  src={drJulianoHero}
-                  alt="Dr. Juliano Machado, oftalmologista"
-                  className="mb-4 h-64 w-full rounded-lg object-cover object-top"
-                  loading="lazy"
-                  decoding="async"
-                />
+                {/*
+                  WebP no lugar do JPG: 62,6 KB contra 122,4 KB para o mesmo
+                  retrato. A auditoria de 28/08/2026 apontou esta imagem como
+                  elemento de LCP adiado, e isso estava ERRADO. Ela vive num
+                  aside "hidden lg:flex", entao nao renderiza no mobile, e no
+                  desktop fica na coluna lateral. loading="lazy" esta correto e
+                  fica. O que sobrava de real era o formato e a falta de
+                  variante, que e o que muda aqui.
+
+                  width e height sao dica de proporcao para antes do CSS. Nao ha
+                  risco de CLS neste caso, porque h-64 w-full ja determina a
+                  caixa, mas custam nada e valem se a classe mudar um dia.
+                */}
+                <picture>
+                  <source
+                    type="image/webp"
+                    srcSet={`${drJulianoHero540} 540w, ${drJulianoHero} 900w, ${drJulianoHero2x} 1400w`}
+                    sizes="400px"
+                  />
+                  <img
+                    src={drJulianoHero}
+                    width={900}
+                    height={1200}
+                    alt="Dr. Juliano Machado, oftalmologista"
+                    className="mb-4 h-64 w-full rounded-lg object-cover object-top"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </picture>
 
                 <h3 className="mb-3 font-serif text-lg font-semibold text-foreground">
                   Por que escolher o Dr. Juliano?

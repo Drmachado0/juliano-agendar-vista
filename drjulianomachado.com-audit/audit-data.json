@@ -90,20 +90,87 @@
     },
     {
       "name": "Schema / Structured Data",
-      "score": 92,
+      "score": 58,
       "what_works": [
-        "@graph completo: Physician, MedicalClinic, MedicalWebPage, MedicalProcedure, FAQPage, BreadcrumbList, ItemList",
-        "MedicalWebPage com lastReviewed e reviewedBy nas 17 paginas de conteudo",
-        "BreadcrumbList em 12 paginas, FAQPage em 14",
-        "aggregateRating auto-declarado removido, que era achado da auditoria anterior",
-        "Quatro blocos JSON-LD por pagina de procedimento"
+        "Physician e WebSite reemitidos com o mesmo @id em 6 dos 7 templates (home, /belem, /paragominas, /procedimentos, /sobre, /agendamento), consolidando a entidade corretamente entre paginas",
+        "NAP realmente distinto por cidade, 2 MedicalClinic em Paragominas (Clinicor, Hospital Geral de Paragominas) e 2 em Belem (Instituto de Olhos de Belem, Vitria Ed. Sintese 21), cada um com address, telephone e @id proprios, e telefone proprio por unidade",
+        "Vinculo bidirecional Physician <-> MedicalClinic por @id (workLocation de um lado, physician do outro)",
+        "Physician com identifier estruturado do CRM (PropertyValue, propertyID CRM, value CRM-PA 15253), reaproveitado em reviewedBy em todo MedicalWebPage, inclusive nas 11 paginas de procedimento",
+        "Physician com alumniOf (5), memberOf (2 sociedades), knowsAbout (6) e medicalSpecialty, bom sinal de E-E-A-T para YMYL",
+        "/procedimentos com BreadcrumbList e ItemList completos, as 11 entradas do ItemList batem com as 11 URLs reais"
       ],
       "findings": [
         {
-          "title": "/politica-de-privacidade sem structured data",
+          "title": "postalCode ausente em 100% dos enderecos (Physician e as 4 MedicalClinic)",
+          "severity": "Critical",
+          "description": "Nenhum PostalAddress do site (Physician nem as 4 MedicalClinic) tem postalCode, campo esperado pelo Google dentro de address para Local Business.",
+          "recommendation": "Adicionar postalCode real a cada um dos 5 objetos PostalAddress (Physician, Clinicor, Hospital Geral de Paragominas, Instituto de Olhos de Belem, Vitria)."
+        },
+        {
+          "title": "Grafo de entidade fragmentado nas 11 paginas de procedimento",
+          "severity": "Critical",
+          "description": "Nas paginas /procedimentos/<slug>, Physician e WebSite nao existem como nos com @id. performer (em MedicalProcedure) e reviewedBy (em MedicalWebPage) trazem uma copia solta do medico, sem @id, desconectada do no canonico https://drjulianomachado.com/#physician usado nas outras 6 templates.",
+          "recommendation": "Reaproveitar os nos Physician e WebSite completos (mesmo @id) usados em home/sobre/agendamento dentro do @graph de cada pagina de procedimento, e referenciar performer/reviewedBy por @id em vez de duplicar sem @id."
+        },
+        {
+          "title": "BreadcrumbList das 11 paginas de procedimento aponta para ancora inexistente na home",
+          "severity": "Critical",
+          "description": "O item de posicao 2 (Procedimentos) em todas as 11 paginas filhas usa item https://drjulianomachado.com/#procedimentos (ancora na home) em vez de https://drjulianomachado.com/procedimentos, a URL real do hub. Mesma causa raiz do achado High ja registrado em on-page-seo.md, aqui do lado do JSON-LD que o Google le para o rich result de breadcrumb.",
+          "recommendation": "Trocar o item da posicao 2 para https://drjulianomachado.com/procedimentos nas 11 paginas."
+        },
+        {
+          "title": "/politica-de-privacidade sem nenhum JSON-LD",
+          "severity": "Critical",
+          "description": "Confirmado, 0 blocos application/ld+json no HTML. Unica URL do site sem qualquer schema.",
+          "recommendation": "Adicionar WebPage minimo com isPartOf apontando para o WebSite (@id) e um BreadcrumbList de 2 niveis."
+        },
+        {
+          "title": "BreadcrumbList ausente em /sobre, /belem, /paragominas e /agendamento",
+          "severity": "High",
+          "description": "Essas 4 paginas emitem Physician, WebSite e MedicalWebPage mas nenhum BreadcrumbList, mesmo estando a 1 nivel da home.",
+          "recommendation": "Adicionar BreadcrumbList de 2 niveis (Inicio > nome da pagina) nas 4 paginas."
+        },
+        {
+          "title": "availableService usado de forma incorreta e ausente onde deveria estar",
+          "severity": "High",
+          "description": "A unica ocorrencia de availableService fica dentro do proprio MedicalProcedure apontando para si mesmo. O dominio correto da propriedade e MedicalOrganization (Physician, MedicalClinic), nenhum dos dois lista os 11 procedimentos que oferece.",
+          "recommendation": "Remover o availableService circular do MedicalProcedure e adicionar um array availableService no no Physician referenciando os 11 procedimentos por nome e url."
+        },
+        {
+          "title": "medicalSpecialty usa texto livre em vez do valor de enumeracao do schema.org",
+          "severity": "Medium",
+          "description": "Todas as ocorrencias (Physician, as 4 MedicalClinic, performer e reviewedBy das 11 paginas de procedimento) usam a string Ophthalmology, que nao e um termo da enumeracao MedicalSpecialty do schema.org (o termo correto e Ophthalmic).",
+          "recommendation": "Trocar Ophthalmology por https://schema.org/Ophthalmic em todas as ocorrencias."
+        },
+        {
+          "title": "Sem geo nem openingHoursSpecification nas 4 MedicalClinic",
+          "severity": "Medium",
+          "description": "Nenhuma das 4 unidades declara GeoCoordinates nem horario de funcionamento em JSON-LD.",
+          "recommendation": "Adicionar geo (latitude/longitude reais) e openingHoursSpecification a cada MedicalClinic."
+        },
+        {
+          "title": "Physician.address mostra so o endereco de Paragominas mesmo nas paginas de Belem",
+          "severity": "Medium",
+          "description": "O no Physician, identico em todas as paginas inclusive /belem, tem address fixo em Paragominas (Clinicor), o que pode sugerir que a base do medico e so em Paragominas.",
+          "recommendation": "Avaliar remover address do Physician (mantendo so nas MedicalClinic) ou documentar que representa o endereco principal."
+        },
+        {
+          "title": "sameAs limitado e MedicalClinic sem image, url ou priceRange",
+          "severity": "Medium",
+          "description": "sameAs do Physician tem so Instagram e um link de Google Maps com cid fixo, sem indicacao de qual unidade representa. As 4 MedicalClinic nao tem image, url proprio nem priceRange.",
+          "recommendation": "Adicionar perfis profissionais adicionais ao sameAs e completar image/url/priceRange em cada MedicalClinic."
+        },
+        {
+          "title": "FAQPage presente na home, /belem, /paragominas e nas 11 paginas de procedimento",
           "severity": "Info",
-          "description": "Unica pagina sem JSON-LD.",
-          "recommendation": "Um WebPage simples fecharia, mas o ganho e proximo de zero."
+          "description": "O Google aposentou o rich result de FAQ para todos os sites em 07/05/2026. Sem ganho de SERP no Google associado a esse schema, e sem beneficio confirmado de citacao por IA/GEO.",
+          "recommendation": "Manter como esta. Nao remover, nao expandir para novas paginas visando o Google, nao prometer ganho de trafego a partir dele."
+        },
+        {
+          "title": "Physician usa alumniOf, propriedade de dominio Person, dentro de um tipo de organizacao",
+          "severity": "Low",
+          "description": "Physician e subtipo de MedicalOrganization no schema.org, mas o site usa alumniOf nele, propriedade cujo dominio oficial e Person. O Google tolera esse padrao na pratica, mas validadores estritos podem sinalizar.",
+          "recommendation": "Nao urgente. Registrado como observacao tecnica."
         }
       ]
     },

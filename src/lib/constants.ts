@@ -98,7 +98,19 @@ export const AREAS_CONHECIMENTO = [
 // Lattes (id K4525719A1) ficou de fora de proposito: a URL do buscatextual
 // devolve captcha, e sameAs apontando para captcha nao prova nada.
 export const PERFIS_SOCIAIS = [
-  "https://www.instagram.com/drjulianomachado.oftalmo/",
+  // TROCADO EM 29/08/2026, de drjulianomachado.oftalmo para drjuliano.oftalmo.
+  //
+  // Existem dois perfis com o nome do medico, e o site inteiro apontava para o
+  // que NAO e o ativo. A auditoria de 28/08 encontrou os dois e tratou como
+  // fragmentacao de entidade, o que era otimista: nao era sinal dividido, era
+  // sinal mandado para o lugar errado.
+  //
+  // O confirmado pelo proprio medico e este. Nao troque sem perguntar a ele.
+  //
+  // E nao tente confirmar por HTTP: o Instagram devolve 200 para qualquer
+  // handle, inclusive inexistente, porque serve a parede de login. A regra de
+  // "so entra URL que responde 200", logo acima, nao vale para este dominio.
+  "https://www.instagram.com/drjuliano.oftalmo/",
   // Google Business Profile canonico (CID extraido do link g.page oficial).
   "https://www.google.com/maps?cid=16599594730260861753",
 ] as const;

@@ -58,16 +58,26 @@ beforeEach(() => {
 });
 
 describe("Paragominas landing page — restructure", () => {
-  it("H1 usa 'Sua visão,' + 'com mais clareza.'", () => {
+  // POR QUE toBe E NAO toMatch: o h1 antigo eram dois spans irmaos com
+  // className="block", "Sua visão," e "com mais clareza.". Visualmente havia
+  // quebra de linha, mas o textContent saia grudado, "Sua visão,com mais
+  // clareza.", que e exatamente o que um crawler le. Comparar a string inteira
+  // e o que impede esse modo de falha de voltar sem ninguem notar.
+  it("H1 nomeia a cidade e sai como texto contiguo", () => {
     renderPage();
     const h1 = screen.getByRole("heading", { level: 1 });
-    expect(h1.textContent).toMatch(/Sua visão/i);
-    expect(h1.textContent).toMatch(/clareza/i);
+    expect(h1.textContent).toBe("Oftalmologista em Paragominas");
   });
 
-  it("Eyebrow preserva SEO 'Oftalmologista em Paragominas' e mostra CRM-PA 15253", () => {
+  it("A linha editorial continua na pagina, agora fora do h1", () => {
     renderPage();
-    expect(screen.getAllByText(/Oftalmologista em Paragominas/i).length).toBeGreaterThan(0);
+    const h1 = screen.getByRole("heading", { level: 1 });
+    expect(h1.textContent).not.toMatch(/clareza/i);
+    expect(screen.getByText("Sua visão, com mais clareza.")).toBeInTheDocument();
+  });
+
+  it("Mostra CRM-PA 15253", () => {
+    renderPage();
     expect(screen.getAllByText(/CRM-PA 15253/i).length).toBeGreaterThan(0);
   });
 

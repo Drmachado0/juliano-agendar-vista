@@ -38,6 +38,8 @@ import { existsSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { ROTAS_EXTRA } from "./rotas-extra.mjs"
+
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..")
 const DIST = join(RAIZ, "dist")
 const BUNDLE_SSR = join(RAIZ, "dist-ssr", "entry-server.js")
@@ -58,9 +60,14 @@ const { renderizarRota } = await import(`file://${BUNDLE_SSR.replace(/\\/g, "/")
 
 const casca = await readFile(join(DIST, "index.html"), "utf8")
 const sitemap = await readFile(join(RAIZ, "public/sitemap.xml"), "utf8")
-const rotas = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
+const rotasDoSitemap = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
   (m) => m[1].replace(BASE, "") || "/"
 )
+
+// A lista vive em scripts/rotas-extra.mjs, importada no topo. O porque de ela
+// existir, e o cuidado ao cresce-la, estao documentados la.
+
+const rotas = [...new Set([...rotasDoSitemap, ...ROTAS_EXTRA])]
 
 /**
  * Monta o HTML final juntando a casca construida, as tags do helmet e o corpo.
@@ -116,7 +123,17 @@ for (const rota of rotas) {
 
 await writeFile(
   join(DIST, "ssg-status.json"),
-  JSON.stringify({ em: new Date().toISOString(), escritas, puladas }, null, 2),
+  JSON.stringify(
+    {
+      em: new Date().toISOString(),
+      doSitemap: rotasDoSitemap.length,
+      extras: ROTAS_EXTRA,
+      escritas,
+      puladas,
+    },
+    null,
+    2,
+  ),
   "utf8"
 )
 
