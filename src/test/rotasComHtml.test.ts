@@ -53,11 +53,6 @@ function rotasDoSitemap(): string[] {
 const SEM_HTML_PROPRIO = new Set([
   // Curinga do React Router. Nao e uma URL.
   "*",
-  // Redirects que hoje so acontecem no cliente. O lugar certo deles e um 301 de
-  // servidor, item 2.7 do plano de acao, que depende do painel do Cloudflare.
-  // Enquanto isso, pre-renderizar um <Navigate> nao produziria HTML util.
-  "/agendar",
-  "/agendar-consulta",
 ]);
 
 /** Area logada. Bloqueada no robots.txt e sem valor de busca. */

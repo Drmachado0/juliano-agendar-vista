@@ -181,23 +181,53 @@ Vale registrar, porque os tres nasceram de medir do lado de fora sem abrir o cod
 
   *Falhou se:* `/auth/` e `/home/` continuarem aparecendo no relatorio de paginas do GSC daqui a algumas semanas.
 
-- [ ] **2.7 BLOQUEADO PARA MIM. `/agendar` e `/agendar-consulta` como 301 de servidor.**
+- [x] **2.7 FEITO em 29/08/2026, e nao como estava escrito.**
 
-  Nao consegui fazer, e nao ha como fazer pelo repositorio. Procurei arquivo de configuracao de host e nao existe nenhum: sem `_redirects`, sem `_headers`, sem `netlify.toml`, sem `vercel.json`. A pasta `.lovable/` tem so um `plan.md`. O redirecionamento e servido pela Lovable atras do Cloudflare, e as duas configuracoes vivem em painel, fora daqui.
+  *O que o item dizia:* criar uma Redirect Rule no painel do Cloudflare.
 
-  *Estado atual:* as duas rotas sao `<Navigate replace>` do React Router, ou seja, redirect que so acontece depois que o JS roda. Para o servidor e para o crawler sao duas URLs respondendo 200 com o HTML da home.
+  *Por que estava errado:* nao existe painel. Os nameservers do dominio sao
+  `ns1.dns-parking.com` e `ns2.dns-parking.com`, da Hostinger. O `Server:
+  cloudflare` na resposta vem do Cloudflare **da Lovable**, na frente da
+  hospedagem deles. O Cloudflare esta no caminho, mas nao e do medico.
 
-  *O que precisa ser criado no painel do Cloudflare,* em Rules e depois Redirect Rules, duas regras ou uma com expressao composta:
+  *O que foi feito:* as duas rotas entraram em `scripts/rotas-extra.mjs`, entao
+  o SSG gera HTML proprio para elas, e o `RedirectToAgendamento` em
+  `src/App.tsx` passou a emitir `noindex, follow` mais canonical apontando para
+  `/agendamento`. Nao e um 301, mas resolve o que o 301 resolveria para busca:
+  o Google para de indexar as duas e entende qual e a pagina real.
 
-  ```
-  Se  http.request.uri.path in {"/agendar" "/agendar-consulta"}
-  Entao  redirecionar 301 para  https://drjulianomachado.com/agendamento
-  Preservar query string: sim
-  ```
+  *Um bug que a correcao criou e obrigou a consertar outro:* o `montar()` do
+  `scripts/ssg.mjs` injetava canonical incondicionalmente, entao toda rota saia
+  com DUAS tags. Nas 18 do sitemap as duas coincidiam e ninguem via. Nestas duas
+  passaram a se contradizer, uma dizendo `/agendar` e a outra `/agendamento`, e
+  canonicals conflitantes podem ser todos ignorados pelo Google. O canonical do
+  SSG virou condicional, so entra quando a pagina nao emitiu o dela.
 
-  *Falhou se:* `curl -sI https://drjulianomachado.com/agendar` nao devolver `301` com `location: https://drjulianomachado.com/agendamento`.
+  **Isso fecha tambem o achado de canonical duplicado do `on-page-seo.md`.** As
+  23 rotas agora tem exatamente uma tag, verificado no `dist`.
 
-  *Enquanto nao for feito:* o dano e pequeno e conhecido. O GSC reporta as duas como "URL is unknown to Google", ou seja, nem rastreadas foram.
+  *Feito de quebra:* o `<Navigate>` passou a renderizar so no cliente. No
+  servidor ele era no-op e imprimia um aviso duas vezes por build. Aviso que
+  aparece sempre e aviso que ninguem le.
+
+  *Uma regressao que eu criei e a revisao pegou:* ao ganharem HTML proprio, as
+  duas rotas passaram a sair com `<title>` VAZIO e sem nenhuma tag OG. Antes
+  elas serviam a casca da home e herdavam o titulo e a previa dela. O `montar()`
+  remove os OG da casca de proposito, e o Helmet nao repunha nada. Isso doi mais
+  nestas duas que na maioria das paginas, porque sao justamente as URLs curtas
+  que vao em campanha paga e em link colado no WhatsApp, e previa sem titulo
+  parece link quebrado antes de qualquer um clicar. Corrigido, elas repetem o
+  titulo, a description e os OG de `/agendamento`.
+
+  *Duas limpezas de quebra:* o `SEM_HTML_PROPRIO` em `src/test/rotasComHtml.test.ts`
+  ainda listava as duas rotas dizendo que pre renderizar um `<Navigate>` nao
+  produziria HTML util, o contrario do que acabou de ser feito, e nenhum teste
+  cruzava as duas listas, entao a contradicao era silenciosa. E o canonical de
+  `/paragominas/agendamento` era o unico relativo do site, mascarado ate agora
+  porque o SSG injetava a absoluta ao lado.
+
+  *Falhou se:* alguma rota do `dist` tiver zero ou duas tags canonical, ou se
+  `/agendar` deixar de apontar para `/agendamento`.
 
 ---
 

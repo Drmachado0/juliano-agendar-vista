@@ -4,9 +4,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from "react-router-dom";
-import { HelmetProvider } from "react-helmet-async";
+import { Helmet, HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
+import { BASE_URL } from "@/lib/locations";
 import Index from "./pages/Index";
 
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
@@ -60,9 +61,67 @@ const ProcIridotomia = lazy(() => import("./pages/procedimentos/IridotomiaLaser"
 
 const queryClient = new QueryClient();
 
+/**
+ * /agendar e /agendar-consulta apontam para /agendamento.
+ *
+ * ISTO NAO E UM 301, E O QUE DA PARA FAZER SEM O HOST. O redirecionamento aqui
+ * e do React Router, entao so acontece depois que o JS roda. Para o servidor as
+ * duas URLs respondem 200, e ate 29/08/2026 respondiam com o HTML da home,
+ * porque nao estavam pre renderizadas e caiam no fallback da SPA. O Google via
+ * duas copias indexaveis da home.
+ *
+ * O 301 de verdade exigiria regra no host. A auditoria de 28/08 registrou isso
+ * como tarefa de painel do Cloudflare, e em 29/08 descobrimos que o Cloudflare
+ * no caminho e da Lovable, nao do medico: os nameservers do dominio sao da
+ * Hostinger, ns1 e ns2.dns-parking.com. Nao ha painel para criar a regra.
+ *
+ * O QUE ESTAS TAGS RESOLVEM: com as duas rotas em scripts/rotas-extra.mjs, o
+ * SSG gera HTML proprio para elas, e esse HTML diz noindex e aponta o canonical
+ * para /agendamento. O Google para de indexar as duas e entende qual e a pagina
+ * real. O efeito chega perto do 301, sem ser um.
+ *
+ * A query string e o hash seguem para o destino, porque campanha paga usa
+ * utm_source e perder isso quebraria a atribuicao.
+ */
 const RedirectToAgendamento = () => {
   const location = useLocation();
-  return <Navigate to={`/agendamento${location.search}${location.hash}`} replace />;
+  return (
+    <>
+      <Helmet>
+        <meta name="robots" content="noindex, follow" />
+        <link rel="canonical" href={`${BASE_URL}/agendamento`} />
+        {/*
+          Titulo e OG repetem os de /agendamento de proposito.
+          Enquanto estas rotas serviam a casca da home, elas herdavam o titulo e
+          a previa dela. Ao ganharem HTML proprio em 29/08/2026, o montar() do
+          ssg.mjs passou a remover os OG da casca e o Helmet nao repunha nada:
+          saiam com <title> vazio e sem previa nenhuma.
+          Isso importa mais aqui que na maioria das paginas. Sao as URLs curtas
+          que vao em campanha paga e em link colado no WhatsApp, e previa sem
+          titulo parece link quebrado antes de qualquer um clicar.
+        */}
+        <title>Agendar Consulta — Dr. Juliano Machado | Oftalmologista</title>
+        <meta
+          name="description"
+          content="Agende sua consulta com Dr. Juliano Machado: oftalmologista 5 estrelas em Paragominas e Belém. Agendamento online ou direto com nossa secretária pelo WhatsApp."
+        />
+        <meta property="og:title" content="Agendar Consulta — Dr. Juliano Machado | Oftalmologista" />
+        <meta
+          property="og:description"
+          content="Agende sua consulta com Dr. Juliano Machado: oftalmologista 5 estrelas em Paragominas e Belém."
+        />
+        <meta property="og:url" content={`${BASE_URL}/agendamento`} />
+      </Helmet>
+      {/*
+        So no cliente. No servidor o React Router avisa que <Navigate> na
+        primeira renderizacao dentro de StaticRouter e no-op, e imprimia isso
+        duas vezes por build. Aviso que aparece sempre e aviso que ninguem le.
+      */}
+      {typeof window === "undefined" ? null : (
+        <Navigate to={`/agendamento${location.search}${location.hash}`} replace />
+      )}
+    </>
+  );
 };
 
 const RouteFallback = () => (

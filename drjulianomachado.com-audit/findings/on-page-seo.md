@@ -85,7 +85,7 @@ Tambem chama atencao `/procedimentos/glaucoma` ocupar um item de menu global. Um
 
 ---
 
-### [Medium] Duas tags canonical por pagina
+### [x] RESOLVIDO em 29/08/2026. Duas tags canonical por pagina
 
 Cada uma das 18 paginas serve duas tags canonical, uma injetada pelo react-helmet no SSG e outra do template.
 
@@ -98,7 +98,13 @@ Hoje os valores **coincidem** nas 18 rotas, e o Google tolera canonicals duplica
 
 *Correcao:* eleger uma fonte so. Como o SSG ja injeta via helmet em todas as rotas, tirar a tag estatica do template.
 
-*Como saber se falhou:* `curl -s <url> | grep -c 'rel="canonical"'` tem que devolver 1 nas 18 rotas.
+*Resolvido junto com o item 2.7 do plano.* O `montar()` do `scripts/ssg.mjs`
+so injeta canonical quando a pagina nao emitiu o dela. O gatilho foi
+`/agendar`, que precisa apontar para `/agendamento` e passou a contradizer a
+tag do SSG. O risco que este achado descrevia, de as duas fontes divergirem,
+deixou de ser hipotetico e virou bug real em menos de um dia.
+
+*Verificado:* as 23 rotas do `dist` tem exatamente uma tag canonical.
 
 ---
 

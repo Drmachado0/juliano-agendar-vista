@@ -86,7 +86,23 @@ function montar(html, helmet, rota) {
     // Sem esta linha o HTML sai com o texto certo e sem dado estruturado, que
     // e justamente o que o Google usa para entender a entidade.
     helmet.script,
-    `<link rel="canonical" href="${url}" />`,
+    // Canonical so quando a pagina nao emitiu o dela.
+    //
+    // Ate 29/08/2026 esta linha era incondicional, e toda rota saia com DUAS
+    // tags canonical, a do react-helmet e esta. Nas 18 rotas do sitemap as duas
+    // coincidiam, entao o Google tolerava e ninguem via.
+    //
+    // Quebrou ao acrescentar /agendar e /agendar-consulta, que emitem canonical
+    // apontando para /agendamento de proposito. As duas tags passaram a se
+    // CONTRADIZER na mesma pagina, uma dizendo /agendar e a outra /agendamento.
+    // A documentacao do Google diz que canonicals conflitantes podem ser todos
+    // ignorados, o que anularia justamente a correcao.
+    //
+    // Agora a pagina manda, e esta linha e so a rede de seguranca para quem
+    // esquecer de emitir a sua.
+    helmet.link?.includes('rel="canonical"')
+      ? null
+      : `<link rel="canonical" href="${url}" />`,
   ]
     .filter(Boolean)
     .join("\n    ")

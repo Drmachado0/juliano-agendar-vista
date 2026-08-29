@@ -16,9 +16,18 @@
  * Nao coloque rota noindex no sitemap para resolver isso. Sitemap com URL
  * noindex e sinal contraditorio e o Google reclama. Coloque aqui.
  *
- * /agendar e /agendar-consulta ficam de fora de proposito. Nao sao paginas, sao
- * redirects que hoje so existem no React Router. O lugar certo delas e um 301
- * de servidor, item 2.7 do plano de acao.
+ * /agendar e /agendar-consulta ENTRARAM em 29/08/2026, depois de ficarem de
+ * fora. O motivo da exclusao era que elas nao sao paginas, sao redirects, e o
+ * lugar certo delas seria um 301 de servidor.
+ *
+ * Esse 301 nao existe e nao vai existir tao cedo: o Cloudflare no caminho e da
+ * Lovable, nao do medico. Os nameservers do dominio sao da Hostinger, ns1 e
+ * ns2.dns-parking.com, entao nao ha painel onde criar a regra.
+ *
+ * Sem HTML proprio elas caiam no fallback da SPA e serviam a home inteira, com
+ * index,follow. Com HTML proprio elas servem o noindex e o canonical que o
+ * RedirectToAgendamento em src/App.tsx emite. Nao e um 301, mas resolve o que
+ * o 301 resolveria para busca.
  *
  * POR QUE ESTE ARQUIVO EXISTE, EM VEZ DE UM const DENTRO DO ssg.mjs: o
  * src/test/rotasComHtml.test.ts precisa da mesma lista para garantir que nenhuma
@@ -32,4 +41,10 @@
  * entrada nova aqui tapa um buraco especifico. Se a lista comecar a crescer,
  * pare e resolva o geral.
  */
-export const ROTAS_EXTRA = ["/paragominas/agendamento", "/obrigado", "/auth"]
+export const ROTAS_EXTRA = [
+  "/paragominas/agendamento",
+  "/obrigado",
+  "/auth",
+  "/agendar",
+  "/agendar-consulta",
+]

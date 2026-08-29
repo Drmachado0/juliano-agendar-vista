@@ -20,6 +20,7 @@ import { useAgendamentoFlow } from "@/features/agendamento/useAgendamentoFlow";
 import type { Clinica } from "@/services/clinicas";
 import type { TipoAtendimento } from "@/services/tiposAtendimento";
 import { DOCTOR } from "@/lib/constants";
+import { BASE_URL } from "@/lib/locations";
 // Variante de 540w, 32 KB. Este avatar tem 64 por 64 pixels, e ate 29/08/2026
 // baixava o JPG de 122 KB para exibir nesse tamanho. Esta pagina era o ultimo
 // consumidor daquele arquivo, entao a troca tira o JPG do build inteiro.
@@ -124,7 +125,9 @@ const ParagominasAgendamento = () => {
           name="description"
           content="Agende sua consulta com o Dr. Juliano Machado nas unidades de Paragominas (Clinicor e HGP)."
         />
-        <link rel="canonical" href="/paragominas/agendamento" />
+        {/* Absoluta, como as outras 22. Era a unica relativa do site, e o
+            fallback do ssg.mjs mascarava isso injetando a absoluta ao lado. */}
+        <link rel="canonical" href={`${BASE_URL}/paragominas/agendamento`} />
       </Helmet>
 
       {/* Header mobile compacto */}
