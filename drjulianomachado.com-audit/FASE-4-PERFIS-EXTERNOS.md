@@ -417,14 +417,19 @@ nome e o CRM dele.
 - [ ] Trocar `@droftalmologista_` por `@drjuliano.oftalmo`, ou apagar
 - [ ] Se der para remover o perfil inteiro, melhor ainda
 
-### 4. BoaConsulta, mesma logica
+### 4. FEITO em 29/08/2026. BoaConsulta e Doctoralia, cancelados
 
-Dano menor, porque nao ha telefone la. Mas quatro cidades falsas diluem a
-relevancia local dele nas duas cidades reais.
+O medico removeu os dois no mesmo dia. **Nao mande cancelar de novo.**
 
-- [ ] Apagar os enderecos de Tome-Acu, Sao Miguel do Guama e Ananindeua
-- [ ] Corrigir Av. Generalissimo Deodoro de 868 Umarizal para 904 Nazare
-- [ ] Corrigir o bairro do Hospital Geral, de Celio Miranda para Centro
+O BoaConsulta tinha perfil auto gerado, sem telefone, com seis enderecos, quatro
+deles em cidades onde ele nao atende, Tome-Acu, Sao Miguel do Guama e
+Ananindeua. O Doctoralia nao chegou a existir como perfil dele, e a decisao de
+nao criar continua valendo, ver a secao de correcao acima.
+
+**Expectativa correta sobre o prazo:** o perfil sai da plataforma rapido, mas o
+Google pode levar semanas para tirar do indice, porque precisa rastrear de novo
+uma pagina que agora nao existe. Se em um mes ainda aparecer na busca pelo nome
+dele, o caminho e a ferramenta de remocao de conteudo obsoleto do Google.
 
 ### 5. CRM-PA e sociedades da especialidade
 
