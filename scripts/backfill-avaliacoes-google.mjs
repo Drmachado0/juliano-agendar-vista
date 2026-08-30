@@ -144,13 +144,6 @@ const norm = reviews.map((r) => ({
 
 writeFileSync("scripts/backfill-avaliacoes-google.json", JSON.stringify(norm, null, 2));
 
-/*
-  Quantos caracteres de texto entram na identidade de uma avaliacao. Precisa ser
-  o mesmo ASSINATURA_TEXTO de src/lib/testimonialsPool.ts. Ver a nota no DELETE
-  gerado logo abaixo.
-*/
-const ASSINATURA_TEXTO = 60;
-
 const esc = (v) => (v === null || v === undefined ? "NULL" : `'${String(v).replace(/'/g, "''")}'`);
 const values = norm
   .map(
@@ -176,28 +169,22 @@ ON CONFLICT (google_review_id) DO UPDATE SET
   updated_at = now();
 
 -- Remove as linhas antigas (formato Autor_timestamp do Places API) que tem uma
--- gemea nova, ou seja, mesmo autor e mesmo comeco de texto.
+-- gemea nova, ou seja, mesma identidade.
 --
--- ESTA REGRA E ESPELHO de identidade() em src/lib/testimonialsPool.ts, e as
--- duas PRECISAM normalizar igual. O JS faz trim, colapsa espaco, minuscula e
--- corta em ${ASSINATURA_TEXTO}, nessa ordem. Se voce mexer em ASSINATURA_TEXTO
--- ou na normalizacao de um lado sem mexer no outro, sobram duplicatas no mural.
+-- A REGRA NAO ESTA ESCRITA AQUI, e sim em avaliacao_identidade no banco, criada
+-- pela migracao 20260830090000_avaliacoes_google_sem_gemea.sql. Ate esta
+-- migracao existir, este DELETE repetia a normalizacao inteira em regex, e a
+-- copia tinha divergido da versao em JavaScript sem ninguem notar.
 --
--- Duas copias sao inevitaveis aqui: o SQL precisa calcular a identidade das
--- linhas ANTIGAS, que so existem no banco e que este script nunca teve em maos.
---
--- btrim() sozinho NAO serve: ele tira espaco e nao tira quebra de linha, e o
--- .trim() do JS tira as duas. Um \\n no inicio deslocaria a janela em um
--- caractere e as chaves deixariam de bater.
+-- PRE-REQUISITO: rode aquela migracao antes deste arquivo, senao a funcao nao
+-- existe e o DELETE falha.
 DELETE FROM public.avaliacoes_google antiga
 WHERE antiga.google_review_id NOT LIKE 'maps\\_%'
   AND EXISTS (
     SELECT 1 FROM public.avaliacoes_google nova
     WHERE nova.google_review_id LIKE 'maps\\_%'
-      AND lower(regexp_replace(COALESCE(nova.author_name, ''), '^\\s+|\\s+$', '', 'g'))
-        = lower(regexp_replace(COALESCE(antiga.author_name, ''), '^\\s+|\\s+$', '', 'g'))
-      AND left(lower(regexp_replace(regexp_replace(COALESCE(nova.text, ''), '^\\s+|\\s+$', '', 'g'), '\\s+', ' ', 'g')), ${ASSINATURA_TEXTO})
-        = left(lower(regexp_replace(regexp_replace(COALESCE(antiga.text, ''), '^\\s+|\\s+$', '', 'g'), '\\s+', ' ', 'g')), ${ASSINATURA_TEXTO})
+      AND public.avaliacao_identidade(nova.author_name, nova.text)
+        = public.avaliacao_identidade(antiga.author_name, antiga.text)
   );
 `;
 

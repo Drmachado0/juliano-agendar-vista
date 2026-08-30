@@ -19,10 +19,17 @@ export interface TestimonialItem {
   caracteres ficam antes de qualquer corte observado e ja distinguem avaliacoes
   diferentes do mesmo autor.
 
-  ESTE NUMERO E A NORMALIZACAO ABAIXO tem um espelho em SQL, no DELETE que
-  scripts/backfill-avaliacoes-google.mjs gera. Mudou aqui, mude la, senao a
-  limpeza do backfill deixa duplicata para tras. Duas copias sao inevitaveis: o
-  SQL calcula a identidade de linhas que so existem no banco.
+  QUEM MANDA HOJE E O BANCO, e nao este arquivo. A funcao avaliacao_identidade,
+  criada em 20260830090000_avaliacoes_google_sem_gemea.sql, tem a mesma regra, e
+  um trigger BEFORE INSERT impede que a mesma avaliacao entre duas vezes. O que
+  sobrou aqui e rede de seguranca.
+
+  A REDE FICA por um caso que o trigger nao pega: ele so dispara em INSERT, e se
+  o paciente editar a avaliacao no Google o texto muda, a identidade muda junto,
+  e a linha nova entra sem reconhecer a antiga. Duplicata na tela e pior que
+  duas copias da regra.
+
+  Mudou o numero ou a normalizacao aqui, mude na migracao tambem.
 */
 const ASSINATURA_TEXTO = 60;
 
