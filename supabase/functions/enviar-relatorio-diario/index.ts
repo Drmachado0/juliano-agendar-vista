@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireCronSecret } from "../_shared/authGuards.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,7 +8,6 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const CRON_SECRET = Deno.env.get("CRON_SECRET");
 
 interface Body {
   telefone?: string;
@@ -42,7 +42,30 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const isCron = req.headers.get("x-cron-secret") === CRON_SECRET && !!CRON_SECRET;
+    /*
+      QUEM CHAMA E O CRON DAS 8H, e ate 30/08/2026 isso era decidido comparando
+      o header com Deno.env.get("CRON_SECRET"). Essa variavel nunca foi
+      configurada neste projeto, entao isCron era sempre falso e o relatorio
+      diario nunca saiu como relatorio diario: usava a data de HOJE em vez da de
+      ontem e nem procurava o telefone de destino.
+
+      E nao dava erro em lugar nenhum. Diferente das outras funcoes, esta nao
+      responde 401 quando nao reconhece o chamador, ela so muda de
+      comportamento. Falha silenciosa e o pior tipo.
+
+      requireCronSecret le o segredo de integracao_secrets, a mesma fonte que
+      _cron_headers() usa do lado do banco, com Deno.env apenas como ultimo
+      recurso. Aceita x-cron-secret ou Authorization Bearer.
+    */
+    const guardCron = await requireCronSecret(req);
+    const isCron = guardCron.ok;
+
+    // O log existe porque esta funcao nao tem 401 onde pendurar o motivo. Sem
+    // ele, a proxima configuracao errada volta a produzir uma execucao de cara
+    // bem sucedida com a data errada, que foi exatamente o que aconteceu aqui.
+    if (!isCron) {
+      console.log('[enviar-relatorio-diario] chamada nao reconhecida como cron:', guardCron.reason);
+    }
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
     let body: Body = {};
