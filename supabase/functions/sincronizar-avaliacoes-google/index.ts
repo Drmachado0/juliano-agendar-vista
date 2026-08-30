@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCronSecret, unauthorizedResponse } from "../_shared/authGuards.ts";
+import { requireAdmin } from "../_shared/adminAuth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,41 +36,37 @@ serve(async (req) => {
   }
 
   try {
-    // Validate authorization (CRON_SECRET for scheduled jobs)
-    const authHeader = req.headers.get('Authorization');
-    const cronSecret = Deno.env.get('CRON_SECRET');
-    
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      // Allow admin users via Supabase auth
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseKey, {
-        global: { headers: { Authorization: authHeader || '' } }
-      });
-      
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Unauthorized access attempt');
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      // Check if user is admin
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .single();
-        
-      if (!roleData) {
-        console.error('Non-admin user attempt');
-        return new Response(JSON.stringify({ error: 'Admin access required' }), {
-          status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+    /*
+      QUEM CHAMA E O CRON, e ate 30/08/2026 essa checagem era feita aqui mesmo,
+      comparando o header com Deno.env.get('CRON_SECRET'). Essa variavel nunca
+      foi configurada neste projeto, entao a comparacao falhava sempre, caia no
+      ramo de admin abaixo, e o cron diario recebia 401 todos os dias sem nunca
+      sincronizar nada. O banco ficou congelado em 17 avaliacoes por meses por
+      causa disto, e nao pela regua de relevancia do Google.
+
+      requireCronSecret e o guard que as funcoes do WhatsApp ja usavam. Ele le o
+      segredo da tabela integracao_secrets, a mesma fonte que _cron_headers()
+      usa para montar o header do lado do banco, com Deno.env apenas como
+      ultimo recurso. Aceita x-cron-secret ou Authorization Bearer, e compara em
+      tempo constante.
+    */
+    const guardCron = await requireCronSecret(req);
+
+    /*
+      O OUTRO CHAMADOR E O BOTAO Sincronizar Agora, em /admin/configuracoes, que
+      manda o JWT do medico. requireAdmin faz o mesmo que as trinta linhas que
+      estavam aqui, e faz melhor: resolve o papel pela RPC has_role num cliente
+      de service role, enquanto o codigo anterior lia user_roles com o cliente
+      anonimo e so funcionava se a RLS deixasse o usuario ler a propria linha.
+
+      E o mesmo par de guardas de enviar-whatsapp-queue: segredo compartilhado
+      primeiro, admin como alternativa, um unico 401 no fim.
+    */
+    if (!guardCron.ok) {
+      const guardAdmin = await requireAdmin(req);
+      if (!guardAdmin.ok) {
+        console.error('Acesso negado', { cron: guardCron.reason, admin: guardAdmin.reason });
+        return unauthorizedResponse(guardAdmin.reason ?? 'unauthorized', corsHeaders);
       }
     }
 
