@@ -16,25 +16,46 @@ export interface AvaliacaoGoogle {
 }
 
 /*
-  A funcao buscarAvaliacoesGoogle foi removida em 29/08/2026.
+  TETO DE LINHAS. O mural exibe no maximo 20, e a sincronizacao diaria faz esta
+  tabela crescer de proposito. Sem limite, cada visita a home e a cada uma das 12
+  paginas de procedimento baixaria a tabela inteira para jogar fora o excedente.
+  O dobro de folga cobre as avaliacoes sem texto, que o pool descarta.
 
-  Ela lia a tabela avaliacoes_google, que guarda nome e texto de paciente, e
-  alimentava os carrosseis de depoimento da home, de /agendamento e de
-  /paragominas. Esses carrosseis sairam por decisao do medico, ver a Fase 0 do
-  plano de acao, e a funcao ficou sem consumidor.
-
-  O ARQUIVO CONTINUA porque sincronizarAvaliacoesManualmente segue em uso na
-  tela de admin, em pages/admin/Configuracoes.tsx. A sincronizacao ainda grava
-  as avaliacoes no banco, o que alimenta o total e a nota que o site exibe de
-  forma agregada.
-
-  QUESTAO EM ABERTO para o medico: se o site nao exibe mais texto de avaliacao,
-  vale continuar gravando o texto e o nome no banco, ou basta guardar o total e
-  a nota? Guardar menos dado pessoal e melhor por padrao.
-
-  O tipo AvaliacaoGoogle acima descreve o que a sincronizacao grava, e por isso
-  fica.
+  Nao esta em MAX_TESTIMONIALS de propósito: testimonialsPool importa o tipo
+  daqui, e importar a constante de volta fecharia um ciclo entre os dois.
 */
+const MAX_LINHAS = 40;
+
+/**
+ * Busca as avaliacoes ativas do Google gravadas no banco pela sincronizacao.
+ *
+ * REMOVIDA E REPOSTA NO MESMO DIA, 29/08/2026. A Fase 0 do ajuste de publicidade
+ * medica tirou esta funcao junto com os carrosseis de depoimento. O medico
+ * revisou a decisao horas depois e pediu os comentarios de volta na home, em
+ * formato de prova social. A escolha e dele, esta registrada, e vale so para a
+ * TestimonialsSection: /agendamento e /paragominas seguem sem depoimento.
+ *
+ * O QUE ESTA FUNCAO DEVOLVE E DADO PESSOAL de paciente, nome, foto e texto.
+ * Quem consumir isso esta publicando depoimento identificado. Ver a nota no
+ * topo de components/TestimonialsSection.tsx antes de criar um segundo
+ * consumidor.
+ */
+export async function buscarAvaliacoesGoogle(): Promise<AvaliacaoGoogle[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('avaliacoes_google')
+    .select('*')
+    .eq('ativo', true)
+    .order('time_epoch', { ascending: false })
+    .limit(MAX_LINHAS);
+
+  if (error) {
+    console.error('Erro ao buscar avaliações do Google:', error);
+    return [];
+  }
+
+  return data || [];
+}
 
 /**
  * Sincroniza manualmente as avaliações do Google (apenas para admins)

@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn, initialsFrom } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -49,12 +49,7 @@ const truncateMessage = (message: string | null, maxLength: number = 40) => {
 };
 
 const WhatsAppLeadItem = ({ lead, isSelected, onClick }: WhatsAppLeadItemProps) => {
-  const initials = lead.nome_completo
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  const initials = initialsFrom(lead.nome_completo);
 
   return (
     <div

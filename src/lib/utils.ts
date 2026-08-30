@@ -61,3 +61,19 @@ export function formatAppointmentDate(
 export function isAdminRoute(pathname: string = window.location.pathname): boolean {
   return pathname.startsWith("/admin");
 }
+
+/**
+ * Iniciais de um nome, no máximo duas, para avatar sem foto.
+ *
+ * Estava copiada em três lugares até 29/08/2026: no mural de avaliações e em
+ * dois componentes do WhatsApp no admin. Mesma regra, três donos.
+ */
+export function initialsFrom(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}

@@ -86,25 +86,74 @@ serve(async (req) => {
 
     console.log('Fetching reviews from Google Places API...');
 
-    // Fetch reviews from Google Places API
-    const googleUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=reviews,user_ratings_total,rating&key=${googleApiKey}&language=pt-BR`;
-    
-    const googleResponse = await fetch(googleUrl);
-    const googleData: PlaceDetailsResponse = await googleResponse.json();
+    /*
+      DUAS CHAMADAS, NAO UMA, desde 29/08/2026.
+
+      A Place Details devolve no maximo 5 avaliacoes por chamada, e quem escolhe
+      as 5 e o Google. No padrao reviews_sort=most_relevant ele repete quase
+      sempre as mesmas campeas, entao o banco travou em 17 depois de meses de
+      cron diario. Pedindo tambem reviews_sort=newest vem o recorte das mais
+      recentes, e a uniao das duas rende ate 10 distintas por rodada.
+
+      ISTO NAO BAIXA AS 111. A Places API nao expoe o historico completo, nem na
+      versao nova. Quem entrega tudo e a Google Business Profile API, que exige
+      OAuth do dono do perfil e allowlist do projeto no Google. Enquanto isso
+      nao existir, o unico caminho e o cron acumulando.
+    */
+    const buildUrl = (sort: 'most_relevant' | 'newest') =>
+      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=reviews,user_ratings_total,rating&reviews_sort=${sort}&key=${googleApiKey}&language=pt-BR`;
+
+    /*
+      OS DOIS CORPOS SAO LIDOS ANTES DE QUALQUER RETORNO. Se a checagem de status
+      viesse primeiro, o caminho de erro sairia da funcao sem consumir a segunda
+      resposta, e o Deno reclamaria de conexao vazando a cada sincronizacao que
+      falha.
+    */
+    const [googleData, newestParsed] = await Promise.all([
+      fetch(buildUrl('most_relevant')).then((r) => r.json() as Promise<PlaceDetailsResponse>),
+      fetch(buildUrl('newest'))
+        .then((r) => r.json() as Promise<PlaceDetailsResponse>)
+        .catch((err) => {
+          console.warn('Falha ao ler a resposta de reviews_sort=newest:', err);
+          return null;
+        }),
+    ]);
 
     if (googleData.status !== 'OK') {
       console.error('Google API error:', googleData.status, googleData.error_message);
-      return new Response(JSON.stringify({ 
-        error: 'Google API error', 
-        details: googleData.error_message || googleData.status 
+      return new Response(JSON.stringify({
+        error: 'Google API error',
+        details: googleData.error_message || googleData.status
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const reviews = googleData.result?.reviews || [];
-    console.log(`Found ${reviews.length} reviews from Google`);
+    /*
+      A SEGUNDA CHAMADA E COMPLEMENTAR e nunca derruba a sincronizacao. Se o
+      Google recusar reviews_sort=newest, ou mudar o parametro um dia, a funcao
+      segue com o resultado da primeira em vez de falhar inteira.
+    */
+    let newestReviews: GoogleReview[] = [];
+    if (newestParsed && newestParsed.status === 'OK') {
+      newestReviews = newestParsed.result?.reviews ?? [];
+    } else if (newestParsed) {
+      console.warn('reviews_sort=newest respondeu', newestParsed.status, newestParsed.error_message);
+    }
+
+    /*
+      A CHAVE DO MAPA E O google_review_id, e nao uma chave qualquer. O upsert
+      mais abaixo itera este mesmo mapa e usa a chave direto, entao a formula da
+      identidade existe num lugar so e as duas nao tem como divergir.
+    */
+    const reviewsById = new Map<string, GoogleReview>();
+    for (const review of [...(googleData.result?.reviews ?? []), ...newestReviews]) {
+      reviewsById.set(`${review.author_name.replace(/\s+/g, '_')}_${review.time}`, review);
+    }
+    console.log(
+      `Found ${reviewsById.size} reviews from Google (uniao de most_relevant e newest)`,
+    );
 
     // Connect to Supabase with service role
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -127,7 +176,7 @@ serve(async (req) => {
       if (cfgErr) console.error('Erro ao gravar total em site_config:', cfgErr);
     }
 
-    if (reviews.length === 0) {
+    if (reviewsById.size === 0) {
       return new Response(JSON.stringify({
         success: true,
         message: 'No reviews found',
@@ -139,41 +188,40 @@ serve(async (req) => {
       });
     }
 
-    // Process and upsert reviews
-    let syncedCount = 0;
-    let errorCount = 0;
+    /*
+      UM UPSERT SO, e nao um por avaliacao. O laco anterior fazia uma ida e volta
+      ao PostgREST por linha. Com a uniao das duas ordenacoes isso dobrou para
+      ate 10 por rodada, todas equivalentes a uma unica chamada com array.
 
-    for (const review of reviews) {
-      // Generate unique ID based on author and timestamp
-      const googleReviewId = `${review.author_name.replace(/\s+/g, '_')}_${review.time}`;
-      
-      const reviewData = {
-        google_review_id: googleReviewId,
-        author_name: review.author_name,
-        author_photo_url: review.profile_photo_url || null,
-        rating: review.rating,
-        text: review.text || null,
-        relative_time_description: review.relative_time_description,
-        time_epoch: review.time,
-        language: review.language,
-        ativo: true,
-        updated_at: new Date().toISOString(),
-      };
+      A CHAVE VEM DO MAPA, nao e recalculada aqui.
+    */
+    const now = new Date().toISOString();
+    const rows = [...reviewsById].map(([googleReviewId, review]) => ({
+      google_review_id: googleReviewId,
+      author_name: review.author_name,
+      author_photo_url: review.profile_photo_url || null,
+      rating: review.rating,
+      text: review.text || null,
+      relative_time_description: review.relative_time_description,
+      time_epoch: review.time,
+      language: review.language,
+      ativo: true,
+      updated_at: now,
+    }));
 
-      const { error: upsertError } = await supabaseAdmin
-        .from('avaliacoes_google')
-        .upsert(reviewData, { 
-          onConflict: 'google_review_id',
-          ignoreDuplicates: false 
-        });
+    const { error: upsertError } = await supabaseAdmin
+      .from('avaliacoes_google')
+      .upsert(rows, {
+        onConflict: 'google_review_id',
+        ignoreDuplicates: false,
+      });
 
-      if (upsertError) {
-        console.error('Error upserting review:', googleReviewId, upsertError);
-        errorCount++;
-      } else {
-        console.log('Synced review:', googleReviewId);
-        syncedCount++;
-      }
+    // Em lote o resultado e tudo ou nada, entao a contagem por linha some junto.
+    const syncedCount = upsertError ? 0 : rows.length;
+    const errorCount = upsertError ? rows.length : 0;
+
+    if (upsertError) {
+      console.error('Error upserting reviews:', upsertError);
     }
 
     console.log(`Sync complete: ${syncedCount} synced, ${errorCount} errors`);
@@ -183,7 +231,7 @@ serve(async (req) => {
       message: `Synchronized ${syncedCount} reviews`,
       synced: syncedCount,
       errors: errorCount,
-      total_from_google: reviews.length,
+      total_from_google: rows.length,
       google_reviews_total: googleData.result?.user_ratings_total ?? null,
       google_rating: googleData.result?.rating ?? null
     }), {

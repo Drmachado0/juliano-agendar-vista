@@ -62,6 +62,14 @@
          @font-face e inline e os arquivos sao da propria origem.
          So Archivo (h1-h3 da landing) e Inter (corpo) recebem preload:
          sao as unicas que pintam acima da dobra. -->
+    <!--
+      O mural de avaliacoes carrega o retrato de cada paciente direto de
+      lh3.googleusercontent.com, uma origem que nao aparece em mais nada do site.
+      Sem o preconnect, o primeiro avatar paga DNS mais TLS numa origem fria, o
+      que no 4G custa algo entre 100 e 300 ms.
+    -->
+    <link rel="preconnect" href="https://lh3.googleusercontent.com" crossorigin />
+
     <link rel="preload" as="font" type="font/woff2" href="/fonts/archivo-latin.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-latin.woff2" crossorigin />
     <style>

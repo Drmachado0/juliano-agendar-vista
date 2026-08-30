@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Send, Sparkles, ArrowLeft, Phone, MapPin, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatAppointmentDate } from "@/lib/utils";
+import { formatAppointmentDate, initialsFrom } from "@/lib/utils";
 import { mesmoTelefone } from "@/lib/whatsappNumber";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -239,7 +239,7 @@ const WhatsAppChat = ({ lead, onBack, showBackButton }: WhatsAppChatProps) => {
         
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center">
           <span className="text-sm font-semibold text-primary">
-            {lead.nome_completo.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
+            {initialsFrom(lead.nome_completo)}
           </span>
         </div>
         
