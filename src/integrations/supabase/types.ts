@@ -1515,6 +1515,36 @@ export type Database = {
           },
         ]
       }
+      n8n_followups: {
+        Row: {
+          atualizado_em: string | null
+          followup_1_em: string | null
+          followup_2_em: string | null
+          proxima_acao: string | null
+          telefone: string
+          ultima_msg_paciente_em: string | null
+          ultima_resposta_bot_em: string | null
+        }
+        Insert: {
+          atualizado_em?: string | null
+          followup_1_em?: string | null
+          followup_2_em?: string | null
+          proxima_acao?: string | null
+          telefone: string
+          ultima_msg_paciente_em?: string | null
+          ultima_resposta_bot_em?: string | null
+        }
+        Update: {
+          atualizado_em?: string | null
+          followup_1_em?: string | null
+          followup_2_em?: string | null
+          proxima_acao?: string | null
+          telefone?: string
+          ultima_msg_paciente_em?: string | null
+          ultima_resposta_bot_em?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -2191,6 +2221,7 @@ export type Database = {
     }
     Functions: {
       _cron_headers: { Args: never; Returns: Json }
+      _n8n_headers: { Args: never; Returns: Json }
       apagar_dados_paciente: {
         Args: { p_confirmar?: boolean; p_telefone: string }
         Returns: Json
