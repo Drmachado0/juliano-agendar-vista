@@ -62,3 +62,11 @@ drjulianomachado.com-audit/pages/
 drjulianomachado.com-audit/screenshots/
 drjulianomachado.com-audit/render_home*.json
 drjulianomachado.com-audit/findings/_*.py
+
+# Saida do backfill de avaliacoes, 111 nomes de paciente com o texto de cada um.
+# ESTE REPOSITORIO E PUBLICO. O script fica versionado, o dado nao. Quem
+# precisar reproduzir roda `node scripts/backfill-avaliacoes-google.mjs` e gera
+# os arquivos de novo na propria maquina.
+scripts/backfill-avaliacoes-google.json
+scripts/backfill-avaliacoes-google.sql
+scripts/.reviews-raw.json

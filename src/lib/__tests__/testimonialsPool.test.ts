@@ -30,20 +30,55 @@ const mk = (over: Partial<AvaliacaoGoogle>): AvaliacaoGoogle => ({
 });
 
 describe("testimonialsPool", () => {
-  it("limita o pool a MAX_TESTIMONIALS (20)", () => {
-    const items = Array.from({ length: 30 }, (_, i) =>
-      mk({ google_review_id: `gr_${i}`, time_epoch: 1_000_000 + i })
+  it("limita o pool a MAX_TESTIMONIALS", () => {
+    // O texto precisa variar: a identidade e autor mais texto, entao 80 copias
+    // do mesmo depoimento colapsariam em uma so, e com razao.
+    const items = Array.from({ length: MAX_TESTIMONIALS + 10 }, (_, i) =>
+      mk({ google_review_id: `gr_${i}`, text: `Avaliação número ${i}.`, time_epoch: 1_000_000 + i })
     );
     const pool = buildTestimonialPool(items);
-    expect(MAX_TESTIMONIALS).toBe(20);
-    expect(pool).toHaveLength(20);
+    expect(pool).toHaveLength(MAX_TESTIMONIALS);
   });
 
-  it("deduplica por google_review_id", () => {
+  /*
+    O CASO REAL QUE ESTES TESTES GUARDAM. A mesma avaliacao chega ao banco por
+    dois caminhos com chaves que nunca batem: o cron da Places API grava
+    "Autor_timestamp" e o backfill do Google Maps grava "maps_<id do Google>".
+    Nem o time_epoch coincide. Sem dedupe por autor mais texto, o mural mostrava
+    as 17 avaliacoes antigas duas vezes.
+  */
+  it("junta a mesma avaliação vinda das duas fontes, apesar das chaves diferentes", () => {
+    const texto = "Um excelente profissional, atencioso e didático.";
     const items = [
-      mk({ google_review_id: "same", author_name: "A" }),
-      mk({ google_review_id: "same", author_name: "B" }),
-      mk({ google_review_id: "other", author_name: "C" }),
+      mk({ google_review_id: "Eciane_Barbosa_1785421096", author_name: "Eciane Barbosa", text: texto }),
+      mk({ google_review_id: "maps_Ci9DQUlRQUNvZ", author_name: "Eciane Barbosa", text: texto }),
+    ];
+    expect(dedupeAvaliacoes(items)).toHaveLength(1);
+  });
+
+  it("tolera o corte de texto da raspagem, que cola reticências no fim", () => {
+    const inteiro =
+      "Um ótimo atendimento, não tenho do que reclamar, vim através da indicação do meu esposo.";
+    const items = [
+      mk({ google_review_id: "Jessyca_1", author_name: "Jessyca", text: inteiro }),
+      mk({ google_review_id: "maps_x", author_name: "Jessyca", text: `${inteiro.slice(0, 70)} …` }),
+    ];
+    expect(dedupeAvaliacoes(items)).toHaveLength(1);
+  });
+
+  it("mantém avaliações diferentes do mesmo autor", () => {
+    const items = [
+      mk({ google_review_id: "a", author_name: "Ana", text: "Consulta ótima, voltarei." }),
+      mk({ google_review_id: "b", author_name: "Ana", text: "Cirurgia correu muito bem." }),
+    ];
+    expect(dedupeAvaliacoes(items)).toHaveLength(2);
+  });
+
+  it("sem texto, cai para o google_review_id", () => {
+    const items = [
+      mk({ google_review_id: "same", author_name: "A", text: null }),
+      mk({ google_review_id: "same", author_name: "B", text: null }),
+      mk({ google_review_id: "other", author_name: "C", text: null }),
     ];
     const deduped = dedupeAvaliacoes(items);
     expect(deduped).toHaveLength(2);

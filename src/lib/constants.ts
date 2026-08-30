@@ -3,6 +3,18 @@
 // Validada em produção: abre direto o popup "Escrever avaliação".
 export const GOOGLE_REVIEW_URL = "https://g.page/r/CTkTpXB1m13mEAE/review";
 
+/*
+  Teto do mural de avaliacoes. Era 20 quando o banco so tinha 17. Depois do
+  backfill do historico do Google Maps o banco tem as 111, e 67 delas com texto.
+  O mural abre com 6 e o resto entra pelo botao "Ver mais", entao um teto alto
+  nao pesa o primeiro render.
+
+  MORA AQUI, e nao em lib/testimonialsPool, porque services/avaliacoesGoogle
+  precisa dele para dimensionar a consulta, e testimonialsPool importa o tipo
+  de la. Constants nao importa nada, entao e o unico lugar sem ciclo.
+*/
+export const MAX_TESTIMONIALS = 70;
+
 // Número real de avaliações do Google — usado em toda a interface
 // para evitar inconsistência entre páginas. Atualizar conforme as
 // avaliações reais crescem no perfil do Google Business.

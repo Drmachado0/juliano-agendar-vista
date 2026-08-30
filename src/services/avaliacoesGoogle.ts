@@ -1,4 +1,5 @@
 import { getSupabase } from "@/integrations/supabase/lazy";
+import { MAX_TESTIMONIALS } from "@/lib/constants";
 
 export interface AvaliacaoGoogle {
   id: string;
@@ -16,15 +17,15 @@ export interface AvaliacaoGoogle {
 }
 
 /*
-  TETO DE LINHAS. O mural exibe no maximo 20, e a sincronizacao diaria faz esta
-  tabela crescer de proposito. Sem limite, cada visita a home e a cada uma das 12
-  paginas de procedimento baixaria a tabela inteira para jogar fora o excedente.
-  O dobro de folga cobre as avaliacoes sem texto, que o pool descarta.
+  TETO DE LINHAS. A sincronizacao diaria faz esta tabela crescer de proposito, e
+  o backfill do Maps trouxe as 111 de uma vez. Sem limite, cada visita a home e a
+  cada uma das 12 paginas de procedimento baixaria a tabela inteira.
 
-  Nao esta em MAX_TESTIMONIALS de propósito: testimonialsPool importa o tipo
-  daqui, e importar a constante de volta fecharia um ciclo entre os dois.
+  A folga sobre o teto do mural existe porque a deduplicacao acontece depois, no
+  cliente, e pode colapsar linhas. Baixar exatamente o teto arriscaria entregar
+  menos avaliacoes do que o mural aguenta mostrar.
 */
-const MAX_LINHAS = 40;
+const MAX_LINHAS = MAX_TESTIMONIALS + 20;
 
 /**
  * Busca as avaliacoes ativas do Google gravadas no banco pela sincronizacao.
@@ -46,7 +47,23 @@ export async function buscarAvaliacoesGoogle(): Promise<AvaliacaoGoogle[]> {
     .from('avaliacoes_google')
     .select('*')
     .eq('ativo', true)
-    .order('time_epoch', { ascending: false })
+    /*
+      Sem texto nao entra no mural, e o backfill trouxe 44 assim. Filtrar aqui
+      impede que ocupem as vagas do limite e empurrem as boas para fora.
+
+      UM FILTRO SO, e nao dois. text <> '' ja descarta NULL, porque a comparacao
+      devolve NULL e o WHERE trata isso como falso. Texto so de espaco ainda
+      passa, e quem barra e o buildTestimonialPool.
+    */
+    .neq('text', '')
+    /*
+      nullsFirst false porque o padrao do Postgres em DESC e NULLS FIRST, e o JS
+      ordena com `b.time_epoch || 0`, que joga nulo para o fim. Sem isso as duas
+      pontas discordam: relToEpoch devolve null quando nao entende a data
+      relativa, e essas linhas tomariam as primeiras vagas do limite para depois
+      cair no fim do mural.
+    */
+    .order('time_epoch', { ascending: false, nullsFirst: false })
     .limit(MAX_LINHAS);
 
   if (error) {
