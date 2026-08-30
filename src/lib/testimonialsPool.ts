@@ -41,14 +41,26 @@ const ASSINATURA_TEXTO = 60;
  * grava "Autor_timestamp" e o backfill do Maps grava "maps_<id do Google>". Nem
  * o timestamp bate entre os dois. O que bate e o par autor mais texto.
  *
- * Sem texto nao ha o que assinar, entao cai para a chave da linha. Avaliacao
- * sem texto nao aparece no mural de qualquer jeito.
+ * SEM TEXTO, O AUTOR SOZINHO IDENTIFICA. O Google permite uma avaliacao por
+ * pessoa por local. Cai para a chave da linha apenas quando nao ha nem autor
+ * nem texto, que na pratica nao acontece.
+ *
+ * O RAMO SEM TEXTO E CODIGO MORTO EM PRODUCAO, e fica so por disciplina de
+ * espelho: buscarAvaliacoesGoogle filtra text vazio no servidor, antes de a
+ * lista chegar aqui. Quem faz esse trabalho de verdade e a funcao SQL de mesmo
+ * nome, que roda no INSERT.
+ *
+ * AUTOR E TEXTO NORMALIZAM IGUAL, e igual ao lado SQL: tira espaco das pontas,
+ * colapsa espaco interno, minuscula. Colapsar o autor nao e detalhe: sem texto
+ * ele e a chave inteira, e a raspagem do Maps devolve "Jessyca  Aquinno" com
+ * dois espacos onde a Places API devolve um.
  */
 function identidade(item: AvaliacaoGoogle): string {
-  const corpo = (item.text || "").trim().replace(/\s+/g, " ").toLowerCase();
-  if (!corpo) return item.google_review_id || item.id;
-  const autor = (item.author_name || "").trim().toLowerCase();
-  return `${autor}::${corpo.slice(0, ASSINATURA_TEXTO)}`;
+  const normalizar = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
+  const autor = normalizar(item.author_name || "");
+  const corpo = normalizar(item.text || "");
+  if (!autor && !corpo) return item.google_review_id || item.id;
+  return `${autor}::${corpo ? corpo.slice(0, ASSINATURA_TEXTO) : "<sem-texto>"}`;
 }
 
 /** Deduplica pela identidade de autor mais texto, com fallback à chave da linha. */

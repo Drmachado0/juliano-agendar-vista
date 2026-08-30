@@ -74,15 +74,42 @@ describe("testimonialsPool", () => {
     expect(dedupeAvaliacoes(items)).toHaveLength(2);
   });
 
-  it("sem texto, cai para o google_review_id", () => {
+  /*
+    O Google permite uma avaliação por pessoa por local, então sem texto o nome
+    do autor já identifica a avaliação. Antes disto a linha caía na chave da
+    fonte, e como cron e backfill usam chaves diferentes, a mesma nota entrava
+    duas vezes. Aconteceu de verdade em 30/08/2026.
+  */
+  it("sem texto, identifica pelo autor", () => {
     const items = [
-      mk({ google_review_id: "same", author_name: "A", text: null }),
-      mk({ google_review_id: "same", author_name: "B", text: null }),
-      mk({ google_review_id: "other", author_name: "C", text: null }),
+      mk({ google_review_id: "cron_Erik_123", author_name: "Erik Gomes", text: null }),
+      mk({ google_review_id: "maps_abc", author_name: "Erik Gomes", text: null }),
+      mk({ google_review_id: "maps_def", author_name: "Outra Pessoa", text: null }),
     ];
     const deduped = dedupeAvaliacoes(items);
     expect(deduped).toHaveLength(2);
-    expect(deduped.map((x) => x.author_name)).toEqual(["A", "C"]);
+    expect(deduped.map((x) => x.author_name)).toEqual(["Erik Gomes", "Outra Pessoa"]);
+  });
+
+  /*
+    Sem texto o autor é a chave inteira, e é justamente aí que as duas fontes
+    divergem: a raspagem do Maps devolve nome com espaço duplo, a Places API
+    devolve com um. Sem colapsar, a correção acima não valeria de nada.
+  */
+  it("normaliza espaço interno do autor, senão a gêmea sem texto escapa", () => {
+    const items = [
+      mk({ google_review_id: "maps_x", author_name: "Jessyca  Aquinno", text: null }),
+      mk({ google_review_id: "cron_y", author_name: " Jessyca Aquinno ", text: null }),
+    ];
+    expect(dedupeAvaliacoes(items)).toHaveLength(1);
+  });
+
+  it("sem autor e sem texto, cai para o google_review_id", () => {
+    const items = [
+      mk({ google_review_id: "a", author_name: "", text: null }),
+      mk({ google_review_id: "b", author_name: "", text: null }),
+    ];
+    expect(dedupeAvaliacoes(items)).toHaveLength(2);
   });
 
   it("descarta avaliações sem texto, porque nota sozinha não é prova social", () => {
