@@ -1644,6 +1644,8 @@ export type Database = {
       site_config: {
         Row: {
           expected_meta_pixel_id: string
+          google_rating: number | null
+          google_reviews_total: number | null
           id: boolean
           updated_at: string
           updated_by: string | null
@@ -1651,6 +1653,8 @@ export type Database = {
         }
         Insert: {
           expected_meta_pixel_id?: string
+          google_rating?: number | null
+          google_reviews_total?: number | null
           id?: boolean
           updated_at?: string
           updated_by?: string | null
@@ -1658,6 +1662,8 @@ export type Database = {
         }
         Update: {
           expected_meta_pixel_id?: string
+          google_rating?: number | null
+          google_reviews_total?: number | null
           id?: boolean
           updated_at?: string
           updated_by?: string | null
@@ -2196,6 +2202,10 @@ export type Database = {
         Returns: Json
       }
       auto_compareceu_vencidos: { Args: never; Returns: number }
+      avaliacao_identidade: {
+        Args: { p_autor: string; p_texto: string }
+        Returns: string
+      }
       buscar_agendamento_por_telefone: {
         Args: { p_telefone: string }
         Returns: {
