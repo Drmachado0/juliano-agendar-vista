@@ -1520,6 +1520,7 @@ export type Database = {
           atualizado_em: string | null
           followup_1_em: string | null
           followup_2_em: string | null
+          followup_3_em: string | null
           proxima_acao: string | null
           telefone: string
           ultima_msg_paciente_em: string | null
@@ -1529,6 +1530,7 @@ export type Database = {
           atualizado_em?: string | null
           followup_1_em?: string | null
           followup_2_em?: string | null
+          followup_3_em?: string | null
           proxima_acao?: string | null
           telefone: string
           ultima_msg_paciente_em?: string | null
@@ -1538,10 +1540,35 @@ export type Database = {
           atualizado_em?: string | null
           followup_1_em?: string | null
           followup_2_em?: string | null
+          followup_3_em?: string | null
           proxima_acao?: string | null
           telefone?: string
           ultima_msg_paciente_em?: string | null
           ultima_resposta_bot_em?: string | null
+        }
+        Relationships: []
+      }
+      n8n_manychat_subscribers: {
+        Row: {
+          atualizado_em: string | null
+          created_em: string | null
+          origem: string | null
+          subscriber_id: string | null
+          telefone: string
+        }
+        Insert: {
+          atualizado_em?: string | null
+          created_em?: string | null
+          origem?: string | null
+          subscriber_id?: string | null
+          telefone: string
+        }
+        Update: {
+          atualizado_em?: string | null
+          created_em?: string | null
+          origem?: string | null
+          subscriber_id?: string | null
+          telefone?: string
         }
         Relationships: []
       }
@@ -2316,6 +2343,7 @@ export type Database = {
           total_duplicados: number
         }[]
       }
+      eh_service_role: { Args: never; Returns: boolean }
       encrypt_sensitive_data: { Args: { plain_text: string }; Returns: string }
       encrypt_totp_secret: { Args: { plain_secret: string }; Returns: string }
       exportar_dados_paciente: { Args: { p_telefone: string }; Returns: Json }
