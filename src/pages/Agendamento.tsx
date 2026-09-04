@@ -531,28 +531,17 @@ const Agendamento = () => {
           </div>
         </header>
 
-        <main className="container mx-auto px-4 py-6 md:py-10">
-          {/* Banner de prova social mobile */}
-          <div className="mb-5 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground lg:hidden">
-            <span className="flex items-center gap-1">
-              <Star className="h-3.5 w-3.5 fill-accent text-accent" />
-              <strong className="text-foreground">{reviews.rating.toFixed(1)}</strong> · {reviews.count} avaliações
-            </span>
-            <span className="flex items-center gap-1">
-              <Award className="h-3.5 w-3.5 text-accent" />
-              <strong className="text-foreground">{DOCTOR.yearsExperienceLabel}</strong>
-            </span>
-          </div>
-
-          {/* CTA WhatsApp em destaque (mobile, acima do form) */}
-          <div className="mb-6 lg:hidden">
-            <WhatsAppHighlight location="agendamento_destaque_secretaria_mobile" compact />
-          </div>
-
+        <main className="container mx-auto px-4 py-4 md:py-10">
+          {/*
+            Mobile: o formulário vem PRIMEIRO. Avaliação Meta Ads de 04/09/2026
+            mediu que só 30-41% dos cliques viravam Landing Page View e que o
+            topo da página era banner + WhatsApp + prova social antes do passo 1.
+            Prova social e WhatsApp continuam existindo, mas ABAIXO do card.
+          */}
           <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_minmax(320px,400px)] lg:gap-12">
             {/* COLUNA ESQUERDA: Form */}
             <div>
-              <div className="mb-8 text-center lg:text-left">
+              <div className="mb-5 text-center lg:mb-8 lg:text-left">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-panel mb-4 lg:hidden">
                   <ShieldCheck className="w-4 h-4 text-primary" />
                   <span className="text-xs font-bold text-foreground/90 uppercase tracking-widest">
@@ -592,7 +581,7 @@ const Agendamento = () => {
                 NAO REINTRODUZA sem falar com ele.
               */}
               {!isSubmitted && (
-                <div className="mb-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-4 text-sm shadow-sm">
+                <div className="mb-6 hidden flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-4 text-sm shadow-sm lg:flex">
                   <span className="flex items-center gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
@@ -615,7 +604,7 @@ const Agendamento = () => {
                 </div>
               )}
 
-              <div className="rounded-xl border border-border bg-card p-6 shadow-lg md:p-8">
+              <div className="rounded-xl border border-border bg-card p-4 shadow-lg sm:p-6 md:p-8">
                 {!isSubmitted && <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />}
 
                 <div className="mt-6">
@@ -659,10 +648,44 @@ const Agendamento = () => {
                 </div>
               </div>
 
-              <p className="mt-4 text-center text-xs text-muted-foreground">
+              <p className="mt-3 text-center text-xs text-muted-foreground">
                 <ShieldCheck className="mr-1 inline h-3.5 w-3.5 text-accent" />
                 Seus dados estão protegidos. Atendimento humanizado e sigiloso.
               </p>
+
+              {/*
+                Mobile: WhatsApp + nota agregada do Google ABAIXO do form.
+                Só nota agregada e link — sem depoimento de paciente (CFM
+                1.974/2011; ver comentário acima do bloco desktop).
+              */}
+              <div className="mt-6 space-y-4 lg:hidden">
+                <WhatsAppHighlight location="agendamento_destaque_secretaria_mobile" compact />
+                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-4 text-sm shadow-sm">
+                  <span className="flex items-center gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
+                    ))}
+                  </span>
+                  <span className="font-semibold text-foreground">
+                    {reviews.rating.toFixed(1)}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {reviews.count} avaliações no Google
+                  </span>
+                  <a
+                    href={GOOGLE_REVIEW_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    Ler no Google
+                  </a>
+                  <span className="flex items-center gap-1 text-muted-foreground">
+                    <Award className="h-3.5 w-3.5 text-accent" />
+                    {DOCTOR.yearsExperienceLabel}
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* COLUNA DIREITA: prova social (desktop) */}

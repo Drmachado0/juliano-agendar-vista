@@ -1,9 +1,11 @@
 /**
- * Carregamento idempotente do GTM. O Meta Pixel é disparado exclusivamente
- * via GTM (controlado pelo Consent Mode v2 — ad_storage).
+ * Carregamento idempotente do GTM (analytics/ads Google) e do Meta Pixel.
+ * O Meta Pixel é carregado DIRETO (src/lib/metaPixel.ts) quando `marketing`
+ * é autorizado — a tag do Pixel no GTM não dispara em produção.
  */
 
 import { loadClarity } from "./clarity";
+import { loadMetaPixel } from "./metaPixel";
 
 const GTM_ID = "GTM-K3C2NNF6";
 
@@ -26,11 +28,12 @@ export function loadGTM(): void {
 /**
  * Aplica consent: GTM carrega quando analytics OU marketing for autorizado
  * (o GTM precisa estar presente para servir as tags de marketing também).
- * O Meta Pixel é uma tag dentro do GTM e respeita o Consent Mode automaticamente.
+ * O Meta Pixel carrega direto (com PageView) apenas com `marketing=true`.
  * Microsoft Clarity carrega apenas quando `analytics=true` E
  * CLARITY_PROJECT_ID estiver preenchido (fica inerte enquanto o ID não for fornecido).
  */
 export function applyConsentToScripts(opts: { analytics: boolean; marketing: boolean }): void {
   if (opts.analytics || opts.marketing) loadGTM();
+  if (opts.marketing) loadMetaPixel();
   if (opts.analytics) loadClarity();
 }

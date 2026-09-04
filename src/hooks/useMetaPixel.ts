@@ -1,5 +1,6 @@
-// Meta Pixel events: empurra eventos para o dataLayer (GTM).
-// O Pixel é disparado exclusivamente via GTM — sem fbq() direto neste código.
+// Meta Pixel events: empurra eventos para o dataLayer (GTM) e, quando o
+// Pixel direto está carregado (src/lib/metaPixel.ts), dispara o custom
+// equivalente via fbqTrack com o mesmo eventID do CAPI.
 //
 // O parâmetro opcional `eventId` é usado para dedup com o CAPI server-side.
 // Quando presente, o GTM deve passar `eventId` como `eventID` no fbq() para

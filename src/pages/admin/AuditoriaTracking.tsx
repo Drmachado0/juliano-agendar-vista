@@ -91,14 +91,15 @@ const TRACKING_INVENTORY: TrackingEntry[] = [
   },
   {
     type: "Meta Pixel",
-    id: "(configurado apenas no GTM)",
+    id: "1368847001883653",
     purpose:
-      "Pixel do Facebook/Instagram — disparado via GTM (browser) + Meta CAPI (server, edge function meta-capi)",
+      "Pixel do Facebook/Instagram — carregado direto pelo site após consentimento de marketing (PageView + eventos custom) + Meta CAPI (server, edge function meta-capi, mesmo event_id)",
     files: [
-      "src/hooks/useMetaPixel.ts (apenas dataLayer push)",
+      "src/lib/metaPixel.ts (carregador + PageView SPA)",
+      "src/lib/metaPixelClient.ts (trackCustom com eventID)",
       "supabase/functions/meta-capi/index.ts (server-side)",
     ],
-    source: "gtm-only",
+    source: "code",
   },
 ];
 

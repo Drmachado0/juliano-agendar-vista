@@ -22,6 +22,15 @@ import {
 import { applyConsentToScripts } from "@/lib/loadTrackingScripts";
 import { isPrivateRoute } from "@/lib/trackingGuard";
 
+/**
+ * Banner de cookies (LGPD).
+ *
+ * Compacto no mobile por decisão de mídia paga (avaliação Meta Ads 04/09/2026):
+ * a versão anterior ocupava ~253 px de um viewport de 844 px (30% da tela) e
+ * escondia o topo da página de agendamento para quem chega do anúncio.
+ * Agora: uma frase curta, dois botões na mesma linha e "Personalizar" como
+ * link dentro do texto — cerca de 120 px no mobile.
+ */
 export default function ConsentBanner() {
   const location = useLocation();
   const [visible, setVisible] = useState(false);
@@ -85,51 +94,49 @@ export default function ConsentBanner() {
         <div
           role="dialog"
           aria-label="Aviso de cookies"
-          className="fixed bottom-0 inset-x-0 z-[60] p-3 sm:p-4 animate-in slide-in-from-bottom duration-500 max-h-[30vh]"
+          className="fixed bottom-0 inset-x-0 z-[60] p-2 sm:p-4 animate-in slide-in-from-bottom duration-500"
         >
-          <div className="max-w-5xl mx-auto rounded-2xl border border-primary/20 bg-card/95 backdrop-blur-xl shadow-2xl shadow-background/50 p-3 sm:p-5 overflow-y-auto">
-            <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
-              <div className="flex items-start gap-3 flex-1">
-                <div className="hidden sm:flex w-10 h-10 rounded-lg bg-primary/15 border border-primary/25 items-center justify-center shrink-0">
-                  <Cookie className="w-5 h-5 text-primary" />
+          <div className="max-w-5xl mx-auto rounded-xl sm:rounded-2xl border border-primary/20 bg-card/95 backdrop-blur-xl shadow-2xl shadow-background/50 p-3 sm:p-5">
+            <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-4 sm:items-center">
+              <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                <div className="hidden sm:flex w-9 h-9 rounded-lg bg-primary/15 border border-primary/25 items-center justify-center shrink-0">
+                  <Cookie className="w-4 h-4 text-primary" />
                 </div>
-                <div className="text-sm text-muted-foreground leading-relaxed">
-                  <strong className="text-foreground">Privacidade & cookies.</strong>{" "}
-                  Usamos cookies para melhorar sua experiência, medir desempenho do site
-                  e personalizar comunicações. Você pode aceitar todos, rejeitar ou personalizar suas escolhas.{" "}
+                <p className="text-xs sm:text-sm text-muted-foreground leading-snug">
+                  <strong className="text-foreground">Cookies:</strong> usamos para medir o
+                  site e as campanhas.{" "}
                   <Link
                     to="/politica-de-privacidade"
-                    className="text-primary hover:underline font-medium"
+                    className="text-primary hover:underline font-medium whitespace-nowrap"
                   >
                     Política de Privacidade
                   </Link>
-                  .
-                </div>
+                  <span aria-hidden="true"> · </span>
+                  <button
+                    type="button"
+                    onClick={() => setPrefsOpen(true)}
+                    className="text-primary hover:underline font-medium"
+                  >
+                    Personalizar
+                  </button>
+                </p>
               </div>
-              <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleAcceptAll}
-                  className="flex-1 lg:flex-none min-h-[44px]"
-                >
-                  Aceitar todos
-                </Button>
+              <div className="flex gap-2 w-full sm:w-auto shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleRejectAll}
-                  className="flex-1 lg:flex-none min-h-[44px]"
+                  className="flex-1 sm:flex-none min-h-[44px] sm:min-h-0"
                 >
                   Rejeitar
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="default"
                   size="sm"
-                  onClick={() => setPrefsOpen(true)}
-                  className="flex-1 lg:flex-none min-h-[44px]"
+                  onClick={handleAcceptAll}
+                  className="flex-1 sm:flex-none min-h-[44px] sm:min-h-0"
                 >
-                  Personalizar
+                  Aceitar todos
                 </Button>
               </div>
             </div>

@@ -50,7 +50,8 @@
           })(window,document,'script','dataLayer','GTM-K3C2NNF6');
           window.__gtmLoaded = true;
         }
-        // Meta Pixel é disparado pelo GTM (controlado pelo Consent Mode v2 ad_storage).
+        // Meta Pixel: carregado direto pelo app (src/lib/metaPixel.ts) quando
+        // c.marketing === true — a tag do Pixel no GTM não dispara em produção.
       } catch(e) { /* ignore */ }
     })();</script>
     <!-- End consent bootstrap -->
@@ -165,7 +166,7 @@
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-K3C2NNF6"
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
-    <!-- Meta Pixel é servido via GTM, sem fallback noscript direto -->
+    <!-- Meta Pixel: carregado pelo app após consentimento de marketing (sem noscript, LGPD) -->
 
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
