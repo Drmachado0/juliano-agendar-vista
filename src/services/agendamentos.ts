@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import { z } from "zod";
 
 // Zod schema for appointment validation
@@ -445,7 +446,10 @@ export async function atualizarStatusFunil(
   statusAnterior?: string,
   motivo?: string | null
 ): Promise<{ error: Error | null }> {
-  const updates: Record<string, unknown> = {
+  // Tipado pela tabela, nao como Record<string, unknown>: assim uma chave que
+  // nao seja coluna vira erro de compilacao aqui, em vez de o PostgREST recusar
+  // o update inteiro em producao. Versoes novas do supabase-js exigem isso.
+  const updates: TablesUpdate<"agendamentos"> = {
     status_funil: novoStatus,
     updated_at: new Date().toISOString(),
   };

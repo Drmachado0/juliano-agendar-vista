@@ -1,5 +1,18 @@
 import { supabase } from "@/integrations/supabase/client";
 
+/**
+ * Espelha as colunas de google_calendar_settings, porque
+ * updateGoogleCalendarSettings espalha este objeto inteiro no upsert.
+ *
+ * pull_enabled NAO entra aqui. Ate 09/09/2026 estava declarado como opcional
+ * e ninguem preenchia, entao nunca quebrou em runtime. Mas a coluna vive em
+ * google_calendar_tokens (migration 20260426204248), e quem a grava e
+ * updateGoogleCalendarPullSettings, via GoogleCalendarPullSettings. Um campo a
+ * mais aqui iria para a tabela errada e o PostgREST recusaria o upsert inteiro.
+ * Versoes mais novas do supabase-js rejeitam isso em tempo de compilacao (a
+ * 2.116 ja rejeita; a 2.86 fixada no bun.lock ainda aceitava), e foi assim
+ * que o erro apareceu.
+ */
 export interface GoogleCalendarSettings {
   default_duration_min: number;
   reminder_popup_min: number[];
@@ -8,7 +21,6 @@ export interface GoogleCalendarSettings {
   include_convenio: boolean;
   auto_sync_enabled: boolean;
   default_import_clinica_id?: string | null;
-  pull_enabled?: boolean;
 }
 
 export interface PullResult {
