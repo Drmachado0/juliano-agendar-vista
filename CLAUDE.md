@@ -2,117 +2,117 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What this is
+## O que é isto
 
-Public website + admin CRM for Dr. Juliano Machado (ophthalmologist, Paragominas/Belém, PA). Frontend is a Vite/React SPA that is statically pre-rendered at build time; backend is Supabase (Postgres + ~55 Deno edge functions) that also serves a WhatsApp booking bot via n8n/ManyChat/Evolution API. Everything (identifiers, comments, commits, docs) is written in **pt-BR**. Keep it that way.
+Site público + CRM administrativo do Dr. Juliano Machado (oftalmologista, Paragominas/Belém, PA). O frontend é uma SPA Vite/React pré-renderizada estaticamente no build; o backend é Supabase (Postgres + ~55 edge functions em Deno), que também atende um bot de agendamento por WhatsApp via n8n/ManyChat/Evolution API. Tudo (identificadores, comentários, commits, docs) é escrito em **pt-BR**. Mantenha assim.
 
-## Commands
+## Comandos
 
-Lockfile is `bun.lock`. Use bun; if you use npm, never commit `package-lock.json`.
+O lockfile é o `bun.lock`. Use bun; se usar npm, nunca commite `package-lock.json`.
 
 ```sh
 bun install --frozen-lockfile
-bun run dev                 # Vite on port 8080
-bun run typecheck           # tsc --noEmit -p tsconfig.app.json  (strict is OFF; still catches TS2304 etc.)
-bun run test                # vitest run (jsdom by default)
+bun run dev                 # Vite na porta 8080
+bun run typecheck           # tsc --noEmit -p tsconfig.app.json  (strict DESLIGADO; ainda pega TS2304 etc.)
+bun run test                # vitest run (jsdom por padrão)
 bun run test:watch
-bunx vitest run src/lib/__tests__/telefoneCanonico.test.ts   # single file
-bunx vitest run -t "nome do teste"                            # by name
-bun run lint                # eslint; supabase/functions is ignored (Deno code)
-bun run build               # full pipeline: lastmod -> vite build -> SSR bundle -> SSG (see below)
-bun run build:sem-prerender # plain vite build, no SSG
-bun run hooks:instalar      # installs scripts/hooks/pre-push (runs typecheck + test). Skip with git push --no-verify
-bun run monitorar:seo       # hits PRODUCTION over the network; on demand only, never in CI
-bun run indexnow            # ping IndexNow; run AFTER a deploy is live
+bunx vitest run src/lib/__tests__/telefoneCanonico.test.ts   # um arquivo
+bunx vitest run -t "nome do teste"                            # por nome
+bun run lint                # eslint; supabase/functions é ignorado (código Deno)
+bun run build               # pipeline completo: lastmod -> vite build -> bundle SSR -> SSG (ver abaixo)
+bun run build:sem-prerender # só o vite build, sem SSG
+bun run hooks:instalar      # instala scripts/hooks/pre-push (roda typecheck + test). Pular: git push --no-verify
+bun run monitorar:seo       # bate em PRODUÇÃO pela rede; só sob demanda, nunca no CI
+bun run indexnow            # ping no IndexNow; rode DEPOIS que o deploy estiver no ar
 ```
 
-`bun.lock` resolves every tarball from Lovable's private npm mirror (`europe-west1-npm.pkg.dev/lovable-core-prod/...`). In an environment where that host is unreachable, `bun install --frozen-lockfile` fails part-way. Fallback for local verification only: `rm -rf node_modules && npm install --legacy-peer-deps` (plain `npm install` crashes in npm's peer resolver on this tree), then `npm install --no-save --legacy-peer-deps @testing-library/dom@<version in bun.lock> @supabase/supabase-js@<version in bun.lock>`. npm ignores `bun.lock`, so it pulls newer minors than CI uses; a typecheck difference under npm is suspect until reproduced with the pinned versions. Don't commit `package-lock.json` and don't regenerate `bun.lock` as a side effect.
+O `bun.lock` resolve todos os tarballs a partir do espelho npm privado da Lovable (`europe-west1-npm.pkg.dev/lovable-core-prod/...`). Num ambiente em que esse host não é alcançável, `bun install --frozen-lockfile` falha no meio. Alternativa só para verificação local: `rm -rf node_modules && npm install --legacy-peer-deps` (o `npm install` puro quebra no resolvedor de peers do npm com esta árvore) e depois `npm install --no-save --legacy-peer-deps @testing-library/dom@<versão do bun.lock> @supabase/supabase-js@<versão do bun.lock>`. O npm ignora o `bun.lock`, então puxa minors mais novos que os do CI; uma diferença de typecheck sob npm é suspeita até ser reproduzida com as versões fixadas. Não commite `package-lock.json` e não regenere o `bun.lock` por efeito colateral.
 
-`bun run lint` is not part of CI or the pre-push gate. It currently reports one `prefer-const` error in `src/integrations/supabase/previewAuthStorage.ts` and ~360 `no-explicit-any` warnings (known Lovable-generated typing debt, kept as warnings on purpose).
+`bun run lint` não faz parte do CI nem do gate de pre-push. Hoje ele reporta um erro `prefer-const` em `src/integrations/supabase/previewAuthStorage.ts` e ~360 avisos `no-explicit-any` (dívida de tipagem gerada pela Lovable, mantida como aviso de propósito).
 
-Edge functions are Deno and are not built, linted, or type-checked by this repo's toolchain. Deploy with the Supabase CLI (`supabase functions deploy <name>`) or Lovable Cloud. The SQL tests in `src/lib/__tests__/*.sql.test.ts` self-skip unless `PGHOST`/`SUPABASE_DB_URL` and `psql` are available.
+As edge functions são Deno e não são construídas, lintadas nem checadas pelo toolchain deste repo. Deploy pela CLI do Supabase (`supabase functions deploy <nome>`) ou pela Lovable Cloud. Os testes SQL em `src/lib/__tests__/*.sql.test.ts` se auto-pulam a menos que `PGHOST`/`SUPABASE_DB_URL` e `psql` estejam disponíveis.
 
-## Deployment model (read before pushing to main)
+## Modelo de deploy (leia antes de fazer push na main)
 
-- This is a **Lovable** project. A push to `main` **is a production deploy** of drjulianomachado.com. There is no review step, and Lovable's build runs `npm run build` (Node 22) but **does not run tsc**. A type error reaches production silently. That is why the pre-push hook and `.github/workflows/verificar.yml` exist; the workflow warns (red X) but cannot block the deploy.
-- Lovable's editor also commits straight to `main` ("Lovable update", "Work in progress" commits). Expect them in history.
-- `.env.production` is committed on purpose: it holds only the public Supabase URL/anon key that Vite inlines. Real secrets live in Supabase/Lovable Cloud secrets, never in the repo. `.env`/`.env.local` are gitignored overrides.
-- The repo is public. Don't commit patient data (see the `scripts/backfill-avaliacoes-google.*` gitignore entries).
+- Este é um projeto **Lovable**. Push na `main` **é deploy em produção** de drjulianomachado.com. Não há etapa de revisão, e o build da Lovable roda `npm run build` (Node 22) mas **não roda tsc**. Erro de tipo chega a produção em silêncio. É por isso que existem o hook de pre-push e o `.github/workflows/verificar.yml`; o workflow avisa (X vermelho) mas não consegue bloquear o deploy.
+- O editor da Lovable também commita direto na `main` (commits "Lovable update", "Work in progress"). Espere encontrá-los no histórico.
+- `.env.production` é commitado de propósito: contém só a URL e a anon key públicas do Supabase que o Vite embute. Segredos de verdade vivem nos secrets do Supabase/Lovable Cloud, nunca no repo. `.env`/`.env.local` são overrides gitignored.
+- O repositório é público. Não commite dado de paciente (veja as entradas `scripts/backfill-avaliacoes-google.*` no gitignore).
 
-## Frontend architecture
+## Arquitetura do frontend
 
-**Stack**: Vite 5, React 18, TypeScript (non-strict), react-router-dom 7, TanStack Query, react-helmet-async, shadcn/ui + Tailwind (tokens in `src/index.css`, dark navy/gold theme), zod. Alias `@/` -> `src/`.
+**Stack**: Vite 5, React 18, TypeScript (não estrito), react-router-dom 7, TanStack Query, react-helmet-async, shadcn/ui + Tailwind (tokens em `src/index.css`, tema escuro azul-marinho/dourado), zod. Alias `@/` -> `src/`.
 
-**`src/App.tsx` is split in two exports and the SSG depends on that split**:
-- `AppProvedores` — router-independent providers (Helmet, QueryClient, Tooltip, toasters). Accepts a `helmetContext` so the server can collect head tags.
-- `AppConteudo` — everything inside the router (tracker, scroll, consent banner, `<Routes>`).
-- `main.tsx` wraps them in `BrowserRouter`; `src/entry-server.tsx` wraps them in `StaticRouter` (imported from `react-router-dom`, not `react-router`, or vitest gets two module instances). Don't merge them back.
+**`src/App.tsx` é dividido em dois exports e o SSG depende dessa divisão**:
+- `AppProvedores` — provedores independentes de roteador (Helmet, QueryClient, Tooltip, toasters). Aceita um `helmetContext` para o servidor coletar as tags do head.
+- `AppConteudo` — tudo que vive dentro do roteador (tracker, scroll, banner de consentimento, `<Routes>`).
+- `main.tsx` os envolve em `BrowserRouter`; `src/entry-server.tsx` os envolve em `StaticRouter` (importado de `react-router-dom`, não de `react-router`, senão o vitest cria duas instâncias de módulo). Não junte os dois de volta.
 
-**Lazy loading and the Supabase chunk** are a deliberate performance contract:
-- Every page except `Index`, `PoliticaPrivacidade`, `NotFound` is `React.lazy`.
-- `AuthProvider` wraps only `/auth` and `/admin/*` via the `RotasAutenticadas` layout route. No public component may call `useAuth()`.
-- `@supabase/supabase-js` must not be in the initial bundle. Anything reachable from the root or from public pages (`AuthContext`, `WhatsAppButton`, `useGoogleReviews`, `siteConfig`, `avaliacoesGoogle`) uses `getSupabase()` from `src/integrations/supabase/lazy.ts`. Lazy-loaded pages, admin components, hooks and `src/services/*` import `supabase` from `client.ts` directly, which is fine because they are already off the critical path. Don't add supabase to `manualChunks` in `vite.config.ts`; even an `import type` from `client.ts` in a root module re-adds the modulepreload.
-- `client.ts` throws (and paints a WhatsApp fallback screen) if `VITE_SUPABASE_*` is missing; `vitest.config.ts` injects placeholders so tests don't hit that.
-- `src/integrations/supabase/types.ts` is generated by Supabase. Don't hand-edit.
-- Upgrading `@supabase/supabase-js` past the pinned 2.86.x turns on excess-property checking for `upsert`; today that breaks `updateGoogleCalendarSettings` in `src/services/googleCalendar.ts` (`pull_enabled` is not in the table's Insert type). Fix the type or the payload before bumping.
+**Carregamento preguiçoso e o chunk do Supabase** são um contrato de performance deliberado:
+- Toda página exceto `Index`, `PoliticaPrivacidade` e `NotFound` é `React.lazy`.
+- `AuthProvider` envolve só `/auth` e `/admin/*` pela rota de layout `RotasAutenticadas`. Nenhum componente público pode chamar `useAuth()`.
+- `@supabase/supabase-js` não pode entrar no bundle inicial. Tudo que é alcançável a partir da raiz ou das páginas públicas (`AuthContext`, `WhatsAppButton`, `useGoogleReviews`, `siteConfig`, `avaliacoesGoogle`) usa `getSupabase()` de `src/integrations/supabase/lazy.ts`. Páginas lazy, componentes de admin, hooks e `src/services/*` importam `supabase` de `client.ts` direto, o que é aceitável porque já estão fora do caminho crítico. Não adicione o supabase ao `manualChunks` do `vite.config.ts`; até um `import type` de `client.ts` num módulo da raiz devolve o modulepreload.
+- `client.ts` lança erro (e pinta uma tela de fallback com WhatsApp) se `VITE_SUPABASE_*` estiver ausente; o `vitest.config.ts` injeta placeholders para os testes não caírem nisso.
+- `src/integrations/supabase/types.ts` é gerado pelo Supabase. Não edite à mão.
+- Subir `@supabase/supabase-js` além do 2.86.x fixado liga a checagem de propriedade excedente no `upsert`; hoje isso quebra `updateGoogleCalendarSettings` em `src/services/googleCalendar.ts` (`pull_enabled` não está no tipo Insert da tabela). Corrija o tipo ou o payload antes de subir a versão.
 
-**Layers**: `src/services/*.ts` are thin wrappers over tables and `supabase.functions.invoke(...)`; `src/hooks/*` wrap them with react-query and Supabase realtime for the screens; `src/features/agendamento/useAgendamentoFlow.ts` is the booking state machine shared by `/agendamento` and `/paragominas/agendamento` (same payload and tracking events, only `experienceVariant` differs).
+**Camadas**: `src/services/*.ts` são wrappers finos sobre tabelas e `supabase.functions.invoke(...)`; `src/hooks/*` os envolvem com react-query e realtime do Supabase para as telas; `src/features/agendamento/useAgendamentoFlow.ts` é a máquina de estado do agendamento compartilhada por `/agendamento` e `/paragominas/agendamento` (mesmo payload e mesmos eventos de tracking, só o `experienceVariant` muda).
 
-**Single sources of truth for SEO/NAP** (Google reconciles entities by `@id`, so duplicates are bugs, not style):
-- `src/lib/locations.ts` — the four clinics (address, CEP, coordinates), `BASE_URL`, `PHYSICIAN_ID`.
-- `src/lib/constants.ts` — `DOCTOR` (CRM, years of experience), formation, social profiles.
-- `src/lib/schema.ts` — the whole JSON-LD graph (Physician, MedicalClinic, MedicalWebPage, FAQPage, Breadcrumb). Pages call its builders; they don't write JSON-LD by hand.
-- Procedure pages are data objects rendered by `src/components/procedimentos/ProcedurePageLayout.tsx`.
+**Fontes únicas de verdade para SEO/NAP** (o Google reconcilia entidades por `@id`, então duplicata é bug, não estilo):
+- `src/lib/locations.ts` — as quatro clínicas (endereço, CEP, coordenadas), `BASE_URL`, `PHYSICIAN_ID`.
+- `src/lib/constants.ts` — `DOCTOR` (CRM, anos de experiência), formação, perfis sociais.
+- `src/lib/schema.ts` — o grafo JSON-LD inteiro (Physician, MedicalClinic, MedicalWebPage, FAQPage, Breadcrumb). As páginas chamam os construtores dele; não escrevem JSON-LD à mão.
+- Páginas de procedimento são objetos de dados renderizados por `src/components/procedimentos/ProcedurePageLayout.tsx`.
 
-**Tracking/consent**: `index.html` sets Google Consent Mode v2 to denied by default (LGPD); `ConsentBanner` + `src/lib/consent.ts` flip it. `main.tsx` captures UTMs/click-ids on entry (`lib/tracking.ts`), decorates WhatsApp links for CRM attribution, and installs web-vitals. Meta Pixel fires browser-side and server-side (`meta-capi` edge function) deduplicated by `event_id`. Details in `docs/GTM-EVENTOS-DATALAYER.md` and `docs/META-CAPI-SETUP.md`.
+**Tracking/consentimento**: `index.html` define o Google Consent Mode v2 como negado por padrão (LGPD); `ConsentBanner` + `src/lib/consent.ts` liberam. `main.tsx` captura UTMs/click-ids na entrada (`lib/tracking.ts`), decora links de WhatsApp para atribuição no CRM e instala web-vitals. O Meta Pixel dispara no navegador e no servidor (edge function `meta-capi`), deduplicado por `event_id`. Detalhes em `docs/GTM-EVENTOS-DATALAYER.md` e `docs/META-CAPI-SETUP.md`.
 
-## Build pipeline and SSG
+## Pipeline de build e SSG
 
-`bun run build` runs, in order:
-1. `scripts/atualizar-lastmod.mjs` — writes each route's last git commit date into `public/sitemap.xml` `<lastmod>`.
-2. `vite build` — client bundle into `dist/`.
-3. `scripts/build-ssr.mjs` — `vite build --ssr src/entry-server.tsx` into `dist-ssr/`. **Never fails the build**; on error it writes `dist/ssr-build-status.json` and exits 0.
-4. `scripts/ssg.mjs` — imports the SSR bundle and renders every route from `public/sitemap.xml` plus `scripts/rotas-extra.mjs` with `renderToPipeableStream`, writing `dist/<rota>/index.html` with the route's Helmet head (title, meta, canonical, JSON-LD) and body. Routes that throw are skipped and keep serving the shell. Summary in `dist/ssg-status.json`.
+`bun run build` roda, nesta ordem:
+1. `scripts/atualizar-lastmod.mjs` — grava a data do último commit de cada rota no `<lastmod>` do `public/sitemap.xml`.
+2. `vite build` — bundle do cliente em `dist/`.
+3. `scripts/build-ssr.mjs` — `vite build --ssr src/entry-server.tsx` em `dist-ssr/`. **Nunca derruba o build**; em erro grava `dist/ssr-build-status.json` e sai com 0.
+4. `scripts/ssg.mjs` — importa o bundle SSR e renderiza toda rota do `public/sitemap.xml` mais as de `scripts/rotas-extra.mjs` com `renderToPipeableStream`, gravando `dist/<rota>/index.html` com o head do Helmet da rota (title, meta, canonical, JSON-LD) e o body. Rota que lança erro é pulada e segue servindo a casca. Resumo em `dist/ssg-status.json`.
 
-There is **no hydration on purpose**: the client calls `createRoot().render()`, which replaces the SSG markup. Don't switch to `hydrateRoot`.
+**Não há hidratação, de propósito**: o cliente chama `createRoot().render()`, que substitui o markup do SSG. Não troque por `hydrateRoot`.
 
-`scripts/prerender.mjs` (Playwright/Chromium) is legacy: it cannot run in Lovable's build container (missing system libs) and was superseded by the SSG on 28/08/2026. Read `.claude/skills/prerender-na-lovable/SKILL.md` before touching anything in this pipeline.
+`scripts/prerender.mjs` (Playwright/Chromium) é legado: não roda no container de build da Lovable (faltam bibliotecas de sistema) e foi substituído pelo SSG em 28/08/2026. Leia `.claude/skills/prerender-na-lovable/SKILL.md` antes de mexer em qualquer coisa deste pipeline.
 
-## Adding or changing a public route
+## Criar ou alterar uma rota pública
 
-Several vitest guard tests read source files as text and fail the commit if the pieces disagree. When you add a route:
+Vários testes-guarda do vitest leem os arquivos-fonte como texto e derrubam o commit se as peças discordarem. Ao criar uma rota:
 
-1. Add the `<Route>` in `App.tsx` (lazy import).
-2. Indexable? Add the URL to `public/sitemap.xml`. Not indexable (funnel, redirect, auth)? Add it to `scripts/rotas-extra.mjs` and emit `<meta name="robots" content="noindex">` via Helmet. Never both. (`src/test/rotasComHtml.test.ts`)
-3. Add it to `public/llms.txt`. (`src/test/llmsTxt.test.ts`)
-4. Procedure page? Add its card to `src/pages/procedimentos/Index.tsx`. (`src/test/procedimentosIndex.test.ts`)
-5. The page must emit its own `<title>`, description and canonical through Helmet. Do not add canonical/description back into `index.html`. (`src/test/indexHtmlMetaTags.test.ts`)
-6. If the page mounts `MobileStickyCTA`, pass `apenasDesktop` to `WhatsAppButton`. (`src/test/whatsappDuplicado.test.ts`)
-7. The component must render under Node with no `window`/`document` access during render; `src/test/ssg.test.tsx` renders sample routes and asserts real text came out. Gate browser-only code behind `typeof window !== "undefined"` or `useEffect`.
+1. Adicione o `<Route>` no `App.tsx` (import lazy).
+2. Indexável? Adicione a URL ao `public/sitemap.xml`. Não indexável (funil, redirect, auth)? Adicione a `scripts/rotas-extra.mjs` e emita `<meta name="robots" content="noindex">` via Helmet. Nunca os dois. (`src/test/rotasComHtml.test.ts`)
+3. Adicione ao `public/llms.txt`. (`src/test/llmsTxt.test.ts`)
+4. Página de procedimento? Adicione o card em `src/pages/procedimentos/Index.tsx`. (`src/test/procedimentosIndex.test.ts`)
+5. A página precisa emitir seu próprio `<title>`, description e canonical pelo Helmet. Não devolva canonical/description ao `index.html`. (`src/test/indexHtmlMetaTags.test.ts`)
+6. Se a página monta `MobileStickyCTA`, passe `apenasDesktop` ao `WhatsAppButton`. (`src/test/whatsappDuplicado.test.ts`)
+7. O componente precisa renderizar em Node sem acessar `window`/`document` durante o render; `src/test/ssg.test.tsx` renderiza rotas de amostra e exige texto de verdade na saída. Proteja código só de navegador com `typeof window !== "undefined"` ou `useEffect`.
 
-Redirect routes (`/agendar`, `/agendar-consulta`) are React Router redirects with noindex + canonical, because the host offers no way to configure a 301. Don't assume server rules exist.
+As rotas de redirecionamento (`/agendar`, `/agendar-consulta`) são redirects do React Router com noindex + canonical, porque o host não oferece como configurar um 301. Não presuma que existam regras de servidor.
 
-## Backend: Supabase edge functions
+## Backend: edge functions do Supabase
 
-Project ref `cnpifhaszbonwlqruwnn`. Functions live in `supabase/functions/<name>/index.ts`; `supabase/config.toml` sets `verify_jwt` per function (add a block for every new function).
+Ref do projeto: `cnpifhaszbonwlqruwnn`. As funções vivem em `supabase/functions/<nome>/index.ts`; `supabase/config.toml` define `verify_jwt` por função (adicione um bloco para toda função nova).
 
-- **`_shared/` holds the business logic; `index.ts` should only do HTTP** (auth, parse, log, serialize). Agenda rules live in `_shared/agenda.ts` (I/O) and `_shared/agendaCore.ts` (pure).
-- **Pure modules with zero imports** (`agendaCore.ts`, `statusTerminais.ts`, `telefoneCanonico.ts`, `dataBelem.ts`, `confirmationStatus.ts`, `classifyNotificationResults.ts`, ...) are imported directly by vitest tests in `src/lib/__tests__/`. Modules that import from `https://esm.sh/...` cannot be, so tests for those are **structural**: they read the function's source as text and assert invariants with regexes (e.g. `mcpAgendamentoFailClosed.test.ts`). Keep new shared logic pure when you want it unit-tested, and expect refactors of `index.ts` files to break a structural test rather than a runtime one.
-- **Auth**: server-to-server callers (n8n, cron) send `x-n8n-secret` (aliases `x-mcp-secret`, `x-api-key`, `Authorization: Bearer`), verified timing-safe by `requireN8nSecret` in `_shared/authGuards.ts`; the secret is read from Vault via RPC `ler_secret_integracao` with env fallback (`_shared/n8nSecret.ts`). Admin-only functions use `requireAdmin` from `_shared/adminAuth.ts`. Never compare secrets with `===`.
-- **Timezone**: functions run in UTC; the clinic is America/Belem (UTC-3, no DST). Use `_shared/dataBelem.ts` and inject "now" into pure functions instead of calling `new Date()` inside them.
+- **`_shared/` guarda a lógica de negócio; `index.ts` só faz HTTP** (auth, parse, log, serialização). As regras de agenda vivem em `_shared/agenda.ts` (I/O) e `_shared/agendaCore.ts` (puro).
+- **Módulos puros com zero imports** (`agendaCore.ts`, `statusTerminais.ts`, `telefoneCanonico.ts`, `dataBelem.ts`, `confirmationStatus.ts`, `classifyNotificationResults.ts`, ...) são importados direto pelos testes do vitest em `src/lib/__tests__/`. Módulos que importam de `https://esm.sh/...` não podem ser, então os testes deles são **estruturais**: leem o fonte da função como texto e afirmam invariantes por regex (ex.: `mcpAgendamentoFailClosed.test.ts`). Mantenha lógica compartilhada nova pura quando quiser testá-la em unidade, e espere que refatorar um `index.ts` quebre um teste estrutural, não um de runtime.
+- **Auth**: chamadores servidor-a-servidor (n8n, cron) enviam `x-n8n-secret` (aliases `x-mcp-secret`, `x-api-key`, `Authorization: Bearer`), verificado em tempo constante por `requireN8nSecret` em `_shared/authGuards.ts`; o segredo é lido do Vault pela RPC `ler_secret_integracao` com fallback em env (`_shared/n8nSecret.ts`). Funções só de admin usam `requireAdmin` de `_shared/adminAuth.ts`. Nunca compare segredo com `===`.
+- **Fuso horário**: as funções rodam em UTC; a clínica está em America/Belem (UTC-3, sem horário de verão). Use `_shared/dataBelem.ts` e injete o "agora" nas funções puras em vez de chamar `new Date()` dentro delas.
 
-## Domain rules that have bitten before
+## Regras de domínio que já morderam
 
-- `agendamentos` is both the lead and the appointment (a CRM card). "Active" means `isRegistroAtivo()` from `_shared/statusTerminais.ts`: not sandbox, `status_crm` not terminal, `status_funil` not terminal. Never define a local terminal-status list; a divergent copy in `buscar-contexto-paciente` produced false "ambiguous patient" escalations (see `.lovable/plan.md`).
-- Phone matching is by exact `telefone_canonico` (`_shared/telefoneCanonico.ts` / RPC `telefone_canonico`), never `ilike` or last-8-digits.
-- Booking via the bot is **fail-closed**: `mcp-agendamento` (JSON-RPC 2.0) only confirms an existing card by UUID, rejects sandbox/terminal cards and phone mismatches. Contracts for every n8n-facing endpoint are in `docs/CONTRATO-*.md`; update the doc with the code.
-- `agendamentos.confirmation_status` has a DB CHECK constraint; use the vocabulary in `_shared/confirmationStatus.ts`, which a test compares against the migration.
-- Message flow: WhatsApp -> Evolution API -> n8n -> `registrar-mensagem-in-n8n` (idempotent on `mensagem_externa_id`) -> `assistente-pre-agendamento`. Outbound: n8n/ManyChat -> `registrar-envio-out-n8n`. `supabase.functions.invoke` resolves even on failure; classify results with `_shared/classifyNotificationResults.ts`.
-- `scripts/check-lembretes-runner-guardrails.sh` greps runtime code for a retired secret/runner name; don't reintroduce it.
+- `agendamentos` é ao mesmo tempo o lead e o agendamento (um card do CRM). "Ativo" significa `isRegistroAtivo()` de `_shared/statusTerminais.ts`: não sandbox, `status_crm` não terminal, `status_funil` não terminal. Nunca defina uma lista local de status terminais; uma cópia divergente em `buscar-contexto-paciente` gerou escalações falsas de "paciente ambíguo" (ver `.lovable/plan.md`).
+- Casamento de telefone é por `telefone_canonico` exato (`_shared/telefoneCanonico.ts` / RPC `telefone_canonico`), nunca `ilike` nem últimos 8 dígitos.
+- Agendamento pelo bot é **fail-closed**: `mcp-agendamento` (JSON-RPC 2.0) só confirma card existente por UUID e rejeita card sandbox/terminal e divergência de telefone. Os contratos de todo endpoint voltado ao n8n estão em `docs/CONTRATO-*.md`; atualize o doc junto com o código.
+- `agendamentos.confirmation_status` tem CHECK constraint no banco; use o vocabulário de `_shared/confirmationStatus.ts`, que um teste compara com a migration.
+- Fluxo de mensagens: WhatsApp -> Evolution API -> n8n -> `registrar-mensagem-in-n8n` (idempotente por `mensagem_externa_id`) -> `assistente-pre-agendamento`. Saída: n8n/ManyChat -> `registrar-envio-out-n8n`. `supabase.functions.invoke` resolve mesmo em falha; classifique resultados com `_shared/classifyNotificationResults.ts`.
+- `scripts/check-lembretes-runner-guardrails.sh` procura no código de runtime um nome de runner/segredo aposentado; não o reintroduza.
 
-## Conventions
+## Convenções
 
-- **Comments explain "POR QUE", with dates.** The codebase's comments are long, dated explanations of why a decision was made and what broke before. Match that style when you change something non-obvious, and when you meet a "não reabra isto" note, check whether its premises still hold before obeying it (the SSG only became possible because two earlier blockers had been removed for other reasons).
-- **Commits** are pt-BR, imperative, `tipo: descrição` (`feat:`, `fix:`, `perf:`, `docs:`, `a11y:`, `build:`, `chore:`), body explains the why.
-- Public copy follows CFM medical-advertising rules (Resolução CFM 1.974/2011, decided by the doctor on 29/08/2026, commit `9170e90`): no before/after patient images and no testimonials that identify a patient. Only the aggregate Google rating plus link is shown. Don't reintroduce either, and don't fetch review text with patient names on public pages.
-- `docs/` holds audits and integration contracts; `drjulianomachado.com-audit/` holds SEO audit reports; `.lovable/plan.md` is a Lovable diagnostic note. None of these are build inputs.
+- **Comentários explicam o "POR QUE", com data.** Os comentários do código são explicações longas e datadas de por que uma decisão foi tomada e o que quebrou antes. Siga esse estilo ao mudar algo não óbvio, e ao encontrar uma nota "não reabra isto", confira se as premissas dela ainda valem antes de obedecer (o SSG só ficou possível porque dois bloqueios anteriores foram removidos por outros motivos).
+- **Commits** em pt-BR, no imperativo, `tipo: descrição` (`feat:`, `fix:`, `perf:`, `docs:`, `a11y:`, `build:`, `chore:`), com o corpo explicando o porquê.
+- O texto público segue as normas de publicidade médica do CFM (Resolução CFM 1.974/2011, decisão do médico em 29/08/2026, commit `9170e90`): nenhuma imagem de antes e depois de paciente e nenhum depoimento que identifique paciente. Só a nota agregada do Google mais o link é exibida. Não reintroduza nenhum dos dois, e não busque texto de avaliação com nome de paciente em página pública.
+- `docs/` guarda auditorias e contratos de integração; `drjulianomachado.com-audit/` guarda relatórios de auditoria de SEO; `.lovable/plan.md` é uma nota de diagnóstico da Lovable. Nenhum deles é insumo de build.
