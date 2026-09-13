@@ -32,7 +32,7 @@ import drJulianoHero2x from "@/assets/dr-juliano-hero@2x.webp";
 import { DOCTOR } from "@/lib/constants";
 import { BASE_URL } from "@/lib/locations";
 import { useGoogleReviews } from "@/hooks/useGoogleReviews";
-import { GOOGLE_REVIEW_URL } from "@/lib/constants";
+import { GOOGLE_MAPS_REVIEWS_URL } from "@/lib/constants";
 import {
   physicianNode,
   websiteNode,

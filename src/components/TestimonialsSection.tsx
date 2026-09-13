@@ -47,9 +47,7 @@ const AVATAR_STACK_SIZE = 5;
 const MAX_STAGGER_STEPS = 6;
 const STAGGER_MS = 70;
 
-/** URL publica da aba de avaliacoes do perfil no Google Maps, para leitura. */
-const GOOGLE_MAPS_REVIEWS_URL =
-  "https://www.google.com/maps/place/Dr+Juliano+Machado+-+Oftalmologista/@-2.9927566,-47.3578126,17z/data=!4m8!3m7!1s0x92b75df6a9424bcf:0xe65d9b7570a51339!8m2!3d-2.9927566!4d-47.3552377!9m1!1b1!16s%2Fg%2F11l2j4k6yb";
+import { GOOGLE_MAPS_REVIEWS_URL } from "@/lib/constants";
 
 const GoogleIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
