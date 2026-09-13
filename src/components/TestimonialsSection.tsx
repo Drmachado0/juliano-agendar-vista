@@ -47,8 +47,6 @@ const AVATAR_STACK_SIZE = 5;
 const MAX_STAGGER_STEPS = 6;
 const STAGGER_MS = 70;
 
-import { GOOGLE_MAPS_REVIEWS_URL } from "@/lib/constants";
-
 const GoogleIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
     <path
