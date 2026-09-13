@@ -32,7 +32,7 @@ import logoImage from "@/assets/dr-juliano-logo.svg";
 import drHero from "@/assets/dr-juliano-hero.webp";
 import drHero2x from "@/assets/dr-juliano-hero@2x.webp";
 import drConsultorio from "@/assets/dr-juliano-consultorio.jpg";
-import { DOCTOR, GOOGLE_REVIEWS, GOOGLE_REVIEW_URL } from "@/lib/constants";
+import { DOCTOR, GOOGLE_REVIEWS, GOOGLE_MAPS_REVIEWS_URL } from "@/lib/constants";
 import { clinicNodes, LOCATIONS, BASE_URL } from "@/lib/locations";
 import {
   physicianNode,
