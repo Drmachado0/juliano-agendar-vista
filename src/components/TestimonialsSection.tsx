@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useScrollAnimation } from "@/hooks/use-scroll-animation";
 import { useGoogleReviews } from "@/hooks/useGoogleReviews";
 import { useTestimonials } from "@/hooks/useTestimonials";
-import { GOOGLE_REVIEW_URL } from "@/lib/constants";
+import { GOOGLE_REVIEW_URL, GOOGLE_MAPS_REVIEWS_URL } from "@/lib/constants";
 import { formatReviewCount, initialsFrom } from "@/lib/utils";
 import { type TestimonialItem } from "@/lib/testimonialsPool";
 
