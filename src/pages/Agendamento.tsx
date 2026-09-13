@@ -32,7 +32,7 @@ import drJulianoHero2x from "@/assets/dr-juliano-hero@2x.webp";
 import { DOCTOR } from "@/lib/constants";
 import { BASE_URL } from "@/lib/locations";
 import { useGoogleReviews } from "@/hooks/useGoogleReviews";
-import { GOOGLE_REVIEW_URL } from "@/lib/constants";
+import { GOOGLE_MAPS_REVIEWS_URL } from "@/lib/constants";
 import {
   physicianNode,
   websiteNode,
@@ -594,7 +594,7 @@ const Agendamento = () => {
                     {reviews.count} avaliações no Google
                   </span>
                   <a
-                    href={GOOGLE_REVIEW_URL}
+                    href={GOOGLE_MAPS_REVIEWS_URL}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary underline-offset-4 hover:underline"
@@ -673,7 +673,7 @@ const Agendamento = () => {
                     {reviews.count} avaliações no Google
                   </span>
                   <a
-                    href={GOOGLE_REVIEW_URL}
+                    href={GOOGLE_MAPS_REVIEWS_URL}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary underline-offset-4 hover:underline"
@@ -796,7 +796,7 @@ const Agendamento = () => {
                   {reviews.count} avaliações de pacientes
                 </p>
                 <a
-                  href={GOOGLE_REVIEW_URL}
+                  href={GOOGLE_MAPS_REVIEWS_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-2 inline-block text-xs text-primary underline-offset-4 hover:underline"
