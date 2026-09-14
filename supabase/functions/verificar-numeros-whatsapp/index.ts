@@ -11,9 +11,10 @@ const corsHeaders = {
 interface NumberCheckResult {
   telefone: string;
   telefoneFormatado: string;
-  existeWhatsApp: boolean;
+  existeWhatsApp?: boolean;
   jid?: string;
   fromCache?: boolean;
+  erro?: string;
 }
 
 interface CachedVerification {
@@ -94,39 +95,56 @@ serve(async (req) => {
       const uniques = [...new Set(numerosParaVerificar.map(n => n.formatted))];
       console.log(`[verificar] Verificando ${uniques.length} números únicos`);
 
-      const existsMap = new Map<string, { exists: boolean; jid?: string }>();
-      for (const phone of uniques) {
-        const r = await verificarNumeroWhatsapp(phone);
-        if (!r.ok) {
-          console.error(`[verificar] Falha na verificação para ${phone}: ${r.erro}`);
-          return new Response(
-            JSON.stringify({
-              success: false,
-              error: `Erro ao verificar número: ${r.erro}`,
-              resultadosParciais: results,
-            }),
-            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+      const existsMap = new Map<string, { resolved: boolean; exists?: boolean; jid?: string; erro?: string }>();
+
+      // Uma falha de resolução no ManyChat não pode cancelar o lote inteiro.
+      // Processamos com concorrência limitada e mantemos o número como
+      // "não verificado", sem classificá-lo incorretamente como sem WhatsApp.
+      const CONCURRENCY = 5;
+      for (let i = 0; i < uniques.length; i += CONCURRENCY) {
+        const chunk = uniques.slice(i, i + CONCURRENCY);
+        const checked = await Promise.all(chunk.map(async (phone) => ({
+          phone,
+          result: await verificarNumeroWhatsapp(phone),
+        })));
+
+        for (const { phone, result } of checked) {
+          if (!result.ok || typeof result.exists !== 'boolean') {
+            const erro = result.erro || 'resultado_inconclusivo';
+            console.error(`[verificar] Falha na verificação para ${phone}: ${erro}`);
+            existsMap.set(phone, { resolved: false, erro });
+            continue;
+          }
+          existsMap.set(phone, {
+            resolved: true,
+            exists: result.exists,
+            jid: result.exists ? `${phone}@s.whatsapp.net` : undefined,
+          });
         }
-        existsMap.set(phone, {
-          exists: r.exists === true,
-          jid: r.exists ? `${phone}@s.whatsapp.net` : undefined,
-        });
       }
 
       const newVerifications: { telefone: string; existe_whatsapp: boolean; jid: string | null }[] = [];
       for (const num of numerosParaVerificar) {
-        const info = existsMap.get(num.formatted) || { exists: false };
+        const info = existsMap.get(num.formatted);
+        if (!info?.resolved) {
+          results.push({
+            telefone: num.original,
+            telefoneFormatado: num.formatted,
+            fromCache: false,
+            erro: info?.erro || 'resultado_inconclusivo',
+          });
+          continue;
+        }
         results.push({
           telefone: num.original,
           telefoneFormatado: num.formatted,
-          existeWhatsApp: info.exists,
+          existeWhatsApp: info.exists === true,
           jid: info.jid,
           fromCache: false,
         });
         newVerifications.push({
           telefone: num.formatted,
-          existe_whatsapp: info.exists,
+          existe_whatsapp: info.exists === true,
           jid: info.jid || null,
         });
       }
@@ -141,8 +159,9 @@ serve(async (req) => {
       }
     }
 
-    const validos = results.filter(r => r.existeWhatsApp).length;
-    const invalidos = results.length - validos;
+    const validos = results.filter(r => r.existeWhatsApp === true).length;
+    const invalidos = results.filter(r => r.existeWhatsApp === false).length;
+    const naoVerificados = results.filter(r => typeof r.existeWhatsApp !== 'boolean').length;
     const fromCache = results.filter(r => r.fromCache).length;
 
     return new Response(
@@ -153,6 +172,7 @@ serve(async (req) => {
           total: results.length,
           validos,
           invalidos,
+          naoVerificados,
           doCache: fromCache,
           verificadosAgora: results.length - fromCache,
         },
