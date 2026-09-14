@@ -929,7 +929,7 @@ const Lembretes = () => {
       const telefones = Array.from(telSet);
 
       const BATCH = 50;
-      const all: { telefoneFormatado: string; existeWhatsApp: boolean; fromCache?: boolean }[] = [];
+      const all: { telefoneFormatado: string; existeWhatsApp?: boolean; fromCache?: boolean; erro?: string }[] = [];
 
       for (let i = 0; i < telefones.length; i += BATCH) {
         const batch = telefones.slice(i, i + BATCH);
@@ -974,21 +974,23 @@ const Lembretes = () => {
           let n = l.telefone.replace(/\D/g, '');
           if (!n.startsWith('55')) n = '55' + n;
           const r = all.find(x => x.telefoneFormatado === n);
-          next.set(l.id, r?.existeWhatsApp ? 'valido' : 'invalido');
+          if (r?.existeWhatsApp === true) next.set(l.id, 'valido');
+          else if (r?.existeWhatsApp === false) next.set(l.id, 'invalido');
+          else next.delete(l.id);
         });
         return next;
       });
 
       setVerificacaoConcluida(true);
-      const validos = all.filter(r => r.existeWhatsApp).length;
-      const invalidos = all.filter(r => !r.existeWhatsApp).length;
+      const validos = all.filter(r => r.existeWhatsApp === true).length;
+      const invalidos = all.filter(r => r.existeWhatsApp === false).length;
+      const naoVerificados = all.filter(r => typeof r.existeWhatsApp !== 'boolean').length;
       const cache = all.filter(r => r.fromCache).length;
 
       toast({
-        title: "Verificação concluída!",
-        description: cache > 0
-          ? `${validos} válido(s), ${invalidos} inválido(s). ${cache} do cache.`
-          : `${validos} válido(s), ${invalidos} não encontrado(s) no WhatsApp.`,
+        title: naoVerificados > 0 ? "Verificação concluída parcialmente" : "Verificação concluída!",
+        description: `${validos} válido(s), ${invalidos} inválido(s), ${naoVerificados} não verificado(s)${cache > 0 ? `; ${cache} do cache` : ''}.`,
+        variant: validos === 0 && invalidos === 0 ? "destructive" : "default",
       });
     } catch (err) {
       console.error("Erro ao verificar números:", err);
