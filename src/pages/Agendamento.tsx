@@ -47,9 +47,9 @@ import type { FormData } from "@/components/scheduling/SchedulingModal";
 
 const URL_AGENDAMENTO = `${BASE_URL}/agendamento`;
 
-// Atualize apenas estas constantes a cada nova agenda em Paragominas.
 // Fonte única dos convênios: usada no bloco do topo e no card lateral,
-// para nunca divergirem.
+// para nunca divergirem. Edite só se mudarem locais ou convênios —
+// a página é genérica e não contém datas fixas de agenda.
 const CONVENIOS = [
   "Unimed",
   "Seguros Unimed",
@@ -61,15 +61,15 @@ const CONVENIOS = [
 ] as const;
 
 const SCHEDULE_CONTEXT = {
-  headline: "Atendimento em Paragominas · 23 a 26 de setembro",
+  headline: "Atendimento em Paragominas",
   locations: "Hospital Geral de Paragominas (HGP) e Clinicor",
   insurances: `Convênios: ${CONVENIOS.join(" · ")}`,
 } as const;
 
 const WHATSAPP_STANDARD_MESSAGE =
-  "Olá! Quero agendar uma consulta com o Dr. Juliano Machado em Paragominas (23 a 26/09).";
+  "Olá! Quero agendar uma consulta com o Dr. Juliano Machado em Paragominas.";
 const WHATSAPP_YAG_MESSAGE =
-  "Olá! Vi o anúncio sobre visão embaçada após cirurgia de catarata e quero agendar uma avaliação em Paragominas (23 a 26/09).";
+  "Olá! Vi o anúncio sobre visão embaçada após cirurgia de catarata e quero agendar uma avaliação em Paragominas.";
 
 const initialFormData: FormData = {
   fullName: "",
