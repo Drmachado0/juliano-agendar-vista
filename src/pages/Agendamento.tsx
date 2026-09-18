@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
+  CalendarDays,
   Star,
   ShieldCheck,
   Award,
@@ -12,6 +13,7 @@ import {
   CheckCircle2,
   MessageCircle,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +46,21 @@ import { fbqTrack } from "@/lib/metaPixelClient";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
 const URL_AGENDAMENTO = `${BASE_URL}/agendamento`;
+
+// Atualize apenas estas constantes a cada nova agenda em Paragominas.
+const SCHEDULE_CONTEXT = {
+  headline: "Atendimento em Paragominas · 23 a 26 de setembro",
+  locations: "Hospital Geral de Paragominas (HGP) e Clinicor",
+  insurances:
+    "Convênios: Unimed · Seguros Unimed · Bradesco Saúde · SulAmérica · Cassi · Saúde Caixa · Particular",
+  shortDate: "23 a 26/09",
+} as const;
+
+const WHATSAPP_NUMBER = "5591936180476";
+const WHATSAPP_STANDARD_MESSAGE =
+  "Olá! Quero agendar uma consulta com o Dr. Juliano Machado em Paragominas (23 a 26/09). (origem: agendamento_topo)";
+const WHATSAPP_YAG_MESSAGE =
+  "Olá! Vi o anúncio sobre visão embaçada após cirurgia de catarata e quero agendar uma avaliação em Paragominas (23 a 26/09). (origem: anuncio_yag)";
 
 const initialFormData: FormData = {
   fullName: "",
@@ -81,6 +98,7 @@ const Agendamento = () => {
   const [leadId, setLeadId] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
   const {
     trackViewContent,
     trackLead,
@@ -103,6 +121,13 @@ const Agendamento = () => {
   // aggregateRating do JSON-LD nao podem divergir entre si nem da home.
   const reviews = useGoogleReviews();
   const WHATSAPP_URL = waLink(WHATSAPP_DEFAULT_MSG, "agendamento_secretaria");
+  const queryParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const isYagCampaign =
+    queryParams?.get("origem")?.toLowerCase() === "yag" ||
+    queryParams?.get("utm_content")?.toLowerCase().includes("yag") === true;
+  const TOP_WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+    isYagCampaign ? WHATSAPP_YAG_MESSAGE : WHATSAPP_STANDARD_MESSAGE,
+  )}`;
   const formStartFiredRef = useRef(false);
   const successFiredRef = useRef(false);
   const viewFiredRef = useRef(false);
@@ -170,10 +195,14 @@ const Agendamento = () => {
     setFormData((prev) => ({ ...prev, ...data }));
   };
 
-  const handleWhatsAppClick = (location: string) => {
-    trackWhatsAppClick(WHATSAPP_URL, "Falar com a secretária", `whatsapp_${location}`, location);
+  const handleWhatsAppClick = (location: string, url = WHATSAPP_URL) => {
+    trackWhatsAppClick(url, "Falar com a secretária", `whatsapp_${location}`, location);
     trackWhatsAppGoogleAdsConversion();
     trackMetaContact("WhatsApp");
+  };
+
+  const scrollToForm = () => {
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const STEP_NAMES: Record<number, string> = {
@@ -265,6 +294,8 @@ const Agendamento = () => {
           hora_agendamento: formData.selectedTime,
           aceita_primeiro_horario: formData.acceptFirstAvailable,
           aceita_contato_whatsapp_email: formData.acceptNotifications,
+          data_nascimento: formData.birthDate || null,
+          email: formData.email || null,
         },
         localAtendimento
       );
@@ -549,7 +580,11 @@ const Agendamento = () => {
                   </span>
                 </div>
                 <h2 className="mb-2 font-serif text-2xl font-bold text-foreground md:text-3xl lg:text-4xl">
-                  {isSubmitted ? "Agendamento enviado!" : "Agende sua consulta"}
+                  {isSubmitted
+                    ? "Agendamento enviado!"
+                    : isYagCampaign
+                      ? "Avaliação para visão embaçada após cirurgia de catarata"
+                      : "Agende sua consulta"}
                 </h2>
                 <div className="flex items-center justify-center lg:justify-start gap-2 text-xs text-muted-foreground font-medium mb-4 lg:hidden">
                   <span>{DOCTOR.name}</span>
@@ -558,11 +593,69 @@ const Agendamento = () => {
                 </div>
                 {!isSubmitted && (
                   <p className="text-sm text-muted-foreground md:text-base">
-                    Preencha os dados abaixo e nossa equipe confirma seu horário pelo WhatsApp —
-                    ou, se preferir, fale agora com a nossa secretária.
+                    {isYagCampaign
+                      ? "Atendimento em Paragominas. Nossa equipe confirma seu horário pelo WhatsApp."
+                      : "Preencha os dados abaixo e nossa equipe confirma seu horário pelo WhatsApp — ou, se preferir, fale agora com a nossa secretária."}
                   </p>
                 )}
               </div>
+
+              {!isSubmitted && (
+                <div className="mb-6 space-y-4">
+                  <div className="rounded-xl border border-primary/25 bg-card p-4 shadow-md sm:p-5">
+                    <p className="text-base font-bold leading-snug text-foreground sm:text-lg">
+                      {SCHEDULE_CONTEXT.headline}
+                    </p>
+                    <p className="mt-2 flex items-start gap-2 text-sm leading-relaxed text-foreground/90">
+                      <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                      {SCHEDULE_CONTEXT.locations}
+                    </p>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                      {SCHEDULE_CONTEXT.insurances}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Button asChild variant="whatsapp" size="lg" className="h-auto min-h-14 w-full py-3">
+                      <a
+                        href={TOP_WHATSAPP_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => handleWhatsAppClick("agendamento_topo", TOP_WHATSAPP_URL)}
+                        className="flex-col gap-0.5"
+                      >
+                        <span className="flex items-center gap-2">
+                          <MessageCircle className="h-5 w-5" />
+                          Agendar pelo WhatsApp
+                        </span>
+                        <span className="text-xs font-medium opacity-90">Resposta da nossa secretária</span>
+                      </a>
+                    </Button>
+                    <Button variant="outline" size="lg" onClick={scrollToForm} className="min-h-14 w-full">
+                      Agendar online
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2 rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-4 text-sm shadow-sm">
+                    <span className="flex items-center gap-1" aria-label={`${reviews.rating.toFixed(1)} estrelas`}>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
+                      ))}
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      {reviews.rating.toFixed(1).replace(".", ",")} · {reviews.count} avaliações no Google · {DOCTOR.yearsExperienceLabel}
+                    </span>
+                    <a
+                      href={GOOGLE_MAPS_REVIEWS_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      Ler no Google
+                    </a>
+                  </div>
+                </div>
+              )}
 
               {/*
                 AQUI HAVIA UM CARROSSEL COM TRES DEPOIMENTOS DE PACIENTES, com
@@ -580,7 +673,7 @@ const Agendamento = () => {
 
                 NAO REINTRODUZA sem falar com ele.
               */}
-              {!isSubmitted && (
+              {!isSubmitted && false && (
                 <div className="mb-6 hidden flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-4 text-sm shadow-sm lg:flex">
                   <span className="flex items-center gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -604,7 +697,7 @@ const Agendamento = () => {
                 </div>
               )}
 
-              <div className="rounded-xl border border-border bg-card p-4 shadow-lg sm:p-6 md:p-8">
+              <div ref={formRef} className="scroll-mt-20 rounded-xl border border-border bg-card p-4 shadow-lg sm:p-6 md:p-8">
                 {!isSubmitted && <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />}
 
                 <div className="mt-6">
@@ -617,6 +710,7 @@ const Agendamento = () => {
                           formData={formData}
                           updateFormData={updateFormData}
                           onNext={nextStep}
+                          deferBirthDateAndEmail
                         />
                       )}
                       {currentStep === 2 && (
@@ -641,6 +735,8 @@ const Agendamento = () => {
                           onSubmit={handleSubmit}
                           onPrev={prevStep}
                           isSubmitting={isSubmitting}
+                          collectDeferredPersonalDetails
+                          updateFormData={updateFormData}
                         />
                       )}
                     </>
@@ -658,9 +754,9 @@ const Agendamento = () => {
                 Só nota agregada e link — sem depoimento de paciente (CFM
                 1.974/2011; ver comentário acima do bloco desktop).
               */}
-              <div className="mt-6 space-y-4 lg:hidden">
+              <div className="mt-6 space-y-4">
                 <WhatsAppHighlight location="agendamento_destaque_secretaria_mobile" compact />
-                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-4 text-sm shadow-sm">
+                <div className="hidden flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-4 text-sm shadow-sm">
                   <span className="flex items-center gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
@@ -814,6 +910,20 @@ const Agendamento = () => {
             <p>Ao prosseguir, você concorda em receber contato via WhatsApp e e-mail.</p>
           </div>
         </footer>
+
+        {!isSubmitted && (
+          <a
+            href={TOP_WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => handleWhatsAppClick("agendamento_floating_mobile", TOP_WHATSAPP_URL)}
+            aria-label="Agendar pelo WhatsApp"
+            title="Agendar pelo WhatsApp"
+            className="fixed bottom-4 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-xl shadow-[#25D366]/30 transition-transform active:scale-95 lg:hidden"
+          >
+            <MessageCircle className="h-6 w-6" />
+          </a>
+        )}
       </div>
     </>
   );
