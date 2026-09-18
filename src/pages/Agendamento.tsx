@@ -48,11 +48,22 @@ import type { FormData } from "@/components/scheduling/SchedulingModal";
 const URL_AGENDAMENTO = `${BASE_URL}/agendamento`;
 
 // Atualize apenas estas constantes a cada nova agenda em Paragominas.
+// Fonte única dos convênios: usada no bloco do topo e no card lateral,
+// para nunca divergirem.
+const CONVENIOS = [
+  "Unimed",
+  "Seguros Unimed",
+  "Bradesco Saúde",
+  "SulAmérica",
+  "Cassi",
+  "Saúde Caixa",
+  "Particular",
+] as const;
+
 const SCHEDULE_CONTEXT = {
   headline: "Atendimento em Paragominas · 23 a 26 de setembro",
   locations: "Hospital Geral de Paragominas (HGP) e Clinicor",
-  insurances:
-    "Convênios: Unimed · Seguros Unimed · Bradesco Saúde · SulAmérica · Cassi · Saúde Caixa · Particular",
+  insurances: `Convênios: ${CONVENIOS.join(" · ")}`,
 } as const;
 
 const WHATSAPP_STANDARD_MESSAGE =
@@ -847,7 +858,11 @@ const Agendamento = () => {
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                     <span className="text-muted-foreground">
-                      Convênios: <strong className="text-foreground">Unimed, Bradesco, Cassi, Sul América</strong>
+                      Convênios:{" "}
+                      <strong className="text-foreground">
+                        {CONVENIOS.slice(0, -1).join(", ")} e{" "}
+                        {CONVENIOS[CONVENIOS.length - 1]}
+                      </strong>
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
