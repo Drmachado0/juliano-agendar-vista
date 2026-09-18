@@ -60,6 +60,7 @@ const WHATSAPP_STANDARD_MESSAGE =
   "Olá! Quero agendar uma consulta com o Dr. Juliano Machado em Paragominas (23 a 26/09). (origem: agendamento_topo)";
 const WHATSAPP_YAG_MESSAGE =
   "Olá! Vi o anúncio sobre visão embaçada após cirurgia de catarata e quero agendar uma avaliação em Paragominas (23 a 26/09). (origem: anuncio_yag)";
+const GOOGLE_REVIEWS_DISPLAY_COUNT = 111;
 
 const initialFormData: FormData = {
   fullName: "",
@@ -660,7 +661,7 @@ const Agendamento = () => {
                       ))}
                     </span>
                     <span className="font-semibold text-foreground">
-                      {reviews.rating.toFixed(1).replace(".", ",")} · {reviews.count} avaliações no Google · {DOCTOR.yearsExperienceLabel}
+                      {reviews.rating.toFixed(1).replace(".", ",")} · {GOOGLE_REVIEWS_DISPLAY_COUNT} avaliações no Google · {DOCTOR.yearsExperienceLabel}
                     </span>
                     <a
                       href={GOOGLE_MAPS_REVIEWS_URL}
