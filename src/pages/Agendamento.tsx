@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
+  CalendarDays,
   Star,
   ShieldCheck,
   Award,
@@ -12,6 +13,7 @@ import {
   CheckCircle2,
   MessageCircle,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +46,21 @@ import { fbqTrack } from "@/lib/metaPixelClient";
 import type { FormData } from "@/components/scheduling/SchedulingModal";
 
 const URL_AGENDAMENTO = `${BASE_URL}/agendamento`;
+
+// Atualize apenas estas constantes a cada nova agenda em Paragominas.
+const SCHEDULE_CONTEXT = {
+  headline: "Atendimento em Paragominas · 23 a 26 de setembro",
+  locations: "Hospital Geral de Paragominas (HGP) e Clinicor",
+  insurances:
+    "Convênios: Unimed · Seguros Unimed · Bradesco Saúde · SulAmérica · Cassi · Saúde Caixa · Particular",
+} as const;
+
+const WHATSAPP_NUMBER = "5591936180476";
+const WHATSAPP_STANDARD_MESSAGE =
+  "Olá! Quero agendar uma consulta com o Dr. Juliano Machado em Paragominas (23 a 26/09). (origem: agendamento_topo)";
+const WHATSAPP_YAG_MESSAGE =
+  "Olá! Vi o anúncio sobre visão embaçada após cirurgia de catarata e quero agendar uma avaliação em Paragominas (23 a 26/09). (origem: anuncio_yag)";
+const GOOGLE_REVIEWS_DISPLAY_COUNT = 111;
 
 const initialFormData: FormData = {
   fullName: "",
@@ -81,6 +98,8 @@ const Agendamento = () => {
   const [leadId, setLeadId] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFormActionVisible, setIsFormActionVisible] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
   const {
     trackViewContent,
     trackLead,
@@ -103,6 +122,13 @@ const Agendamento = () => {
   // aggregateRating do JSON-LD nao podem divergir entre si nem da home.
   const reviews = useGoogleReviews();
   const WHATSAPP_URL = waLink(WHATSAPP_DEFAULT_MSG, "agendamento_secretaria");
+  const queryParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const isYagCampaign =
+    queryParams?.get("origem")?.toLowerCase() === "yag" ||
+    queryParams?.get("utm_content")?.toLowerCase().includes("yag") === true;
+  const TOP_WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+    isYagCampaign ? WHATSAPP_YAG_MESSAGE : WHATSAPP_STANDARD_MESSAGE,
+  )}`;
   const formStartFiredRef = useRef(false);
   const successFiredRef = useRef(false);
   const viewFiredRef = useRef(false);
@@ -154,6 +180,22 @@ const Agendamento = () => {
     }
   }, [currentStep, isSubmitted]);
 
+  useEffect(() => {
+    if (isSubmitted || typeof IntersectionObserver === "undefined") {
+      setIsFormActionVisible(false);
+      return;
+    }
+    const buttons = formRef.current?.querySelectorAll("button");
+    const action = buttons?.item(Math.max(0, (buttons?.length ?? 1) - 1));
+    if (!action) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsFormActionVisible(entry.isIntersecting),
+      { threshold: 0.2 },
+    );
+    observer.observe(action);
+    return () => observer.disconnect();
+  }, [currentStep, isSubmitted]);
+
   // Carrossel auto
   useEffect(() => {
     const interval = setInterval(() => {
@@ -170,10 +212,14 @@ const Agendamento = () => {
     setFormData((prev) => ({ ...prev, ...data }));
   };
 
-  const handleWhatsAppClick = (location: string) => {
-    trackWhatsAppClick(WHATSAPP_URL, "Falar com a secretária", `whatsapp_${location}`, location);
+  const handleWhatsAppClick = (location: string, url = WHATSAPP_URL) => {
+    trackWhatsAppClick(url, "Falar com a secretária", `whatsapp_${location}`, location);
     trackWhatsAppGoogleAdsConversion();
     trackMetaContact("WhatsApp");
+  };
+
+  const scrollToForm = () => {
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const STEP_NAMES: Record<number, string> = {
@@ -243,11 +289,12 @@ const Agendamento = () => {
     if (currentStep > 1) setCurrentStep((prev) => prev - 1);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (deferredDetails?: Pick<FormData, "birthDate" | "email">) => {
     setIsSubmitting(true);
+    const submissionData = { ...formData, ...deferredDetails };
 
     try {
-      const localAtendimento = formData.locationName || formData.location;
+      const localAtendimento = submissionData.locationName || submissionData.location;
 
       if (!leadId) {
         toast({
@@ -261,10 +308,12 @@ const Agendamento = () => {
       const { error } = await converterLeadEmAgendamento(
         leadId,
         {
-          data_agendamento: formData.selectedDate ? format(formData.selectedDate, "yyyy-MM-dd") : "",
-          hora_agendamento: formData.selectedTime,
-          aceita_primeiro_horario: formData.acceptFirstAvailable,
-          aceita_contato_whatsapp_email: formData.acceptNotifications,
+          data_agendamento: submissionData.selectedDate ? format(submissionData.selectedDate, "yyyy-MM-dd") : "",
+          hora_agendamento: submissionData.selectedTime,
+          aceita_primeiro_horario: submissionData.acceptFirstAvailable,
+          aceita_contato_whatsapp_email: submissionData.acceptNotifications,
+          data_nascimento: submissionData.birthDate || null,
+          email: submissionData.email || null,
         },
         localAtendimento
       );
@@ -293,11 +342,11 @@ const Agendamento = () => {
 
       await notificarN8n("agendamento_criado", {
         id: leadId,
-        nome_completo: formData.fullName,
-        telefone_whatsapp: formData.phone,
+        nome_completo: submissionData.fullName,
+        telefone_whatsapp: submissionData.phone,
         local_atendimento: localAtendimento,
-        data_agendamento: formData.selectedDate ? format(formData.selectedDate, "yyyy-MM-dd") : "",
-        hora_agendamento: formData.selectedTime,
+        data_agendamento: submissionData.selectedDate ? format(submissionData.selectedDate, "yyyy-MM-dd") : "",
+        hora_agendamento: submissionData.selectedTime,
       });
 
       const NOTIFICATION_TIMEOUT_MS = 8000;
@@ -305,28 +354,29 @@ const Agendamento = () => {
         supabase.functions.invoke("confirmar-agendamento-whatsapp", {
           body: {
             agendamento_data: {
-              nome_completo: formData.fullName,
-              telefone_whatsapp: formData.phone,
-              tipo_atendimento: formData.appointmentTypeName || formData.appointmentType,
+              nome_completo: submissionData.fullName,
+              telefone_whatsapp: submissionData.phone,
+              tipo_atendimento: submissionData.appointmentTypeName || submissionData.appointmentType,
               local_atendimento: localAtendimento,
-              data_agendamento: formData.selectedDate ? format(formData.selectedDate, "yyyy-MM-dd") : "",
-              hora_agendamento: formData.selectedTime,
-              convenio: formData.insuranceName || formData.insurance,
+              data_agendamento: submissionData.selectedDate ? format(submissionData.selectedDate, "yyyy-MM-dd") : "",
+              hora_agendamento: submissionData.selectedTime,
+              convenio: submissionData.insuranceName || submissionData.insurance,
             },
           },
         }),
         supabase.functions.invoke("notificar-agendamento-email", {
           body: {
-            nome_completo: formData.fullName,
-            telefone_whatsapp: formData.phone,
-            email_paciente: formData.email || null,
-            data_nascimento: formData.birthDate || null,
-            tipo_atendimento: formData.appointmentTypeName || formData.appointmentType,
+            nome_completo: submissionData.fullName,
+            telefone_whatsapp: submissionData.phone,
+            email_paciente: submissionData.email || null,
+            data_nascimento: submissionData.birthDate || null,
+            tipo_atendimento: submissionData.appointmentTypeName || submissionData.appointmentType,
             local_atendimento: localAtendimento,
-            convenio: formData.insuranceName || formData.insurance,
-            convenio_outro: formData.insurance === "outro" ? formData.otherInsurance : null,
-            data_agendamento: formData.selectedDate ? format(formData.selectedDate, "yyyy-MM-dd") : "",
-            hora_agendamento: formData.selectedTime,
+            convenio: submissionData.insuranceName || submissionData.insurance,
+            convenio_outro:
+              submissionData.insurance === "outro" ? submissionData.otherInsurance : null,
+            data_agendamento: submissionData.selectedDate ? format(submissionData.selectedDate, "yyyy-MM-dd") : "",
+            hora_agendamento: submissionData.selectedTime,
           },
         }),
       ]);
@@ -336,9 +386,9 @@ const Agendamento = () => {
       await Promise.race([notificationsPromise, timeoutPromise]);
 
       // Tracking (event_id = leadId para dedup com CAPI server-side)
-      trackScheduleComplete(formData.appointmentTypeName, formData.locationName);
-      trackSchedule(formData.appointmentTypeName, formData.locationName, leadId);
-      trackCompleteRegistration(formData.appointmentTypeName, formData.locationName, leadId);
+      trackScheduleComplete(submissionData.appointmentTypeName, submissionData.locationName);
+      trackSchedule(submissionData.appointmentTypeName, submissionData.locationName, leadId);
+      trackCompleteRegistration(submissionData.appointmentTypeName, submissionData.locationName, leadId);
       trackFormSubmitConversion();
 
       // Evento de sucesso real do agendamento (GA4 + Google Ads conversion).
@@ -347,15 +397,15 @@ const Agendamento = () => {
         successFiredRef.current = true;
         trackAppointmentSuccess('landing_agendamento', {
           id: leadId ?? null,
-          appointmentType: formData.appointmentTypeName,
-          location: formData.locationName,
+          appointmentType: submissionData.appointmentTypeName,
+          location: submissionData.locationName,
         });
         pushDL({
           event: "book_appointment",
           page_type: "landing_agendamento",
           appointment_id: leadId ?? null,
-          appointment_type: formData.appointmentTypeName,
-          location: formData.locationName,
+          appointment_type: submissionData.appointmentTypeName,
+          location: submissionData.locationName,
           value: 0,
           currency: "BRL",
         });
@@ -375,9 +425,9 @@ const Agendamento = () => {
         lead_id: leadId ?? null,
         event_id: leadEventId,
         user_data: buildLeadUserData({
-          fullName: formData.fullName,
-          phone: formData.phone,
-          email: formData.email,
+          fullName: submissionData.fullName,
+          phone: submissionData.phone,
+          email: submissionData.email,
         }),
         ...collectAttribution(),
       });
@@ -387,8 +437,8 @@ const Agendamento = () => {
       pushDL({
         event: "lp_appointment_scheduled",
         page_type: "landing_agendamento",
-        tipo_atendimento: formData.appointmentTypeName,
-        local: formData.locationName,
+        tipo_atendimento: submissionData.appointmentTypeName,
+        local: submissionData.locationName,
         value: 0,
         currency: "BRL",
       });
@@ -549,7 +599,11 @@ const Agendamento = () => {
                   </span>
                 </div>
                 <h2 className="mb-2 font-serif text-2xl font-bold text-foreground md:text-3xl lg:text-4xl">
-                  {isSubmitted ? "Agendamento enviado!" : "Agende sua consulta"}
+                  {isSubmitted
+                    ? "Agendamento enviado!"
+                    : isYagCampaign
+                      ? "Avaliação para visão embaçada após cirurgia de catarata"
+                      : "Agende sua consulta"}
                 </h2>
                 <div className="flex items-center justify-center lg:justify-start gap-2 text-xs text-muted-foreground font-medium mb-4 lg:hidden">
                   <span>{DOCTOR.name}</span>
@@ -558,11 +612,69 @@ const Agendamento = () => {
                 </div>
                 {!isSubmitted && (
                   <p className="text-sm text-muted-foreground md:text-base">
-                    Preencha os dados abaixo e nossa equipe confirma seu horário pelo WhatsApp —
-                    ou, se preferir, fale agora com a nossa secretária.
+                    {isYagCampaign
+                      ? "Atendimento em Paragominas. Nossa equipe confirma seu horário pelo WhatsApp."
+                      : "Preencha os dados abaixo e nossa equipe confirma seu horário pelo WhatsApp — ou, se preferir, fale agora com a nossa secretária."}
                   </p>
                 )}
               </div>
+
+              {!isSubmitted && (
+                <div className="mb-6 space-y-4">
+                  <div className="rounded-xl border border-primary/25 bg-card p-4 shadow-md sm:p-5">
+                    <p className="text-base font-bold leading-snug text-foreground sm:text-lg">
+                      {SCHEDULE_CONTEXT.headline}
+                    </p>
+                    <p className="mt-2 flex items-start gap-2 text-sm leading-relaxed text-foreground/90">
+                      <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                      {SCHEDULE_CONTEXT.locations}
+                    </p>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                      {SCHEDULE_CONTEXT.insurances}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Button asChild variant="whatsapp" size="lg" className="h-auto min-h-14 w-full py-3">
+                      <a
+                        href={TOP_WHATSAPP_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => handleWhatsAppClick("agendamento_topo", TOP_WHATSAPP_URL)}
+                        className="flex-col gap-0.5"
+                      >
+                        <span className="flex items-center gap-2">
+                          <MessageCircle className="h-5 w-5" />
+                          Agendar pelo WhatsApp
+                        </span>
+                        <span className="text-xs font-medium opacity-90">Resposta da nossa secretária</span>
+                      </a>
+                    </Button>
+                    <Button variant="outline" size="lg" onClick={scrollToForm} className="min-h-14 w-full">
+                      Agendar online
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2 rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-4 text-sm shadow-sm">
+                    <span className="flex items-center gap-1" aria-label={`${reviews.rating.toFixed(1)} estrelas`}>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
+                      ))}
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      {reviews.rating.toFixed(1).replace(".", ",")} · {GOOGLE_REVIEWS_DISPLAY_COUNT} avaliações no Google · {DOCTOR.yearsExperienceLabel}
+                    </span>
+                    <a
+                      href={GOOGLE_MAPS_REVIEWS_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      Ler no Google
+                    </a>
+                  </div>
+                </div>
+              )}
 
               {/*
                 AQUI HAVIA UM CARROSSEL COM TRES DEPOIMENTOS DE PACIENTES, com
@@ -580,31 +692,7 @@ const Agendamento = () => {
 
                 NAO REINTRODUZA sem falar com ele.
               */}
-              {!isSubmitted && (
-                <div className="mb-6 hidden flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-4 text-sm shadow-sm lg:flex">
-                  <span className="flex items-center gap-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
-                    ))}
-                  </span>
-                  <span className="font-semibold text-foreground">
-                    {reviews.rating.toFixed(1)}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {reviews.count} avaliações no Google
-                  </span>
-                  <a
-                    href={GOOGLE_MAPS_REVIEWS_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary underline-offset-4 hover:underline"
-                  >
-                    Ler no Google
-                  </a>
-                </div>
-              )}
-
-              <div className="rounded-xl border border-border bg-card p-4 shadow-lg sm:p-6 md:p-8">
+              <div id="agendamento-online" ref={formRef} className="scroll-mt-20 rounded-xl border border-border bg-card p-4 shadow-lg sm:p-6 md:p-8">
                 {!isSubmitted && <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />}
 
                 <div className="mt-6">
@@ -617,6 +705,7 @@ const Agendamento = () => {
                           formData={formData}
                           updateFormData={updateFormData}
                           onNext={nextStep}
+                          deferBirthDateAndEmail
                         />
                       )}
                       {currentStep === 2 && (
@@ -641,6 +730,8 @@ const Agendamento = () => {
                           onSubmit={handleSubmit}
                           onPrev={prevStep}
                           isSubmitting={isSubmitting}
+                          collectDeferredPersonalDetails
+                          updateFormData={updateFormData}
                         />
                       )}
                     </>
@@ -660,7 +751,7 @@ const Agendamento = () => {
               */}
               <div className="mt-6 space-y-4 lg:hidden">
                 <WhatsAppHighlight location="agendamento_destaque_secretaria_mobile" compact />
-                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-4 text-sm shadow-sm">
+                <div className="hidden flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-4 text-sm shadow-sm">
                   <span className="flex items-center gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
@@ -814,6 +905,26 @@ const Agendamento = () => {
             <p>Ao prosseguir, você concorda em receber contato via WhatsApp e e-mail.</p>
           </div>
         </footer>
+
+        {!isSubmitted && !isFormActionVisible && (
+          <Button
+            asChild
+            variant="whatsapp"
+            size="icon"
+            className="fixed bottom-4 right-4 z-40 h-14 w-14 rounded-full lg:hidden"
+          >
+            <a
+              href={TOP_WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => handleWhatsAppClick("agendamento_floating_mobile", TOP_WHATSAPP_URL)}
+              aria-label="Agendar pelo WhatsApp"
+              title="Agendar pelo WhatsApp"
+            >
+              <MessageCircle className="h-6 w-6" />
+            </a>
+          </Button>
+        )}
       </div>
     </>
   );
