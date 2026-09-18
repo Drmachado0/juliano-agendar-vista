@@ -61,15 +61,15 @@ const CONVENIOS = [
 ] as const;
 
 const SCHEDULE_CONTEXT = {
-  headline: "Atendimento em Paragominas · 23 a 26 de setembro",
+  headline: "Atendimento em Paragominas",
   locations: "Hospital Geral de Paragominas (HGP) e Clinicor",
   insurances: `Convênios: ${CONVENIOS.join(" · ")}`,
 } as const;
 
 const WHATSAPP_STANDARD_MESSAGE =
-  "Olá! Quero agendar uma consulta com o Dr. Juliano Machado em Paragominas (23 a 26/09).";
+  "Olá! Quero agendar uma consulta com o Dr. Juliano Machado em Paragominas.";
 const WHATSAPP_YAG_MESSAGE =
-  "Olá! Vi o anúncio sobre visão embaçada após cirurgia de catarata e quero agendar uma avaliação em Paragominas (23 a 26/09).";
+  "Olá! Vi o anúncio sobre visão embaçada após cirurgia de cirurgia de catarata e quero agendar uma avaliação em Paragominas.";
 
 const initialFormData: FormData = {
   fullName: "",
