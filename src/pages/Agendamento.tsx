@@ -69,7 +69,7 @@ const SCHEDULE_CONTEXT = {
 const WHATSAPP_STANDARD_MESSAGE =
   "Olá! Quero agendar uma consulta com o Dr. Juliano Machado em Paragominas.";
 const WHATSAPP_YAG_MESSAGE =
-  "Olá! Vi o anúncio sobre visão embaçada após cirurgia de cirurgia de catarata e quero agendar uma avaliação em Paragominas.";
+  "Olá! Vi o anúncio sobre visão embaçada após cirurgia de catarata e quero agendar uma avaliação em Paragominas.";
 
 const initialFormData: FormData = {
   fullName: "",
