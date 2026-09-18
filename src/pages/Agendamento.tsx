@@ -185,7 +185,8 @@ const Agendamento = () => {
       setIsFormActionVisible(false);
       return;
     }
-    const action = formRef.current?.querySelector("[data-form-actions]");
+    const buttons = formRef.current?.querySelectorAll("button");
+    const action = buttons?.item(Math.max(0, (buttons?.length ?? 1) - 1));
     if (!action) return;
     const observer = new IntersectionObserver(
       ([entry]) => setIsFormActionVisible(entry.isIntersecting),

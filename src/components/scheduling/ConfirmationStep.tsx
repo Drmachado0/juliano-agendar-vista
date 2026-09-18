@@ -230,7 +230,7 @@ const ConfirmationStep = ({
         </div>
       </div>
 
-      <div data-form-actions className="flex justify-between pt-4">
+      <div className="flex justify-between pt-4">
         <Button variant="outline" onClick={onPrev}>
           Voltar
         </Button>
