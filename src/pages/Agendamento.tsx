@@ -287,11 +287,12 @@ const Agendamento = () => {
     if (currentStep > 1) setCurrentStep((prev) => prev - 1);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (deferredDetails?: Pick<FormData, "birthDate" | "email">) => {
     setIsSubmitting(true);
+    const submissionData = { ...formData, ...deferredDetails };
 
     try {
-      const localAtendimento = formData.locationName || formData.location;
+      const localAtendimento = submissionData.locationName || submissionData.location;
 
       if (!leadId) {
         toast({
@@ -305,12 +306,12 @@ const Agendamento = () => {
       const { error } = await converterLeadEmAgendamento(
         leadId,
         {
-          data_agendamento: formData.selectedDate ? format(formData.selectedDate, "yyyy-MM-dd") : "",
-          hora_agendamento: formData.selectedTime,
-          aceita_primeiro_horario: formData.acceptFirstAvailable,
-          aceita_contato_whatsapp_email: formData.acceptNotifications,
-          data_nascimento: formData.birthDate || null,
-          email: formData.email || null,
+          data_agendamento: submissionData.selectedDate ? format(submissionData.selectedDate, "yyyy-MM-dd") : "",
+          hora_agendamento: submissionData.selectedTime,
+          aceita_primeiro_horario: submissionData.acceptFirstAvailable,
+          aceita_contato_whatsapp_email: submissionData.acceptNotifications,
+          data_nascimento: submissionData.birthDate || null,
+          email: submissionData.email || null,
         },
         localAtendimento
       );
@@ -339,11 +340,11 @@ const Agendamento = () => {
 
       await notificarN8n("agendamento_criado", {
         id: leadId,
-        nome_completo: formData.fullName,
-        telefone_whatsapp: formData.phone,
+        nome_completo: submissionData.fullName,
+        telefone_whatsapp: submissionData.phone,
         local_atendimento: localAtendimento,
-        data_agendamento: formData.selectedDate ? format(formData.selectedDate, "yyyy-MM-dd") : "",
-        hora_agendamento: formData.selectedTime,
+        data_agendamento: submissionData.selectedDate ? format(submissionData.selectedDate, "yyyy-MM-dd") : "",
+        hora_agendamento: submissionData.selectedTime,
       });
 
       const NOTIFICATION_TIMEOUT_MS = 8000;
@@ -351,28 +352,28 @@ const Agendamento = () => {
         supabase.functions.invoke("confirmar-agendamento-whatsapp", {
           body: {
             agendamento_data: {
-              nome_completo: formData.fullName,
-              telefone_whatsapp: formData.phone,
-              tipo_atendimento: formData.appointmentTypeName || formData.appointmentType,
+              nome_completo: submissionData.fullName,
+              telefone_whatsapp: submissionData.phone,
+              tipo_atendimento: submissionData.appointmentTypeName || submissionData.appointmentType,
               local_atendimento: localAtendimento,
-              data_agendamento: formData.selectedDate ? format(formData.selectedDate, "yyyy-MM-dd") : "",
-              hora_agendamento: formData.selectedTime,
-              convenio: formData.insuranceName || formData.insurance,
+              data_agendamento: submissionData.selectedDate ? format(submissionData.selectedDate, "yyyy-MM-dd") : "",
+              hora_agendamento: submissionData.selectedTime,
+              convenio: submissionData.insuranceName || submissionData.insurance,
             },
           },
         }),
         supabase.functions.invoke("notificar-agendamento-email", {
           body: {
-            nome_completo: formData.fullName,
-            telefone_whatsapp: formData.phone,
-            email_paciente: formData.email || null,
-            data_nascimento: formData.birthDate || null,
-            tipo_atendimento: formData.appointmentTypeName || formData.appointmentType,
+            nome_completo: submissionData.fullName,
+            telefone_whatsapp: submissionData.phone,
+            email_paciente: submissionData.email || null,
+            data_nascimento: submissionData.birthDate || null,
+            tipo_atendimento: submissionData.appointmentTypeName || submissionData.appointmentType,
             local_atendimento: localAtendimento,
-            convenio: formData.insuranceName || formData.insurance,
-            convenio_outro: formData.insurance === "outro" ? formData.otherInsurance : null,
-            data_agendamento: formData.selectedDate ? format(formData.selectedDate, "yyyy-MM-dd") : "",
-            hora_agendamento: formData.selectedTime,
+            convenio: submissionData.insuranceName || submissionData.insurance,
+              submissionData.insurance === "outro" ? submissionData.otherInsurance : null,
+            data_agendamento: submissionData.selectedDate ? format(submissionData.selectedDate, "yyyy-MM-dd") : "",
+            hora_agendamento: submissionData.selectedTime,
           },
         }),
       ]);
@@ -382,9 +383,9 @@ const Agendamento = () => {
       await Promise.race([notificationsPromise, timeoutPromise]);
 
       // Tracking (event_id = leadId para dedup com CAPI server-side)
-      trackScheduleComplete(formData.appointmentTypeName, formData.locationName);
-      trackSchedule(formData.appointmentTypeName, formData.locationName, leadId);
-      trackCompleteRegistration(formData.appointmentTypeName, formData.locationName, leadId);
+      trackScheduleComplete(submissionData.appointmentTypeName, submissionData.locationName);
+      trackSchedule(submissionData.appointmentTypeName, submissionData.locationName, leadId);
+      trackCompleteRegistration(submissionData.appointmentTypeName, submissionData.locationName, leadId);
       trackFormSubmitConversion();
 
       // Evento de sucesso real do agendamento (GA4 + Google Ads conversion).
@@ -393,15 +394,15 @@ const Agendamento = () => {
         successFiredRef.current = true;
         trackAppointmentSuccess('landing_agendamento', {
           id: leadId ?? null,
-          appointmentType: formData.appointmentTypeName,
-          location: formData.locationName,
+          appointmentType: submissionData.appointmentTypeName,
+          location: submissionData.locationName,
         });
         pushDL({
           event: "book_appointment",
           page_type: "landing_agendamento",
           appointment_id: leadId ?? null,
-          appointment_type: formData.appointmentTypeName,
-          location: formData.locationName,
+          appointment_type: submissionData.appointmentTypeName,
+          location: submissionData.locationName,
           value: 0,
           currency: "BRL",
         });
@@ -421,9 +422,9 @@ const Agendamento = () => {
         lead_id: leadId ?? null,
         event_id: leadEventId,
         user_data: buildLeadUserData({
-          fullName: formData.fullName,
-          phone: formData.phone,
-          email: formData.email,
+          fullName: submissionData.fullName,
+          phone: submissionData.phone,
+          email: submissionData.email,
         }),
         ...collectAttribution(),
       });
@@ -433,8 +434,8 @@ const Agendamento = () => {
       pushDL({
         event: "lp_appointment_scheduled",
         page_type: "landing_agendamento",
-        tipo_atendimento: formData.appointmentTypeName,
-        local: formData.locationName,
+        tipo_atendimento: submissionData.appointmentTypeName,
+        local: submissionData.locationName,
         value: 0,
         currency: "BRL",
       });
