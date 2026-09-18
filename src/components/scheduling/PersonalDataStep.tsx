@@ -313,7 +313,7 @@ const PersonalDataStep = ({
       </div>
 
 
-      <div data-form-actions className="flex justify-end pt-4">
+      <div className="flex justify-end pt-4">
         <Button variant="hero" onClick={handleNext}>
           Avançar
         </Button>
