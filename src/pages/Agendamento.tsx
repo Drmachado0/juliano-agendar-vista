@@ -55,12 +55,10 @@ const SCHEDULE_CONTEXT = {
     "Convênios: Unimed · Seguros Unimed · Bradesco Saúde · SulAmérica · Cassi · Saúde Caixa · Particular",
 } as const;
 
-const WHATSAPP_NUMBER = "5591936180476";
 const WHATSAPP_STANDARD_MESSAGE =
-  "Olá! Quero agendar uma consulta com o Dr. Juliano Machado em Paragominas (23 a 26/09). (origem: agendamento_topo)";
+  "Olá! Quero agendar uma consulta com o Dr. Juliano Machado em Paragominas (23 a 26/09).";
 const WHATSAPP_YAG_MESSAGE =
-  "Olá! Vi o anúncio sobre visão embaçada após cirurgia de catarata e quero agendar uma avaliação em Paragominas (23 a 26/09). (origem: anuncio_yag)";
-const GOOGLE_REVIEWS_DISPLAY_COUNT = 111;
+  "Olá! Vi o anúncio sobre visão embaçada após cirurgia de catarata e quero agendar uma avaliação em Paragominas (23 a 26/09).";
 
 const initialFormData: FormData = {
   fullName: "",
@@ -126,9 +124,10 @@ const Agendamento = () => {
   const isYagCampaign =
     queryParams?.get("origem")?.toLowerCase() === "yag" ||
     queryParams?.get("utm_content")?.toLowerCase().includes("yag") === true;
-  const TOP_WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+  const TOP_WHATSAPP_URL = waLink(
     isYagCampaign ? WHATSAPP_YAG_MESSAGE : WHATSAPP_STANDARD_MESSAGE,
-  )}`;
+    isYagCampaign ? "anuncio_yag" : "agendamento_topo",
+  );
   const formStartFiredRef = useRef(false);
   const successFiredRef = useRef(false);
   const viewFiredRef = useRef(false);
@@ -662,7 +661,7 @@ const Agendamento = () => {
                       ))}
                     </span>
                     <span className="font-semibold text-foreground">
-                      {reviews.rating.toFixed(1).replace(".", ",")} · {GOOGLE_REVIEWS_DISPLAY_COUNT} avaliações no Google · {DOCTOR.yearsExperienceLabel}
+                      {reviews.rating.toFixed(1).replace(".", ",")} · {reviews.count} avaliações no Google · {DOCTOR.yearsExperienceLabel}
                     </span>
                     <a
                       href={GOOGLE_MAPS_REVIEWS_URL}
