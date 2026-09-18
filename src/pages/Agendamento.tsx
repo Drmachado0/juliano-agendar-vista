@@ -47,9 +47,9 @@ import type { FormData } from "@/components/scheduling/SchedulingModal";
 
 const URL_AGENDAMENTO = `${BASE_URL}/agendamento`;
 
-// Atualize apenas estas constantes a cada nova agenda em Paragominas.
 // Fonte única dos convênios: usada no bloco do topo e no card lateral,
-// para nunca divergirem.
+// para nunca divergirem. Edite só se mudarem locais ou convênios —
+// a página é genérica e não contém datas fixas de agenda.
 const CONVENIOS = [
   "Unimed",
   "Seguros Unimed",
