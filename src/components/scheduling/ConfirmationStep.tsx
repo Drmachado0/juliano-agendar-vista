@@ -48,6 +48,7 @@ const ConfirmationStep = ({
   updateFormData,
 }: ConfirmationStepProps) => {
   const [birthDateBr, setBirthDateBr] = useState(isoToBr(formData.birthDate));
+  const [emailValue, setEmailValue] = useState(formData.email);
   const [errors, setErrors] = useState<{ birthDate?: string; email?: string }>({});
   const getAppointmentTypeLabel = (value: string) => {
     const types: Record<string, string> = {
@@ -118,13 +119,13 @@ const ConfirmationStep = ({
       if (year < 1900) nextErrors.birthDate = "Digite uma data válida no formato DD/MM/AAAA.";
       else if (birthDate > today) nextErrors.birthDate = "A data de nascimento não pode estar no futuro.";
     }
-    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+    if (emailValue.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue.trim())) {
       nextErrors.email = "Por favor, digite um e-mail válido (ex: nome@email.com)";
     }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    const details = { birthDate: isoBirthDate, email: formData.email };
+    const details = { birthDate: isoBirthDate, email: emailValue };
     updateFormData?.(details);
     onSubmit(details);
   };
@@ -173,8 +174,9 @@ const ConfirmationStep = ({
             <Input
               id="email-final"
               type="email"
-              value={formData.email}
+              value={emailValue}
               onChange={(event) => {
+                setEmailValue(event.target.value);
                 updateFormData?.({ email: event.target.value });
                 setErrors((current) => ({ ...current, email: undefined }));
               }}
