@@ -371,6 +371,7 @@ const Agendamento = () => {
             tipo_atendimento: submissionData.appointmentTypeName || submissionData.appointmentType,
             local_atendimento: localAtendimento,
             convenio: submissionData.insuranceName || submissionData.insurance,
+            convenio_outro:
               submissionData.insurance === "outro" ? submissionData.otherInsurance : null,
             data_agendamento: submissionData.selectedDate ? format(submissionData.selectedDate, "yyyy-MM-dd") : "",
             hora_agendamento: submissionData.selectedTime,
