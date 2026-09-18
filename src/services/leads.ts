@@ -63,6 +63,8 @@ export async function converterLeadEmAgendamento(
     hora_agendamento: string;
     aceita_primeiro_horario?: boolean;
     aceita_contato_whatsapp_email?: boolean;
+    data_nascimento?: string | null;
+    email?: string | null;
   },
   localAtendimento: string
 ): Promise<{ error: Error | null }> {
@@ -77,6 +79,8 @@ export async function converterLeadEmAgendamento(
         local_atendimento: localAtendimento,
         aceita_primeiro_horario: data.aceita_primeiro_horario ?? false,
         aceita_contato_whatsapp_email: data.aceita_contato_whatsapp_email ?? false,
+        data_nascimento: data.data_nascimento ?? null,
+        email: data.email?.trim() || null,
       },
     });
 

@@ -115,6 +115,8 @@ Deno.serve(async (req) => {
       local_atendimento,
       aceita_primeiro_horario,
       aceita_contato_whatsapp_email,
+      data_nascimento,
+      email,
     } = await req.json();
 
     // Validate required fields
@@ -203,6 +205,12 @@ Deno.serve(async (req) => {
       status_crm: statusCrm,
       updated_at: new Date().toISOString(),
     };
+    if (typeof data_nascimento === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data_nascimento)) {
+      updatePayload.data_nascimento = data_nascimento;
+    }
+    if (typeof email === "string") {
+      updatePayload.email = email.trim() || null;
+    }
     if (clinicaIdResolved) {
       updatePayload.clinica_id = clinicaIdResolved;
     }

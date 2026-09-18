@@ -9,6 +9,7 @@ interface PersonalDataStepProps {
   formData: FormData;
   updateFormData: (data: Partial<FormData>) => void;
   onNext: () => void;
+  deferBirthDateAndEmail?: boolean;
 }
 
 // Converte ISO (yyyy-mm-dd) para BR (dd/mm/aaaa)
@@ -45,7 +46,12 @@ const formatBirthDateInput = (value: string) => {
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 };
 
-const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStepProps) => {
+const PersonalDataStep = ({
+  formData,
+  updateFormData,
+  onNext,
+  deferBirthDateAndEmail = false,
+}: PersonalDataStepProps) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [birthDateBr, setBirthDateBr] = useState<string>(isoToBr(formData.birthDate || ""));
 
@@ -127,29 +133,31 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
       }
     }
 
-    // E-mail: opcional, mas se preenchido precisa ser válido
-    const emailVal = formData.email.trim();
-    if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-      newErrors.email = "Por favor, digite um e-mail válido (ex: nome@email.com)";
-    }
+    if (!deferBirthDateAndEmail) {
+      // E-mail: opcional, mas se preenchido precisa ser válido
+      const emailVal = formData.email.trim();
+      if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+        newErrors.email = "Por favor, digite um e-mail válido (ex: nome@email.com)";
+      }
 
-    // Data de nascimento OBRIGATÓRIA
-    const bd = birthDateBr.trim();
-    if (!bd) {
-      newErrors.birthDate = "Informe a data de nascimento.";
-    } else if (bd.length !== 10 || !brToIso(bd)) {
-      newErrors.birthDate = "Digite uma data válida no formato DD/MM/AAAA.";
-    } else {
-      const iso = brToIso(bd);
-      const [ano, mes, dia] = iso.split("-").map(Number);
-      const dataNasc = new Date(ano, mes - 1, dia);
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-
-      if (ano < 1900) {
+      // Data de nascimento OBRIGATÓRIA
+      const bd = birthDateBr.trim();
+      if (!bd) {
+        newErrors.birthDate = "Informe a data de nascimento.";
+      } else if (bd.length !== 10 || !brToIso(bd)) {
         newErrors.birthDate = "Digite uma data válida no formato DD/MM/AAAA.";
-      } else if (dataNasc > hoje) {
-        newErrors.birthDate = "A data de nascimento não pode estar no futuro.";
+      } else {
+        const iso = brToIso(bd);
+        const [ano, mes, dia] = iso.split("-").map(Number);
+        const dataNasc = new Date(ano, mes - 1, dia);
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+
+        if (ano < 1900) {
+          newErrors.birthDate = "Digite uma data válida no formato DD/MM/AAAA.";
+        } else if (dataNasc > hoje) {
+          newErrors.birthDate = "A data de nascimento não pode estar no futuro.";
+        }
       }
     }
 
@@ -165,7 +173,9 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
     }
     // Foca o primeiro campo inválido na ordem visual
     requestAnimationFrame(() => {
-      const order = ["fullName", "phone", "birthDate", "email"];
+      const order = deferBirthDateAndEmail
+        ? ["fullName", "phone"]
+        : ["fullName", "phone", "birthDate", "email"];
       // Reexecuta validação síncrona para descobrir erros novamente sem depender do setState
       const invalid = order.find((id) => {
         const el = document.getElementById(id) as HTMLInputElement | null;
@@ -202,7 +212,7 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
             aria-required="true"
             aria-invalid={!!errors.fullName}
             aria-describedby={errors.fullName ? "fullName-error" : undefined}
-            className={`bg-secondary border-border focus:border-primary ${
+            className={`min-h-12 bg-secondary border-border focus:border-primary ${
               errors.fullName ? "border-destructive" : ""
             }`}
           />
@@ -230,7 +240,7 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
             aria-required="true"
             aria-invalid={!!errors.phone}
             aria-describedby={errors.phone ? "phone-error" : undefined}
-            className={`bg-secondary border-border focus:border-primary ${
+            className={`min-h-12 bg-secondary border-border focus:border-primary ${
               errors.phone ? "border-destructive" : ""
             }`}
           />
@@ -241,6 +251,8 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
           )}
         </div>
 
+        {!deferBirthDateAndEmail && (
+          <>
         {/* Birth Date — OBRIGATÓRIO */}
         <div className="space-y-2">
           <Label htmlFor="birthDate" className="text-foreground flex items-center gap-2">
@@ -296,6 +308,8 @@ const PersonalDataStep = ({ formData, updateFormData, onNext }: PersonalDataStep
             </p>
           )}
         </div>
+          </>
+        )}
       </div>
 
 
