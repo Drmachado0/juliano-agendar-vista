@@ -190,7 +190,7 @@ const DateTimeStep = ({ formData, updateFormData, onNext, onPrev }: DateTimeStep
         </div>
       </div>
 
-      <div className="flex justify-between pt-4">
+      <div data-form-actions className="flex justify-between pt-4">
         <Button variant="outline" onClick={onPrev}>
           Voltar
         </Button>

@@ -53,7 +53,6 @@ const SCHEDULE_CONTEXT = {
   locations: "Hospital Geral de Paragominas (HGP) e Clinicor",
   insurances:
     "Convênios: Unimed · Seguros Unimed · Bradesco Saúde · SulAmérica · Cassi · Saúde Caixa · Particular",
-  shortDate: "23 a 26/09",
 } as const;
 
 const WHATSAPP_NUMBER = "5591936180476";
@@ -98,6 +97,7 @@ const Agendamento = () => {
   const [leadId, setLeadId] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFormActionVisible, setIsFormActionVisible] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
   const {
     trackViewContent,
@@ -177,6 +177,21 @@ const Agendamento = () => {
         step: currentStep,
       });
     }
+  }, [currentStep, isSubmitted]);
+
+  useEffect(() => {
+    if (isSubmitted || typeof IntersectionObserver === "undefined") {
+      setIsFormActionVisible(false);
+      return;
+    }
+    const action = formRef.current?.querySelector("[data-form-actions]");
+    if (!action) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsFormActionVisible(entry.isIntersecting),
+      { threshold: 0.2 },
+    );
+    observer.observe(action);
+    return () => observer.disconnect();
   }, [currentStep, isSubmitted]);
 
   // Carrossel auto
@@ -673,31 +688,7 @@ const Agendamento = () => {
 
                 NAO REINTRODUZA sem falar com ele.
               */}
-              {!isSubmitted && false && (
-                <div className="mb-6 hidden flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-4 text-sm shadow-sm lg:flex">
-                  <span className="flex items-center gap-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
-                    ))}
-                  </span>
-                  <span className="font-semibold text-foreground">
-                    {reviews.rating.toFixed(1)}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {reviews.count} avaliações no Google
-                  </span>
-                  <a
-                    href={GOOGLE_MAPS_REVIEWS_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary underline-offset-4 hover:underline"
-                  >
-                    Ler no Google
-                  </a>
-                </div>
-              )}
-
-              <div ref={formRef} className="scroll-mt-20 rounded-xl border border-border bg-card p-4 shadow-lg sm:p-6 md:p-8">
+              <div id="agendamento-online" ref={formRef} className="scroll-mt-20 rounded-xl border border-border bg-card p-4 shadow-lg sm:p-6 md:p-8">
                 {!isSubmitted && <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />}
 
                 <div className="mt-6">
@@ -754,7 +745,7 @@ const Agendamento = () => {
                 Só nota agregada e link — sem depoimento de paciente (CFM
                 1.974/2011; ver comentário acima do bloco desktop).
               */}
-              <div className="mt-6 space-y-4">
+              <div className="mt-6 space-y-4 lg:hidden">
                 <WhatsAppHighlight location="agendamento_destaque_secretaria_mobile" compact />
                 <div className="hidden flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 via-card to-primary/5 p-4 text-sm shadow-sm">
                   <span className="flex items-center gap-1">
@@ -911,7 +902,7 @@ const Agendamento = () => {
           </div>
         </footer>
 
-        {!isSubmitted && (
+        {!isSubmitted && !isFormActionVisible && (
           <a
             href={TOP_WHATSAPP_URL}
             target="_blank"
