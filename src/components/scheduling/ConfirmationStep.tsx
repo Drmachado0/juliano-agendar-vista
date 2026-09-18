@@ -9,7 +9,7 @@ import { useState } from "react";
 
 interface ConfirmationStepProps {
   formData: FormData;
-  onSubmit: () => void;
+  onSubmit: (details?: Pick<FormData, "birthDate" | "email">) => void;
   onPrev: () => void;
   isSubmitting?: boolean;
   collectDeferredPersonalDetails?: boolean;
@@ -124,8 +124,9 @@ const ConfirmationStep = ({
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    updateFormData?.({ birthDate: isoBirthDate });
-    onSubmit();
+    const details = { birthDate: isoBirthDate, email: formData.email };
+    updateFormData?.(details);
+    onSubmit(details);
   };
 
   return (
