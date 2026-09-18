@@ -903,17 +903,23 @@ const Agendamento = () => {
         </footer>
 
         {!isSubmitted && !isFormActionVisible && (
-          <a
-            href={TOP_WHATSAPP_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => handleWhatsAppClick("agendamento_floating_mobile", TOP_WHATSAPP_URL)}
-            aria-label="Agendar pelo WhatsApp"
-            title="Agendar pelo WhatsApp"
-            className="fixed bottom-4 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-xl shadow-[#25D366]/30 transition-transform active:scale-95 lg:hidden"
+          <Button
+            asChild
+            variant="whatsapp"
+            size="icon"
+            className="fixed bottom-4 right-4 z-40 h-14 w-14 rounded-full lg:hidden"
           >
-            <MessageCircle className="h-6 w-6" />
-          </a>
+            <a
+              href={TOP_WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => handleWhatsAppClick("agendamento_floating_mobile", TOP_WHATSAPP_URL)}
+              aria-label="Agendar pelo WhatsApp"
+              title="Agendar pelo WhatsApp"
+            >
+              <MessageCircle className="h-6 w-6" />
+            </a>
+          </Button>
         )}
       </div>
     </>
