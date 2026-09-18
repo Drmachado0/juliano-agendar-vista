@@ -68,8 +68,6 @@ const SCHEDULE_CONTEXT = {
 
 const WHATSAPP_STANDARD_MESSAGE =
   "Olá! Quero agendar uma consulta com o Dr. Juliano Machado em Paragominas.";
-const WHATSAPP_YAG_MESSAGE =
-  "Olá! Vi o anúncio sobre visão embaçada após cirurgia de catarata e quero agendar uma avaliação em Paragominas.";
 
 const initialFormData: FormData = {
   fullName: "",
@@ -131,14 +129,7 @@ const Agendamento = () => {
   // aggregateRating do JSON-LD nao podem divergir entre si nem da home.
   const reviews = useGoogleReviews();
   const WHATSAPP_URL = waLink(WHATSAPP_DEFAULT_MSG, "agendamento_secretaria");
-  const queryParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-  const isYagCampaign =
-    queryParams?.get("origem")?.toLowerCase() === "yag" ||
-    queryParams?.get("utm_content")?.toLowerCase().includes("yag") === true;
-  const TOP_WHATSAPP_URL = waLink(
-    isYagCampaign ? WHATSAPP_YAG_MESSAGE : WHATSAPP_STANDARD_MESSAGE,
-    isYagCampaign ? "anuncio_yag" : "agendamento_topo",
-  );
+  const TOP_WHATSAPP_URL = waLink(WHATSAPP_STANDARD_MESSAGE, "agendamento_topo");
   const formStartFiredRef = useRef(false);
   const successFiredRef = useRef(false);
   const viewFiredRef = useRef(false);
@@ -609,11 +600,7 @@ const Agendamento = () => {
                   </span>
                 </div>
                 <h2 className="mb-2 font-serif text-2xl font-bold text-foreground md:text-3xl lg:text-4xl">
-                  {isSubmitted
-                    ? "Agendamento enviado!"
-                    : isYagCampaign
-                      ? "Avaliação para visão embaçada após cirurgia de catarata"
-                      : "Agende sua consulta"}
+                  {isSubmitted ? "Agendamento enviado!" : "Agende sua consulta"}
                 </h2>
                 <div className="flex items-center justify-center lg:justify-start gap-2 text-xs text-muted-foreground font-medium mb-4 lg:hidden">
                   <span>{DOCTOR.name}</span>
@@ -622,9 +609,7 @@ const Agendamento = () => {
                 </div>
                 {!isSubmitted && (
                   <p className="text-sm text-muted-foreground md:text-base">
-                    {isYagCampaign
-                      ? "Atendimento em Paragominas. Nossa equipe confirma seu horário pelo WhatsApp."
-                      : "Preencha os dados abaixo e nossa equipe confirma seu horário pelo WhatsApp — ou, se preferir, fale agora com a nossa secretária."}
+                    Preencha os dados abaixo e nossa equipe confirma seu horário pelo WhatsApp — ou, se preferir, fale agora com a nossa secretária.
                   </p>
                 )}
               </div>
