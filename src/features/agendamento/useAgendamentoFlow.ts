@@ -205,11 +205,13 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
         convenio_outro: formData.insurance === "outro" ? formData.otherInsurance : null,
       };
 
-      const { lead_id, error, status, attempts } = await criarLeadComRetry(leadData);
+      const { lead_id, error, status, attempts, lead: leadEnviado } =
+        await criarLeadComRetry(leadData);
 
       if (error) {
         console.error("[useAgendamentoFlow] Erro ao criar lead:", error);
-        savePendingLead(leadData);
+        // Guarda com o mesmo event_id: o reenvio não vira um segundo lead.
+        savePendingLead(leadEnviado);
         trackAppointmentError(pageType as any, "lead_creation", error.message, {
           statusCode: status,
           step: "lead_creation",

@@ -134,6 +134,29 @@ Deno.serve(async (req) => {
 
     const phoneClean = data.telefone_whatsapp.replace(/\D/g, '');
 
+    // Idempotência: o front repete a chamada quando a resposta se perde na rede
+    // (4G oscilando, timeout) mesmo que o INSERT já tenha acontecido. Como o
+    // event_id é o mesmo em toda repetição, devolvemos o lead existente em vez
+    // de criar um segundo registro da mesma pessoa.
+    if (data.event_id) {
+      const { data: existente, error: buscaErro } = await supabase
+        .from('agendamentos')
+        .select('id')
+        .eq('event_id', data.event_id)
+        .limit(1)
+        .maybeSingle();
+
+      if (buscaErro) {
+        console.error('[criar-lead] Falha ao checar event_id existente:', buscaErro);
+      } else if (existente?.id) {
+        console.log(`[criar-lead] event_id já registrado, devolvendo lead_id=${existente.id}`);
+        return new Response(
+          JSON.stringify({ success: true, lead_id: existente.id, deduplicado: true }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     const { data: lead, error } = await supabase
       .from('agendamentos')
       .insert({

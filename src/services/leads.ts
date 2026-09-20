@@ -11,6 +11,11 @@ export interface LeadData {
   local_atendimento: string;
   convenio: string;
   convenio_outro?: string | null;
+  /**
+   * Identificador único da tentativa de agendamento. Quando informado, é
+   * reusado em todas as repetições para o servidor não criar lead duplicado.
+   */
+  event_id?: string | null;
 }
 
 export async function criarLead(
@@ -34,7 +39,9 @@ export async function criarLead(
       fbc: tracking.fbc || null,
       landing_page: tracking.landing_page || null,
       referrer: tracking.referrer || null,
-      event_id: tracking.event_id || null,
+      // O id da tentativa vence o da sessão: é ele que garante que repetir a
+      // chamada não crie um segundo lead da mesma pessoa.
+      event_id: data.event_id || tracking.event_id || null,
     };
 
     const { data: responseData, error } = await supabase.functions.invoke('criar-lead', {
@@ -49,7 +56,9 @@ export async function criarLead(
 
     if (responseData?.error) {
       console.error('Erro retornado pela edge function:', responseData.error);
-      return { lead_id: null, error: new Error(responseData.error), status: 200 };
+      // Sem status: o erro veio no corpo de uma resposta que o cliente não
+      // expõe o código. Registrar 200 poluiria o lp_appointment_error.
+      return { lead_id: null, error: new Error(responseData.error) };
     }
 
     return { lead_id: responseData?.lead_id || null, error: null };
