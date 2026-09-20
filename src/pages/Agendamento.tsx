@@ -211,6 +211,11 @@ const Agendamento = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Reenvio silencioso de lead que ficou guardado numa visita anterior.
+  useEffect(() => {
+    void retryPendingLead();
+  }, []);
+
   const updateFormData = (data: Partial<FormData>) => {
     if (!formStartFiredRef.current) {
       formStartFiredRef.current = true;
