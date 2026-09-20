@@ -192,17 +192,24 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
         convenio_outro: formData.insurance === "outro" ? formData.otherInsurance : null,
       };
 
-      const { lead_id, error } = await criarLead(leadData);
+      const { lead_id, error, status, attempts } = await criarLeadComRetry(leadData);
 
       if (error) {
         console.error("[useAgendamentoFlow] Erro ao criar lead:", error);
+        savePendingLead(leadData);
+        trackAppointmentError(pageType as any, "lead_creation", error.message, {
+          statusCode: status,
+          step: "lead_creation",
+          attempts,
+        });
         toast({
-          title: "Erro ao registrar interesse",
+          title: "Não conseguimos salvar seus dados agora",
           description:
-            "Não foi possível salvar seus dados. O agendamento continuará normalmente.",
+            "Continue o agendamento normalmente. Se falhar de novo no fim, abrimos o WhatsApp com seus dados para a nossa equipe concluir.",
           variant: "destructive",
         });
       } else if (lead_id) {
+        clearPendingLead();
         setLeadId(lead_id);
         trackLead("Dados Pessoais Preenchidos - Landing", lead_id);
         pushDL({
