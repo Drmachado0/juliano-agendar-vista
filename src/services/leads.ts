@@ -56,7 +56,9 @@ export async function criarLead(
 
     if (responseData?.error) {
       console.error('Erro retornado pela edge function:', responseData.error);
-      return { lead_id: null, error: new Error(responseData.error), status: 200 };
+      // Sem status: o erro veio no corpo de uma resposta que o cliente não
+      // expõe o código. Registrar 200 poluiria o lp_appointment_error.
+      return { lead_id: null, error: new Error(responseData.error) };
     }
 
     return { lead_id: responseData?.lead_id || null, error: null };
