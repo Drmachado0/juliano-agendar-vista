@@ -23,7 +23,14 @@ import ConsultationDetailsStep from "@/components/scheduling/ConsultationDetails
 import DateTimeStep from "@/components/scheduling/DateTimeStep";
 import ConfirmationStep from "@/components/scheduling/ConfirmationStep";
 import SuccessStep from "@/components/scheduling/SuccessStep";
-import { criarLead, converterLeadEmAgendamento } from "@/services/leads";
+import { converterLeadEmAgendamento } from "@/services/leads";
+import {
+  buildFallbackWhatsAppMessage,
+  clearPendingLead,
+  criarLeadComRetry,
+  retryPendingLead,
+  savePendingLead,
+} from "@/features/agendamento/leadRecovery";
 import { notificarN8n } from "@/services/integracoes";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
