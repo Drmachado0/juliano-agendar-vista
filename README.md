@@ -1,73 +1,119 @@
-# Welcome to your Lovable project
+# Dr. JulianoMachado
 
-## Project info
+**Prompt para o Lovable**
 
-**URL**: https://lovable.dev/projects/e5291dc7-2065-4dfc-9149-64aa4c0a0ce6
+Crie um site de agendamento de consultas para o médico oftalmologista **Dr. Juliano Machado**.
 
-## How can I edit this code?
+Use como referência de informações e estilo as páginas:
 
-There are several ways of editing your application.
+* [https://drjulianomachado.com/](https://drjulianomachado.com/)
+* [https://agendarconsulta.com/perfil/dr-dr-juliano-machado-1720017204?origin=profile_search](https://agendarconsulta.com/perfil/dr-dr-juliano-machado-1720017204?origin=profile_search)
 
-**Use Lovable**
+O site deve ter:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e5291dc7-2065-4dfc-9149-64aa4c0a0ce6) and start prompting.
+### Landing page
 
-Changes made via Lovable will be committed automatically to this repo.
+* Cabeçalho com foto ou ícone de olho, nome **“Dr. Juliano Machado – Oftalmologia”** e botão em destaque **“Agendar consulta”**.
+* Seções curtas:
 
-**Use your preferred IDE**
+  * **Sobre** (mini bio do médico, experiência e especialidades).
+  * **Locais de atendimento** (Clinicor – Paragominas, Hospital Geral de Paragominas – HGP, Belém – IOB/Vitria).
+  * **Convênios atendidos** (Particular, Bradesco, Unimed, Cassi, Sul América).
+* Botão fixo de **WhatsApp** flutuante.
+* Estilo **moderno, clean, levemente dark, profissional médico**, com destaques em **azul/verde** e totalmente responsivo (ótimo em celular).
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Formulário de agendamento em passos (multi-step)
 
-Follow these steps:
+#### Step 1 – Dados pessoais
+
+Manter apenas estes campos:
+
+* **Nome completo** (obrigatório)
+* **Telefone (WhatsApp obrigatório)** (obrigatório)
+* **Data de nascimento**
+* **E-mail**
+
+(⚠️ Remover CPF, Cidade/Bairro e a pergunta “Como você nos conheceu?”.)
+
+---
+
+#### Step 2 – Detalhes da consulta
+
+* **Tipo de atendimento:**
+
+  * Consulta
+  * Retorno
+  * Exame (campo visual, OCT, mapeamento etc.)
+  * Cirurgia (catarata, pterígio etc.)
+
+* **Local do atendimento:**
+
+  * Clinicor – Paragominas
+  * Hospital Geral de Paragominas
+  * Belém (IOB / Vitria)
+
+* **Convênio:**
+
+  * Particular
+  * Bradesco
+  * Unimed
+  * Cassi
+  * Sul América
+  * Outro (campo de texto)
+
+(⚠️ Remover o campo de texto “Queixa principal / motivo da consulta”.)
+
+---
+
+#### Step 3 – Escolha de data e horário
+
+* Seletor de data em formato de **calendário**.
+* Lista de **horários disponíveis** para o dia escolhido.
+* Checkbox: **“Aceito o primeiro horário disponível se não houver vaga no horário escolhido”**.
+* Checkbox: **“Aceito receber confirmação e lembretes por WhatsApp/E-mail”**.
+* Deixar o código preparado para futura integração com **Google Calendar ou Calendly**.
+
+---
+
+#### Step 4 – Confirmação
+
+* Mostrar um **resumo** de todos os dados do paciente e da consulta.
+* Botão **“Confirmar agendamento”**.
+* Após confirmar, exibir mensagem:
+
+  > “Seu pedido de agendamento foi enviado. Nossa equipe entrará em contato pelo WhatsApp para confirmar o horário.”
+* Botão para abrir um link direto do **WhatsApp** da clínica.
+
+---
+
+### Regras de UX e técnicas
+
+* Usar **validação de campos obrigatórios**.
+* Mostrar claramente o passo atual (ex.: 1/4, 2/4, 3/4, 4/4).
+* Incluir botões **“Voltar”** e **“Avançar”** em todos os steps.
+* Site leve, com **carregamento rápido** e layout otimizado para dispositivos móveis.
+
+This project was built with [Lovable](https://lovable.dev).
+
+**Live app**: https://juliano-agendar-vista.lovable.app
+
+## Build with Lovable
+
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/e5291dc7-2065-4dfc-9149-64aa4c0a0ce6).
+
+- **Ship faster**: describe what you want to build and Lovable handles the code.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+
+## Development
+
+Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
+git clone <this-repository-url>
+cd <repository-name>
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/e5291dc7-2065-4dfc-9149-64aa4c0a0ce6) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
