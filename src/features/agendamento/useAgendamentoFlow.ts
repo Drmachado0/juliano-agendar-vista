@@ -88,6 +88,8 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { waLink } = useSiteWhatsApp();
+
   const {
     trackViewContent,
     trackLead,
