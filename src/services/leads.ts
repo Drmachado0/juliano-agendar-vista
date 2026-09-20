@@ -13,7 +13,9 @@ export interface LeadData {
   convenio_outro?: string | null;
 }
 
-export async function criarLead(data: LeadData): Promise<{ lead_id: string | null; error: Error | null }> {
+export async function criarLead(
+  data: LeadData,
+): Promise<{ lead_id: string | null; error: Error | null; status?: number }> {
   try {
     const tracking = getTrackingParams();
     const payload = {
