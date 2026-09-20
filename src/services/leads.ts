@@ -11,6 +11,11 @@ export interface LeadData {
   local_atendimento: string;
   convenio: string;
   convenio_outro?: string | null;
+  /**
+   * Identificador único da tentativa de agendamento. Quando informado, é
+   * reusado em todas as repetições para o servidor não criar lead duplicado.
+   */
+  event_id?: string | null;
 }
 
 export async function criarLead(
