@@ -145,6 +145,9 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
     } catch (e) {
       console.warn("[useAgendamentoFlow] UTM capture falhou:", e);
     }
+
+    // Reenvio silencioso de lead que ficou guardado numa visita anterior.
+    void retryPendingLead();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
