@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789874162193,
+      "tag": "0000_agendamentos_event_id_unico",
+      "breakpoints": true
+    }
+  ]
+}
