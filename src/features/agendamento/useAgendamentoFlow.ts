@@ -2,7 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { criarLead, converterLeadEmAgendamento } from "@/services/leads";
+import { converterLeadEmAgendamento } from "@/services/leads";
+import {
+  buildFallbackWhatsAppMessage,
+  clearPendingLead,
+  criarLeadComRetry,
+  retryPendingLead,
+  savePendingLead,
+} from "@/features/agendamento/leadRecovery";
+import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import { notificarN8n } from "@/services/integracoes";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
@@ -80,6 +88,8 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { waLink } = useSiteWhatsApp();
+
   const {
     trackViewContent,
     trackLead,
@@ -135,6 +145,9 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
     } catch (e) {
       console.warn("[useAgendamentoFlow] UTM capture falhou:", e);
     }
+
+    // Reenvio silencioso de lead que ficou guardado numa visita anterior.
+    void retryPendingLead();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -192,17 +205,24 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
         convenio_outro: formData.insurance === "outro" ? formData.otherInsurance : null,
       };
 
-      const { lead_id, error } = await criarLead(leadData);
+      const { lead_id, error, status, attempts } = await criarLeadComRetry(leadData);
 
       if (error) {
         console.error("[useAgendamentoFlow] Erro ao criar lead:", error);
+        savePendingLead(leadData);
+        trackAppointmentError(pageType as any, "lead_creation", error.message, {
+          statusCode: status,
+          step: "lead_creation",
+          attempts,
+        });
         toast({
-          title: "Erro ao registrar interesse",
+          title: "Não conseguimos salvar seus dados agora",
           description:
-            "Não foi possível salvar seus dados. O agendamento continuará normalmente.",
+            "Continue o agendamento normalmente. Se falhar de novo no fim, abrimos o WhatsApp com seus dados para a nossa equipe concluir.",
           variant: "destructive",
         });
       } else if (lead_id) {
+        clearPendingLead();
         setLeadId(lead_id);
         trackLead("Dados Pessoais Preenchidos - Landing", lead_id);
         pushDL({
@@ -238,11 +258,28 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
       const localAtendimento = formData.locationName || formData.location;
 
       if (!leadId) {
-        toast({
-          title: "Erro",
-          description: "Lead não encontrado. Por favor, reinicie o agendamento.",
-          variant: "destructive",
+        // O registro no banco falhou: cumprimos a promessa levando a pessoa ao
+        // WhatsApp com tudo que ela já preencheu.
+        const mensagem = buildFallbackWhatsAppMessage({
+          nome: formData.fullName,
+          telefone: formData.phone,
+          tipoAtendimento: formData.appointmentTypeName || formData.appointmentType,
+          local: localAtendimento,
+          convenio: formData.insuranceName || formData.insurance,
+          data: formData.selectedDate ? format(formData.selectedDate, "dd/MM/yyyy") : undefined,
+          hora: formData.selectedTime || undefined,
         });
+        trackAppointmentError(pageType as any, "lead_creation", "lead_id ausente no submit", {
+          step: "submit_without_lead",
+        });
+        toast({
+          title: "Vamos concluir pelo WhatsApp",
+          description:
+            "Não conseguimos salvar seu agendamento no site. Abrimos o WhatsApp com seus dados para a nossa equipe confirmar.",
+        });
+        if (typeof window !== "undefined") {
+          window.open(waLink(mensagem, "agendamento_fallback"), "_blank", "noopener,noreferrer");
+        }
         return;
       }
 

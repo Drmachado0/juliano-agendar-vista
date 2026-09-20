@@ -138,14 +138,18 @@ export const useGoogleTag = () => {
 
   const trackAppointmentError = (
     pageType: AppointmentContext,
-    errorType: 'availability' | 'other' | 'unexpected',
+    errorType: 'availability' | 'other' | 'unexpected' | 'lead_creation',
     errorMessage?: string,
+    details?: { statusCode?: number; step?: string; attempts?: number },
   ) => {
     pushToDataLayer({
       event: pageType === 'modal' ? 'modal_appointment_error' : 'lp_appointment_error',
       page_type: pageType,
       error_type: errorType,
       error_message: errorMessage,
+      status_code: details?.statusCode,
+      error_step: details?.step,
+      attempts: details?.attempts,
     });
   };
 

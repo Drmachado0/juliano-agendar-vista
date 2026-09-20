@@ -13,7 +13,9 @@ export interface LeadData {
   convenio_outro?: string | null;
 }
 
-export async function criarLead(data: LeadData): Promise<{ lead_id: string | null; error: Error | null }> {
+export async function criarLead(
+  data: LeadData,
+): Promise<{ lead_id: string | null; error: Error | null; status?: number }> {
   try {
     const tracking = getTrackingParams();
     const payload = {
@@ -41,12 +43,13 @@ export async function criarLead(data: LeadData): Promise<{ lead_id: string | nul
 
     if (error) {
       console.error('Erro ao criar lead:', error);
-      return { lead_id: null, error: new Error(error.message || 'Erro ao criar lead') };
+      const status = (error as any)?.context?.status as number | undefined;
+      return { lead_id: null, error: new Error(error.message || 'Erro ao criar lead'), status };
     }
 
     if (responseData?.error) {
       console.error('Erro retornado pela edge function:', responseData.error);
-      return { lead_id: null, error: new Error(responseData.error) };
+      return { lead_id: null, error: new Error(responseData.error), status: 200 };
     }
 
     return { lead_id: responseData?.lead_id || null, error: null };

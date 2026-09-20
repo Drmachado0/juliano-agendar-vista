@@ -23,7 +23,14 @@ import ConsultationDetailsStep from "@/components/scheduling/ConsultationDetails
 import DateTimeStep from "@/components/scheduling/DateTimeStep";
 import ConfirmationStep from "@/components/scheduling/ConfirmationStep";
 import SuccessStep from "@/components/scheduling/SuccessStep";
-import { criarLead, converterLeadEmAgendamento } from "@/services/leads";
+import { converterLeadEmAgendamento } from "@/services/leads";
+import {
+  buildFallbackWhatsAppMessage,
+  clearPendingLead,
+  criarLeadComRetry,
+  retryPendingLead,
+  savePendingLead,
+} from "@/features/agendamento/leadRecovery";
 import { notificarN8n } from "@/services/integracoes";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
@@ -204,6 +211,11 @@ const Agendamento = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Reenvio silencioso de lead que ficou guardado numa visita anterior.
+  useEffect(() => {
+    void retryPendingLead();
+  }, []);
+
   const updateFormData = (data: Partial<FormData>) => {
     if (!formStartFiredRef.current) {
       formStartFiredRef.current = true;
@@ -256,16 +268,24 @@ const Agendamento = () => {
           convenio_outro: formData.insurance === "outro" ? formData.otherInsurance : null,
         };
 
-        const { lead_id, error } = await criarLead(leadData);
+        const { lead_id, error, status, attempts } = await criarLeadComRetry(leadData);
 
         if (error) {
           console.error("[Agendamento] Erro ao criar lead:", error);
+          savePendingLead(leadData);
+          trackAppointmentError("landing_agendamento", "lead_creation", error.message, {
+            statusCode: status,
+            step: "lead_creation",
+            attempts,
+          });
           toast({
-            title: "Erro ao registrar interesse",
-            description: "Não foi possível salvar seus dados. O agendamento continuará normalmente.",
+            title: "Não conseguimos salvar seus dados agora",
+            description:
+              "Continue o agendamento normalmente. Se falhar de novo no fim, abrimos o WhatsApp com seus dados para a nossa equipe concluir.",
             variant: "destructive",
           });
         } else if (lead_id) {
+          clearPendingLead();
           setLeadId(lead_id);
           // Lead tracking com event_id = lead_id (dedup com CAPI server-side)
           trackLead("Dados Pessoais Preenchidos - Landing", lead_id);
@@ -298,11 +318,35 @@ const Agendamento = () => {
       const localAtendimento = submissionData.locationName || submissionData.location;
 
       if (!leadId) {
-        toast({
-          title: "Erro",
-          description: "Lead não encontrado. Por favor, reinicie o agendamento.",
-          variant: "destructive",
+        // O registro no banco falhou: cumprimos a promessa levando a pessoa ao
+        // WhatsApp com tudo que ela já preencheu.
+        const mensagemFallback = buildFallbackWhatsAppMessage({
+          nome: submissionData.fullName,
+          telefone: submissionData.phone,
+          tipoAtendimento: submissionData.appointmentTypeName || submissionData.appointmentType,
+          local: localAtendimento,
+          convenio: submissionData.insuranceName || submissionData.insurance,
+          data: submissionData.selectedDate
+            ? format(submissionData.selectedDate, "dd/MM/yyyy")
+            : undefined,
+          hora: submissionData.selectedTime || undefined,
         });
+        trackAppointmentError(
+          "landing_agendamento",
+          "lead_creation",
+          "lead_id ausente no submit",
+          { step: "submit_without_lead" },
+        );
+        toast({
+          title: "Vamos concluir pelo WhatsApp",
+          description:
+            "Não conseguimos salvar seu agendamento no site. Abrimos o WhatsApp com seus dados para a nossa equipe confirmar.",
+        });
+        window.open(
+          waLink(mensagemFallback, "agendamento_fallback"),
+          "_blank",
+          "noopener,noreferrer",
+        );
         return;
       }
 
