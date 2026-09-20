@@ -28,6 +28,7 @@ import { envioAutomaticoLiberado } from "../_shared/envioStatusGlobal.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 const PENDING_GRACE_MIN = 3; // espera mínima após envio antes de re-tentar

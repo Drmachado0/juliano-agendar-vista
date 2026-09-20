@@ -20,6 +20,7 @@ import { dataCivilBelem, instanteBelem } from '../_shared/dataBelem.ts';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 // Configuração: horas de antecedência para enviar confirmação

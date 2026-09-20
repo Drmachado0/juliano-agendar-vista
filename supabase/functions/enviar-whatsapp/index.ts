@@ -11,6 +11,7 @@ import { getN8nSharedSecret, timingSafeEqual } from "../_shared/n8nSecret.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-n8n-secret",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 // Schema validation — contrato de entrada mantido + suporte opcional a imagem
