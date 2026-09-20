@@ -2,7 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { criarLead, converterLeadEmAgendamento } from "@/services/leads";
+import { converterLeadEmAgendamento } from "@/services/leads";
+import {
+  buildFallbackWhatsAppMessage,
+  clearPendingLead,
+  criarLeadComRetry,
+  retryPendingLead,
+  savePendingLead,
+} from "@/features/agendamento/leadRecovery";
+import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 import { notificarN8n } from "@/services/integracoes";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useGoogleTag } from "@/hooks/useGoogleTag";
