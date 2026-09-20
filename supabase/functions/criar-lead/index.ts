@@ -192,6 +192,35 @@ Deno.serve(async (req) => {
       })
       .select('id')
       .single();
+
+    if (error || !lead) {
+      // Corrida: duas chamadas com o mesmo event_id passaram juntas pela checagem
+      // acima e o índice único barrou a segunda. Devolvemos o lead já gravado em
+      // vez de um erro — o resultado para o paciente é o mesmo caminho de dedup.
+      if ((error as { code?: string } | null)?.code === '23505' && data.event_id) {
+        const { data: jaExiste } = await supabase
+          .from('agendamentos')
+          .select('id')
+          .eq('event_id', data.event_id)
+          .limit(1)
+          .maybeSingle();
+
+        if (jaExiste?.id) {
+          console.log(`[criar-lead] corrida resolvida por event_id, lead_id=${jaExiste.id}`);
+          return new Response(
+            JSON.stringify({ success: true, lead_id: jaExiste.id, deduplicado: true }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      console.error('[criar-lead] Falha ao inserir lead:', error);
+      return new Response(
+        JSON.stringify({ error: 'Erro ao salvar seus dados. Tente novamente.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Fire-and-forget Meta CAPI Lead (server-side dedup com browser via event_id = lead.id)
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim()
       ?? req.headers.get('x-real-ip')
