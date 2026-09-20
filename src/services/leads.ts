@@ -39,7 +39,9 @@ export async function criarLead(
       fbc: tracking.fbc || null,
       landing_page: tracking.landing_page || null,
       referrer: tracking.referrer || null,
-      event_id: tracking.event_id || null,
+      // O id da tentativa vence o da sessão: é ele que garante que repetir a
+      // chamada não crie um segundo lead da mesma pessoa.
+      event_id: data.event_id || tracking.event_id || null,
     };
 
     const { data: responseData, error } = await supabase.functions.invoke('criar-lead', {
