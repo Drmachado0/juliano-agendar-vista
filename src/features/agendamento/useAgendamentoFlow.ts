@@ -253,11 +253,28 @@ export function useAgendamentoFlow(options: UseAgendamentoFlowOptions = {}) {
       const localAtendimento = formData.locationName || formData.location;
 
       if (!leadId) {
-        toast({
-          title: "Erro",
-          description: "Lead não encontrado. Por favor, reinicie o agendamento.",
-          variant: "destructive",
+        // O registro no banco falhou: cumprimos a promessa levando a pessoa ao
+        // WhatsApp com tudo que ela já preencheu.
+        const mensagem = buildFallbackWhatsAppMessage({
+          nome: formData.fullName,
+          telefone: formData.phone,
+          tipoAtendimento: formData.appointmentTypeName || formData.appointmentType,
+          local: localAtendimento,
+          convenio: formData.insuranceName || formData.insurance,
+          data: formData.selectedDate ? format(formData.selectedDate, "dd/MM/yyyy") : undefined,
+          hora: formData.selectedTime || undefined,
         });
+        trackAppointmentError(pageType as any, "lead_creation", "lead_id ausente no submit", {
+          step: "submit_without_lead",
+        });
+        toast({
+          title: "Vamos concluir pelo WhatsApp",
+          description:
+            "Não conseguimos salvar seu agendamento no site. Abrimos o WhatsApp com seus dados para a nossa equipe confirmar.",
+        });
+        if (typeof window !== "undefined") {
+          window.open(waLink(mensagem, "agendamento_fallback"), "_blank", "noopener,noreferrer");
+        }
         return;
       }
 
