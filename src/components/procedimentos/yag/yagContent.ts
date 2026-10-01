@@ -32,23 +32,24 @@ export const AVISO_CONTATO =
  * Valor do procedimento particular, por olho tratado.
  *
  * Fonte única: qualquer lugar que exiba preço deve importar daqui, para a
- * página nunca divergir de si mesma. Cobrança é POR OLHO — quem trata os dois
- * paga duas vezes, e isso precisa estar explícito onde o valor aparece.
+ * página nunca divergir de si mesma. Há um valor por olho e um valor bilateral
+ * específico; não calcule o bilateral multiplicando o valor unitário.
  *
  * Atenção ao editar: informar o valor de forma factual é uma coisa; usar preço
  * como chamariz (promoção, desconto, comparação com outros profissionais) é
  * vedado pelo Manual de Publicidade Médica do CFM. Mantenha o tom informativo.
  */
-export const VALOR_YAG = "R$ 850,00";
+export const VALOR_YAG = "R$ 650,00";
 export const VALOR_YAG_UNIDADE = "por olho";
 export const VALOR_YAG_COMPLETO = `${VALOR_YAG} ${VALOR_YAG_UNIDADE}`;
+export const VALOR_YAG_AMBOS = "R$ 1.200,00";
 
 /** Exibido junto ao campo de olho operado. */
 export const AVISO_POR_OLHO = `Particular: ${VALOR_YAG_COMPLETO} tratado.`;
 
-/** Reforço quando o paciente marca os dois olhos — evita a surpresa do dobro. */
+/** Reforço quando o paciente marca os dois olhos. */
 export const AVISO_AMBOS_OLHOS =
-  `Você marcou os dois olhos. O valor particular é ${VALOR_YAG_COMPLETO} tratado, cobrado separadamente para cada um.`;
+  `Você marcou os dois olhos. O valor particular para ambos é ${VALOR_YAG_AMBOS}.`;
 
 export const WHATSAPP_MENSAGEM =
   "Olá! Vi a página do YAG Laser e quero agendar no HGP em Paragominas.";
@@ -152,7 +153,7 @@ export const FAQS: YagFAQ[] = [
   {
     question: "Quanto custa e é coberto por convênio?",
     answer:
-      "No particular, o valor é de R$ 850,00 por olho tratado — quem precisa tratar os dois olhos paga o valor de cada um separadamente. Por convênio, a cobertura depende do plano e das regras da operadora: ao preencher o formulário, nossa equipe verifica a sua cobertura antes de confirmar a data.",
+      "No particular, o valor é de R$ 650,00 por olho tratado ou R$ 1.200,00 para os dois olhos. Por convênio, a cobertura depende do plano e das regras da operadora: ao preencher o formulário, nossa equipe verifica a sua cobertura antes de confirmar a data.",
   },
   {
     question: "Onde o procedimento é realizado?",

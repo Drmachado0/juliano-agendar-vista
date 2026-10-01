@@ -22,6 +22,7 @@ import {
   SECTIONS,
   TIPO_ATENDIMENTO,
   VALOR_YAG,
+  VALOR_YAG_AMBOS,
   VALOR_YAG_COMPLETO,
   WHATSAPP_MENSAGEM,
 } from "@/components/procedimentos/yag/yagContent";
@@ -258,21 +259,21 @@ describe("Valores exibidos na página", () => {
     }
   });
 
-  it("publica o valor do particular como R$ 850,00 por olho", () => {
-    expect(VALOR_YAG).toBe("R$ 850,00");
-    expect(VALOR_YAG_COMPLETO).toBe("R$ 850,00 por olho");
+  it("publica o valor do particular como R$ 650,00 por olho", () => {
+    expect(VALOR_YAG).toBe("R$ 650,00");
+    expect(VALOR_YAG_COMPLETO).toBe("R$ 650,00 por olho");
     expect(AVISO_POR_OLHO).toContain(VALOR_YAG);
     expect(AVISO_POR_OLHO).toMatch(/por olho/i);
   });
 
-  it("deixa claro que a cobranca e por olho, nao por sessao", () => {
-    // Quem trata os dois olhos paga duas vezes. Se essa frase sumir, o
-    // paciente que marca "Ambos" e surpreendido depois.
-    expect(AVISO_AMBOS_OLHOS).toContain(VALOR_YAG);
-    expect(AVISO_AMBOS_OLHOS).toMatch(/cada um|separadamente/i);
+  it("publica o valor bilateral de R$ 1.200,00 sem calcular duas unidades", () => {
+    expect(VALOR_YAG_AMBOS).toBe("R$ 1.200,00");
+    expect(AVISO_AMBOS_OLHOS).toContain(VALOR_YAG_AMBOS);
+    expect(AVISO_AMBOS_OLHOS).toMatch(/dois olhos|ambos/i);
     const faqValor = FAQS.map((f) => f.answer).join(" ");
     expect(faqValor).toContain(VALOR_YAG);
-    expect(faqValor).toMatch(/por olho/i);
+    expect(faqValor).toContain(VALOR_YAG_AMBOS);
+    expect(faqValor).toMatch(/por olho|dois olhos/i);
   });
 
   it("nunca expoe o valor da CONSULTA (R$ 300) na pagina do YAG", () => {
