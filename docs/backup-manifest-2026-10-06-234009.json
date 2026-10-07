@@ -1,0 +1,68 @@
+{
+  "created_at": "2026-10-06T23:40:09.577907-03:00",
+  "repository": "https://github.com/Drmachado0/juliano-agendar-vista",
+  "github_main": "201d26e0def295810358cf15a56be8d26b6e204d",
+  "local_base": "811df9d333964a1a23afd1f3ab8963f97be1897b",
+  "local_snapshot_branch": "backup/2026-10-06-234009-local",
+  "saved_refs": [
+    {
+      "original": "refs/heads/feat/prerender",
+      "sha": "10985e3f6565b6fc68a0b88367bb9da10f76849a",
+      "backup": "backup/2026-10-06-234009/local/feat/prerender"
+    },
+    {
+      "original": "refs/heads/fix/seo-aggregate-rating-restante",
+      "sha": "fead56e4cbffee410d6baf8b11f8b44f80610ed6",
+      "backup": "backup/2026-10-06-234009/local/fix/seo-aggregate-rating-restante"
+    },
+    {
+      "original": "refs/heads/fix/seo-auditoria-fase-1",
+      "sha": "4402d9b2ecd971e214d2dcbe3f5254b8af360d33",
+      "backup": "backup/2026-10-06-234009/local/fix/seo-auditoria-fase-1"
+    },
+    {
+      "original": "refs/heads/fix/seo-head-tags",
+      "sha": "bcf094fd5424d79928c095448b0f4dfb551c1338",
+      "backup": "backup/2026-10-06-234009/local/fix/seo-head-tags"
+    },
+    {
+      "original": "refs/heads/main",
+      "sha": "811df9d333964a1a23afd1f3ab8963f97be1897b",
+      "backup": "backup/2026-10-06-234009/local/main"
+    },
+    {
+      "original": "refs/remotes/origin/claude/dev-browser-setup-p7em3x",
+      "sha": "74bfc2a423ae22d79d102d15187e2ae982cfcc96",
+      "backup": "backup/2026-10-06-234009/github/claude/dev-browser-setup-p7em3x"
+    },
+    {
+      "original": "refs/remotes/origin/claude/init-nemalo",
+      "sha": "18141de991d665e6a32da183f9117f773735ae3a",
+      "backup": "backup/2026-10-06-234009/github/claude/init-nemalo"
+    },
+    {
+      "original": "refs/remotes/origin/claude/manychat-template-user-name-w46ftv",
+      "sha": "2662e39ebe4f85e2670ccfaa11e4ca78d0bd3373",
+      "backup": "backup/2026-10-06-234009/github/claude/manychat-template-user-name-w46ftv"
+    },
+    {
+      "original": "refs/remotes/origin/main",
+      "sha": "201d26e0def295810358cf15a56be8d26b6e204d",
+      "backup": "backup/2026-10-06-234009/github/main"
+    },
+    {
+      "original": "refs/remotes/origin/redesign/landing-v2",
+      "sha": "88fa10a336f57c0b10c2824440ce9c78bba07202",
+      "backup": "backup/2026-10-06-234009/github/redesign/landing-v2"
+    },
+    {
+      "original": "refs/remotes/origin/seo/verificacao-belem-setembro",
+      "sha": "a612ff258575abb32ed4d2902b05028d52263204",
+      "backup": "backup/2026-10-06-234009/github/seo/verificacao-belem-setembro"
+    }
+  ],
+  "scope": "Source code, public assets, dependencies lockfile, configuration with public values, Supabase functions and migrations. Local sitemap edits and untracked project configuration included.",
+  "excluded": "Live database rows, hosted storage, hosted secrets, node_modules, generated dist, logs, caches, and Ruflo runtime state.",
+  "restore_local": "git clone --branch backup/2026-10-06-234009-local https://github.com/Drmachado0/juliano-agendar-vista.git",
+  "restore_github_main": "git clone --branch backup/2026-10-06-234009/github/main https://github.com/Drmachado0/juliano-agendar-vista.git"
+}
