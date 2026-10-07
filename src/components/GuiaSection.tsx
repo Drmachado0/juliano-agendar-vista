@@ -1,0 +1,6 @@
+import { Link } from 'react-router-dom';
+import { GUIA_ARTIGOS } from '@/lib/guia';
+
+export default function GuiaSection() {
+  return <section id="guia" className="py-16 border-t border-border/30"><div className="container mx-auto px-5"><div className="flex flex-wrap justify-between items-end gap-5 mb-8"><div><p className="text-primary text-sm uppercase tracking-wider mb-2">Informação para cuidar da visão</p><h2 className="font-serif text-3xl md:text-4xl">Guia de Saúde Ocular</h2></div><Link to="/guia-saude-ocular" className="text-primary underline min-h-11 inline-flex items-center">Ver todos os artigos →</Link></div><div className="grid md:grid-cols-3 gap-6">{GUIA_ARTIGOS.filter(a => ['catarata-pode-voltar','glaucoma-sintomas','diabetes-saude-ocular'].includes(a.slug)).map(a => <Link to={'/guia/'+a.slug} key={a.slug} className="rounded-xl overflow-hidden border border-border bg-card hover:border-primary"><img src={a.imagem.srcset[0].src} alt={a.imagem.alt} width={640} height={360} className="w-full aspect-video object-cover" loading="lazy" /><div className="p-5"><p className="text-xs text-primary mb-3">{a.categoria}</p><h3 className="font-serif text-xl mb-3">{a.titulo}</h3><span className="text-primary text-sm">Ler artigo →</span></div></Link>)}</div></div></section>;
+}

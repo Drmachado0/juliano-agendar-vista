@@ -59,6 +59,11 @@ const ProcGonioscopia = lazy(() => import("./pages/procedimentos/Gonioscopia"));
 const ProcBiometria = lazy(() => import("./pages/procedimentos/BiometriaUltrassonica"));
 const ProcIridotomia = lazy(() => import("./pages/procedimentos/IridotomiaLaser"));
 
+const GuiaSaudeOcular = lazy(() => import("./pages/GuiaSaudeOcular"));
+const GuiaArtigo = lazy(() => import("./pages/GuiaArtigo"));
+const LocaisAtendimento = lazy(() => import("./pages/LocaisAtendimento"));
+const HomeLegado = lazy(() => import("./pages/HomeLegado"));
+
 const queryClient = new QueryClient();
 
 /**
@@ -190,6 +195,16 @@ export const AppConteudo = () => (
               <Route path="/" element={<Index />} />
               <Route path="/agendar" element={<RedirectToAgendamento />} />
               <Route path="/agendar-consulta" element={<RedirectToAgendamento />} />
+              <Route path="/home" element={<HomeLegado />} />
+              <Route path="/guia-saude-ocular" element={<GuiaSaudeOcular />} />
+              <Route path="/locais-de-atendimento" element={<LocaisAtendimento />} />
+              <Route path="/guia/catarata-pode-voltar" element={<GuiaArtigo slug="catarata-pode-voltar" />} />
+              <Route path="/guia/capsulotomia-yag" element={<GuiaArtigo slug="capsulotomia-yag" />} />
+              <Route path="/guia/glaucoma-sintomas" element={<GuiaArtigo slug="glaucoma-sintomas" />} />
+              <Route path="/guia/olho-seco" element={<GuiaArtigo slug="olho-seco" />} />
+              <Route path="/guia/visao-embacada" element={<GuiaArtigo slug="visao-embacada" />} />
+              <Route path="/guia/diabetes-saude-ocular" element={<GuiaArtigo slug="diabetes-saude-ocular" />} />
+              <Route path="/guia/quando-fazer-exame-vista" element={<GuiaArtigo slug="quando-fazer-exame-vista" />} />
               <Route path="/agendamento" element={<Agendamento />} />
               <Route path="/paragominas" element={<Paragominas />} />
               <Route path="/belem" element={<Belem />} />

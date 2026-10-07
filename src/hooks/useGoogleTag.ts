@@ -1,4 +1,5 @@
 import { isTrackingAllowed, safeDataLayerPush } from '@/lib/trackingGuard';
+import { trackGuiaAppointmentSuccess } from '@/lib/guiaAnalytics';
 
 declare global {
   interface Window {
@@ -161,6 +162,7 @@ export const useGoogleTag = () => {
     pageType: AppointmentContext,
     data?: { id?: string | null; appointmentType?: string; location?: string; value?: number },
   ) => {
+    trackGuiaAppointmentSuccess();
     const value = data?.value ?? 300;
     pushToDataLayer({
       event: pageType === 'modal' ? 'modal_appointment_success' : 'lp_appointment_success',

@@ -31,12 +31,12 @@ const Header = () => {
   // /paragominas. "Locais" era ancora para a secao que lista as unidades, o que
   // as duas paginas de cidade fazem melhor, entao a troca nao perde nada.
   //
-  // A contagem de itens ficou em 8 de proposito. O menu de desktop so aparece a
-  // partir de xl e divide a linha com logo e dois CTAs, entao acrescentar um
-  // nono item arriscava quebrar em 1280px.
+  // O guia ganhou um link curto. A largura do menu é verificada em 1280px
+  // junto ao logo e ao CTA de agendamento.
   const navItems = [
     { label: "Sobre", id: "sobre", href: "/sobre" },
     { label: "Procedimentos", id: "procedimentos", href: "/procedimentos" },
+    { label: "Guia", id: "guia", href: "/guia-saude-ocular" },
     { label: "Glaucoma", id: "glaucoma", href: "/procedimentos/glaucoma" },
     { label: "YAG Laser", id: "yag-laser" },
     // O rotulo era "Depoimentos" ate 29/08/2026. A secao deixou de exibir
@@ -176,7 +176,7 @@ const Header = () => {
 
         {/* Mobile Menu */}
         <div className={`xl:hidden overflow-hidden transition-all duration-300 ease-in-out ${
-          isMenuOpen ? 'max-h-[28rem] mt-3 pb-4 border-t border-border/30 pt-3' : 'max-h-0'
+          isMenuOpen ? 'max-h-[calc(100dvh-6rem)] overflow-y-auto mt-3 pb-4 border-t border-border/30 pt-3' : 'max-h-0'
         }`}>
           <div className={`${isMenuOpen ? 'backdrop-blur-xl' : ''}`}>
             <nav className="flex flex-col gap-0.5">

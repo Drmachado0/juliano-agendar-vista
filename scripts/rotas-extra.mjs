@@ -42,6 +42,7 @@
  * pare e resolva o geral.
  */
 export const ROTAS_EXTRA = [
+  "/home",
   "/paragominas/agendamento",
   "/obrigado",
   "/auth",

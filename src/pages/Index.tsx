@@ -20,6 +20,7 @@ import InsuranceSection from "@/components/InsuranceSection";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import MobileStickyCTA from "@/components/MobileStickyCTA";
 import Footer from "@/components/Footer";
+import GuiaSection from "@/components/GuiaSection";
 
 import { useSiteWhatsApp } from "@/hooks/useSiteWhatsApp";
 
@@ -87,6 +88,7 @@ const Index = () => {
           <TestimonialsSection />
           <LocationsSection />
           <InsuranceSection />
+          <GuiaSection />
           <AgendarFAQSection />
         </main>
 

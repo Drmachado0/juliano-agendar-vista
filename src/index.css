@@ -3,6 +3,15 @@
 @tailwind components;
 @tailwind utilities;
 
+.ocular-guide .guide-body section { margin-bottom: 2rem; scroll-margin-top: 7rem; }
+.ocular-guide .guide-body h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.6rem; line-height: 1.3; margin-bottom: 1rem; }
+.ocular-guide .guide-body h3 { font-weight: 600; margin: 1.25rem 0 .75rem; }
+.ocular-guide .guide-body p { margin-bottom: 1rem; line-height: 1.85; }
+.ocular-guide .guide-body a { color: hsl(var(--primary)); text-decoration: underline; }
+.ocular-guide .guia__alerta { padding: 1.25rem; border-left: 3px solid hsl(var(--primary)); background: hsl(var(--card)); border-radius: .5rem; margin: 1.5rem 0; }
+.ocular-guide .guia__alerta p:last-child { margin-bottom: 0; }
+.ocular-guide h2[id] { scroll-margin-top: 7rem; }
+
 @layer base {
   :root {
     /* Premium Navy Blue & Gold Palette — refined */

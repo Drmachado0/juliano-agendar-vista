@@ -59,7 +59,8 @@ const Footer = () => {
                 { label: "Sobre", id: "sobre", href: "/sobre" },
                 { label: "Procedimentos", id: "procedimentos" },
                 { label: "Avaliações", id: "depoimentos" },
-                { label: "Locais de Atendimento", id: "locais" },
+                { label: "Guia de Saúde Ocular", id: "guia", href: "/guia-saude-ocular" },
+                { label: "Locais de Atendimento", id: "locais", href: "/locais-de-atendimento" },
                 { label: "Convênios", id: "convenios" },
               ].map(link => {
                 const classes =

@@ -26,6 +26,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import Footer from "@/components/Footer";
+import GuiaSection from "@/components/GuiaSection";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { AREAS_ATUACAO } from "@/components/AreasDeAtuacao";
 import logoImage from "@/assets/dr-juliano-logo.svg";
@@ -1148,6 +1149,7 @@ const Paragominas = () => {
               </ul>
             </div>
           </section>
+          <GuiaSection />
         </main>
 
         <div ref={footerRef}>

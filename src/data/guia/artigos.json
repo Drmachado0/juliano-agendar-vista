@@ -1,0 +1,425 @@
+[
+  {
+    "slug": "catarata-pode-voltar",
+    "titulo": "A catarata pode voltar depois da cirurgia?",
+    "descricao": "Entenda por que a visão pode voltar a embaçar após a cirurgia de catarata, o que é a opacificação da cápsula e quando procurar avaliação.",
+    "estado": "publicado",
+    "conteudo": "catarata-pode-voltar.html",
+    "autor": null,
+    "revisao_medica": {
+      "nome": "Dr. Juliano Machado",
+      "crm": "CRM-PA 15253"
+    },
+    "data_publicacao": "2026-10-07",
+    "data_revisao": "2026-10-07",
+    "relacionados": [
+      "/procedimentos/cirurgia-de-catarata",
+      "/procedimentos/capsulotomia-yag-laser",
+      "/procedimentos/consulta-oftalmologica",
+      "/guia/capsulotomia-yag"
+    ],
+    "fontes": [
+      {
+        "id": "nei-cirurgia",
+        "titulo": "National Eye Institute — Cataract Surgery",
+        "url": "https://www.nei.nih.gov/eye-health-information/eye-conditions-and-diseases/cataracts/cataract-surgery"
+      },
+      {
+        "id": "cuh",
+        "titulo": "Cambridge University Hospitals — YAG laser posterior capsulotomy",
+        "url": "https://www.cuh.nhs.uk/patient-information/yag-laser-posterior-capsulotomy-following-cataract-surgery/"
+      },
+      {
+        "id": "kingston",
+        "titulo": "Kingston and Richmond NHS — Posterior Capsular Opacification",
+        "url": "https://www.kingstonandrichmond.nhs.uk/patients-and-families/patient-leaflets/posterior-capsular-opacification-pco-and-yag-laser-capsulotomy"
+      },
+      {
+        "id": "nei-retina",
+        "titulo": "National Eye Institute — Retinal Detachment",
+        "url": "https://www.nei.nih.gov/eye-health-information/eye-conditions-and-diseases/retinal-detachment"
+      }
+    ],
+    "imagem": {
+      "src": "/images/guia/catarata-pode-voltar.webp",
+      "largura": 1672,
+      "altura": 941,
+      "srcset": [
+        {
+          "src": "/images/guia/catarata-pode-voltar-640.webp",
+          "largura": 640
+        },
+        {
+          "src": "/images/guia/catarata-pode-voltar-1280.webp",
+          "largura": 1280
+        },
+        {
+          "src": "/images/guia/catarata-pode-voltar.webp",
+          "largura": 1672
+        }
+      ],
+      "alt": "Detalhe de um olho castanho de uma pessoa adulta, em luz suave.",
+      "legenda": "Imagem ilustrativa gerada por IA. Não representa um diagnóstico."
+    },
+    "categoria": "Catarata e YAG laser",
+    "html": "<section aria-labelledby=\"catarata-volta\">\n  <h2 id=\"catarata-volta\">A catarata volta no olho operado?</h2>\n  <p>O cristalino opaco é retirado na cirurgia e substituído por uma lente intraocular. Por isso, aquela catarata não volta. A visão pode, porém, voltar a embaçar por outra alteração — e o motivo precisa ser examinado. <a href=\"#fonte-nei-cirurgia\" class=\"guia__citacao\">Fonte: NEI</a></p>\n</section>\n<section aria-labelledby=\"capsula\">\n  <h2 id=\"capsula\">O que pode ficar opaco depois?</h2>\n  <p>Uma cápsula fina é preservada para apoiar a lente implantada. Sua parte posterior pode perder transparência, dificultando a passagem da luz. Isso se chama <strong>opacificação da cápsula posterior</strong>. O nome popular “catarata secundária” pode dar a impressão de que a catarata voltou, mas descreve uma alteração diferente. <a href=\"#fonte-cuh\" class=\"guia__citacao\">Fonte: CUH</a></p>\n  <p>A opacificação pode surgir semanas, meses ou anos após a cirurgia. Não existe um prazo único para todos os pacientes. <a href=\"#fonte-nei-cirurgia\" class=\"guia__citacao\">Fonte: NEI</a></p>\n</section>\n<section aria-labelledby=\"avaliacao\">\n  <h2 id=\"avaliacao\">Visão embaçada significa que preciso de laser?</h2>\n  <p>Não automaticamente. A avaliação precisa confirmar se a cápsula está opaca e se ela explica a dificuldade visual. O exame da visão e das estruturas do olho ajuda a escolher a conduta. Chegar à consulta com o relato de quando a mudança começou é mais útil do que partir de um diagnóstico pronto.</p>\n  <p>Se a opacificação prejudica a visão, o oftalmologista pode indicar capsulotomia YAG: uma abertura na cápsula para permitir a passagem da luz. Se outra doença ocular também compromete a visão, tratar a cápsula pode não resolver todo o problema. <a href=\"#fonte-kingston\" class=\"guia__citacao\">Fonte: Kingston NHS</a></p>\n</section>\n<section aria-labelledby=\"atencao\">\n  <h2 id=\"atencao\">Quando a mudança merece atendimento urgente?</h2>\n  <aside class=\"guia__alerta\" aria-label=\"Sinais de alerta\">\n    <p><strong>Perda súbita da visão, flashes, muitas manchas novas ou uma sombra como cortina exigem avaliação imediata.</strong> Procure atendimento oftalmológico de urgência; não espere uma vaga de rotina. <a href=\"#fonte-nei-retina\" class=\"guia__citacao\">Fonte: NEI</a></p>\n  </aside>\n  <p>Depois da cirurgia, dor intensa, olho muito vermelho ou redução da visão também precisam de contato imediato com o serviço que acompanha você. Não conclua que esses sintomas são apenas “a lente suja”. <a href=\"#fonte-nei-cirurgia\" class=\"guia__citacao\">Fonte: NEI</a></p>\n</section>\n<section aria-labelledby=\"duvidas\">\n  <h2 id=\"duvidas\">Dúvidas comuns</h2>\n  <h3>Vou precisar trocar a lente implantada?</h3>\n  <p>A capsulotomia trata a cápsula atrás da lente, não uma nova catarata no implante. A necessidade de outro procedimento depende do diagnóstico. <a href=\"#fonte-kingston\" class=\"guia__citacao\">Fonte: Kingston NHS</a></p>\n  <h3>O laser substitui os óculos?</h3>\n  <p>Não. Mesmo após o tratamento da cápsula, pode continuar existindo necessidade de óculos. <a href=\"#fonte-cuh\" class=\"guia__citacao\">Fonte: CUH</a></p>\n</section>\n"
+  },
+  {
+    "slug": "capsulotomia-yag",
+    "titulo": "Capsulotomia YAG: como funciona a limpeza da lente",
+    "descricao": "O que o laser YAG trata após a cirurgia de catarata, como é o procedimento e quais cuidados e sinais de alerta merecem atenção.",
+    "estado": "publicado",
+    "conteudo": "capsulotomia-yag.html",
+    "autor": null,
+    "revisao_medica": {
+      "nome": "Dr. Juliano Machado",
+      "crm": "CRM-PA 15253"
+    },
+    "data_publicacao": "2026-10-07",
+    "data_revisao": "2026-10-07",
+    "relacionados": [
+      "/procedimentos/capsulotomia-yag-laser",
+      "/guia/catarata-pode-voltar",
+      "/procedimentos/consulta-oftalmologica"
+    ],
+    "fontes": [
+      {
+        "id": "glos",
+        "titulo": "Gloucestershire Hospitals NHS — Yag laser capsulotomy",
+        "url": "https://www.gloshospitals.nhs.uk/your-visit/patient-information-leaflets/yag-laser-capsulotomy-ghpi0354/"
+      },
+      {
+        "id": "cuh",
+        "titulo": "Cambridge University Hospitals — YAG laser posterior capsulotomy",
+        "url": "https://www.cuh.nhs.uk/patient-information/yag-laser-posterior-capsulotomy-following-cataract-surgery/"
+      },
+      {
+        "id": "kingston",
+        "titulo": "Kingston and Richmond NHS — Posterior Capsular Opacification",
+        "url": "https://www.kingstonandrichmond.nhs.uk/patients-and-families/patient-leaflets/posterior-capsular-opacification-pco-and-yag-laser-capsulotomy"
+      },
+      {
+        "id": "nei-retina",
+        "titulo": "National Eye Institute — Retinal Detachment",
+        "url": "https://www.nei.nih.gov/eye-health-information/eye-conditions-and-diseases/retinal-detachment"
+      }
+    ],
+    "imagem": {
+      "src": "/images/guia/capsulotomia-yag.webp",
+      "largura": 1672,
+      "altura": 941,
+      "srcset": [
+        {
+          "src": "/images/guia/capsulotomia-yag-640.webp",
+          "largura": 640
+        },
+        {
+          "src": "/images/guia/capsulotomia-yag-1280.webp",
+          "largura": 1280
+        },
+        {
+          "src": "/images/guia/capsulotomia-yag.webp",
+          "largura": 1672
+        }
+      ],
+      "alt": "Equipamento oftalmológico ilustrativo com microscópio binocular e apoio para o rosto.",
+      "legenda": "Imagem ilustrativa gerada por IA de um equipamento oftalmológico."
+    },
+    "categoria": "Catarata e YAG laser",
+    "html": "<section aria-labelledby=\"o-que-e\">\n  <h2 id=\"o-que-e\">O que significa “limpeza da lente”?</h2>\n  <p>A expressão é familiar, mas não descreve literalmente o tratamento. O laser YAG faz uma abertura na <strong>cápsula posterior opacificada</strong>, atrás da lente intraocular. Ele não lava nem troca o implante. A abertura permite que a luz atravesse essa região. <a href=\"#fonte-glos\" class=\"guia__citacao\">Fonte: Gloucestershire NHS</a></p>\n</section>\n<section aria-labelledby=\"indicacao\">\n  <h2 id=\"indicacao\">Quando a capsulotomia pode ser indicada?</h2>\n  <p>O procedimento pode ser considerado quando a cápsula perde transparência após a cirurgia de catarata e compromete a visão. A indicação depende do exame; se a alteração é leve e não causa dificuldade, nem sempre é necessário tratá-la naquele momento. <a href=\"#fonte-cuh\" class=\"guia__citacao\">Fonte: CUH</a></p>\n  <p>Na consulta, conte quando percebeu a mudança e quais atividades ficaram difíceis. Pergunte o que o tratamento pode melhorar no seu caso e se existe outra condição limitando a visão. <a href=\"#fonte-kingston\" class=\"guia__citacao\">Fonte: Kingston NHS</a></p>\n</section>\n<section aria-labelledby=\"procedimento\">\n  <h2 id=\"procedimento\">Como é feito o procedimento?</h2>\n  <p>O atendimento inclui avaliação da visão e explicação do tratamento. Podem ser usados colírios para dilatar a pupila e anestesiar a superfície do olho. Você fica sentado diante do aparelho, com a cabeça apoiada; uma lente de contato pode ajudar a direcionar o laser. <a href=\"#fonte-glos\" class=\"guia__citacao\">Fonte: Gloucestershire NHS</a></p>\n  <p>A aplicação costuma durar poucos minutos, mas a preparação e a observação podem aumentar o tempo da visita. Durante os disparos, é possível notar luzes ou pequenos cliques. Esclareça dúvidas antes de consentir. <a href=\"#fonte-glos\" class=\"guia__citacao\">Fonte: Gloucestershire NHS</a></p>\n</section>\n<section aria-labelledby=\"depois\">\n  <h2 id=\"depois\">O que observar depois do laser?</h2>\n  <p>A dilatação pode deixar a visão embaçada por algumas horas. Organize a volta e não dirija enquanto a visão estiver prejudicada. As orientações sobre colírios, retorno e atividades devem ser individualizadas; não comece ou suspenda medicamentos por conta própria. <a href=\"#fonte-cuh\" class=\"guia__citacao\">Fonte: CUH</a></p>\n</section>\n<section aria-labelledby=\"riscos\">\n  <h2 id=\"riscos\">Quais riscos precisam ser discutidos?</h2>\n  <p>Podem ocorrer aumento da pressão ocular, inflamação ou manchas flutuantes. Complicações menos frequentes incluem edema na região central da retina e descolamento de retina. O exame e o histórico ajudam a discutir benefícios e riscos para cada olho. <a href=\"#fonte-kingston\" class=\"guia__citacao\">Fonte: Kingston NHS</a></p>\n  <aside class=\"guia__alerta\" aria-label=\"Sinais de alerta\">\n    <p><strong>Procure urgência se surgir perda da visão, uma cortina no campo visual, flashes ou muitas manchas novas.</strong> Dor ou vermelhidão em piora após o laser também merecem contato urgente com o serviço. <a href=\"#fonte-nei-retina\" class=\"guia__citacao\">NEI</a> · <a href=\"#fonte-cuh\" class=\"guia__citacao\">CUH</a></p>\n  </aside>\n</section>\n<section aria-labelledby=\"duvidas\">\n  <h2 id=\"duvidas\">O laser garante que vou enxergar bem?</h2>\n  <p>Não é uma garantia. O resultado depende de a cápsula ser a causa da dificuldade e de outras condições do olho. O tratamento também não elimina necessariamente a necessidade de óculos. <a href=\"#fonte-kingston\" class=\"guia__citacao\">Fonte: Kingston NHS</a></p>\n</section>\n"
+  },
+  {
+    "slug": "glaucoma-sintomas",
+    "titulo": "Glaucoma dá sintomas? Entenda por que o diagnóstico pode ser tardio",
+    "categoria": "Glaucoma",
+    "descricao": "O glaucoma pode avançar sem sinais perceptíveis. Entenda o papel dos exames, do histórico familiar e do acompanhamento para proteger a visão.",
+    "relacionados": [
+      "/procedimentos/glaucoma",
+      "/procedimentos",
+      "/guia/quando-fazer-exame-vista",
+      "/guia/diabetes-saude-ocular"
+    ],
+    "fontes": [
+      {
+        "id": "nih",
+        "titulo": "National Institutes of Health — Glaucoma",
+        "url": "https://health.nih.gov/health-topics-a-z/glaucoma"
+      },
+      {
+        "id": "nhs",
+        "titulo": "NHS — Glaucoma",
+        "url": "https://www.nhs.uk/conditions/glaucoma/"
+      }
+    ],
+    "estado": "publicado",
+    "conteudo": "glaucoma-sintomas.html",
+    "autor": null,
+    "revisao_medica": {
+      "nome": "Dr. Juliano Machado",
+      "crm": "CRM-PA 15253"
+    },
+    "data_publicacao": "2026-10-07",
+    "data_revisao": "2026-10-07",
+    "imagem": {
+      "src": "/images/guia/glaucoma-sintomas.webp",
+      "largura": 1672,
+      "altura": 941,
+      "srcset": [
+        {
+          "src": "/images/guia/glaucoma-sintomas-640.webp",
+          "largura": 640
+        },
+        {
+          "src": "/images/guia/glaucoma-sintomas-1280.webp",
+          "largura": 1280
+        },
+        {
+          "src": "/images/guia/glaucoma-sintomas.webp",
+          "largura": 1672
+        }
+      ],
+      "alt": "Equipamento oftalmológico ilustrativo de avaliação ocular, com apoio para o rosto.",
+      "legenda": "Imagem ilustrativa gerada por IA. Não representa um paciente, diagnóstico ou equipamento específico do consultório."
+    },
+    "html": "<section aria-labelledby=\"silencioso\">\n  <h2 id=\"silencioso\">Posso ter glaucoma mesmo enxergando bem?</h2>\n  <p>Sim. O glaucoma é um grupo de doenças que danificam o nervo óptico, responsável por levar informação visual ao cérebro. Nas formas mais comuns, a alteração começa devagar e pode não causar sintomas no início. A perda da visão lateral pode passar despercebida. <a href=\"#fonte-nih\" class=\"guia__citacao\">Fonte: NIH</a></p>\n  <p>Por isso, ler bem no celular ou reconhecer pessoas à distância não descarta a doença. Esperar notar uma dificuldade para procurar avaliação pode atrasar o diagnóstico. <a href=\"#fonte-nhs\" class=\"guia__citacao\">Fonte: NHS</a></p>\n</section>\n<section aria-labelledby=\"pressao\">\n  <h2 id=\"pressao\">Pressão do olho alta é a mesma coisa que glaucoma?</h2>\n  <p>Não. A pressão ocular é uma parte da investigação, mas precisa ser interpretada junto ao exame do nervo óptico e a outros achados. Há pessoas com glaucoma mesmo com pressão dentro da faixa considerada normal. Uma medida isolada não responde a toda a pergunta. <a href=\"#fonte-nhs\" class=\"guia__citacao\">Fonte: NHS</a></p>\n</section>\n<section aria-labelledby=\"risco\">\n  <h2 id=\"risco\">Quem deve conversar sobre o risco?</h2>\n  <p>O risco aumenta com a idade e merece atenção quando há familiares com glaucoma. Informe ao oftalmologista se pai, mãe ou irmãos têm o diagnóstico. O intervalo das consultas deve considerar seu histórico e os resultados dos exames; não existe uma agenda única para todos. <a href=\"#fonte-nih\" class=\"guia__citacao\">Fonte: NIH</a></p>\n</section>\n<section aria-labelledby=\"exames\">\n  <h2 id=\"exames\">Como o oftalmologista investiga?</h2>\n  <p>A avaliação pode incluir exame com dilatação, medida da pressão e teste do campo visual. Os resultados ajudam a identificar alterações e a acompanhar sua evolução. <a href=\"#fonte-nih\" class=\"guia__citacao\">Fonte: NIH</a></p>\n  <p>Leve exames anteriores e pergunte quais achados precisam de comparação no retorno. Se receber um pedido de exame, esclareça o objetivo e quando levar o resultado. Ter os documentos organizados facilita a conversa sobre seu acompanhamento.</p>\n</section>\n<section aria-labelledby=\"tratamento\">\n  <h2 id=\"tratamento\">O tratamento recupera a visão perdida?</h2>\n  <p>O cuidado busca controlar a doença e preservar a visão que permanece. Pode envolver colírios, laser ou cirurgia, conforme o caso. Mesmo sem sintomas, seguir a prescrição e os retornos é parte do tratamento. <a href=\"#fonte-nih\" class=\"guia__citacao\">Fonte: NIH</a></p>\n  <p>Na consulta, conte se esquece doses, sente desconforto ou tem dificuldade para comprar ou aplicar o colírio. Essas dificuldades merecem uma solução combinada com o médico.</p>\n</section>\n<section aria-labelledby=\"urgencia\">\n  <h2 id=\"urgencia\">Quando procurar urgência?</h2>\n  <aside class=\"guia__alerta\" aria-label=\"Sinais de alerta\"><p><strong>Dor ocular intensa, olho vermelho, visão embaçada e náusea de início súbito exigem atendimento imediato.</strong> Algumas formas de glaucoma podem provocar uma crise aguda. Não espere uma consulta de rotina. <a href=\"#fonte-nhs\" class=\"guia__citacao\">Fonte: NHS</a></p></aside>\n</section>\n"
+  },
+  {
+    "slug": "olho-seco",
+    "titulo": "Olho seco: por que os olhos ardem, incomodam e às vezes lacrimejam?",
+    "categoria": "Olho seco",
+    "descricao": "Ardência, sensação de areia e desconforto nas telas podem estar ligados ao olho seco. Saiba o que observar e quando buscar avaliação.",
+    "relacionados": [
+      "/procedimentos/consulta-oftalmologica",
+      "/guia/visao-embacada",
+      "/guia/quando-fazer-exame-vista"
+    ],
+    "fontes": [
+      {
+        "id": "nih",
+        "titulo": "National Institutes of Health — Dry Eye",
+        "url": "https://health.nih.gov/health-topics-a-z/dry-eye"
+      },
+      {
+        "id": "nhs",
+        "titulo": "NHS — Dry eyes",
+        "url": "https://www.nhs.uk/symptoms/dry-eyes/"
+      }
+    ],
+    "estado": "publicado",
+    "conteudo": "olho-seco.html",
+    "autor": null,
+    "revisao_medica": {
+      "nome": "Dr. Juliano Machado",
+      "crm": "CRM-PA 15253"
+    },
+    "data_publicacao": "2026-10-07",
+    "data_revisao": "2026-10-07",
+    "imagem": {
+      "src": "/images/guia/olho-seco.webp",
+      "largura": 1672,
+      "altura": 941,
+      "srcset": [
+        {
+          "src": "/images/guia/olho-seco-640.webp",
+          "largura": 640
+        },
+        {
+          "src": "/images/guia/olho-seco-1280.webp",
+          "largura": 1280
+        },
+        {
+          "src": "/images/guia/olho-seco.webp",
+          "largura": 1672
+        }
+      ],
+      "alt": "Pessoa fictícia fazendo uma pausa no uso do computador e olhando para a janela.",
+      "legenda": "Imagem ilustrativa gerada por IA. Não representa um paciente, diagnóstico ou equipamento específico do consultório."
+    },
+    "html": "<section aria-labelledby=\"lagrima\">\n  <h2 id=\"lagrima\">O que é olho seco?</h2>\n  <p>A lágrima ajuda a manter a superfície ocular úmida. Quando sua quantidade ou funcionamento não são adequados, ou ela evapora rápido demais, pode surgir olho seco. O problema pode ser passageiro ou persistente. <a href=\"#fonte-nih\" class=\"guia__citacao\">Fonte: NIH</a></p>\n  <p>Ardência, sensação de areia, vermelhidão e visão que embaça fazem parte das possíveis queixas. Esses sinais também aparecem em outras condições; o nome do sintoma não confirma sozinho o diagnóstico. <a href=\"#fonte-nhs\" class=\"guia__citacao\">Fonte: NHS</a></p>\n</section>\n<section aria-labelledby=\"lacrimejamento\">\n  <h2 id=\"lacrimejamento\">Por que o olho pode lacrimejar?</h2>\n  <p>Parece contraditório, mas olho seco também pode provocar episódios de lacrimejamento. Ver lágrima escorrendo não significa necessariamente que a superfície está bem lubrificada. A avaliação ajuda a entender o que ocorre no seu caso. <a href=\"#fonte-nih\" class=\"guia__citacao\">Fonte: NIH</a></p>\n</section>\n<section aria-labelledby=\"telas\">\n  <h2 id=\"telas\">Telas e ar-condicionado podem piorar?</h2>\n  <p>Uso prolongado de telas, vento, ambientes secos e ar-condicionado podem favorecer desconforto. Alguns medicamentos e o uso de lentes de contato também entram na investigação. <a href=\"#fonte-nhs\" class=\"guia__citacao\">Fonte: NHS</a></p>\n  <p>Faça pausas nas atividades que exigem atenção visual, lembre-se de piscar e evite vento direto no rosto. Não suspenda um medicamento prescrito por suspeitar que ele causa ressecamento; converse com o profissional que acompanha você. <a href=\"#fonte-nih\" class=\"guia__citacao\">NIH</a> · <a href=\"#fonte-nhs\" class=\"guia__citacao\">NHS</a></p>\n</section>\n<section aria-labelledby=\"consulta\">\n  <h2 id=\"consulta\">O que contar na consulta?</h2>\n  <p>Anote em quais momentos o incômodo aparece: ao acordar, no fim do expediente, diante do computador ou com lentes de contato. Conte se ocorre em um olho ou nos dois e quais produtos já usou. Leve a lista dos medicamentos, incluindo os que não são colírios.</p>\n  <p>O exame pode avaliar a superfície dos olhos, as pálpebras e características da lágrima. Nem todo paciente precisa dos mesmos testes. <a href=\"#fonte-nih\" class=\"guia__citacao\">Fonte: NIH</a></p>\n</section>\n<section aria-labelledby=\"colirios\">\n  <h2 id=\"colirios\">Qualquer colírio resolve?</h2>\n  <p>O tratamento depende da causa e da intensidade. Pode incluir lubrificação, ajustes no ambiente e outras medidas orientadas após avaliação. Persistência dos sintomas merece consulta. <a href=\"#fonte-nih\" class=\"guia__citacao\">Fonte: NIH</a></p>\n  <p>Em vez de escolher um produto apenas pelo anúncio, pergunte qual é sua finalidade, como acompanhar a resposta e quando retornar. Se já utiliza um colírio, leve o nome ou a embalagem para esclarecer dúvidas.</p>\n</section>\n<section aria-labelledby=\"alertas\">\n  <h2 id=\"alertas\">Quando não devo esperar?</h2>\n  <aside class=\"guia__alerta\" aria-label=\"Sinais de alerta\"><p><strong>Olho vermelho e doloroso, principalmente em quem usa lentes de contato, precisa de avaliação urgente.</strong> Perda da visão ou dor intensa também exigem atendimento imediato; não atribua tudo ao ressecamento. <a href=\"#fonte-nhs\" class=\"guia__citacao\">Fonte: NHS</a></p></aside>\n</section>\n"
+  },
+  {
+    "slug": "visao-embacada",
+    "titulo": "Visão embaçada: quando procurar um oftalmologista?",
+    "categoria": "Sintomas e sinais de alerta",
+    "descricao": "Visão embaçada pode ter diferentes causas. Entenda como o início dos sintomas orienta a avaliação e quais sinais exigem urgência.",
+    "relacionados": [
+      "/procedimentos/consulta-oftalmologica",
+      "/procedimentos/cirurgia-de-catarata",
+      "/guia/olho-seco",
+      "/guia/diabetes-saude-ocular"
+    ],
+    "fontes": [
+      {
+        "id": "nhs",
+        "titulo": "NHS — Vision loss",
+        "url": "https://www.nhs.uk/conditions/vision-loss/"
+      },
+      {
+        "id": "oms",
+        "titulo": "Organização Mundial da Saúde — Refractive errors",
+        "url": "https://www.who.int/news-room/questions-and-answers/item/blindness-and-vision-impairment-refractive-errors"
+      },
+      {
+        "id": "retina",
+        "titulo": "NHS — Detached retina",
+        "url": "https://www.nhs.uk/conditions/detached-retina-retinal-detachment/"
+      }
+    ],
+    "estado": "publicado",
+    "conteudo": "visao-embacada.html",
+    "autor": null,
+    "revisao_medica": {
+      "nome": "Dr. Juliano Machado",
+      "crm": "CRM-PA 15253"
+    },
+    "data_publicacao": "2026-10-07",
+    "data_revisao": "2026-10-07",
+    "imagem": {
+      "src": "/images/guia/visao-embacada.webp",
+      "largura": 1672,
+      "altura": 941,
+      "srcset": [
+        {
+          "src": "/images/guia/visao-embacada-640.webp",
+          "largura": 640
+        },
+        {
+          "src": "/images/guia/visao-embacada-1280.webp",
+          "largura": 1280
+        },
+        {
+          "src": "/images/guia/visao-embacada.webp",
+          "largura": 1672
+        }
+      ],
+      "alt": "Óculos em primeiro plano sobre uma mesa, com fundo desfocado.",
+      "legenda": "Imagem ilustrativa gerada por IA. Não representa um paciente, diagnóstico ou equipamento específico do consultório."
+    },
+    "html": "<section aria-labelledby=\"causas\">\n  <h2 id=\"causas\">Visão embaçada significa que preciso de óculos?</h2>\n  <p>Essa é uma possibilidade, mas não é a única. Miopia, hipermetropia, astigmatismo e presbiopia podem dificultar o foco. A presbiopia costuma se manifestar com dificuldade para enxergar de perto conforme a idade avança. <a href=\"#fonte-oms\" class=\"guia__citacao\">Fonte: OMS</a></p>\n  <p>Catarata e alterações da retina também podem prejudicar a nitidez. O tratamento depende da causa; não é possível escolher a conduta apenas pela palavra “embaçado”. <a href=\"#fonte-nhs\" class=\"guia__citacao\">Fonte: NHS</a></p>\n</section>\n<section aria-labelledby=\"inicio\">\n  <h2 id=\"inicio\">Por que importa saber quando começou?</h2>\n  <p>A mudança pode ser gradual ou súbita e atingir um ou ambos os olhos. Isso muda a forma de investigar e a urgência do atendimento. <a href=\"#fonte-nhs\" class=\"guia__citacao\">Fonte: NHS</a></p>\n  <p>Na consulta, descreva o que aconteceu com exemplos: ficou difícil ler, enxergar placas, reconhecer rostos ou trabalhar? Conte quando percebeu a mudança e se ela permanece ou aparece em episódios. Se souber, diga qual olho foi afetado. Um relato concreto ajuda mais do que tentar adivinhar o diagnóstico.</p>\n</section>\n<section aria-labelledby=\"urgencia\">\n  <h2 id=\"urgencia\">Quais sinais exigem atendimento imediato?</h2>\n  <aside class=\"guia__alerta\" aria-label=\"Sinais de alerta\"><p><strong>Perda súbita da visão, dor ocular intensa ou uma sombra como cortina exigem avaliação imediata.</strong> Flashes ou muitas manchas novas também precisam de atendimento urgente. Não espere uma vaga de rotina. <a href=\"#fonte-nhs\" class=\"guia__citacao\">NHS</a> · <a href=\"#fonte-retina\" class=\"guia__citacao\">NHS</a></p></aside>\n  <p>Não dirija se a visão está comprometida. Peça ajuda para chegar ao serviço de urgência. <a href=\"#fonte-nhs\" class=\"guia__citacao\">Fonte: NHS</a></p>\n</section>\n<section aria-labelledby=\"gradual\">\n  <h2 id=\"gradual\">E quando a dificuldade vem aos poucos?</h2>\n  <p>Uma mudança persistente merece exame, mesmo que não haja dor. Algumas causas têm tratamento e o diagnóstico ajuda a definir o cuidado. <a href=\"#fonte-nhs\" class=\"guia__citacao\">Fonte: NHS</a></p>\n  <p>Ao marcar, informe que houve alteração na visão para que o serviço possa orientar o atendimento. Se os sintomas se tornarem súbitos, intensos ou vierem com os alertas acima, procure urgência em vez de aguardar a data já marcada.</p>\n</section>\n<section aria-labelledby=\"avaliacao\">\n  <h2 id=\"avaliacao\">Como aproveitar melhor a avaliação?</h2>\n  <p>Leve seus óculos, receitas e exames anteriores. Faça uma lista dos medicamentos e informe cirurgias oculares prévias. Se já acompanha diabetes ou outra condição, leve informações do tratamento para discutir com o médico.</p>\n  <p>Vale perguntar: o que explica a mudança, quais exames são necessários e como saberei se estou melhorando? Antes de sair, confirme quando retornar e o que fazer se a visão piorar.</p>\n</section>\n<section aria-labelledby=\"duvida\">\n  <h2 id=\"duvida\">Posso resolver trocando o grau sozinho?</h2>\n  <p>Óculos podem corrigir erros de refração, mas a avaliação é necessária para identificar o problema e a correção apropriada. Uma armação nova não responde, por si só, se há outra condição ocular. <a href=\"#fonte-oms\" class=\"guia__citacao\">Fonte: OMS</a></p>\n</section>\n"
+  },
+  {
+    "slug": "diabetes-saude-ocular",
+    "titulo": "Quem tem diabetes precisa examinar os olhos com que frequência?",
+    "categoria": "Diabetes e visão",
+    "descricao": "As alterações oculares do diabetes podem começar sem sintomas. Entenda por que o exame da retina e o acompanhamento individual são importantes.",
+    "relacionados": [
+      "/procedimentos",
+      "/procedimentos/consulta-oftalmologica",
+      "/guia/visao-embacada",
+      "/guia/quando-fazer-exame-vista"
+    ],
+    "fontes": [
+      {
+        "id": "niddk",
+        "titulo": "NIDDK — Diabetic Eye Disease",
+        "url": "https://www.niddk.nih.gov/health-information/diabetes/overview/preventing-problems/diabetic-eye-disease"
+      },
+      {
+        "id": "nhs",
+        "titulo": "NHS — Diabetic retinopathy",
+        "url": "https://www.nhs.uk/conditions/diabetic-retinopathy/"
+      },
+      {
+        "id": "ada",
+        "titulo": "American Diabetes Association — Standards of Care in Diabetes 2026, seção 12",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12690177/"
+      }
+    ],
+    "estado": "publicado",
+    "conteudo": "diabetes-saude-ocular.html",
+    "autor": null,
+    "revisao_medica": {
+      "nome": "Dr. Juliano Machado",
+      "crm": "CRM-PA 15253"
+    },
+    "data_publicacao": "2026-10-07",
+    "data_revisao": "2026-10-07",
+    "imagem": {
+      "src": "/images/guia/diabetes-saude-ocular.webp",
+      "largura": 1672,
+      "altura": 941,
+      "srcset": [
+        {
+          "src": "/images/guia/diabetes-saude-ocular-640.webp",
+          "largura": 640
+        },
+        {
+          "src": "/images/guia/diabetes-saude-ocular-1280.webp",
+          "largura": 1280
+        },
+        {
+          "src": "/images/guia/diabetes-saude-ocular.webp",
+          "largura": 1672
+        }
+      ],
+      "alt": "Medidor de glicose ilustrativo com visor desligado ao lado de óculos e caderno.",
+      "legenda": "Imagem ilustrativa gerada por IA. Não representa um paciente, diagnóstico ou equipamento específico do consultório."
+    },
+    "html": "<section aria-labelledby=\"sem-sintomas\">\n  <h2 id=\"sem-sintomas\">Preciso consultar mesmo enxergando bem?</h2>\n  <p>Sim. A retinopatia diabética pode começar sem sintomas. O diabetes pode afetar os vasos da retina, estrutura no fundo do olho que participa da visão. Identificar alterações cedo ajuda a orientar o acompanhamento e o tratamento quando necessário. <a href=\"#fonte-nhs\" class=\"guia__citacao\">Fonte: NHS</a></p>\n  <p>Por isso, não espere a visão embaçar para conversar sobre o exame. O acompanhamento ocular faz parte do cuidado com o diabetes. <a href=\"#fonte-niddk\" class=\"guia__citacao\">Fonte: NIDDK</a></p>\n</section>\n<section aria-labelledby=\"frequencia\">\n  <h2 id=\"frequencia\">O exame deve ser anual?</h2>\n  <p>Muitas pessoas precisam de avaliação anual. Em adultos com diabetes tipo 2, o exame inicial é recomendado no diagnóstico; em adultos com tipo 1, em geral cinco anos após o diagnóstico. O calendário depende do tipo de diabetes e da situação clínica. <a href=\"#fonte-ada\" class=\"guia__citacao\">Fonte: ADA 2026</a></p>\n  <p>Quando os exames estão normais e o controle é adequado, o médico pode considerar intervalos maiores. Se existe retinopatia, pode ser necessário examinar com mais frequência. Gestação em quem já tem diabetes exige planejamento específico. Essas decisões devem ser individualizadas. <a href=\"#fonte-ada\" class=\"guia__citacao\">Fonte: ADA 2026</a></p>\n</section>\n<section aria-labelledby=\"retina\">\n  <h2 id=\"retina\">Medir o grau é suficiente?</h2>\n  <p>Não substitui a avaliação do fundo do olho. A dilatação permite examinar uma área maior da retina, e outros testes podem ser indicados conforme os achados. <a href=\"#fonte-niddk\" class=\"guia__citacao\">Fonte: NIDDK</a></p>\n  <p>Se você já tem fotografias da retina ou laudos, leve-os. Pergunte o que foi observado, qual será o intervalo do retorno e se há exames complementares a fazer. Guarde a orientação junto aos demais documentos do seu diabetes.</p>\n</section>\n<section aria-labelledby=\"controle\">\n  <h2 id=\"controle\">Controlar a glicose protege a visão?</h2>\n  <p>O cuidado com glicose, pressão arterial e colesterol ajuda a reduzir o risco de complicações. Esse controle precisa caminhar junto com os exames oculares, e não substituí-los. <a href=\"#fonte-nhs\" class=\"guia__citacao\">Fonte: NHS</a></p>\n  <p>Conte há quanto tempo tem diabetes e quem acompanha seu tratamento. Leve a lista de medicamentos e resultados recentes que já possua. Não é preciso chegar com um diagnóstico ocular pronto; o objetivo da consulta é esclarecer o que acontece com os olhos.</p>\n</section>\n<section aria-labelledby=\"alertas\">\n  <h2 id=\"alertas\">Quando procurar atendimento antes do retorno?</h2>\n  <aside class=\"guia__alerta\" aria-label=\"Sinais de alerta\"><p><strong>Mudança súbita da visão, flashes, muitas manchas novas ou uma cortina no campo visual exigem avaliação urgente.</strong> Não espere o próximo exame de rotina. <a href=\"#fonte-niddk\" class=\"guia__citacao\">Fonte: NIDDK</a></p></aside>\n</section>\n<section aria-labelledby=\"tratamento\">\n  <h2 id=\"tratamento\">Todo diagnóstico exige laser ou injeção?</h2>\n  <p>Não. A conduta varia conforme o estágio e os achados. Algumas pessoas precisam de acompanhamento; outras recebem indicação de tratamento. O oftalmologista deve explicar o objetivo, os riscos e as alternativas aplicáveis ao seu caso. <a href=\"#fonte-nhs\" class=\"guia__citacao\">Fonte: NHS</a></p>\n</section>\n"
+  },
+  {
+    "slug": "quando-fazer-exame-vista",
+    "titulo": "Quando devo fazer exame de vista? Entenda o que a consulta avalia",
+    "categoria": "Consulta e prevenção",
+    "descricao": "A consulta oftalmológica vai além da receita de óculos. Saiba quando buscar avaliação, o que pode ser examinado e como se preparar.",
+    "relacionados": [
+      "/procedimentos/consulta-oftalmologica",
+      "/procedimentos",
+      "/guia/glaucoma-sintomas",
+      "/guia/diabetes-saude-ocular"
+    ],
+    "fontes": [
+      {
+        "id": "medline",
+        "titulo": "MedlinePlus — Standard eye exam",
+        "url": "https://medlineplus.gov/ency/article/003434.htm"
+      },
+      {
+        "id": "moorfields",
+        "titulo": "Moorfields Eye Hospital — The day of your appointment",
+        "url": "https://www.moorfields.nhs.uk/for-patients/plan-your-visit/appointment-day"
+      },
+      {
+        "id": "nhs",
+        "titulo": "NHS — Glaucoma",
+        "url": "https://www.nhs.uk/conditions/glaucoma/"
+      },
+      {
+        "id": "urgencia",
+        "titulo": "NHS — Vision loss",
+        "url": "https://www.nhs.uk/conditions/vision-loss/"
+      }
+    ],
+    "estado": "publicado",
+    "conteudo": "quando-fazer-exame-vista.html",
+    "autor": null,
+    "revisao_medica": {
+      "nome": "Dr. Juliano Machado",
+      "crm": "CRM-PA 15253"
+    },
+    "data_publicacao": "2026-10-07",
+    "data_revisao": "2026-10-07",
+    "imagem": {
+      "src": "/images/guia/quando-fazer-exame-vista.webp",
+      "largura": 1672,
+      "altura": 941,
+      "srcset": [
+        {
+          "src": "/images/guia/quando-fazer-exame-vista-640.webp",
+          "largura": 640
+        },
+        {
+          "src": "/images/guia/quando-fazer-exame-vista-1280.webp",
+          "largura": 1280
+        },
+        {
+          "src": "/images/guia/quando-fazer-exame-vista.webp",
+          "largura": 1672
+        }
+      ],
+      "alt": "Armação de prova e conjunto de lentes ilustrativos para exame de refração.",
+      "legenda": "Imagem ilustrativa gerada por IA. Não representa um paciente, diagnóstico ou equipamento específico do consultório."
+    },
+    "html": "<section aria-labelledby=\"quando\">\n  <h2 id=\"quando\">Só preciso consultar quando o grau muda?</h2>\n  <p>Não. O exame pode avaliar a saúde dos olhos, além da nitidez da visão. Algumas doenças, como o glaucoma, podem não provocar sintomas no início e ser identificadas em uma avaliação de rotina. <a href=\"#fonte-nhs\" class=\"guia__citacao\">Fonte: NHS</a></p>\n  <p>Se você está adiando uma consulta porque ainda lê bem, vale conversar sobre seu histórico e a necessidade de acompanhamento. Leve à consulta suas dúvidas sobre visão, trabalho, leitura e mudanças que percebeu no dia a dia.</p>\n</section>\n<section aria-labelledby=\"intervalo\">\n  <h2 id=\"intervalo\">Existe um intervalo igual para todo mundo?</h2>\n  <p>A frequência depende da idade, do risco de doença ocular e do histórico de saúde. Diabetes e antecedentes familiares podem mudar o calendário. O oftalmologista deve orientar quando retornar, mesmo que você esteja sem queixas. <a href=\"#fonte-medline\" class=\"guia__citacao\">MedlinePlus</a></p>\n  <p>Ao sair, confirme a data aproximada do próximo exame e quais situações justificam antecipá-lo. Um lembrete no calendário pode ajudar a não perder o acompanhamento.</p>\n</section>\n<section aria-labelledby=\"avaliacao\">\n  <h2 id=\"avaliacao\">O que pode ser examinado?</h2>\n  <p>A avaliação pode verificar a acuidade visual, os movimentos dos olhos, a resposta das pupilas e a pressão ocular. A dilatação ajuda a examinar estruturas no fundo do olho. Testes de campo visual também podem fazer parte da investigação. <a href=\"#fonte-medline\" class=\"guia__citacao\">MedlinePlus</a></p>\n  <p>O conjunto de exames varia conforme a necessidade. Pergunte o que cada etapa procura esclarecer; nem toda consulta exige todos os testes.</p>\n</section>\n<section aria-labelledby=\"dilatacao\">\n  <h2 id=\"dilatacao\">Vou precisar dilatar a pupila?</h2>\n  <p>Isso depende da avaliação. Quando são usados colírios dilatadores, pode haver visão embaçada e maior sensibilidade à luz por algumas horas. Planeje a volta e não dirija enquanto a visão estiver prejudicada. <a href=\"#fonte-medline\" class=\"guia__citacao\">MedlinePlus</a> · <a href=\"#fonte-moorfields\" class=\"guia__citacao\">Moorfields</a></p>\n  <p>Avise se tem alguma dúvida sobre a dilatação ou reação prévia a colírios. Pergunte ao serviço, antes de ir, se recomenda acompanhante e quanto tempo reservar para o atendimento.</p>\n</section>\n<section aria-labelledby=\"preparo\">\n  <h2 id=\"preparo\">Como me preparar?</h2>\n  <p>Leve óculos em uso, a lista de medicamentos e informações sobre tratamentos anteriores. Óculos de sol podem ajudar no conforto após a dilatação. <a href=\"#fonte-moorfields\" class=\"guia__citacao\">Fonte: Moorfields</a></p>\n  <p>Organize seus exames anteriores e anote duas ou três perguntas principais. Descreva o motivo da consulta ao marcar: revisão de rotina, mudança na visão ou acompanhamento de uma doença. Essa informação ajuda o serviço a orientar seu atendimento.</p>\n</section>\n<section aria-labelledby=\"alertas\">\n  <h2 id=\"alertas\">Quando a consulta de rotina não é suficiente?</h2>\n  <aside class=\"guia__alerta\" aria-label=\"Sinais de alerta\"><p><strong>Perda súbita da visão ou dor ocular intensa exigem atendimento imediato.</strong> Informe também flashes ou sombra na visão e procure avaliação urgente. Não aguarde o retorno programado. <a href=\"#fonte-urgencia\" class=\"guia__citacao\">Fonte: NHS</a></p></aside>\n</section>\n"
+  }
+]

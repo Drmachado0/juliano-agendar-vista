@@ -70,3 +70,6 @@ drjulianomachado.com-audit/findings/_*.py
 scripts/backfill-avaliacoes-google.json
 scripts/backfill-avaliacoes-google.sql
 scripts/.reviews-raw.json
+
+# Verificações locais de navegador (sem dados de pacientes).
+.verification/

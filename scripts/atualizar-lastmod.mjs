@@ -34,6 +34,12 @@ import { execFileSync } from "node:child_process";
 const SITEMAP = "public/sitemap.xml";
 const APP = "src/App.tsx";
 const BASE = "https://drjulianomachado.com";
+// Artigos têm datas editoriais próprias; editar um texto não exige alterar o renderer.
+const editorialFile = "src/data/guia/artigos.json";
+const editorialDates = new Map(existsSync(editorialFile)
+  ? JSON.parse(readFileSync(editorialFile, "utf-8")).map(a => ["/guia/" + a.slug,
+      [a.data_publicacao, a.data_revisao].filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d || "")).sort().at(-1)])
+  : []);
 
 /** Monta rota -> arquivo lendo as rotas e os imports do App.tsx. */
 function mapaDeRotas() {
@@ -52,7 +58,7 @@ function mapaDeRotas() {
   );
 
   const mapa = new Map();
-  for (const m of app.matchAll(/<Route\s+path="([^"]+)"\s+element=\{<(\w+)\s*\/>\}/g)) {
+  for (const m of app.matchAll(/<Route\s+path="([^"]+)"\s+element=\{<(\w+)\b[^>]*\/>\}/g)) {
     const [, rota, comp] = m;
     const rel = porLazy.get(comp) ?? porEstatico.get(comp);
     if (!rel) continue;
@@ -92,7 +98,7 @@ function main() {
 
     const rota = loc.replace(BASE, "") || "/";
     const arquivo = mapa.get(rota);
-    const data = arquivo ? dataDoArquivo(arquivo) : null;
+    const data = editorialDates.get(rota) ?? (arquivo ? dataDoArquivo(arquivo) : null);
 
     if (!data) {
       semData.push(rota);

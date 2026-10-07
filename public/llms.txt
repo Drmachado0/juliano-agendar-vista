@@ -28,3 +28,15 @@
 ## Outros
 
 - [Política de Privacidade](/politica-de-privacidade): Como o site coleta e protege dados pessoais (LGPD).
+
+## Guia de Saúde Ocular
+
+- [Guia com artigos revisados](/guia-saude-ocular)
+- [Locais de atendimento](/locais-de-atendimento)
+- [A catarata pode voltar depois da cirurgia?](/guia/catarata-pode-voltar)
+- [Capsulotomia YAG: como funciona a limpeza da lente](/guia/capsulotomia-yag)
+- [Glaucoma dá sintomas? Entenda por que o diagnóstico pode ser tardio](/guia/glaucoma-sintomas)
+- [Olho seco: por que os olhos ardem, incomodam e às vezes lacrimejam?](/guia/olho-seco)
+- [Visão embaçada: quando procurar um oftalmologista?](/guia/visao-embacada)
+- [Quem tem diabetes precisa examinar os olhos com que frequência?](/guia/diabetes-saude-ocular)
+- [Quando devo fazer exame de vista? Entenda o que a consulta avalia](/guia/quando-fazer-exame-vista)
